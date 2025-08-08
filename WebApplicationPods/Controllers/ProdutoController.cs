@@ -265,7 +265,7 @@ namespace SitePodsInicial.Controllers
             return View(produto);
         }
 
-        [HttpPost, ActionName("Excluir")]
+        [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult ConfirmarExcluir(int id)
         {

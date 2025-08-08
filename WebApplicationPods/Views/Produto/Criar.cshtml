@@ -2,6 +2,17 @@
 @{
     ViewData["Title"] = "Cadastrar Novo Pod";
     var categorias = ViewBag.Categorias as SelectList ?? new SelectList(new List<SelectListItem>());
+
+   
+}
+
+@if (TempData["MensagemSucesso"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle me-2"></i>
+        <strong>Sucesso!</strong> @TempData["MensagemSucesso"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
 }
 
 <div class="container mt-4">
