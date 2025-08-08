@@ -1,0 +1,108 @@
+﻿@model SitePodsInicial.Models.ProdutoModel
+@{
+    ViewData["Title"] = "Cadastrar Novo Pod";
+    var categorias = ViewBag.Categorias as SelectList ?? new SelectList(new List<SelectListItem>());
+}
+
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white py-3">
+            <h4><i class="fas fa-plus-circle me-2"></i>@ViewData["Title"]</h4>
+        </div>
+        <div class="card-body">
+            @if (TempData["MensagemErro"] != null)
+            {
+                <div class="alert alert-danger mb-4">
+                    @TempData["MensagemErro"]
+                </div>
+            }
+
+            <form asp-action="Criar" enctype="multipart/form-data">
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-4"></div>
+
+                <div class="row g-3">
+                    <!-- Coluna Esquerda -->
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label asp-for="Nome" class="form-label fw-bold"></label>
+                            <input asp-for="Nome" class="form-control" placeholder="Ex: Pod Descartável XYZ 5000 puffs" required />
+                            <span asp-validation-for="Nome" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Descricao" class="form-label fw-bold"></label>
+                            <textarea asp-for="Descricao" class="form-control" rows="5"
+                                      placeholder="Descreva o pod, sabores disponíveis, características técnicas..."></textarea>
+                            <span asp-validation-for="Descricao" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <!-- Coluna Direita -->
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label asp-for="CategoriaId" class="form-label fw-bold">Categoria</label>
+                            <select asp-for="CategoriaId" asp-items="@categorias"
+                                    class="form-control" required>
+                                <option value="">Selecione uma categoria</option>
+                            </select>
+                            <span asp-validation-for="CategoriaId" class="text-danger small"></span>
+
+                            @if (!categorias.Any())
+                            {
+                                <div class="alert alert-warning mt-2">
+                                    Nenhuma categoria disponível. Por favor, cadastre categorias primeiro.
+                                </div>
+                            }
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Preco" class="form-label fw-bold"></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">R$</span>
+                                <input asp-for="Preco" id="preco" name="Preco"
+                                       class="form-control money-mask"
+                                       placeholder="0.00"
+                                       required
+                                       type="text"
+                                       inputmode="decimal" />
+                            </div>
+                            <span asp-validation-for="Preco" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Estoque" class="form-label fw-bold"></label>
+                            <input asp-for="Estoque" class="form-control" value="0" min="0" />
+                            <span asp-validation-for="Estoque" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Imagem do Produto (Opcional)</label>
+                            <input type="file" asp-for="ImagemUpload" class="form-control" accept="image/*" />
+                            <small class="text-muted">Formatos aceitos: JPG, PNG (Máx. 2MB)</small>
+                            <span asp-validation-for="ImagemUpload" class="text-danger small"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-success me-2">
+                        <i class="fas fa-save me-1"></i> Cadastrar
+                    </button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Voltar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Seletor corrigido para usar a classe `money-mask`
+            // Isso é mais robusto que usar o ID direto
+            $('.money-mask').mask('#.##0,00', { reverse: true });
+        });
+    </script>
+}

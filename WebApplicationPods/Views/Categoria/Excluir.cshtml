@@ -1,0 +1,28 @@
+﻿@model CategoriaModel
+
+@{
+    ViewData["Title"] = "Excluir Categoria";
+}
+
+<div class="card">
+    <div class="card-header bg-danger text-white">
+        <h4>@ViewData["Title"]</h4>
+    </div>
+    <div class="card-body">
+        <h5>Você tem certeza que deseja excluir esta categoria?</h5>
+
+        <dl class="row mt-3">
+            <dt class="col-sm-3">Nome:</dt>
+            <dd class="col-sm-9">@Model.Nome</dd>
+
+            <dt class="col-sm-3">Descrição:</dt>
+            <dd class="col-sm-9">@Model.Descricao</dd>
+        </dl>
+
+        <form asp-action="ConfirmarExcluir">
+            <input type="hidden" asp-for="Id" />
+            <button type="submit" class="btn btn-danger">Confirmar Exclusão</button>
+            <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+</div>

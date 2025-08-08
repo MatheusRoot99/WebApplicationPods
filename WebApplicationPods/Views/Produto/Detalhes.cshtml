@@ -1,0 +1,39 @@
+﻿@model ProdutoModel
+
+@{
+    ViewData["Title"] = "Detalhes do Produto";
+}
+
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h4>@ViewData["Title"]</h4>
+    </div>
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">Nome</dt>
+            <dd class="col-sm-9">@Model.Nome</dd>
+
+            <dt class="col-sm-3">Descrição</dt>
+            <dd class="col-sm-9">@Model.Descricao</dd>
+
+            <dt class="col-sm-3">Preço</dt>
+            <dd class="col-sm-9">@Model.Preco.ToString("C")</dd>
+
+            <dt class="col-sm-3">Categoria</dt>
+            <dd class="col-sm-9">@Model.Categoria?.Nome</dd>
+
+            <dt class="col-sm-3">Estoque</dt>
+            <dd class="col-sm-9">@Model.Estoque</dd>
+
+            <dt class="col-sm-3">Data de Cadastro</dt>
+            <dd class="col-sm-9">@Model.DataCadastro.ToString("dd/MM/yyyy")</dd>
+
+            <dt class="col-sm-3">Status</dt>
+            <dd class="col-sm-9">@(Model.Ativo ? "Ativo" : "Inativo")</dd>
+        </dl>
+    </div>
+    <div class="card-footer">
+        <a asp-action="Editar" asp-route-id="@Model.Id" class="btn btn-warning">Editar</a>
+        <a asp-action="Index" class="btn btn-secondary">Voltar</a>
+    </div>
+</div>

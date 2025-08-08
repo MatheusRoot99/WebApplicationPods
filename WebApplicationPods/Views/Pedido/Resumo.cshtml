@@ -1,0 +1,95 @@
+﻿@model CarrinhoModel
+
+@{
+    ViewData["Title"] = "Resumo do Pedido";
+}
+
+<div class="container mt-4">
+    <h2>@ViewData["Title"]</h2>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Itens do Pedido</h4>
+                </div>
+                <div class="card-body">
+                    @foreach (var item in Model.Itens)
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                            <div class="d-flex align-items-center">
+                                <img src="@item.Produto" alt="@item.Produto.Nome" class="img-thumbnail" style="max-width: 60px; margin-right: 15px;">
+                                <div>
+                                    <h5 class="mb-1">@item.Produto.Nome</h5>
+                                    <small class="text-muted">Quantidade: @item.Quantidade</small>
+                                    @if (!string.IsNullOrEmpty(item.Observacoes))
+                                    {
+                                        <div class="mt-1">
+                                            <small><strong>Obs:</strong> @item.Observacoes</small>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span>@item.Subtotal.ToString("C")</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Total do Pedido</h4>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <span>@Model.Total.ToString("C")</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>Frete:</span>
+                        <span>A calcular</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between font-weight-bold">
+                        <span>Total:</span>
+                        <span>@Model.Total.ToString("C")</span>
+                    </div>
+
+                    <div class="mt-4">
+                        <h5>Método de Pagamento</h5>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="metodoPagamento" id="pix" value="Pix" checked>
+                            <label class="form-check-label" for="pix">
+                                Pix (5% de desconto)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="metodoPagamento" id="cartao" value="CartaoCredito">
+                            <label class="form-check-label" for="cartao">
+                                Cartão de Crédito
+                            </label>
+                        </div>
+                    </div>
+
+                    <button id="finalizarPedido" class="btn btn-success btn-block mt-4">
+                        Finalizar Pedido
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('finalizarPedido').addEventListener('click', function() {
+            // Aqui você pode adicionar lógica para enviar o pedido
+            alert('Pedido finalizado com sucesso! Redirecionando...');
+            // window.location.href = '/Pedido/Confirmacao';
+        });
+    </script>
+}

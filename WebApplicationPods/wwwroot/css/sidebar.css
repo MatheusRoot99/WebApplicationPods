@@ -1,0 +1,119 @@
+﻿/* Sidebar Styles */
+#wrapper {
+    overflow-x: hidden;
+}
+
+#sidebar-wrapper {
+    min-height: 100vh;
+    margin-left: -15rem;
+    transition: margin 0.25s ease-out;
+    width: 15rem;
+    position: fixed;
+    z-index: 1030;
+}
+
+    #sidebar-wrapper .sidebar-heading {
+        padding: 0.875rem 1.25rem;
+        font-size: 1.2rem;
+        text-align: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    #sidebar-wrapper .list-group {
+        width: 15rem;
+    }
+
+#page-content-wrapper {
+    min-width: 100vw;
+    margin-left: 0;
+    transition: margin 0.25s ease-out;
+}
+
+#wrapper.toggled #sidebar-wrapper {
+    margin-left: 0;
+}
+
+#wrapper.toggled #page-content-wrapper {
+    margin-left: 15rem;
+    min-width: calc(100vw - 15rem);
+}
+
+.sidebar-section {
+    margin-bottom: 1.5rem;
+}
+
+.sidebar-section-title {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    padding: 0.5rem 1.5rem;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.sidebar-subsection {
+    padding-left: 1.5rem;
+}
+
+.sidebar-subsection-title {
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.list-group-item {
+    border-radius: 0;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-left: 3px solid transparent;
+}
+
+    .list-group-item.active {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-left: 3px solid #6e48aa;
+    }
+
+    .list-group-item:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+
+/* Responsive */
+@media (min-width: 768px) {
+    #sidebar-wrapper {
+        margin-left: 0;
+    }
+
+    #page-content-wrapper {
+        min-width: 0;
+        width: 100%;
+        margin-left: 15rem;
+    }
+
+    #wrapper.toggled #sidebar-wrapper {
+        margin-left: -15rem;
+    }
+
+    #wrapper.toggled #page-content-wrapper {
+        margin-left: 0;
+    }
+}
+
+/* Garante que o wrapper ocupe toda a altura */
+html, body {
+    height: 100%;
+}
+
+/* Estilo do botão de toggle */
+#menu-toggle {
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+#wrapper.toggled #menu-toggle {
+    transform: rotate(90deg);
+}
+
+/* Garante que o conteúdo não fique escondido */
+#page-content-wrapper {
+    overflow-x: hidden;
+}

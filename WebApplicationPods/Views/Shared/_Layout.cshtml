@@ -1,0 +1,214 @@
+﻿<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Pods Eletrônicos</title>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- Estilos personalizados -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/sidebar.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="d-flex" id="wrapper">
+        <!-- Sidebar -->
+        <div class="bg-dark border-right" id="sidebar-wrapper">
+            <div class="sidebar-heading text-white py-4">
+                <i class="fas fa-smoking me-2"></i>
+                <span class="fw-bold">Pods Eletrônicos</span>
+            </div>
+            <div class="list-group list-group-flush">
+                <!-- Seção NAVEGAÇÃO -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">NAVEGAÇÃO</div>
+                    <a asp-controller="Home" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
+                        <i class="fas fa-tachometer-alt me-2"></i> Painel
+                    </a>
+                </div>
+
+                <!-- Seção CLIENTE -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">CLIENTE</div>
+                    <a asp-controller="Produto" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
+                        <i class="fas fa-store me-2"></i> Catálogo
+                    </a>
+                    <a asp-controller="Carrinho" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
+                        <i class="fas fa-shopping-cart me-2"></i> Carrinho
+                    </a>
+                </div>
+
+                <!-- Seção LOJISTA (Apenas para usuários autenticados como lojista) -->
+                @if (User.IsInRole("Lojista"))
+                {
+                    <div class="sidebar-section">
+                        <div class="sidebar-section-title">LOJISTA</div>
+                        <a asp-controller="Pedido" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
+                            <i class="fas fa-clipboard-list me-2"></i> Pedidos
+                        </a>
+                        <a asp-controller="Estoque" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
+                            <i class="fas fa-boxes me-2"></i> Estoque
+                        </a>
+                        <a asp-controller="Relatorio" asp-action="Vendas" class="list-group-item list-group-item-action bg-dark text-white">
+                            <i class="fas fa-chart-line me-2"></i> Relatórios
+                        </a>
+                    </div>
+                }
+
+                <!-- Seção ADMIN (Apenas para administradores) -->
+                @if (User.IsInRole("Admin"))
+                {
+                    <div class="sidebar-section">
+                        <div class="sidebar-section-title">ADMIN</div>
+                        <a asp-controller="Produto" asp-action="Gerenciar" class="list-group-item list-group-item-action bg-dark text-white">
+                            <i class="fas fa-box-open me-2"></i> Gerenciar Produtos
+                        </a>
+                        <a asp-controller="Categoria" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
+                            <i class="fas fa-tags me-2"></i> Categorias
+                        </a>
+                        <a asp-controller="Usuario" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
+                            <i class="fas fa-users-cog me-2"></i> Usuários
+                        </a>
+                    </div>
+                }
+
+                <!-- Seção USUÁRIO -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">USUÁRIO</div>
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        <a asp-controller="Cliente" asp-action="Perfil" class="list-group-item list-group-item-action bg-dark text-white">
+                            <i class="fas fa-user-circle me-2"></i> Perfil
+                        </a>
+                        <a asp-controller="Cliente" asp-action="Logout" class="list-group-item list-group-item-action bg-dark text-white">
+                            <i class="fas fa-sign-out-alt me-2"></i> Sair
+                        </a>
+                    }
+                    else
+                    {
+                        <a asp-controller="Cliente" asp-action="Login" class="list-group-item list-group-item-action bg-dark text-white">
+                            <i class="fas fa-sign-in-alt me-2"></i> Login
+                        </a>
+                        <a asp-controller="Cliente" asp-action="Register" class="list-group-item list-group-item-action bg-dark text-white">
+                            <i class="fas fa-user-plus me-2"></i> Registrar
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Page Content -->
+        <div id="page-content-wrapper">
+            <!-- Top Navigation -->
+            <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
+                <div class="container-fluid">
+                    <button class="btn btn-sm btn-dark" id="menu-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+
+                    <!-- Breadcrumb dinâmico -->
+                    <div class="d-none d-md-block ms-3">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb mb-0">
+                                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+                                @if (ViewContext.RouteData.Values["controller"].ToString() != "Home")
+                                {
+                                    <li class="breadcrumb-item">
+                                        <a asp-controller="@ViewContext.RouteData.Values["controller"]" asp-action="Index">
+                                            @ViewContext.RouteData.Values["controller"]
+                                        </a>
+                                    </li>
+                                }
+                                @if (ViewContext.RouteData.Values["action"].ToString() != "Index")
+                                {
+                                    <li class="breadcrumb-item active" aria-current="page">
+                                        @ViewContext.RouteData.Values["action"]
+                                    </li>
+                                }
+                            </ol>
+                        </nav>
+                    </div>
+
+                    <div class="navbar-collapse">
+                        <ul class="navbar-nav ms-auto">
+                            <!-- Carrinho visível para clientes -->
+                            @if (!User.IsInRole("Admin") && !User.IsInRole("Lojista"))
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Carrinho" asp-action="Index">
+                                        <i class="fas fa-shopping-cart"></i>
+                                        <span class="badge bg-light text-dark">
+                                            @await Component.InvokeAsync("CarrinhoResumo")
+                                        </span>
+                                    </a>
+                                </li>
+                            }
+
+                            <!-- Notificações para lojistas -->
+                            @if (User.IsInRole("Lojista"))
+                            {
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle" href="#" id="navbarNotifications" role="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-bell"></i>
+                                        <span class="badge bg-danger">3</span>
+                                    </a>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><h6 class="dropdown-header">Novos pedidos</h6></li>
+                                        <li><a class="dropdown-item" href="#">Pedido #1234</a></li>
+                                        <li><a class="dropdown-item" href="#">Pedido #1235</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" href="#">Ver todos</a></li>
+                                    </ul>
+                                </li>
+                            }
+
+                            <!-- Menu usuário -->
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-user-circle"></i>
+                                    @(User.Identity.IsAuthenticated? User.Identity.Name : "Conta")
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    @if (User.Identity.IsAuthenticated)
+                                    {
+                                        <li><a class="dropdown-item" asp-controller="Cliente" asp-action="Perfil">Perfil</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" asp-controller="Cliente" asp-action="Logout">Sair</a></li>
+                                    }
+                                    else
+                                    {
+                                        <li><a class="dropdown-item" asp-controller="Cliente" asp-action="Login">Login</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Cliente" asp-action="Register">Registrar</a></li>
+                                    }
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <div class="container-fluid px-4 py-3">
+                @RenderBody()
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script src="~/js/jquery.mask.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/sidebar.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+    @await RenderSectionAsync("Styles", required: false)
+</body>
+</html>

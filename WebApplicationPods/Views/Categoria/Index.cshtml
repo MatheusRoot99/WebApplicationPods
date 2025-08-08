@@ -1,0 +1,299 @@
+﻿@model IEnumerable<CategoriaModel>
+
+@{
+    ViewData["Title"] = "Gerenciamento de Categorias";
+}
+
+<div class="container-fluid px-3 px-md-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4">
+        <h1 class="mt-3 mt-md-4 mb-3 mb-md-0">
+            <i class="fas fa-tags me-2"></i>@ViewData["Title"]
+        </h1>
+        <a asp-action="Criar" class="btn btn-primary btn-lg w-100 w-md-auto mb-2 mb-md-0">
+            <i class="fas fa-plus-circle me-2"></i>Nova Categoria
+        </a>
+    </div>
+
+    <!-- Card Principal -->
+    <div class="card mb-4">
+        <div class="card-header bg-white d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+            <h5 class="mb-2 mb-md-0">
+                <i class="fas fa-list me-2"></i>Lista de Categorias
+            </h5>
+            <div class="w-100 w-md-auto">
+                <div class="input-group input-group-sm" style="min-width: 100%; width: 250px;">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Pesquisar...">
+                    <button class="btn btn-outline-secondary" type="button">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body">
+            @if (TempData["MensagemSucesso"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    @TempData["MensagemSucesso"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            @if (TempData["MensagemErro"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    @TempData["MensagemErro"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            <div class="table-responsive">
+                <table class="table table-hover" id="categoriasTable">
+                    <thead class="table-light d-none d-md-table-header-group">
+                        <tr>
+                            <th width="30%">Nome</th>
+                            <th width="50%">Descrição</th>
+                            <th width="20%" class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td data-label="Nome">
+                                    <div class="d-flex align-items-center">
+                                        <div class="icon-category me-2 me-md-3">
+                                            <i class="fas fa-tag"></i>
+                                        </div>
+                                        <strong>@item.Nome</strong>
+                                    </div>
+                                </td>
+                                <td data-label="Descrição">
+                                    @if (!string.IsNullOrEmpty(item.Descricao))
+                                    {
+                                        <span class="text-muted">@item.Descricao</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted fst-italic">Sem descrição</span>
+                                    }
+                                </td>
+                                <td class="text-end" data-label="Ações">
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Editar" asp-route-id="@item.Id"
+                                           class="btn btn-sm btn-outline-primary"
+                                           data-bs-toggle="tooltip" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a asp-action="Excluir" asp-route-id="@item.Id"
+                                           class="btn btn-sm btn-outline-danger"
+                                           data-bs-toggle="tooltip" title="Excluir">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card-footer bg-white">
+            <div class="row">
+                <div class="col-12 col-md-6 mb-2 mb-md-0">
+                    <p class="mb-0 text-muted">
+                        Mostrando <strong>@Model.Count()</strong> categorias
+                    </p>
+                </div>
+                <div class="col-12 col-md-6">
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm justify-content-start justify-content-md-end mb-0">
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" tabindex="-1">Anterior</a>
+                            </li>
+                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                            <li class="page-item"><a class="page-link" href="#">2</a></li>
+                            <li class="page-item"><a class="page-link" href="#">3</a></li>
+                            <li class="page-item">
+                                <a class="page-link" href="#">Próxima</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .icon-category {
+            width: 36px;
+            height: 36px;
+            background-color: #f8f9fa;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(0, 123, 255, 0.05);
+        }
+
+        .card {
+            border: none;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(33, 40, 50, 0.15);
+            border-radius: 0.35rem;
+        }
+
+        .card-header {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            font-weight: 500;
+        }
+
+        .btn-outline-primary, .btn-outline-danger {
+            transition: all 0.2s ease;
+        }
+
+        /* Estilos para mobile */
+        /* Estilos para mobile */
+        @("@media (max-width: 768px)")
+
+        {
+            #categoriasTable tbody tr
+
+        {
+            display: block;
+            margin-bottom: 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 0.35rem;
+        }
+
+        
+
+        #categoriasTable tbody td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            border: none;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+            #categoriasTable tbody td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                margin-right: 1rem;
+                flex: 0 0 30%;
+            }
+
+            #categoriasTable tbody td:last-child {
+                border-bottom: none;
+            }
+
+        .btn-group {
+            width: 100%;
+            justify-content: flex-end;
+        }
+
+        .icon-category {
+            width: 28px;
+            height: 28px;
+            font-size: 0.8rem;
+        }
+
+        }
+
+        /* Efeito para touch */
+        .active-scale {
+            transform: scale(0.95);
+            transition: transform 0.1s ease;
+        }
+
+        /* Melhoria para toasts em mobile */
+        .toast {
+            z-index: 1100;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        /* Ajuste para inputs em mobile */
+        @("@media (max-width: 576px)")
+
+        {
+            .form-control, .btn
+
+        {
+            font-size: 0.9rem;
+            padding: 0.375rem 0.75rem;
+        }
+
+        .btn-lg {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+        }
+
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Ativa tooltips
+            $('[data-bs-toggle="tooltip"]').tooltip({
+                trigger: 'hover focus'
+            });
+
+            // Filtro de pesquisa
+            $('#searchInput').on('keyup', function() {
+                const value = $(this).val().toLowerCase();
+                $('#categoriasTable tbody tr').filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                });
+            });
+
+            // Transforma tooltips em toasts em mobile
+            if ($(window).width() < 768) {
+                $('[data-bs-toggle="tooltip"]').tooltip('dispose');
+                $('[title]').on('click', function(e) {
+                    e.preventDefault();
+                    const title = $(this).attr('title');
+                    if (title && !$(this).hasClass('no-toast')) {
+                        const toast = $(`
+                            <div class="toast show position-fixed bottom-0 start-50 translate-middle-x mb-3" role="alert">
+                                <div class="toast-body bg-primary text-white rounded">
+                                    ${title}
+                                </div>
+                            </div>
+                        `);
+                        $('body').append(toast);
+                        setTimeout(() => toast.remove(), 2000);
+                    }
+                    return false;
+                });
+            }
+
+            // Ajusta comportamento dos botões de ação
+            $('.btn-outline-primary, .btn-outline-danger').on('touchstart', function() {
+                $(this).addClass('active-scale');
+            }).on('touchend', function() {
+                $(this).removeClass('active-scale');
+            });
+
+            // Animação ao passar o mouse nos botões (desktop)
+            $('.btn-outline-primary').hover(
+                function() { $(this).removeClass('btn-outline-primary').addClass('btn-primary'); },
+                function() { $(this).removeClass('btn-primary').addClass('btn-outline-primary'); }
+            );
+
+            $('.btn-outline-danger').hover(
+                function() { $(this).removeClass('btn-outline-danger').addClass('btn-danger'); },
+                function() { $(this).removeClass('btn-danger').addClass('btn-outline-danger'); }
+            );
+        });
+    </script>
+}

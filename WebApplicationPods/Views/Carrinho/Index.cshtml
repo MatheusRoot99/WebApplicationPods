@@ -1,0 +1,103 @@
+﻿@model CarrinhoModel
+
+@{
+    ViewData["Title"] = "Seu Carrinho de Compras";
+}
+
+<div class="container mt-4">
+    <h2>@ViewData["Title"]</h2>
+
+    @if (Model.Itens.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Produto</th>
+                        <th>Quantidade</th>
+                        <th>Preço Unitário</th>
+                        <th>Subtotal</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Itens)
+                    {
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <img src="@item.Produto" alt="@item.Produto.Nome" class="img-thumbnail" style="max-width: 80px; margin-right: 15px;">
+                                    <div>
+                                        <h5>@item.Produto.Nome</h5>
+                                        <small class="text-muted">@item.Produto.Descricao</small>
+                                        @if (!string.IsNullOrEmpty(item.Observacoes))
+                                        {
+                                            <div class="mt-2">
+                                                <strong>Obs:</strong> @item.Observacoes
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <form asp-action="AdicionarItem" method="post" class="d-inline">
+                                    <input type="hidden" name="produtoId" value="@item.Produto.Id" />
+                                    <div class="input-group" style="width: 120px;">
+                                        <input type="number" name="quantidade" value="@item.Quantidade" min="1" class="form-control" />
+                                        <div class="input-group-append">
+                                            <button type="submit" class="btn btn-outline-primary">Atualizar</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </td>
+                            <td>@item.PrecoUnitario.ToString("C")</td>
+                            <td>@item.Subtotal.ToString("C")</td>
+                            <td>
+                                <form asp-action="RemoverItem" method="post">
+                                    <input type="hidden" name="produtoId" value="@item.Produto.Id" />
+                                    <button type="submit" class="btn btn-danger btn-sm">Remover</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" class="text-right"><strong>Total:</strong></td>
+                        <td colspan="2"><strong>@Model.Total.ToString("C")</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="text-right mt-4">
+            <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Continuar Comprando
+            </a>
+            <a asp-action="Resumo" class="btn btn-success ml-2">
+                Finalizar Pedido <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info text-center">
+            <h4>Seu carrinho está vazio</h4>
+            <p>Adicione pods eletrônicos ao seu carrinho para continuar.</p>
+            <a asp-controller="Home" asp-action="Index" class="btn btn-primary">
+                Ver Produtos
+            </a>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        // Validação para quantidade não ser negativa
+        $("input[name='quantidade']").on('change', function() {
+            if ($(this).val() < 1) {
+                $(this).val(1);
+            }
+        });
+    </script>
+}
