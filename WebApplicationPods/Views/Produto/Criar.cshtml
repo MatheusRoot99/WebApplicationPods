@@ -3,7 +3,7 @@
     ViewData["Title"] = "Cadastrar Novo Pod";
     var categorias = ViewBag.Categorias as SelectList ?? new SelectList(new List<SelectListItem>());
 
-   
+
 }
 
 @if (TempData["MensagemSucesso"] != null)
@@ -92,6 +92,8 @@
                             <small class="text-muted">Formatos aceitos: JPG, PNG (Máx. 2MB)</small>
                             <span asp-validation-for="ImagemUpload" class="text-danger small"></span>
                         </div>
+
+                      
                     </div>
                 </div>
 

@@ -1,45 +1,307 @@
 ﻿@model IEnumerable<ProdutoModel>
 
 @{
-    ViewData["Title"] = "Lista de Pods Eletrônicos";
+    ViewData["Title"] = "Catálogo de Pods Eletrônicos";
 }
-@if (TempData["MensagemSucesso"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="fas fa-check-circle me-2"></i>
-        <strong>Sucesso!</strong> @TempData["MensagemSucesso"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+
+<div class="container-fluid px-0">
+    <!-- Header Aprimorado -->
+    <div class="gradient-header py-4 mb-4 shadow">
+        <div class="container">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center">
+                <div class="mb-3 mb-md-0">
+                    <h1 class="display-5 text-white fw-bold mb-2">@ViewData["Title"]</h1>
+                    <p class="text-white-50 mb-0">Gerencie seu inventário de pods eletrônicos</p>
+                </div>
+                <a asp-action="Criar" class="btn btn-light btn-lg rounded-pill px-4 shadow-sm">
+                    <i class="fas fa-plus-circle me-2"></i> Novo Produto
+                </a>
+            </div>
+        </div>
     </div>
-}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>@ViewData["Title"]</h1>
-    <a asp-action="Criar" class="btn btn-primary">Novo Produto</a>
+
+    <!-- Alertas Modernos -->
+    @if (TempData["MensagemSucesso"] != null)
+    {
+        <div class="container">
+            <div class="alert alert-success alert-dismissible fade show rounded-pill shadow-sm" role="alert">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-check-circle me-3 fs-4"></i>
+                    <div>
+                        <strong class="d-block">Sucesso!</strong>
+                        @TempData["MensagemSucesso"]
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+    }
+
+    <div class="container">
+        <!-- Filtros Rápidos -->
+        <div class="row mb-4 g-3">
+            <div class="col-md-6 col-lg-4">
+                <div class="search-box input-group rounded-pill shadow-sm">
+                    <span class="input-group-text bg-white border-0 ps-4"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control border-0" id="searchInput" placeholder="Pesquisar produtos...">
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-8">
+                <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                    <button class="btn btn-outline-primary rounded-pill filter-btn active" data-filter="all">Todos</button>
+                    <button class="btn btn-outline-primary rounded-pill filter-btn" data-filter="in-stock">Em Estoque</button>
+                    <button class="btn btn-outline-primary rounded-pill filter-btn" data-filter="low-stock">Estoque Baixo</button>
+                    <button class="btn btn-outline-primary rounded-pill filter-btn" data-filter="active">Ativos</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cards para Mobile e Table para Desktop -->
+        <div class="d-none d-lg-block">
+            <div class="table-responsive rounded-3 shadow-sm">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Produto</th>
+                            <th>Preço</th>
+                            <th>Categoria</th>
+                            <th>Estoque</th>
+                            <th class="text-end pe-4">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr class="product-row" data-status="@(item.Ativo ? "active" : "inactive")" data-stock="@(item.Estoque > 5 ? "in-stock" : "low-stock")">
+                                <td class="ps-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="product-img-container me-3">
+                                            @if (!string.IsNullOrEmpty(item.ImagemUrl))
+                                            {
+                                                <img src="@item.ImagemUrl" alt="@item.Nome" class="product-img rounded-3 shadow-sm">
+                                            }
+                                            else
+                                            {
+                                                <div class="product-img-placeholder rounded-3 shadow-sm">
+                                                    <i class="fas fa-cannabis"></i>
+                                                </div>
+                                            }
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 fw-bold">@item.Nome</h6>
+                                            <small class="text-muted">ID: @item.Id</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-primary">@item.Preco.ToString("C")</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark">@item.Categoria?.Nome</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                            <div class="progress-bar @(item.Estoque > 5 ? "bg-success" : "bg-warning")"
+                                                 role="progressbar" style="width: @(Math.Min(item.Estoque * 10, 100))%"></div>
+                                        </div>
+                                        <span class="fw-bold @(item.Estoque <= 5 ? "text-warning" : "")">@item.Estoque</span>
+                                    </div>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <div class="btn-group shadow-sm">
+                                        <a asp-action="Detalhes" asp-route-id="@item.Id" class="btn btn-sm btn-light" title="Detalhes" data-bs-toggle="tooltip">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a asp-action="Editar" asp-route-id="@item.Id" class="btn btn-sm btn-light" title="Editar" data-bs-toggle="tooltip">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a asp-action="Excluir" asp-route-id="@item.Id" class="btn btn-sm btn-light text-danger" title="Excluir" data-bs-toggle="tooltip">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Cards para Mobile -->
+        <div class="row row-cols-1 row-cols-md-2 g-4 d-lg-none">
+            @foreach (var item in Model)
+            {
+                <div class="col">
+                    <div class="card product-card h-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-3">
+                                <div class="product-img-container me-3">
+                                    @if (!string.IsNullOrEmpty(item.ImagemUrl))
+                                    {
+                                        <img src="@item.ImagemUrl" alt="@item.Nome" class="product-img rounded-3 shadow-sm">
+                                    }
+                                    else
+                                    {
+                                        <div class="product-img-placeholder rounded-3 shadow-sm">
+                                            <i class="fas fa-cannabis"></i>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h5 class="card-title fw-bold mb-1">@item.Nome</h5>
+                                    <div class="d-flex flex-wrap gap-2 mb-2">
+                                        <span class="badge bg-light text-dark">@item.Categoria?.Nome</span>
+                                        <span class="badge @(item.Ativo ? "bg-success" : "bg-secondary")">
+                                            @(item.Ativo ? "Ativo" : "Inativo")
+                                        </span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="fw-bold text-primary fs-5">@item.Preco.ToString("C")</span>
+                                        <span class="fw-bold @(item.Estoque <= 5 ? "text-warning" : "")">
+                                            Estoque: @item.Estoque
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                                <a asp-action="Detalhes" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                    <i class="fas fa-eye me-1"></i> Ver
+                                </a>
+                                <a asp-action="Editar" asp-route-id="@item.Id" class="btn btn-sm btn-primary rounded-pill px-3">
+                                    <i class="fas fa-edit me-1"></i> Editar
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Paginação -->
+        <nav class="mt-4 d-flex justify-content-center">
+            <ul class="pagination">
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Anterior</a>
+                </li>
+                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                <li class="page-item">
+                    <a class="page-link" href="#">Próxima</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
 </div>
 
-<table class="table table-striped table-hover">
-    <thead class="table-dark">
-        <tr>
-            <th>Nome</th>
-            <th>Preço</th>
-            <th>Categoria</th>
-            <th>Estoque</th>
-            <th>Ações</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>@item.Nome</td>
-                <td>@item.Preco.ToString("C")</td>
-                <td>@item.Categoria?.Nome</td>
-                <td>@item.Estoque</td>
-                <td>
-                    <a asp-action="Detalhes" asp-route-id="@item.Id" class="btn btn-info btn-sm">Detalhes</a>
-                    <a asp-action="Editar" asp-route-id="@item.Id" class="btn btn-warning btn-sm">Editar</a>
-                    <a asp-action="Excluir" asp-route-id="@item.Id" class="btn btn-danger btn-sm">Excluir</a>
-                </td>
-            </tr>
+@section Styles {
+    <style>
+        .gradient-header {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
         }
-    </tbody>
-</table>
+
+        .product-img-container {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .product-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .product-img-placeholder {
+            width: 100%;
+            height: 100%;
+            background-color: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #adb5bd;
+            font-size: 1.5rem;
+        }
+
+        .product-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: none;
+            border-radius: 12px;
+        }
+
+            .product-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            }
+
+        .search-box {
+            background: white;
+            border-radius: 50px !important;
+        }
+
+        .filter-btn {
+            transition: all 0.3s;
+        }
+
+            .filter-btn.active {
+                background-color: #6a11cb;
+                color: white;
+                border-color: #6a11cb;
+            }
+
+        @@media (max-width: 768px) {
+            .gradient-header {
+                padding: 1.5rem 0;
+            }
+
+            .product-img-container {
+                width: 50px;
+                height: 50px;
+            }
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        // Inicializa tooltips
+        $(function () {
+            $('[data-bs-toggle="tooltip"]').tooltip();
+        });
+
+        // Filtros e busca
+        $(document).ready(function() {
+            // Filtro por botões
+            $('.filter-btn').click(function() {
+                $('.filter-btn').removeClass('active');
+                $(this).addClass('active');
+
+                const filter = $(this).data('filter');
+                $('.product-row, .product-card').hide();
+
+                if (filter === 'all') {
+                    $('.product-row, .product-card').show();
+                } else if (filter === 'in-stock') {
+                    $('[data-stock="in-stock"]').show();
+                } else if (filter === 'low-stock') {
+                    $('[data-stock="low-stock"]').show();
+                } else if (filter === 'active') {
+                    $('[data-status="active"]').show();
+                }
+            });
+
+            // Busca em tempo real
+            $('#searchInput').keyup(function() {
+                const searchText = $(this).val().toLowerCase();
+
+                $('.product-row, .product-card').each(function() {
+                    const productText = $(this).text().toLowerCase();
+                    $(this).toggle(productText.includes(searchText));
+                });
+            });
+        });
+    </script>
+}

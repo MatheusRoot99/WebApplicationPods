@@ -15,6 +15,7 @@
                 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                 <input type="hidden" asp-for="Id" />
                 <input type="hidden" asp-for="DataCadastro" />
+                <input type="hidden" asp-for="ImagemUrl" /> <!-- Campo oculto para manter a URL da imagem -->
 
                 <div class="row">
                     <div class="col-md-6">
@@ -44,7 +45,7 @@
                             <label asp-for="Preco" class="control-label"></label>
                             <div class="input-group">
                                 <span class="input-group-text">R$</span>
-                                <input asp-for="Preco" id="Preco" class="form-control" />
+                                <input asp-for="Preco" id="Preco" class="form-control money-mask" />
                             </div>
                             <span asp-validation-for="Preco" class="text-danger"></span>
                         </div>
@@ -55,9 +56,24 @@
                             <span asp-validation-for="Estoque" class="text-danger"></span>
                         </div>
 
+                        <!-- Seção da Imagem Atual -->
                         <div class="form-group mb-3">
-                            
-                            <input type="file" name="imagemUpload" class="form-control mt-2" accept="image/*" />
+                            <label class="control-label">Imagem Atual</label>
+                            @if (!string.IsNullOrEmpty(Model.ImagemUrl))
+                            {
+                                <div class="mb-2">
+                                    <img src="@Model.ImagemUrl" alt="Imagem do produto" class="img-thumbnail" style="max-height: 200px;" />
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted">Nenhuma imagem cadastrada</p>
+                            }
+
+                            <label class="control-label">Alterar Imagem (opcional)</label>
+                            <input type="file" asp-for="ImagemUpload" class="form-control" accept="image/*" />
+                            <small class="text-muted">Deixe em branco para manter a imagem atual</small>
+                            <span asp-validation-for="ImagemUpload" class="text-danger"></span>
                         </div>
 
                         <div class="form-group form-check mb-3">
@@ -81,12 +97,28 @@
 </div>
 
 @section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
     <script>
-        $(document).ready(function() {
-            $('#Preco').mask('#.##0,00', { reverse: true });
+        $(document).ready(function () {
+            // Aplica a máscara monetária
+            $('.money-mask').mask('#.##0,00', { reverse: true });
+
+            // Validação do tamanho da imagem
+            $('input[type="file"]').change(function() {
+                const file = this.files[0];
+                if (file) {
+                    if (file.size > 2 * 1024 * 1024) {
+                        alert('O tamanho da imagem não pode exceder 2MB');
+                        $(this).val('');
+                    }
+
+                    const allowedExtensions = ['jpg', 'jpeg', 'png'];
+                    const extension = file.name.split('.').pop().toLowerCase();
+                    if (!allowedExtensions.includes(extension)) {
+                        alert('Apenas arquivos JPG, JPEG e PNG são permitidos');
+                        $(this).val('');
+                    }
+                }
+            });
         });
     </script>
 }

@@ -20,6 +20,10 @@ namespace SitePodsInicial.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal Preco { get; set; }
 
+        [Display(Name = "URL da Imagem")]
+        [ValidateNever]
+        public string ImagemUrl { get; set; }  // Esta propriedade será mapeada para o banco
+
         [NotMapped]
         [Display(Name = "Imagem do Produto")]
         public IFormFile ImagemUpload { get; set; }

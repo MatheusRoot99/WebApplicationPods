@@ -79,15 +79,18 @@ namespace SitePodsInicial.Controllers
                 // Remove as propriedades que não precisam ser validadas
                 ModelState.Remove("Categoria");
                 ModelState.Remove("PedidoItens");
+                ModelState.Remove("ImagemUrl"); // Adicionado
 
                 // Processa o preço
                 if (Request.Form.ContainsKey("Preco"))
                 {
-                    // Limpa o valor do preço, removendo "R$", pontos e substituindo a vírgula por ponto
-                    var precoString = Request.Form["Preco"].ToString().Replace("R$", "").Replace(".", "").Replace(",", ".");
+                    var precoString = Request.Form["Preco"].ToString()
+                        .Replace("R$", "")
+                        .Replace(".", "")
+                        .Replace(",", ".");
 
-                    // Tenta converter o preço para decimal
-                    if (decimal.TryParse(precoString, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var parsedPrice))
+                    if (decimal.TryParse(precoString, NumberStyles.AllowDecimalPoint,
+                        CultureInfo.InvariantCulture, out var parsedPrice))
                     {
                         produto.Preco = parsedPrice;
                     }
@@ -103,8 +106,8 @@ namespace SitePodsInicial.Controllers
                     ModelState.AddModelError("CategoriaId", "Selecione uma categoria válida");
                 }
 
-                // Validação da imagem
-                if (produto.ImagemUpload != null)
+                // Validação da imagem (opcional)
+                if (produto.ImagemUpload != null && produto.ImagemUpload.Length > 0)
                 {
                     // Verifica o tamanho do arquivo (máximo 2MB)
                     if (produto.ImagemUpload.Length > 2 * 1024 * 1024)
@@ -121,10 +124,9 @@ namespace SitePodsInicial.Controllers
                     }
                 }
 
-                // Verifica se o modelo está válido após as validações
                 if (ModelState.IsValid)
                 {
-                    // Se uma imagem foi enviada, processa o upload
+                    // Processa a imagem se foi enviada
                     if (produto.ImagemUpload != null && produto.ImagemUpload.Length > 0)
                     {
                         var uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "imagens/produtos");
@@ -141,21 +143,22 @@ namespace SitePodsInicial.Controllers
                             await produto.ImagemUpload.CopyToAsync(fileStream);
                         }
 
-                        // Salvar o caminho da imagem no banco (se necessário)
-                        // produto.ImagemUrl = "/imagens/produtos/" + uniqueFileName;
+                        // Salva o caminho da imagem no banco
+                        produto.ImagemUrl = $"/imagens/produtos/{uniqueFileName}";
                     }
+
+                    // Define a data de cadastro
+                    produto.DataCadastro = DateTime.Now;
 
                     // Adiciona o produto no banco de dados
                     _produtoRepository.Adicionar(produto);
 
-                    // Mensagem de sucesso
                     TempData["MensagemSucesso"] = "Produto cadastrado com sucesso!";
                     return RedirectToAction(nameof(Index));
                 }
             }
             catch (Exception ex)
             {
-                // Captura erros genéricos e exibe mensagem de erro
                 TempData["MensagemErro"] = $"Erro ao cadastrar produto: {ex.Message}";
             }
 
@@ -192,8 +195,11 @@ namespace SitePodsInicial.Controllers
 
             try
             {
+                // Remove as validações desnecessárias
                 ModelState.Remove("Categoria");
                 ModelState.Remove("PedidoItens");
+                ModelState.Remove("ImagemUrl");
+                ModelState.Remove("ImagemUpload"); // Remove a validação padrão do ImagemUpload
 
                 // Validação de categoria
                 if (produto.CategoriaId == 0 || !_context.Categorias.Any(c => c.Id == produto.CategoriaId))
@@ -201,8 +207,16 @@ namespace SitePodsInicial.Controllers
                     ModelState.AddModelError("CategoriaId", "Selecione uma categoria válida");
                 }
 
-                // Validação da imagem
-                if (produto.ImagemUpload != null)
+                // Obter o produto existente
+                var produtoExistente = _produtoRepository.ObterPorId(id);
+                if (produtoExistente == null)
+                {
+                    TempData["MensagemErro"] = "Produto não encontrado";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                // Validação da imagem apenas se uma nova for enviada
+                if (produto.ImagemUpload != null && produto.ImagemUpload.Length > 0)
                 {
                     if (produto.ImagemUpload.Length > 2 * 1024 * 1024)
                     {
@@ -228,6 +242,17 @@ namespace SitePodsInicial.Controllers
                             Directory.CreateDirectory(uploadsFolder);
                         }
 
+                        // Remove a imagem antiga se existir
+                        if (!string.IsNullOrEmpty(produtoExistente.ImagemUrl))
+                        {
+                            var imagemExistentePath = Path.Combine(_hostEnvironment.WebRootPath,
+                                produtoExistente.ImagemUrl.TrimStart('/'));
+                            if (System.IO.File.Exists(imagemExistentePath))
+                            {
+                                System.IO.File.Delete(imagemExistentePath);
+                            }
+                        }
+
                         var uniqueFileName = Guid.NewGuid().ToString() + "_" + produto.ImagemUpload.FileName;
                         var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
@@ -236,10 +261,18 @@ namespace SitePodsInicial.Controllers
                             await produto.ImagemUpload.CopyToAsync(fileStream);
                         }
 
-                        // Aqui você pode adicionar lógica para atualizar o caminho se necessário
+                        produtoExistente.ImagemUrl = $"/imagens/produtos/{uniqueFileName}";
                     }
 
-                    _produtoRepository.Atualizar(produto);
+                    // Atualiza os outros campos
+                    produtoExistente.Nome = produto.Nome;
+                    produtoExistente.Descricao = produto.Descricao;
+                    produtoExistente.Preco = produto.Preco;
+                    produtoExistente.Estoque = produto.Estoque;
+                    produtoExistente.CategoriaId = produto.CategoriaId;
+                    produtoExistente.Ativo = produto.Ativo;
+
+                    _produtoRepository.Atualizar(produtoExistente);
                     TempData["MensagemSucesso"] = "Produto atualizado com sucesso!";
                     return RedirectToAction(nameof(Index));
                 }
