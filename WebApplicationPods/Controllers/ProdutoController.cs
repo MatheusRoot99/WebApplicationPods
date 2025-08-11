@@ -79,9 +79,9 @@ namespace SitePodsInicial.Controllers
                 // Remove as propriedades que não precisam ser validadas
                 ModelState.Remove("Categoria");
                 ModelState.Remove("PedidoItens");
-                ModelState.Remove("ImagemUrl"); // Adicionado
+                ModelState.Remove("ImagemUrl");
 
-                // Processa o preço
+                // Processa os preços
                 if (Request.Form.ContainsKey("Preco"))
                 {
                     var precoString = Request.Form["Preco"].ToString()
@@ -97,6 +97,24 @@ namespace SitePodsInicial.Controllers
                     else
                     {
                         ModelState.AddModelError("Preco", "O preço informado é inválido.");
+                    }
+                }
+
+                if (Request.Form.ContainsKey("PrecoPromocional") && !string.IsNullOrEmpty(Request.Form["PrecoPromocional"]))
+                {
+                    var precoPromoString = Request.Form["PrecoPromocional"].ToString()
+                        .Replace("R$", "")
+                        .Replace(".", "")
+                        .Replace(",", ".");
+
+                    if (decimal.TryParse(precoPromoString, NumberStyles.AllowDecimalPoint,
+                        CultureInfo.InvariantCulture, out var parsedPromoPrice))
+                    {
+                        produto.PrecoPromocional = parsedPromoPrice;
+                    }
+                    else
+                    {
+                        ModelState.AddModelError("PrecoPromocional", "O preço promocional informado é inválido.");
                     }
                 }
 
@@ -124,6 +142,12 @@ namespace SitePodsInicial.Controllers
                     }
                 }
 
+                // Validação adicional para preço promocional
+                if (produto.EmPromocao && (!produto.PrecoPromocional.HasValue || produto.PrecoPromocional >= produto.Preco))
+                {
+                    ModelState.AddModelError("PrecoPromocional", "O preço promocional deve ser menor que o preço normal");
+                }
+
                 if (ModelState.IsValid)
                 {
                     // Processa a imagem se foi enviada
@@ -143,7 +167,6 @@ namespace SitePodsInicial.Controllers
                             await produto.ImagemUpload.CopyToAsync(fileStream);
                         }
 
-                        // Salva o caminho da imagem no banco
                         produto.ImagemUrl = $"/imagens/produtos/{uniqueFileName}";
                     }
 
@@ -337,6 +360,38 @@ namespace SitePodsInicial.Controllers
                 // Logar o erro se necessário
                 ViewBag.Categorias = new SelectList(Enumerable.Empty<SelectListItem>());
                 TempData["MensagemErro"] = $"Erro ao carregar categorias: {ex.Message}";
+            }
+        }
+
+        public IActionResult DetalhesProdutos(int id)
+        {
+            try
+            {
+                var produto = _produtoRepository.ObterPorId(id);
+                if (produto == null)
+                {
+                    TempData["MensagemErro"] = "Produto não encontrado";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                // Usando ViewBag para os dados adicionais
+                ViewBag.SaboresDisponiveis = _context.Produtos
+                    .Where(p => p.CategoriaId == produto.CategoriaId && p.Id != produto.Id)
+                    .Select(p => p.Nome)
+                    .Distinct()
+                    .ToList();
+
+                ViewBag.ProdutosRelacionados = _context.Produtos
+                    .Where(p => p.CategoriaId == produto.CategoriaId && p.Id != produto.Id)
+                    .Take(4)
+                    .ToList();
+
+                return View(produto);
+            }
+            catch (Exception ex)
+            {
+                TempData["MensagemErro"] = "Erro ao carregar detalhes do produto";
+                return RedirectToAction(nameof(Index));
             }
         }
     }

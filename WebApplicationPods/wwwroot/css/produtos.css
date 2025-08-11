@@ -1,8 +1,8 @@
-﻿/* Estilo Moderno para o Hero */
-.hero-pods {
+﻿.hero-pods {
     background: linear-gradient(135deg, #6e48aa 0%, #9d50bb 100%);
     position: relative;
     overflow: hidden;
+    border-radius: 0 0 20px 20px;
 }
 
     .hero-pods::before {
@@ -12,7 +12,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: url('/images/pod-pattern.png') center/cover;
+        background: url('https://clubedovapor.net/13061-thickbox_default/pod-ignite-v300-30000-puffs.jpg') center/cover;
         opacity: 0.1;
     }
 
@@ -24,46 +24,107 @@
     border-radius: 50px;
     font-weight: 600;
     letter-spacing: 1px;
+    font-size: 0.9rem;
 }
 
-/* Cards de Produtos */
-.produto-card {
-    transition: all 0.3s ease;
-    border: none;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-    border-radius: 12px;
-    overflow: hidden;
+/* Estilos do Formulário */
+.bg-gradient-primary {
+    background: linear-gradient(to right, #6e48aa, #9d50bb);
 }
 
-    .produto-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+.form-control, .form-select {
+    border-radius: 8px;
+    padding: 12px 15px;
+    border: 1px solid #e0e0e0;
+    transition: all 0.3s;
+}
+
+    .form-control:focus, .form-select:focus {
+        border-color: #9d50bb;
+        box-shadow: 0 0 0 0.25rem rgba(157, 80, 187, 0.25);
     }
 
-/* Banner Promocional */
-.promo-banner {
-    background: linear-gradient(to right, #4b6cb7, #182848);
-    color: white;
+.form-control-lg {
+    padding: 15px 20px;
 }
 
-/* Estado Vazio */
-.empty-state {
-    background: #f8f9fa;
-    border-radius: 12px;
+.form-label {
+    margin-bottom: 8px;
+    font-size: 0.95rem;
 }
 
-/* Layout Responsivo */
+.input-group-text {
+    border-radius: 8px 0 0 8px !important;
+}
+
+/* Estilo para upload de arquivo */
+.file-upload-wrapper {
+    position: relative;
+    margin-bottom: 5px;
+}
+
+.file-upload-label {
+    display: block;
+    padding: 12px 15px;
+    background-color: #f8f9fa;
+    border: 1px dashed #ced4da;
+    border-radius: 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+    .file-upload-label:hover {
+        background-color: #e9ecef;
+        border-color: #9d50bb;
+    }
+
+.file-upload-text {
+    color: #6c757d;
+}
+
+#imagemUpload {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+/* Switches personalizados */
+.form-switch-lg .form-check-input {
+    width: 3rem;
+    height: 1.5rem;
+    margin-left: -0.5rem;
+}
+
+.form-switch-lg .form-check-label {
+    margin-left: 0.5rem;
+}
+
+/* Responsividade */
 @media (max-width: 768px) {
     .hero-pods {
-        padding: 3rem 0;
+        padding: 2rem 0;
+        text-align: center;
     }
 
         .hero-pods h1 {
-            font-size: 2.2rem;
+            font-size: 2rem;
         }
 
-    .promo-banner .col-md-4 {
-        margin-top: 1rem;
-        text-align: center !important;
+    .card-body {
+        padding: 1.5rem !important;
     }
+
+    .d-flex {
+        flex-direction: column-reverse;
+        gap: 1rem;
+    }
+
+        .d-flex .btn {
+            width: 100%;
+        }
 }

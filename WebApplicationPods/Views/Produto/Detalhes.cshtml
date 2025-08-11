@@ -1,39 +1,220 @@
-﻿@model ProdutoModel
+﻿@model SitePodsInicial.Models.ProdutoModel
 
 @{
-    ViewData["Title"] = "Detalhes do Produto";
+    ViewData["Title"] = Model.Nome;
 }
 
-<div class="card">
-    <div class="card-header bg-primary text-white">
-        <h4>@ViewData["Title"]</h4>
+<div class="container my-5">
+    <div class="row">
+        <!-- Coluna da Imagem -->
+        <div class="col-md-6">
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-body p-4">
+                    @if (!string.IsNullOrEmpty(Model.ImagemUrl))
+                    {
+                        <img src="@Url.Content(Model.ImagemUrl)" class="img-fluid rounded" alt="@Model.Nome" style="max-height: 400px; width: 100%; object-fit: contain;">
+                    }
+                    else
+                    {
+                        <div class="d-flex align-items-center justify-content-center bg-light" style="height: 400px;">
+                            <i class="fas fa-image fa-5x text-secondary"></i>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Coluna de Informações -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h1 class="h2 fw-bold">@Model.Nome</h1>
+
+                    @if (Model.Estoque <= 0)
+                    {
+                        <span class="badge bg-danger mb-3">ESGOTADO</span>
+                    }
+                    else if (Model.PrecoPromocional.HasValue && Model.PrecoPromocional < Model.Preco)
+                    {
+                        <span class="badge bg-success mb-3">PROMOÇÃO</span>
+                    }
+
+                    <div class="mb-4">
+                        @if (Model.PrecoPromocional.HasValue && Model.PrecoPromocional < Model.Preco)
+                        {
+                            <span class="text-decoration-line-through text-muted h5">@Model.Preco.ToString("C")</span>
+                            <span class="text-success fw-bold h3 ms-2">@Model.PrecoPromocional.Value.ToString("C")</span>
+                        }
+                        else
+                        {
+                            <span class="text-success fw-bold h3">@Model.Preco.ToString("C")</span>
+                        }
+
+                        <div class="text-muted small mt-1">
+                            @{
+                                var precoBase = Model.PrecoPromocional.HasValue && Model.PrecoPromocional < Model.Preco ?
+                                Model.PrecoPromocional.Value : Model.Preco;
+                            }
+                            2x de @((precoBase / 2).ToString("C")) sem juros<br>
+                            ou @((precoBase * 0.9m).ToString("C")) à vista (10% OFF)
+                        </div>
+                    </div>
+
+                    <!-- Seção de Sabores -->
+                    @if (ViewBag.SaboresDisponiveis != null && ((List<string>)ViewBag.SaboresDisponiveis).Any())
+                    {
+                        <div class="mb-4">
+                            <h4 class="h5 fw-bold mb-3">Escolha o sabor:</h4>
+                            <div class="row">
+                                @foreach (var sabor in (List<string>)ViewBag.SaboresDisponiveis)
+                                {
+                                    <div class="col-md-6 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="sabor" id="sabor-@sabor" value="@sabor">
+                                            <label class="form-check-label" for="sabor-@sabor">
+                                                @sabor
+                                            </label>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <div class="mb-4">
+                        @if (!string.IsNullOrEmpty(Model.Descricao))
+                        {
+                            <p class="text-muted">@Model.Descricao</p>
+                        }
+
+                        @if (Model.Puffs > 0)
+                        {
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-smoking me-2 text-primary"></i>
+                                <span>@Model.Puffs puffs</span>
+                            </div>
+                        }
+
+                        @if (Model.CapacidadeBateria > 0)
+                        {
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-battery-three-quarters me-2 text-primary"></i>
+                                <span>@Model.CapacidadeBateria mAh</span>
+                            </div>
+                        }
+
+                        @if (Model.Estoque > 0)
+                        {
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-check-circle me-2 text-success"></i>
+                                <span>Disponível em estoque</span>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex mb-4">
+                        <a asp-controller="Carrinho" asp-action="Adicionar" asp-route-produtoId="@Model.Id"
+                           class="btn btn-primary btn-lg px-4 @(Model.Estoque <= 0 ? "disabled" : "")">
+                            @(Model.Estoque <= 0 ? "ESGOTADO" : "COMPRAR AGORA")
+                        </a>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-truck me-2"></i>
+                        Frete calculado no checkout
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="card-body">
-        <dl class="row">
-            <dt class="col-sm-3">Nome</dt>
-            <dd class="col-sm-9">@Model.Nome</dd>
 
-            <dt class="col-sm-3">Descrição</dt>
-            <dd class="col-sm-9">@Model.Descricao</dd>
+    <!-- Descrição e Detalhes -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    @if (!string.IsNullOrEmpty(Model.Descricao))
+                    {
+                        <h3 class="h4 fw-bold mb-3">Descrição do Produto</h3>
+                        <p>@Html.Raw(Model.Descricao.Replace("\n", "<br>"))</p>
+                    }
 
-            <dt class="col-sm-3">Preço</dt>
-            <dd class="col-sm-9">@Model.Preco.ToString("C")</dd>
+                    <!-- Especificações Técnicas -->
+                    <h3 class="h4 fw-bold mt-4 mb-3">Especificações Técnicas</h3>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                @if (Model.Puffs > 0)
+                                {
+                                    <tr>
+                                        <th scope="row" style="width: 30%">Puffs</th>
+                                        <td>@Model.Puffs</td>
+                                    </tr>
+                                }
 
-            <dt class="col-sm-3">Categoria</dt>
-            <dd class="col-sm-9">@Model.Categoria?.Nome</dd>
+                                @if (Model.CapacidadeBateria > 0)
+                                {
+                                    <tr>
+                                        <th scope="row">Capacidade da Bateria</th>
+                                        <td>@Model.CapacidadeBateria mAh</td>
+                                    </tr>
+                                }
 
-            <dt class="col-sm-3">Estoque</dt>
-            <dd class="col-sm-9">@Model.Estoque</dd>
+                                <tr>
+                                    <th scope="row">Tipo</th>
+                                    <td>Pod Descartável</td>
+                                </tr>
 
-            <dt class="col-sm-3">Data de Cadastro</dt>
-            <dd class="col-sm-9">@Model.DataCadastro.ToString("dd/MM/yyyy")</dd>
-
-            <dt class="col-sm-3">Status</dt>
-            <dd class="col-sm-9">@(Model.Ativo ? "Ativo" : "Inativo")</dd>
-        </dl>
+                                <tr>
+                                    <th scope="row">Disponibilidade</th>
+                                    <td>@(Model.Estoque > 0 ? "Em estoque" : "Esgotado")</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="card-footer">
-        <a asp-action="Editar" asp-route-id="@Model.Id" class="btn btn-warning">Editar</a>
-        <a asp-action="Index" class="btn btn-secondary">Voltar</a>
-    </div>
+
+    <!-- Produtos Relacionados -->
+    @if (ViewBag.ProdutosRelacionados != null && ((List<ProdutoModel>)ViewBag.ProdutosRelacionados).Any())
+    {
+        <div class="row mt-5">
+            <div class="col-12">
+                <h3 class="h4 fw-bold mb-4">Produtos Relacionados</h3>
+                <div class="row g-3">
+                    @foreach (var produto in (List<ProdutoModel>)ViewBag.ProdutosRelacionados)
+                    {
+                        <div class="col-sm-6 col-md-4 col-lg-3">
+                            <partial name="ProdutoCard" model="produto" />
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
 </div>
+
+@section Styles {
+    <style>
+        .card {
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-lg {
+            padding: 0.75rem 1.5rem;
+            font-size: 1.1rem;
+        }
+
+        .form-check-input:checked {
+            background-color: #6a11cb;
+            border-color: #6a11cb;
+        }
+
+        th {
+            background-color: #f8f9fa;
+        }
+    </style>
+}

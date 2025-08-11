@@ -12,5 +12,10 @@ namespace SitePodsInicial.Repository.Interface
         void Remover(int id);
         IEnumerable<ProdutoModel> ObterPorCategoria(int categoriaId);
         IEnumerable<ProdutoModel> ObterMaisVendidos(int quantidade);
+
+        List<ProdutoModel> FiltrarProdutos(FiltrosModel filtros);
+        List<string> ObterCategoriasDistintas();
+        List<string> ObterSaboresDistintos();
+        List<string> ObterCoresDistintas();
     }
 }

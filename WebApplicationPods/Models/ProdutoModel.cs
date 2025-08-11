@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
@@ -20,9 +21,13 @@ namespace SitePodsInicial.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal Preco { get; set; }
 
+        [Display(Name = "Preço Promocional")]
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? PrecoPromocional { get; set; }
+
         [Display(Name = "URL da Imagem")]
         [ValidateNever]
-        public string ImagemUrl { get; set; }  // Esta propriedade será mapeada para o banco
+        public string ImagemUrl { get; set; }
 
         [NotMapped]
         [Display(Name = "Imagem do Produto")]
@@ -39,13 +44,54 @@ namespace SitePodsInicial.Models
         [Range(0, int.MaxValue, ErrorMessage = "O estoque não pode ser negativo")]
         public int Estoque { get; set; } = 0;
 
+        [Display(Name = "Sabor")]
+        [StringLength(50)]
+        public string Sabor { get; set; }
+
+        [Display(Name = "Cor")]
+        [StringLength(30)]
+        public string Cor { get; set; }
+
+        [Display(Name = "Avaliação")]
+        [Range(0, 5)]
+        public double Avaliacao { get; set; } = 0;
+
+        [Display(Name = "Quantidade de Puffs")]
+        public int Puffs { get; set; }
+
+        [Display(Name = "Bateria (mAh)")]
+        public int CapacidadeBateria { get; set; }
+
         [Display(Name = "Data de Cadastro")]
-        [DataType(DataType.DateTime)]
         public DateTime DataCadastro { get; set; } = DateTime.Now;
 
+        [Display(Name = "Em Promoção?")]
+        public bool EmPromocao { get; set; }
+
+        [Display(Name = "Mais Vendido?")]
+        public bool MaisVendido { get; set; }
+
+        [Display(Name = "Ativo?")]
         public bool Ativo { get; set; } = true;
 
         [ValidateNever]
         public virtual ICollection<PedidoItemModel> PedidoItens { get; set; }
+
+        // Método para verificar se está em promoção
+        public bool EstaEmPromocao() => EmPromocao && PrecoPromocional.HasValue && PrecoPromocional < Preco;
+
+        // Método para calcular o preço com desconto à vista
+        public decimal PrecoAVista(decimal percentualDesconto = 0.1m)
+        {
+            var precoBase = EstaEmPromocao() ? PrecoPromocional.Value : Preco;
+            return precoBase * (1 - percentualDesconto);
+        }
+
+        // Método para calcular parcelamento
+        public decimal ValorParcela(int numeroParcelas)
+        {
+            var precoBase = EstaEmPromocao() ? PrecoPromocional.Value : Preco;
+            return precoBase / numeroParcelas;
+        }
     }
 }

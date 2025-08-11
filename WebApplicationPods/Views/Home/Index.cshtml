@@ -1,4 +1,4 @@
-﻿@model List<ProdutoModel>
+﻿@model SitePodsInicial.Models.ProdutoListagemViewModel
 
 <!-- Hero Section -->
 <div class="hero-section bg-light p-5 mb-5 text-center text-white" style="background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);">
@@ -8,24 +8,144 @@
     </div>
 </div>
 
-<!-- Produtos em Destaque -->
-<div class="container mb-5">
-    <h2 class="mb-4 text-center fw-bold">🔥 Produtos em Destaque</h2>
+<!-- Filtros e Ordenação -->
+<div class="container mb-4">
+    <div class="row">
+        <div class="col-md-12">
+            <form asp-action="Index" method="get" class="card p-3 mb-4 shadow-sm">
+                <div class="row g-3">
+                    <!-- Filtro de Categoria -->
+                    <div class="col-md-3">
+                        <label asp-for="Filtros.Categoria" class="form-label">Categoria</label>
+                        <select asp-for="Filtros.Categoria" class="form-select"
+                                asp-items="@(new SelectList(Model.Filtros.CategoriasDisponiveis))">
+                            <option value="">Todas Categorias</option>
+                        </select>
+                    </div>
 
+                    <!-- Filtro de Sabor -->
+                    <div class="col-md-3">
+                        <label asp-for="Filtros.Sabor" class="form-label">Sabor</label>
+                        <select asp-for="Filtros.Sabor" class="form-select"
+                                asp-items="@(new SelectList(Model.Filtros.SaboresDisponiveis))">
+                            <option value="">Todos Sabores</option>
+                        </select>
+                    </div>
+
+                    <!-- Filtro de Preço -->
+                    <div class="col-md-2">
+                        <label asp-for="Filtros.PrecoMin" class="form-label">Preço Mín</label>
+                        <input asp-for="Filtros.PrecoMin" type="number" class="form-control" placeholder="R$">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label asp-for="Filtros.PrecoMax" class="form-label">Preço Máx</label>
+                        <input asp-for="Filtros.PrecoMax" type="number" class="form-control" placeholder="R$">
+                    </div>
+
+                    <!-- Ordenação -->
+                    <div class="col-md-2">
+                        <label asp-for="Filtros.OrdenarPor" class="form-label">Ordenar por</label>
+                        <select asp-for="Filtros.OrdenarPor" class="form-select"
+                                asp-items="@(new SelectList(Model.Filtros.OpcoesOrdenacao, "Key", "Value"))">
+                        </select>
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="col-md-12 mt-3">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" asp-for="Filtros.ApenasPromocoes">
+                                    <label class="form-check-label" asp-for="Filtros.ApenasPromocoes">Promoções</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" asp-for="Filtros.ApenasEstoque">
+                                    <label class="form-check-label" asp-for="Filtros.ApenasEstoque">Em estoque</label>
+                                </div>
+                            </div>
+                            <div>
+                                <button type="submit" class="btn btn-primary me-2">
+                                    <i class="fas fa-filter"></i> Filtrar
+                                </button>
+                                <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times"></i> Limpar
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Produtos -->
+<div class="container mb-5">
     <div class="row g-4">
-        @if (Model != null && Model.Any())
+        @if (Model.Produtos != null && Model.Produtos.Any())
         {
-            @foreach (var produto in Model)
+            @foreach (var produto in Model.Produtos)
             {
                 <div class="col-sm-6 col-md-4 col-lg-3">
-                    <div class="card h-100 shadow-sm border-0 produto-card hover-shadow">
-                        <img src="@produto" class="card-img-top img-fluid rounded-top" alt="@produto.Nome" style="object-fit: cover; height: 200px;">
+                    <div class="card h-100 shadow-sm border-0 produto-card">
+                        <!-- Badges -->
+                        <div class="position-relative">
+                            @if (!string.IsNullOrEmpty(produto.ImagemUrl))
+                            {
+                                <img src="@Url.Content(produto.ImagemUrl)" class="card-img-top img-fluid rounded-top" alt="@produto.Nome" style="object-fit: cover; height: 200px;">
+                            }
+                            else
+                            {
+                                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                                    <i class="fas fa-image fa-3x text-secondary"></i>
+                                </div>
+                            }
+
+                            @if (produto.Estoque <= 0)
+                            {
+                                <span class="badge bg-danger position-absolute top-0 end-0 m-2">ESGOTADO</span>
+                            }
+                            else if (produto.EmPromocao)
+                            {
+                                <span class="badge bg-success position-absolute top-0 end-0 m-2">PROMOÇÃO</span>
+                            }
+                        </div>
+
                         <div class="card-body d-flex flex-column">
                             <h5 class="card-title fw-semibold">@produto.Nome</h5>
-                            <p class="card-text text-muted small flex-grow-1">@produto.Descricao</p>
-                            <p class="text-success fw-bold fs-5 mb-3">R$ @produto.Preco</p>
+                            <p class="card-text text-muted small flex-grow-1">
+                                <i class="fas fa-smoking me-1"></i> @produto.Puffs puffs<br>
+                                <i class="fas fa-battery-three-quarters me-1"></i> @produto.CapacidadeBateria mAh
+                            </p>
+
+                            <!-- Preço -->
+                            <div class="mb-2">
+                                @if (produto.EmPromocao && produto.PrecoPromocional.HasValue)
+                                {
+                                    <span class="text-decoration-line-through text-muted">@produto.Preco.ToString("C")</span>
+                                    <span class="text-success fw-bold fs-5 ms-2">@produto.PrecoPromocional.Value.ToString("C")</span>
+                                }
+                                else
+                                {
+                                    <span class="text-success fw-bold fs-5">@produto.Preco.ToString("C")</span>
+                                }
+                            </div>
+
+                            <!-- Parcelamento -->
+                            <p class="small text-muted mb-3">
+                                @{
+                                    var precoBase = produto.EmPromocao && produto.PrecoPromocional.HasValue ?
+                                    produto.PrecoPromocional.Value : produto.Preco;
+                                }
+                                2x de @((precoBase / 2).ToString("C")) sem juros<br>
+                                ou @((precoBase * 0.9m).ToString("C")) à vista (10% OFF)
+                            </p>
+
                             <a asp-controller="Carrinho" asp-action="Adicionar" asp-route-produtoId="@produto.Id"
-                               class="btn btn-primary w-100 mt-auto">Adicionar ao Carrinho</a>
+                               class="btn btn-primary w-100 mt-auto @(produto.Estoque <= 0 ? "disabled" : "")">
+                                @(produto.Estoque <= 0 ? "ESGOTADO" : "COMPRAR")
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -33,35 +153,57 @@
         }
         else
         {
-            <div class="col-12 text-center">
-                <p class="text-muted">Nenhum produto em destaque no momento.</p>
+            <div class="col-12 text-center py-5">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Nenhum produto encontrado com os filtros selecionados.
+                </div>
             </div>
         }
     </div>
 </div>
-
-<!-- Estilo extra opcional -->
+@section Styles{
 <style>
-    .produto-card:hover {
-        transform: translateY(-5px);
-        transition: transform 0.3s ease;
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15) !important;
+    .hero-section {
+        border-radius: 0 0 20px 20px;
     }
+
+    .produto-card {
+        transition: all 0.3s ease;
+        border-radius: 10px;
+    }
+
+        .produto-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+        }
 
     @("@media (max-width: 576px)") {
-        .hero-section
+        .hero-section {
+            padding: 3rem 1rem;
+        }
 
-    {
-        padding: 3rem 1rem;
-    }
+            .hero-section h1 {
+                font-size: 2rem;
+            }
 
-    .hero-section h1 {
-        font-size: 2rem;
-    }
-
-    .hero-section p {
-        font-size: 1.1rem;
-    }
-
+            .hero-section p {
+                font-size: 1.1rem;
+            }
     }
 </style>
+}
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Ativa tooltips
+            $('[data-bs-toggle="tooltip"]').tooltip();
+
+            // Submit do form quando alterar ordenação
+            $('#Filtros_OrdenarPor').change(function() {
+                $(this).closest('form').submit();
+            });
+        });
+    </script>
+}

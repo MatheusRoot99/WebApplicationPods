@@ -1,16 +1,50 @@
-using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using SitePodsInicial.Models;
+using SitePodsInicial.Repository.Interface;
+using System.Diagnostics;
 using SitePodsInicial.Models;
 
 namespace SitePodsInicial.Controllers
 {
     public class HomeController : Controller
     {
-        
+        private readonly IProdutoRepository _produtoRepository;
 
-        public IActionResult Index()
+
+        public HomeController(
+           IProdutoRepository produtoRepository) 
+        
+        
         {
-            return View();
+            
+            _produtoRepository = produtoRepository;
+        }
+        public IActionResult Index(FiltrosModel filtros)
+        {
+            var viewModel = new ProdutoListagemViewModel
+            {
+                Produtos = _produtoRepository.FiltrarProdutos(filtros), // Agora compatível
+                Filtros = new FiltrosModel
+                {
+                    // Preenche as listas para os dropdowns
+                    CategoriasDisponiveis = _produtoRepository.ObterCategoriasDistintas(),
+                    SaboresDisponiveis = _produtoRepository.ObterSaboresDistintos(),
+                    CoresDisponiveis = _produtoRepository.ObterCoresDistintas(),
+                    // Mantém os filtros selecionados
+                    Categoria = filtros.Categoria,
+                    Sabor = filtros.Sabor,
+                    Cor = filtros.Cor,
+                    PrecoMin = filtros.PrecoMin,
+                    PrecoMax = filtros.PrecoMax,
+                    AvaliacaoMin = filtros.AvaliacaoMin,
+                    ApenasPromocoes = filtros.ApenasPromocoes,
+                    ApenasEstoque = filtros.ApenasEstoque,
+                    OrdenarPor = filtros.OrdenarPor
+                }
+            };
+
+            return View(viewModel);
         }
 
         public IActionResult Privacy()

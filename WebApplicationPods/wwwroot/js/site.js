@@ -2,7 +2,7 @@
 // for details on configuring this project to bundle and minify static web assets.
 
 // Write your JavaScript code.
-/ Função de busca simples
+//Função de busca simples
 document.getElementById('searchInput')?.addEventListener('keyup', function () {
     const searchTerm = this.value.toLowerCase();
     document.querySelectorAll('.produto-card').forEach(card => {
