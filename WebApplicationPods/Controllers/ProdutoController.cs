@@ -9,6 +9,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using SitePodsInicial.Models;
 
 namespace SitePodsInicial.Controllers
 {
@@ -365,34 +366,41 @@ namespace SitePodsInicial.Controllers
 
         public IActionResult DetalhesProdutos(int id)
         {
-            try
+            var produto = _produtoRepository.ObterPorId(id);
+            if (produto == null)
             {
-                var produto = _produtoRepository.ObterPorId(id);
-                if (produto == null)
-                {
-                    TempData["MensagemErro"] = "Produto não encontrado";
-                    return RedirectToAction(nameof(Index));
-                }
+                return NotFound();
+            }
 
-                // Usando ViewBag para os dados adicionais
-                ViewBag.SaboresDisponiveis = _context.Produtos
-                    .Where(p => p.CategoriaId == produto.CategoriaId && p.Id != produto.Id)
-                    .Select(p => p.Nome)
-                    .Distinct()
-                    .ToList();
-
-                ViewBag.ProdutosRelacionados = _context.Produtos
+            // Crie o ViewModel e preencha com os dados necessários
+            var viewModel = new ProdutoDetalhesViewModel
+            {
+                Produto = produto,
+                SaboresDisponiveis = new List<string>
+        {
+            "Aloe Grape - Aloe Vera e Uva",
+            "Banana Coconut - Banana e Água de Coco",
+            "Banana Ice",
+            "Blueberry Ice - Mirtilo Ice",
+            "Blueberry Straw Coco - Mirtilo, Morango, Coco",
+            "Grape Ice - Uva Ice",
+            "Green Apple - Maçã Verde",
+            "Icy Mint - Menta Ice",
+            "Menthal - Menta e Hortelã Ice",
+            "Pineapple Ice - Abacaxi Ice",
+            "Strawberry Banana - Morango e Banana",
+            "Strawberry Ice - Morango Ice",
+            "Watermelon Ice - Melancia Ice"
+        },
+                ProdutosRelacionados = _context.Produtos
                     .Where(p => p.CategoriaId == produto.CategoriaId && p.Id != produto.Id)
                     .Take(4)
-                    .ToList();
+                    .ToList()
+            };
 
-                return View(produto);
-            }
-            catch (Exception ex)
-            {
-                TempData["MensagemErro"] = "Erro ao carregar detalhes do produto";
-                return RedirectToAction(nameof(Index));
-            }
+            return View("Detalhes", viewModel); // Passe o ViewModel para a view
         }
+
+
     }
 }

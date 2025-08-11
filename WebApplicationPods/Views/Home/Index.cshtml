@@ -89,6 +89,7 @@
             {
                 <div class="col-sm-6 col-md-4 col-lg-3">
                     <div class="card h-100 shadow-sm border-0 produto-card">
+                        <a asp-controller="Produto" asp-action="DetalhesProdutos" asp-route-id="@produto.Id" class="text-decoration-none">
                         <!-- Badges -->
                         <div class="position-relative">
                             @if (!string.IsNullOrEmpty(produto.ImagemUrl))
@@ -141,12 +142,13 @@
                                 2x de @((precoBase / 2).ToString("C")) sem juros<br>
                                 ou @((precoBase * 0.9m).ToString("C")) à vista (10% OFF)
                             </p>
-
+                              
                             <a asp-controller="Carrinho" asp-action="Adicionar" asp-route-produtoId="@produto.Id"
                                class="btn btn-primary w-100 mt-auto @(produto.Estoque <= 0 ? "disabled" : "")">
                                 @(produto.Estoque <= 0 ? "ESGOTADO" : "COMPRAR")
                             </a>
                         </div>
+                        </a>
                     </div>
                 </div>
             }

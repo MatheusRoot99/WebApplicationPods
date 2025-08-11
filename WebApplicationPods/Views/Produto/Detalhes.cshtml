@@ -1,220 +1,439 @@
-﻿@model SitePodsInicial.Models.ProdutoModel
-
+﻿@using Microsoft.IdentityModel.Tokens
+@model SitePodsInicial.Models.ProdutoDetalhesViewModel
 @{
-    ViewData["Title"] = Model.Nome;
+    ViewData["Title"] = Model.Produto.Nome;
 }
 
-<div class="container my-5">
+<link rel="stylesheet" href="~/css/produto-detalhes.css" asp-append-version="true" /> 
+
+<div class="container produto-detalhes">
+    <!-- Botão Voltar -->
+    <a href="javascript:history.back()" class="btn-voltar">
+        <i class="fas fa-arrow-left"></i> Voltar
+    </a>
+
+    <!-- Breadcrumb/Navegação -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb breadcrumb-custom">
+            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+            <li class="breadcrumb-item"><a href="#">Pods Descartáveis</a></li>
+            <li class="breadcrumb-item active" aria-current="page">@Model.Produto.Nome</li>
+        </ol>
+    </nav>
+
     <div class="row">
         <!-- Coluna da Imagem -->
-        <div class="col-md-6">
-            <div class="card mb-4 border-0 shadow-sm">
-                <div class="card-body p-4">
-                    @if (!string.IsNullOrEmpty(Model.ImagemUrl))
+        <div class="col-lg-6">
+            <div class="produto-imagem-card">
+                <div class="produto-imagem-container">
+                    @if (!string.IsNullOrEmpty(Model.Produto.ImagemUrl))
                     {
-                        <img src="@Url.Content(Model.ImagemUrl)" class="img-fluid rounded" alt="@Model.Nome" style="max-height: 400px; width: 100%; object-fit: contain;">
+                        <img src="@Url.Content(Model.Produto.ImagemUrl)" class="produto-imagem" alt="@Model.Produto.Nome">
                     }
                     else
                     {
-                        <div class="d-flex align-items-center justify-content-center bg-light" style="height: 400px;">
+                        <div class="d-flex align-items-center justify-content-center" style="height: 300px;">
                             <i class="fas fa-image fa-5x text-secondary"></i>
                         </div>
                     }
+
+                    <!-- Selos de garantia -->
+                    <div class="selos-garantia">
+                        <div class="selo-item">
+                            <i class="fas fa-shield-alt"></i>
+                            <p>Garantia 6 meses</p>
+                        </div>
+                        <div class="selo-item">
+                            <i class="fas fa-truck"></i>
+                            <p>Entrega Rápida</p>
+                        </div>
+                        <div class="selo-item">
+                            <i class="fas fa-credit-card"></i>
+                            <p>Pagamento Seguro</p>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Coluna de Informações -->
-        <div class="col-md-6">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body p-4">
-                    <h1 class="h2 fw-bold">@Model.Nome</h1>
+            <div class="produto-info-card">
+                <div class="produto-info-container">
+                    <h1 class="produto-titulo">@Model.Produto.Nome</h1>
 
-                    @if (Model.Estoque <= 0)
+                    <!-- Avaliação -->
+                    <div class="avaliacao">
+                        <div class="avaliacao-estrelas">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star-half-alt"></i>
+                        </div>
+                        <span class="avaliacao-texto">(42 avaliações)</span>
+                        <a href="#avaliacoes" class="avaliacao-texto ms-2">Ver avaliações</a>
+                    </div>
+
+                    @if (Model.Produto.Estoque <= 0)
                     {
                         <span class="badge bg-danger mb-3">ESGOTADO</span>
                     }
-                    else if (Model.PrecoPromocional.HasValue && Model.PrecoPromocional < Model.Preco)
+                    else if (Model.Produto.PrecoPromocional.HasValue && Model.Produto.PrecoPromocional < Model.Produto.Preco)
                     {
                         <span class="badge bg-success mb-3">PROMOÇÃO</span>
                     }
 
-                    <div class="mb-4">
-                        @if (Model.PrecoPromocional.HasValue && Model.PrecoPromocional < Model.Preco)
+                    <!-- Preço -->
+                    <div class="preco-container">
+                        @if (Model.Produto.PrecoPromocional.HasValue && Model.Produto.PrecoPromocional < Model.Produto.Preco)
                         {
-                            <span class="text-decoration-line-through text-muted h5">@Model.Preco.ToString("C")</span>
-                            <span class="text-success fw-bold h3 ms-2">@Model.PrecoPromocional.Value.ToString("C")</span>
+                            <div>
+                                <span class="preco-original">@Model.Produto.Preco.ToString("C")</span>
+                                <span class="preco-promocional">@Model.Produto.PrecoPromocional.Value.ToString("C")</span>
+                                <span class="desconto-badge text-white">@((int)(100 - (Model.Produto.PrecoPromocional.Value * 100 / Model.Produto.Preco)))% OFF</span>
+                            </div>
                         }
                         else
                         {
-                            <span class="text-success fw-bold h3">@Model.Preco.ToString("C")</span>
+                            <span class="preco-promocional">@Model.Produto.Preco.ToString("C")</span>
                         }
 
-                        <div class="text-muted small mt-1">
-                            @{
-                                var precoBase = Model.PrecoPromocional.HasValue && Model.PrecoPromocional < Model.Preco ?
-                                Model.PrecoPromocional.Value : Model.Preco;
-                            }
-                            2x de @((precoBase / 2).ToString("C")) sem juros<br>
-                            ou @((precoBase * 0.9m).ToString("C")) à vista (10% OFF)
+                        <div class="parcelamento">
+                            <i class="fas fa-credit-card me-1"></i> em até 5x de @((Model.Produto.Preco / 5).ToString("C")) sem juros<br>
+                            <i class="fas fa-barcode me-1"></i> ou @((Model.Produto.Preco * 0.9m).ToString("C")) à vista (10% OFF)
                         </div>
                     </div>
-
                     <!-- Seção de Sabores -->
-                    @if (ViewBag.SaboresDisponiveis != null && ((List<string>)ViewBag.SaboresDisponiveis).Any())
-                    {
-                        <div class="mb-4">
-                            <h4 class="h5 fw-bold mb-3">Escolha o sabor:</h4>
-                            <div class="row">
-                                @foreach (var sabor in (List<string>)ViewBag.SaboresDisponiveis)
+                    <div class="mb-4 sabores-container">
+                        <h4 class="sabores-titulo mb-4">Escolha o sabor:</h4>
+                        <div class="sabores-grid">
+                            @{
+                                var gruposSabores = new List<List<string>>();
+                                var currentGroup = new List<string>();
+
+                                foreach (var sabor in Model.SaboresDisponiveis)
                                 {
-                                    <div class="col-md-6 mb-2">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="sabor" id="sabor-@sabor" value="@sabor">
-                                            <label class="form-check-label" for="sabor-@sabor">
-                                                @sabor
+                                    currentGroup.Add(sabor);
+
+                                    if (currentGroup.Count == 3)
+                                    {
+                                        gruposSabores.Add(currentGroup);
+                                        currentGroup = new List<string>();
+                                    }
+                                }
+
+                                if (currentGroup.Any())
+                                {
+                                    gruposSabores.Add(currentGroup);
+                                }
+                            }
+
+                            @foreach (var grupo in gruposSabores)
+                            {
+                                <div class="sabor-row">
+                                    @foreach (var sabor in grupo)
+                                    {
+                                        <div class="sabor-option">
+                                            <input class="sabor-radio" type="radio" name="sabor" id="sabor-@sabor.GetHashCode()" value="@sabor">
+                                            <label class="sabor-label" for="sabor-@sabor.GetHashCode()">
+                                                @{
+                                                    var parts = sabor.Split(new[] { " - " }, StringSplitOptions.None);
+                                                    if (parts.Length > 1)
+                                                    {
+                                                        <span class="sabor-nome-ingles">@parts[0]</span>
+                                                        <span class="sabor-nome-pt">@parts[1]</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="sabor-nome-ingle">@sabor</span>
+                                                    }
+                                                }
                                             </label>
                                         </div>
-                                    </div>
+                                    }
+                                </div>
+
+                                @if (grupo != gruposSabores.Last())
+                                {
+                                    <div class="sabor-divider"></div>
                                 }
-                            </div>
+                            }
+
+                            @if (!Model.SaboresDisponiveis.Any())
+                            {
+                                <div class="sabor-empty">
+                                    <p>Nenhum sabor disponível no momento.</p>
+                                </div>
+                            }
                         </div>
-                    }
-
-                    <div class="mb-4">
-                        @if (!string.IsNullOrEmpty(Model.Descricao))
-                        {
-                            <p class="text-muted">@Model.Descricao</p>
-                        }
-
-                        @if (Model.Puffs > 0)
-                        {
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="fas fa-smoking me-2 text-primary"></i>
-                                <span>@Model.Puffs puffs</span>
-                            </div>
-                        }
-
-                        @if (Model.CapacidadeBateria > 0)
-                        {
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="fas fa-battery-three-quarters me-2 text-primary"></i>
-                                <span>@Model.CapacidadeBateria mAh</span>
-                            </div>
-                        }
-
-                        @if (Model.Estoque > 0)
-                        {
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="fas fa-check-circle me-2 text-success"></i>
-                                <span>Disponível em estoque</span>
-                            </div>
-                        }
                     </div>
 
-                    <div class="d-grid gap-2 d-md-flex mb-4">
-                        <a asp-controller="Carrinho" asp-action="Adicionar" asp-route-produtoId="@Model.Id"
-                           class="btn btn-primary btn-lg px-4 @(Model.Estoque <= 0 ? "disabled" : "")">
-                            @(Model.Estoque <= 0 ? "ESGOTADO" : "COMPRAR AGORA")
+                    <!-- Botão de compra -->
+                    <div class="d-grid gap-2 mb-3">
+                        <a asp-controller="Carrinho" asp-action="Adicionar" asp-route-produtoId="@Model.Produto.Id"
+                           class="btn btn-primary btn-comprar @(Model.Produto.Estoque <= 0 ? "disabled" : "")">
+                            <i class="fas fa-shopping-cart me-2"></i>
+                            @(Model.Produto.Estoque <= 0 ? "ESGOTADO" : "COMPRAR AGORA")
                         </a>
                     </div>
 
-                    <div class="alert alert-info">
-                        <i class="fas fa-truck me-2"></i>
-                        Frete calculado no checkout
+                    <!-- Garantia e Entrega -->
+                    <div class="alert alert-success garantia-alert mb-0">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-check-circle"></i>
+                            <div>
+                                <strong>Compra 100% segura</strong><br>
+                                Entrega rápida | Frete grátis para compras acima de R$ 200
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Descrição e Detalhes -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
+        </div>
+
+        <!-- Coluna de Informações -->
+        <div class="col-lg-6">
+            
+            <div class="descricao-card">
                 <div class="card-body p-4">
-                    @if (!string.IsNullOrEmpty(Model.Descricao))
-                    {
-                        <h3 class="h4 fw-bold mb-3">Descrição do Produto</h3>
-                        <p>@Html.Raw(Model.Descricao.Replace("\n", "<br>"))</p>
-                    }
+                    <h3 class="descricao-titulo">Descrição do Produto</h3>
+                    <p class="descricao-texto">@Model.Produto.Descricao</p>
 
-                    <!-- Especificações Técnicas -->
-                    <h3 class="h4 fw-bold mt-4 mb-3">Especificações Técnicas</h3>
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <tbody>
-                                @if (Model.Puffs > 0)
-                                {
-                                    <tr>
-                                        <th scope="row" style="width: 30%">Puffs</th>
-                                        <td>@Model.Puffs</td>
-                                    </tr>
-                                }
+                    <h4 class="descricao-titulo mt-4">Características:</h4>
+                    <ul class="caracteristicas-list">
+                        <li><strong>@Model.Produto.Puffs puffs</strong> <span>- Duração prolongada</span></li>
+                        <li><strong>@Model.Produto.CapacidadeBateria mAh</strong> <span>- Bateria de alta capacidade</span></li>
+                        <li><strong>Design ergonômico</strong> <span>- Confortável para uso diário</span></li>
+                        <li><strong>Variedade de sabores</strong> <span>- Experiência sensorial única</span></li>
+                        <li><strong>Recarregável</strong> <span>- Pode ser recarregado via USB</span></li>
+                    </ul>
+                </div>
+            </div>
 
-                                @if (Model.CapacidadeBateria > 0)
-                                {
-                                    <tr>
-                                        <th scope="row">Capacidade da Bateria</th>
-                                        <td>@Model.CapacidadeBateria mAh</td>
-                                    </tr>
-                                }
 
-                                <tr>
-                                    <th scope="row">Tipo</th>
-                                    <td>Pod Descartável</td>
-                                </tr>
-
-                                <tr>
-                                    <th scope="row">Disponibilidade</th>
-                                    <td>@(Model.Estoque > 0 ? "Em estoque" : "Esgotado")</td>
-                                </tr>
-                            </tbody>
-                        </table>
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="especificacoes-card">
+                        <div class="card-body p-4">
+                            <h3 class="especificacoes-titulo">Especificações Técnicas</h3>
+                            <div class="table-responsive">
+                                <table class="table especificacoes-table">
+                                    <tbody>
+                                        <tr>
+                                            <th scope="row">Modelo</th>
+                                            <td>@Model.Produto.Nome</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Puffs</th>
+                                            <td>@Model.Produto.Puffs puffs</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Capacidade da Bateria</th>
+                                            <td>@Model.Produto.CapacidadeBateria mAh</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Tipo</th>
+                                            <td>Pod Descartável Recarregável</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Sabores Disponíveis</th>
+                                            <td>13 opções</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Garantia</th>
+                                            <td>6 meses contra defeitos de fabricação</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Descrição do Produto -->
+            
         </div>
     </div>
 
-    <!-- Produtos Relacionados -->
-    @if (ViewBag.ProdutosRelacionados != null && ((List<ProdutoModel>)ViewBag.ProdutosRelacionados).Any())
+    <!-- Especificações Técnicas -->
+    
+
+   @*  <!-- Produtos Relacionados -->
+    @if (Model.ProdutosRelacionados != null && Model.ProdutosRelacionados.Any())
     {
-        <div class="row mt-5">
-            <div class="col-12">
-                <h3 class="h4 fw-bold mb-4">Produtos Relacionados</h3>
-                <div class="row g-3">
-                    @foreach (var produto in (List<ProdutoModel>)ViewBag.ProdutosRelacionados)
+        <div class="related-products">
+            <div class="container">
+                <h2 class="section-title">Você também pode gostar:</h2>
+                <div class="row g-4">
+                    @foreach (var produto in Model.ProdutosRelacionados)
                     {
                         <div class="col-sm-6 col-md-4 col-lg-3">
-                            <partial name="ProdutoCard" model="produto" />
+                            <div class="product-card">
+                                <!-- Imagem do produto com fallback caso não carregue -->
+                                <div class="product-card-image">
+                                    @if (!string.IsNullOrEmpty(produto.ImagemUrl))
+                                    {
+                                        <img src="@produto.ImagemUpload" alt="@produto.Nome" class="img-fluid">
+                                    }
+                                    else
+                                    {
+                                        <div class="product-card-image-placeholder">
+                                            @produto.Nome.Substring(0, Math.Min(produto.Nome.Length, 15))
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="product-card-body">
+                                    <h3 class="product-card-title">@produto.Nome</h3>
+
+                                    @if (!string.IsNullOrEmpty(produto.Descricao))
+                                    {
+                                        <p class="product-card-description">@produto.Descricao</p>
+                                    }
+
+                                    <div class="product-card-price">@produto.Preco.ToString("C")</div>
+
+                                    <button class="product-card-button">Adicionar</button>
+                                    <a href="@Url.Action("Detalhes", "Produtos", new { id = produto.Id })" class="product-card-details">Ver Detalhes</a>
+                                </div>
+                            </div>
                         </div>
                     }
                 </div>
             </div>
         </div>
-    }
+    } *@
+
+    <!-- Avaliações -->
+    <div class="row mt-5" id="avaliacoes">
+        <div class="col-12">
+            <div class="avaliacoes-card">
+                <div class="card-body p-4">
+                    <h3 class="avaliacoes-titulo">Avaliações dos Clientes</h3>
+
+                    <div class="row">
+                        <div class="col-md-4 text-center mb-4">
+                            <div class="avaliacao-numero">4.8</div>
+                            <div class="avaliacao-estrelas mb-2">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star-half-alt"></i>
+                            </div>
+                            <p class="avaliacao-texto">Baseado em 42 avaliações</p>
+                        </div>
+
+                        <div class="col-md-8">
+                            <!-- Avaliação 1 -->
+                            <div class="avaliacao-cliente">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <h5>Ótimo produto!</h5>
+                                    <div class="avaliacao-estrelas">
+                                        <i class="fas fa-star"></i>
+                                        <i class="fas fa-star"></i>
+                                        <i class="fas fa-star"></i>
+                                        <i class="fas fa-star"></i>
+                                        <i class="fas fa-star"></i>
+                                    </div>
+                                </div>
+                                <p class="text-muted">"Comprei o sabor Melancia Ice e adorei! Duração excelente e sabor muito bom."</p>
+                                <p class="avaliacao-texto">Por: João S. em 15/05/2023</p>
+                            </div>
+
+                            <!-- Avaliação 2 -->
+                            <div class="avaliacao-cliente">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <h5>Recomendo</h5>
+                                    <div class="avaliacao-estrelas">
+                                        <i class="fas fa-star"></i>
+                                        <i class="fas fa-star"></i>
+                                        <i class="fas fa-star"></i>
+                                        <i class="fas fa-star"></i>
+                                        <i class="fas fa-star"></i>
+                                    </div>
+                                </div>
+                                <p class="text-muted">"Já é meu segundo pod dessa marca. O sabor de Menta Ice é refrescante e dura bastante."</p>
+                                <p class="avaliacao-texto">Por: Maria L. em 10/05/2023</p>
+                            </div>
+
+                            <button class="btn btn-outline-primary">Ver todas as avaliações</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Perguntas Frequentes -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="faq-card">
+                <div class="card-body p-4">
+                    <h3 class="faq-titulo">Perguntas Frequentes</h3>
+
+                    <div class="accordion" id="faqAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingOne">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                                    Quantos puffs dura este pod?
+                                </button>
+                            </h2>
+                            <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    Este pod tem uma capacidade de aproximadamente @Model.Produto.Puffs puffs, variando de acordo com o estilo de uso de cada pessoa.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingTwo">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+                                    Posso recarregar este pod?
+                                </button>
+                            </h2>
+                            <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    Sim, este pod descartável possui entrada USB para recarga, permitindo aproveitar ao máximo os @Model.Produto.Puffs puffs.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingThree">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
+                                    Qual o prazo de entrega?
+                                </button>
+                            </h2>
+                            <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    O prazo de entrega varia de 3 a 7 dias úteis, dependendo da sua localização. Para a região Sudeste, normalmente chega em 3 dias úteis.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-@section Styles {
-    <style>
-        .card {
-            border-radius: 10px;
-            transition: all 0.3s ease;
-        }
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Inicializa tooltips
+            $('[data-bs-toggle="tooltip"]').tooltip();
 
-        .btn-lg {
-            padding: 0.75rem 1.5rem;
-            font-size: 1.1rem;
-        }
-
-        .form-check-input:checked {
-            background-color: #6a11cb;
-            border-color: #6a11cb;
-        }
-
-        th {
-            background-color: #f8f9fa;
-        }
-    </style>
+            // Scroll suave para as seções
+            $('a[href^="#"]').on('click', function(event) {
+                var target = $(this.getAttribute('href'));
+                if (target.length) {
+                    event.preventDefault();
+                    $('html, body').stop().animate({
+                        scrollTop: target.offset().top - 100
+                    }, 1000);
+                }
+            });
+        });
+    </script>
 }

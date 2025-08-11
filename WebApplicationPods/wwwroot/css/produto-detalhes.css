@@ -1,0 +1,563 @@
+﻿/* Estilos para a página de detalhes do produto */
+.produto-detalhes {
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+}
+
+/* Breadcrumb personalizado */
+.breadcrumb-custom {
+    background-color: transparent;
+    padding: 0.75rem 0;
+    font-size: 0.9rem;
+}
+
+    .breadcrumb-custom .breadcrumb-item + .breadcrumb-item::before {
+        content: ">";
+        color: #6c757d;
+    }
+
+    .breadcrumb-custom .breadcrumb-item.active {
+        color: #6a11cb;
+        font-weight: 500;
+    }
+
+/* Card de imagem do produto */
+.produto-imagem-card {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+    background-color: #fff;
+}
+
+.produto-imagem-container {
+    padding: 1.5rem;
+    text-align: center;
+    background-color: #f8f9fa;
+}
+
+.produto-imagem {
+    max-height: 400px;
+    width: auto;
+    object-fit: contain;
+    margin: 0 auto;
+}
+
+/* Selos de garantia */
+.selos-garantia {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.selo-item {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    text-align: center;
+    min-width: 120px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+    .selo-item i {
+        color: #6a11cb;
+        font-size: 1.25rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .selo-item p {
+        margin: 0;
+        font-size: 0.8rem;
+        color: #495057;
+    }
+
+/* Informações do produto */
+.produto-info-card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+    background-color: #fff;
+}
+
+.produto-info-container {
+    padding: 1.5rem;
+}
+
+.produto-titulo {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #212529;
+    margin-bottom: 1rem;
+}
+
+.avaliacao {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.avaliacao-estrelas {
+    color: #ffc107;
+    margin-right: 0.5rem;
+}
+
+.avaliacao-texto {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+/* Preço */
+.preco-container {
+    margin-bottom: 1.5rem;
+}
+
+.preco-original {
+    text-decoration: line-through;
+    color: #6c757d;
+    font-size: 1.25rem;
+}
+
+.preco-promocional {
+    color: #28a745;
+    font-weight: 700;
+    font-size: 1.75rem;
+    margin-left: 0.5rem;
+}
+
+.desconto-badge {
+    background-color: #dc3545;
+    font-size: 0.9rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    margin-left: 0.5rem;
+}
+
+.parcelamento {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+/* Sabores */
+.sabores-titulo {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #212529;
+}
+
+.sabor-option {
+    margin-bottom: 0.75rem;
+}
+
+    .sabor-option .form-check-input {
+        margin-top: 0.2rem;
+    }
+
+    .sabor-option .form-check-label {
+        font-size: 0.95rem;
+        color: #495057;
+    }
+
+/* Botão de compra */
+.btn-comprar {
+    padding: 0.75rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    margin-top: 1rem;
+    width: 100%;
+}
+
+/* Garantia */
+.garantia-alert {
+    border-radius: 8px;
+    margin-top: 1.5rem;
+    background-color: #f8f9fa;
+    border: none;
+}
+
+    .garantia-alert i {
+        color: #28a745;
+        font-size: 1.5rem;
+        margin-right: 1rem;
+    }
+
+/* Descrição e especificações */
+.descricao-card, .especificacoes-card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+    background-color: #fff;
+}
+
+.descricao-titulo, .especificacoes-titulo {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 1rem;
+}
+
+.descricao-texto {
+    color: #495057;
+    line-height: 1.6;
+}
+
+.caracteristicas-list {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+    .caracteristicas-list li {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        align-items: center;
+    }
+
+        .caracteristicas-list li:last-child {
+            border-bottom: none;
+        }
+
+        .caracteristicas-list li strong {
+            margin-right: 0.5rem;
+            color: #212529;
+        }
+
+/* Tabela de especificações */
+.especificacoes-table {
+    width: 100%;
+}
+
+    .especificacoes-table th {
+        background-color: #f8f9fa;
+        width: 30%;
+    }
+
+    .especificacoes-table td {
+        vertical-align: middle;
+    }
+
+/* Produtos relacionados */
+.produtos-relacionados-titulo {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+/* Avaliações */
+.avaliacoes-card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+    background-color: #fff;
+}
+
+.avaliacoes-titulo {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 1.5rem;
+}
+
+.avaliacao-media {
+    text-align: center;
+}
+
+.avaliacao-numero {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #6a11cb;
+}
+
+.avaliacao-cliente {
+    margin-bottom: 1.5rem;
+}
+
+    .avaliacao-cliente h5 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .avaliacao-cliente p {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-bottom: 0.25rem;
+    }
+
+/* FAQ */
+.faq-card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+    background-color: #fff;
+}
+
+.faq-titulo {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 1.5rem;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: rgba(106, 17, 203, 0.1);
+    color: #6a11cb;
+}
+
+.accordion-button:focus {
+    box-shadow: none;
+    border-color: rgba(0,0,0,.125);
+}
+
+/* Botão voltar */
+.btn-voltar {
+    background-color: #f8f9fa;
+    color: #6a11cb;
+    border: 1px solid #dee2e6;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+}
+
+    .btn-voltar i {
+        margin-right: 0.5rem;
+    }
+
+/* Responsivo */
+@media (max-width: 767.98px) {
+    .produto-titulo {
+        font-size: 1.5rem;
+    }
+
+    .preco-promocional {
+        font-size: 1.5rem;
+    }
+
+    .produto-imagem {
+        max-height: 300px;
+    }
+
+    .selos-garantia {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .selo-item {
+        width: 100%;
+        max-width: 200px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .produto-imagem {
+        max-height: 300px;
+    }
+
+    .produto-titulo {
+        font-size: 1.3rem;
+    }
+}
+.related-products {
+    padding: 40px 0;
+    background-color: #f9f9f9;
+}
+
+.product-card {
+    background-color: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+    .product-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+    }
+
+.product-card-image {
+    height: 180px;
+    background-color: #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+    .product-card-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        padding: 20px;
+    }
+
+.product-card-image-placeholder {
+    color: #757575;
+    text-align: center;
+    padding: 20px;
+    font-weight: bold;
+}
+
+.product-card-body {
+    padding: 20px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.product-card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #1e1e1e;
+    text-align: center;
+}
+
+.product-card-description {
+    font-size: 0.9rem;
+    color: #757575;
+    margin-bottom: 10px;
+    text-align: center;
+    flex-grow: 1;
+}
+
+.product-card-price {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #00c853;
+    text-align: center;
+    margin: 10px 0;
+}
+
+.product-card-button {
+    background-color: #00c853;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    width: 100%;
+    border-radius: 5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+    .product-card-button:hover {
+        background-color: #009624;
+    }
+
+.product-card-details {
+    display: block;
+    text-align: center;
+    margin-top: 10px;
+    color: #757575;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+    .product-card-details:hover {
+        color: #00c853;
+    }
+
+
+    .sabores-container {
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    .sabores-titulo {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #333;
+        text-align: center;
+    }
+    
+    .sabores-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .sabor-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+    }
+    
+    .sabor-option {
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .sabor-radio {
+        position: absolute;
+        opacity: 0;
+    }
+    
+    .sabor-radio:checked + .sabor-label {
+        background-color: #f0f7ff;
+        border-color: #4a90e2;
+    }
+    
+    .sabor-label {
+        display: flex;
+        flex-direction: column;
+        padding: 12px 15px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        height: 100%;
+    }
+    
+    .sabor-label:hover {
+        background-color: #f9f9f9;
+    }
+    
+    .sabor-nome-ingles {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 3px;
+        font-size: 0.95rem;
+    }
+    
+    .sabor-nome-pt {
+        font-size: 0.85rem;
+        color: #666;
+        font-style: italic;
+    }
+    
+    .sabor-divider {
+        height: 1px;
+        background-color: #eee;
+        margin: 10px 0;
+    }
+    
+    .sabor-empty {
+        text-align: center;
+        padding: 20px;
+        color: #999;
+    }
+    
+    @@media (max-width: 768px) {
+        .sabor-row {
+            grid-template-columns: 1fr;
+        }
+    }
