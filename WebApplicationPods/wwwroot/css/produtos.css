@@ -1,8 +1,21 @@
-﻿.hero-pods {
-    background: linear-gradient(135deg, #6e48aa 0%, #9d50bb 100%);
+﻿/* Estilos Gerais */
+:root {
+    --primary-color: #6e48aa;
+    --secondary-color: #9d50bb;
+    --light-gray: #f8f9fa;
+    --medium-gray: #e9ecef;
+    --dark-gray: #6c757d;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+}
+
+/* Hero Section */
+.hero-pods {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
     position: relative;
     overflow: hidden;
     border-radius: 0 0 20px 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
     .hero-pods::before {
@@ -18,20 +31,30 @@
 
 .hero-badge {
     display: inline-block;
-    background: rgba(255,255,255,0.2);
+    background: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(10px);
     padding: 8px 20px;
     border-radius: 50px;
     font-weight: 600;
     letter-spacing: 1px;
     font-size: 0.9rem;
+    text-transform: uppercase;
 }
 
-/* Estilos do Formulário */
-.bg-gradient-primary {
-    background: linear-gradient(to right, #6e48aa, #9d50bb);
+/* Card Principal */
+.card {
+    border: none;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    overflow: hidden;
 }
 
+.card-header {
+    background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+    border-bottom: none;
+}
+
+/* Formulário */
 .form-control, .form-select {
     border-radius: 8px;
     padding: 12px 15px;
@@ -40,8 +63,8 @@
 }
 
     .form-control:focus, .form-select:focus {
-        border-color: #9d50bb;
-        box-shadow: 0 0 0 0.25rem rgba(157, 80, 187, 0.25);
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 0 0.25rem rgba(157, 80, 187, 0.15);
     }
 
 .form-control-lg {
@@ -51,13 +74,16 @@
 .form-label {
     margin-bottom: 8px;
     font-size: 0.95rem;
+    color: var(--primary-color);
 }
 
 .input-group-text {
-    border-radius: 8px 0 0 8px !important;
+    background-color: var(--light-gray);
+    border-color: #e0e0e0;
+    color: var(--primary-color);
 }
 
-/* Estilo para upload de arquivo */
+/* Upload de Imagem */
 .file-upload-wrapper {
     position: relative;
     margin-bottom: 5px;
@@ -66,7 +92,7 @@
 .file-upload-label {
     display: block;
     padding: 12px 15px;
-    background-color: #f8f9fa;
+    background-color: var(--light-gray);
     border: 1px dashed #ced4da;
     border-radius: 8px;
     text-align: center;
@@ -75,12 +101,12 @@
 }
 
     .file-upload-label:hover {
-        background-color: #e9ecef;
-        border-color: #9d50bb;
+        background-color: var(--medium-gray);
+        border-color: var(--secondary-color);
     }
 
 .file-upload-text {
-    color: #6c757d;
+    color: var(--dark-gray);
 }
 
 #imagemUpload {
@@ -93,7 +119,7 @@
     cursor: pointer;
 }
 
-/* Switches personalizados */
+/* Switches Personalizados */
 .form-switch-lg .form-check-input {
     width: 3rem;
     height: 1.5rem;
@@ -102,29 +128,216 @@
 
 .form-switch-lg .form-check-label {
     margin-left: 0.5rem;
+    font-weight: 500;
 }
 
+/* Seção de Sabores */
+#saboresContainer {
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 15px;
+    background-color: var(--light-gray);
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.sabor-item {
+    display: inline-flex;
+    align-items: center;
+    margin: 0 8px 8px 0;
+    background-color: white;
+    border-radius: 20px;
+    padding: 5px 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    transition: all 0.2s;
+}
+
+    .sabor-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+.sabor-badge {
+    display: inline-flex;
+    align-items: center;
+    background-color: var(--primary-color);
+    color: white;
+    padding: 5px 12px;
+    border-radius: 20px;
+}
+
+.quantidade-badge {
+    background-color: white;
+    color: var(--primary-color);
+    margin-left: 8px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-weight: bold;
+}
+
+.remove-sabor {
+    cursor: pointer;
+    margin-left: 8px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    color: white;
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 0.8rem;
+}
+
+    .remove-sabor:hover {
+        opacity: 1;
+    }
+
+/* Barra de rolagem */
+#saboresContainer::-webkit-scrollbar {
+    width: 6px;
+}
+
+#saboresContainer::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+#saboresContainer::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 10px;
+}
+
+/* Botões */
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    padding: 10px 25px;
+    border-radius: 8px;
+    transition: all 0.3s;
+}
+
+    .btn-primary:hover {
+        background-color: var(--secondary-color);
+        border-color: var(--secondary-color);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(110, 72, 170, 0.3);
+    }
+
+.btn-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+    .btn-outline-primary:hover {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
 /* Responsividade */
-@media (max-width: 768px) {
+@media (max-width: 992px) {
     .hero-pods {
-        padding: 2rem 0;
         text-align: center;
     }
 
         .hero-pods h1 {
-            font-size: 2rem;
+            font-size: 2.2rem;
         }
 
     .card-body {
         padding: 1.5rem !important;
     }
+}
+
+@media (max-width: 768px) {
+    .hero-pods {
+        padding: 1.5rem 0;
+    }
+
+        .hero-pods h1 {
+            font-size: 1.8rem;
+        }
+
+    .form-row > .col-md-6 {
+        margin-bottom: 1.5rem;
+    }
 
     .d-flex {
-        flex-direction: column-reverse;
+        flex-direction: column;
         gap: 1rem;
     }
 
         .d-flex .btn {
             width: 100%;
         }
+
+    #saboresContainer {
+        max-height: none;
+    }
 }
+
+@media (max-width: 576px) {
+    .hero-pods h1 {
+        font-size: 1.5rem;
+    }
+
+    .hero-badge {
+        font-size: 0.8rem;
+        padding: 6px 15px;
+    }
+
+    .form-control, .form-select {
+        padding: 10px 12px;
+    }
+}
+
+
+/* Estilos para a seção de sabores */
+.sabor-item {
+    transition: all 0.3s ease;
+    border-left: 3px solid var(--primary-color);
+}
+
+    .sabor-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    }
+
+.remove-sabor {
+    opacity: 0.6;
+    transition: all 0.2s;
+}
+
+    .remove-sabor:hover {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+
+/* Estado vazio */
+#saboresSelecionadosList:empty {
+    display: none;
+}
+
+/* Ajustes de responsividade */
+@media (max-width: 768px) {
+    .sabor-item {
+        margin-bottom: 10px;
+    }
+
+    #saborSelect, #quantidadeInput {
+        margin-bottom: 10px;
+    }
+}
+
+/* Estilos para os toasts */
+.toast {
+    z-index: 1100;
+    opacity: 1;
+}
+
+/* Efeito de hover nos botões de remover sabor */
+.remove-sabor {
+    transition: all 0.2s ease;
+}
+
+    .remove-sabor:hover {
+        transform: scale(1.1);
+    }

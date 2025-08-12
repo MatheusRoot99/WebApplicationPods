@@ -1,4 +1,5 @@
-﻿@model SitePodsInicial.Models.ProdutoModel
+﻿@using Newtonsoft.Json
+@model SitePodsInicial.Models.ProdutoModel
 @{
     ViewData["Title"] = "Cadastrar Novo Pod";
     var categorias = ViewBag.Categorias as SelectList ?? new SelectList(new List<SelectListItem>());
@@ -49,6 +50,8 @@
             <form asp-action="Criar" enctype="multipart/form-data" class="needs-validation" novalidate>
                 <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-4"></div>
 
+                <input type="hidden" name="SaboresQuantidadesList" value='@JsonConvert.SerializeObject(Model.SaboresQuantidadesList)' />
+
                 <div class="row g-4">
                     <!-- Coluna Esquerda -->
                     <div class="col-lg-6">
@@ -69,17 +72,75 @@
                         </div>
 
                         <div class="row g-3">
-                            <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label asp-for="Sabor" class="form-label fw-bold text-primary"></label>
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-light"><i class="fas fa-ice-cream"></i></span>
-                                        <input asp-for="Sabor" class="form-control" placeholder="Ex: Morango, Menta" />
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <label class="form-label fw-bold text-primary h5">Sabores e Quantidades</label>
+                                        <span class="badge bg-primary">
+                                            <i class="fas fa-ice-cream me-1"></i>
+                                            <span id="totalSabores">@Model.SaboresQuantidadesList?.Count ?? 0</span> sabores
+                                        </span>
                                     </div>
-                                    <span asp-validation-for="Sabor" class="text-danger small"></span>
+
+                                    <div class="card border-0 shadow-sm mb-3">
+                                        <div class="card-body p-3">
+                                            <div class="row g-2 align-items-center">
+                                                <div class="col-md-7">
+                                                    <select class="form-select" id="saborSelect">
+                                                        <option value="">Selecione um sabor...</option>
+                                                        @foreach (var sabor in Model.TodosSabores)
+                                                        {
+                                                            <option value="@sabor.Value" data-text="@sabor.Text">@sabor.Text</option>
+                                                        }
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <input type="number" min="1" value="1" class="form-control" id="quantidadeInput" placeholder="Qtd">
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <button type="button" class="btn btn-primary w-100" id="addSaborBtn">
+                                                        <i class="fas fa-plus-circle me-1"></i> Add
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div id="saboresSelecionadosList" class="mb-3">
+                                        @if (Model.SaboresQuantidadesList != null && Model.SaboresQuantidadesList.Any())
+                                        {
+                                            foreach (var sq in Model.SaboresQuantidadesList)
+                                            {
+                                                <div class="card mb-2 border-0 shadow-sm sabor-item">
+                                                    <div class="card-body py-2 px-3">
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <div>
+                                                                <span class="fw-bold text-primary">@sq.Sabor</span>
+                                                                <span class="badge bg-light text-primary ms-2">@sq.Quantidade un.</span>
+                                                            </div>
+                                                            <button type="button" class="btn btn-sm btn-link text-danger remove-sabor">
+                                                                <i class="fas fa-trash-alt"></i>
+                                                            </button>
+                                                        </div>
+                                                        <input type="hidden" name="SaboresQuantidadesList"
+                                                               value='@Json.Serialize(new { Sabor = sq.Sabor, Quantidade = sq.Quantidade })'>
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <div class="alert alert-light border text-center py-4">
+                                                <i class="fas fa-ice-cream fa-2x text-muted mb-3"></i>
+                                                <p class="mb-0 text-muted">Nenhum sabor adicionado ainda</p>
+                                            </div>
+                                        }
+                                    </div>
+
+                                    <div class="text-muted small">
+                                        <i class="fas fa-info-circle me-1"></i> Adicione os sabores disponíveis e suas quantidades
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
+                            
                                 <div class="mb-4">
                                     <label asp-for="Cor" class="form-label fw-bold text-primary"></label>
                                     <div class="input-group">
@@ -88,7 +149,7 @@
                                     </div>
                                     <span asp-validation-for="Cor" class="text-danger small"></span>
                                 </div>
-                            </div>
+                            
                         </div>
                     </div>
 
@@ -125,7 +186,9 @@
                                                placeholder="0.00"
                                                required
                                                type="text"
-                                               inputmode="decimal" />
+                                               value=""
+                                               inputmode="decimal"
+                                                /> <!-- Remova qualquer value inicial -->
                                     </div>
                                     <span asp-validation-for="Preco" class="text-danger small"></span>
                                 </div>
@@ -140,6 +203,7 @@
                                                placeholder="0.00"
                                                type="text"
                                                inputmode="decimal" />
+
                                     </div>
                                     <span asp-validation-for="PrecoPromocional" class="text-danger small"></span>
                                 </div>
@@ -236,33 +300,12 @@
 
 @section Scripts {
     <script>
-        $(document).ready(function () {
+        $(document).ready(function() {
             // Máscara para campos monetários
             $('.money-mask').mask('#.##0,00', { reverse: true });
-
-            // Ativa/desativa preço promocional baseado no checkbox
-            $('#emPromocaoSwitch').change(function() {
-                const isChecked = $(this).is(':checked');
-                $('#precoPromocional').prop('disabled', !isChecked);
-
-                if (isChecked) {
-                    $('#precoPromocional').closest('.mb-4').find('.input-group-text').addClass('text-primary');
-                } else {
-                    $('#precoPromocional').closest('.mb-4').find('.input-group-text').removeClass('text-primary');
-                }
-            }).trigger('change');
-
-            // Mostrar nome do arquivo selecionado
-            $('#imagemUpload').change(function() {
-                const fileName = $(this).val().split('\\').pop();
-                if (fileName) {
-                    $('.file-upload-text').text(fileName);
-                    $('.file-upload-label').addClass('border-primary');
-                } else {
-                    $('.file-upload-text').text('Escolha uma imagem...');
-                    $('.file-upload-label').removeClass('border-primary');
-                }
-            });
-        });
+        }); // Fechamento adicionado aqui
     </script>
+
+    <!-- Inclui o arquivo JS separado -->
+    <script src="~/js/produto-form.js" asp-append-version="true"></script>
 }

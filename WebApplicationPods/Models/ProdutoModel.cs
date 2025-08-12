@@ -1,7 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Newtonsoft.Json;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System.Text.Json;
 
 namespace SitePodsInicial.Models
 {
@@ -46,7 +49,8 @@ namespace SitePodsInicial.Models
 
         [Display(Name = "Sabor")]
         [StringLength(50)]
-        public string Sabor { get; set; }
+        [ValidateNever]
+        public string Sabor { get; set; } = string.Empty;
 
         [Display(Name = "Cor")]
         [StringLength(30)]
@@ -92,6 +96,64 @@ namespace SitePodsInicial.Models
         {
             var precoBase = EstaEmPromocao() ? PrecoPromocional.Value : Preco;
             return precoBase / numeroParcelas;
+        }
+
+
+        // ... outras propriedades existentes ...
+
+        [Display(Name = "Sabores Disponíveis")]
+        [ValidateNever] // Adicione esta anotação para evitar validação
+        public string SaboresDisponiveis { get; set; } = string.Empty;// Armazenará os sabores como JSON
+
+        [Display(Name = "Sabores e Quantidades")]
+        [Column("SaboresQuantidades")] // Especifica o nome da coluna
+        public string SaboresQuantidades { get; set; }
+
+        [NotMapped]
+        [ValidateNever]
+        public List<SaborQuantidade> SaboresQuantidadesList { get; set; } = new List<SaborQuantidade>();
+
+        [NotMapped]
+        [ValidateNever] // Adicione esta anotação para evitar validação
+        public List<string> SaboresSelecionados { get; set; } = new List<string>();
+
+        [NotMapped]
+        [ValidateNever] // Adicione esta anotação para evitar validação
+        public List<SelectListItem> TodosSabores { get; set; } = new List<SelectListItem>();
+
+        // Substitua a classe SaborQuantidade por:
+        public class SaborQuantidade
+        {
+            public string Sabor { get; set; } = string.Empty;
+            public int Quantidade { get; set; } = 0;
+
+            public SaborQuantidade() { }
+
+            public SaborQuantidade(string sabor, int quantidade)
+            {
+                Sabor = sabor;
+                Quantidade = quantidade;
+            }
+        }
+
+        // Atualize os métodos de serialização:
+        public void SerializarSaboresQuantidades()
+        {
+            SaboresQuantidades = JsonConvert.SerializeObject(SaboresQuantidadesList ?? new List<SaborQuantidade>());
+        }
+
+        public void DeserializarSaboresQuantidades()
+        {
+            try
+            {
+                SaboresQuantidadesList = !string.IsNullOrEmpty(SaboresQuantidades)
+                    ? JsonConvert.DeserializeObject<List<SaborQuantidade>>(SaboresQuantidades)
+                    : new List<SaborQuantidade>();
+            }
+            catch
+            {
+                SaboresQuantidadesList = new List<SaborQuantidade>();
+            }
         }
     }
 }
