@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Hosting;
+using Newtonsoft.Json;
 using SitePodsInicial.Data;
+using SitePodsInicial.Models;
 using SitePodsInicial.Models;
 using SitePodsInicial.Repository.Interface;
 using System;
@@ -9,8 +11,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using SitePodsInicial.Models;
-using Newtonsoft.Json;
+using static SitePodsInicial.Models.ProdutoModel;
 
 namespace SitePodsInicial.Controllers
 {
@@ -386,9 +387,13 @@ namespace SitePodsInicial.Controllers
             }
 
             var saboresDisponiveis = produto.SaboresQuantidadesList?
-                .Where(sq => sq.Quantidade > 0)
-                .Select(sq => sq.Sabor)
-                .ToList() ?? new List<string>();
+    .Where(sq => sq.Quantidade > 0)
+    .Select(sq => new ProdutoModel.SaborQuantidade
+    {
+        Sabor = sq.Sabor,
+        Quantidade = sq.Quantidade
+    })
+    .ToList();
 
             var viewModel = new ProdutoDetalhesViewModel
             {
@@ -402,8 +407,6 @@ namespace SitePodsInicial.Controllers
 
             return View("Detalhes", viewModel);
         }
-
-
 
     }
 }

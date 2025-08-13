@@ -115,24 +115,29 @@
                 <div class="flavors-responsive-grid">
                     @foreach (var sabor in Model.SaboresDisponiveis)
                     {
+                        var saborId = "flavor-" + sabor.Sabor.GetHashCode();
+                        var parts = sabor.Sabor.Split(new[] { " - " }, StringSplitOptions.None);
+
                         <div class="flavor-card">
-                            <input type="radio" name="flavor" id="flavor-@sabor.GetHashCode()" value="@sabor" class="flavor-radio">
-                            <label for="flavor-@sabor.GetHashCode()" class="flavor-label">
-                                @{
-                                    var parts = sabor.Split(new[] { " - " }, StringSplitOptions.None);
-                                    if (parts.Length > 1)
-                                    {
-                                        <span class="flavor-name-en">@parts[0]</span>
-                                        <span class="flavor-name-pt">@parts[1]</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="flavor-name-en">@sabor</span>
-                                    }
+                            <input type="radio" name="flavor" id="@saborId" value="@sabor.Sabor" class="flavor-radio"
+                                   data-estoque="@sabor.Quantidade" />
+                            <label for="@saborId" class="flavor-label">
+                                @if (parts.Length > 1)
+                                {
+                                    <span class="flavor-name-en">@parts[0]</span>
+                                    <span class="flavor-name-pt">@parts[1]</span>
+                                }
+                                else
+                                {
+                                    <span class="flavor-name-en">@sabor.Sabor</span>
                                 }
                             </label>
                         </div>
                     }
+                    <div class="mt-3 text-muted" id="estoque-info" style="display:none;">
+                        <i class="fas fa-boxes me-2"></i>
+                        Estoque disponível: <span id="estoque-quantidade" class="fw-bold"></span> unidades
+                    </div>
                 </div>
 
                 @if (!Model.SaboresDisponiveis.Any())
@@ -434,19 +439,31 @@
                         });
                     }
 
-                    // Captura do sabor selecionado
-                    const flavorRadios = document.querySelectorAll('.flavor-radio');
-                    const saborSelecionado = document.getElementById('saborSelecionado');
+                                    // Captura do sabor selecionado e exibe o estoque
+                        const flavorRadios = document.querySelectorAll('.flavor-radio');
+                        const saborSelecionado = document.getElementById('saborSelecionado');
+                        const estoqueInfo = document.getElementById('estoque-info');
+                        const estoqueQuantidade = document.getElementById('estoque-quantidade');
 
-                    if (flavorRadios.length && saborSelecionado) {
-                        flavorRadios.forEach(radio => {
-                            radio.addEventListener('change', function() {
-                                if (this.checked) {
-                                    saborSelecionado.value = this.value;
-                                }
-                            });
-                        });
-                    }
+                        if (flavorRadios.length && saborSelecionado) {
+                                 flavorRadios.forEach(radio => {
+                                    radio.addEventListener('change', function () {
+                                        if (this.checked) {
+                                            saborSelecionado.value = this.value;
+
+                                            const estoque = this.getAttribute('data-estoque');
+                                            if (estoqueInfo && estoqueQuantidade) {
+                                                estoqueQuantidade.textContent = estoque;
+                                                estoqueInfo.style.display = 'block';
+                                            }
+                                        } else {
+                                            estoqueInfo.style.display = 'none';
+                                            estoqueQuantidade.textContent = '';
+                                        }
+                                    });
+                                });
+                        }
+
 
                     // Validação antes de adicionar ao carrinho
                     const addToCartForm = document.querySelector('form[asp-controller="Carrinho"]');
@@ -474,4 +491,39 @@
                     }
                 });
     </script>
+            <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                    const radios = document.querySelectorAll(".flavor-radio");
+                    const estoqueInfo = document.getElementById("estoque-info");
+                    const estoqueQuantidade = document.getElementById("estoque-quantidade");
+                    const inputSaborSelecionado = document.getElementById("saborSelecionado");
+
+                    function atualizarEstoque() {
+                        const selecionado = document.querySelector(".flavor-radio:checked");
+                        if (selecionado) {
+                            const estoque = selecionado.getAttribute("data-estoque");
+                            estoqueQuantidade.textContent = estoque;
+                            estoqueInfo.style.display = "block";
+
+                            // Atualiza o input hidden do sabor selecionado para envio no form
+                            if (inputSaborSelecionado) {
+                                inputSaborSelecionado.value = selecionado.value;
+                            }
+                        } else {
+                            estoqueInfo.style.display = "none";
+                            estoqueQuantidade.textContent = "";
+                            if (inputSaborSelecionado) {
+                                inputSaborSelecionado.value = "";
+                            }
+                        }
+                    }
+
+                    radios.forEach(radio => {
+                        radio.addEventListener("change", atualizarEstoque);
+                    });
+
+                    // Opcional: atualiza o estoque ao carregar a página se algum sabor já estiver selecionado
+                    atualizarEstoque();
+                });
+            </script>
 }

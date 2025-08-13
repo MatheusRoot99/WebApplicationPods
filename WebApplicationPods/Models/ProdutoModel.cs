@@ -4,7 +4,6 @@ using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json;
 
 namespace SitePodsInicial.Models
 {
@@ -81,29 +80,7 @@ namespace SitePodsInicial.Models
         [ValidateNever]
         public virtual ICollection<PedidoItemModel> PedidoItens { get; set; }
 
-        // Método para verificar se está em promoção
-        public bool EstaEmPromocao() => EmPromocao && PrecoPromocional.HasValue && PrecoPromocional < Preco;
-
-        // Método para calcular o preço com desconto à vista
-        public decimal PrecoAVista(decimal percentualDesconto = 0.1m)
-        {
-            var precoBase = EstaEmPromocao() ? PrecoPromocional.Value : Preco;
-            return precoBase * (1 - percentualDesconto);
-        }
-
-        // Método para calcular parcelamento
-        public decimal ValorParcela(int numeroParcelas)
-        {
-            var precoBase = EstaEmPromocao() ? PrecoPromocional.Value : Preco;
-            return precoBase / numeroParcelas;
-        }
-
-
-        // ... outras propriedades existentes ...
-
-        [Display(Name = "Sabores Disponíveis")]
-        [ValidateNever] // Adicione esta anotação para evitar validação
-        public string SaboresDisponiveis { get; set; } = string.Empty;// Armazenará os sabores como JSON
+        // ======= Sabores com Quantidade =======
 
         [Display(Name = "Sabores e Quantidades")]
         [Column("SaboresQuantidades")]
@@ -115,31 +92,33 @@ namespace SitePodsInicial.Models
         public List<SaborQuantidade> SaboresQuantidadesList { get; set; } = new List<SaborQuantidade>();
 
         [NotMapped]
-        [ValidateNever] // Adicione esta anotação para evitar validação
+        [ValidateNever]
+        public List<SaborQuantidade> SaboresDisponiveis { get; set; } = new List<SaborQuantidade>();
+
+        [NotMapped]
+        [ValidateNever]
         public List<string> SaboresSelecionados { get; set; } = new List<string>();
 
         [NotMapped]
-        [ValidateNever] // Adicione esta anotação para evitar validação
+        [ValidateNever]
         public List<SelectListItem> TodosSabores { get; set; } = new List<SelectListItem>();
 
-        // Substitua a classe SaborQuantidade por:
-        public class SaborQuantidade
+        // ======= Métodos Auxiliares =======
+
+        public bool EstaEmPromocao() => EmPromocao && PrecoPromocional.HasValue && PrecoPromocional < Preco;
+
+        public decimal PrecoAVista(decimal percentualDesconto = 0.1m)
         {
-            [JsonProperty("sabor")] // Adicione isso se os nomes forem diferentes
-            public string Sabor { get; set; } = string.Empty;
-            [JsonProperty("quantidade")]
-            public int Quantidade { get; set; } = 0;
-
-            public SaborQuantidade() { }
-
-            public SaborQuantidade(string sabor, int quantidade)
-            {
-                Sabor = sabor;
-                Quantidade = quantidade;
-            }
+            var precoBase = EstaEmPromocao() ? PrecoPromocional.Value : Preco;
+            return precoBase * (1 - percentualDesconto);
         }
 
-        // Atualize os métodos de serialização:
+        public decimal ValorParcela(int numeroParcelas)
+        {
+            var precoBase = EstaEmPromocao() ? PrecoPromocional.Value : Preco;
+            return precoBase / numeroParcelas;
+        }
+
         public void SerializarSaboresQuantidades()
         {
             SaboresQuantidades = JsonConvert.SerializeObject(SaboresQuantidadesList ?? new List<SaborQuantidade>());
@@ -159,7 +138,6 @@ namespace SitePodsInicial.Models
             }
         }
 
-        // Método para validar sabores e quantidades
         public bool ValidarSaboresQuantidades()
         {
             if (SaboresQuantidadesList == null || SaboresQuantidadesList.Count == 0)
@@ -167,6 +145,25 @@ namespace SitePodsInicial.Models
 
             return SaboresQuantidadesList.All(sq =>
                 !string.IsNullOrWhiteSpace(sq.Sabor) && sq.Quantidade > 0);
+        }
+
+        // ======= Classe Interna =======
+
+        public class SaborQuantidade
+        {
+            [JsonProperty("sabor")]
+            public string Sabor { get; set; } = string.Empty;
+
+            [JsonProperty("quantidade")]
+            public int Quantidade { get; set; } = 0;
+
+            public SaborQuantidade() { }
+
+            public SaborQuantidade(string sabor, int quantidade)
+            {
+                Sabor = sabor;
+                Quantidade = quantidade;
+            }
         }
     }
 }
