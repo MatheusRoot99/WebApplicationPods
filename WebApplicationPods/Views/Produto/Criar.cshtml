@@ -50,7 +50,7 @@
             <form asp-action="Criar" enctype="multipart/form-data" class="needs-validation" novalidate>
                 <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-4"></div>
 
-                <input type="hidden" name="SaboresQuantidadesList" value='@JsonConvert.SerializeObject(Model.SaboresQuantidadesList)' />
+               
 
                 <div class="row g-4">
                     <!-- Coluna Esquerda -->
@@ -72,74 +72,76 @@
                         </div>
 
                         <div class="row g-3">
-                                <div class="mb-4">
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <label class="form-label fw-bold text-primary h5">Sabores e Quantidades</label>
-                                        <span class="badge bg-primary">
-                                            <i class="fas fa-ice-cream me-1"></i>
-                                            <span id="totalSabores">@Model.SaboresQuantidadesList?.Count ?? 0</span> sabores
-                                        </span>
-                                    </div>
+                            <!-- Substitua a seção de Sabores e Quantidades por este código -->
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <label class="form-label fw-bold text-primary h5">Sabores e Quantidades</label>
+                                    <span class="badge bg-primary">
+                                        <i class="fas fa-ice-cream me-1"></i>
+                                        <span id="totalSabores">@Model.SaboresQuantidadesList?.Count ?? 0</span> sabores
+                                        <span id="totalEstoque" class="ms-2">(@Model.SaboresQuantidadesList?.Sum(sq => sq.Quantidade) ?? 0 un.)</span>
+                                    </span>
+                                </div>
 
-                                    <div class="card border-0 shadow-sm mb-3">
-                                        <div class="card-body p-3">
-                                            <div class="row g-2 align-items-center">
-                                                <div class="col-md-7">
-                                                    <select class="form-select" id="saborSelect">
-                                                        <option value="">Selecione um sabor...</option>
-                                                        @foreach (var sabor in Model.TodosSabores)
-                                                        {
-                                                            <option value="@sabor.Value" data-text="@sabor.Text">@sabor.Text</option>
-                                                        }
-                                                    </select>
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <input type="number" min="1" value="1" class="form-control" id="quantidadeInput" placeholder="Qtd">
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <button type="button" class="btn btn-primary w-100" id="addSaborBtn">
-                                                        <i class="fas fa-plus-circle me-1"></i> Add
-                                                    </button>
-                                                </div>
+                                <div class="card border-0 shadow-sm mb-3">
+                                    <div class="card-body p-3">
+                                        <div class="row g-2 align-items-center">
+                                            <div class="col-md-7">
+                                                <select class="form-select" id="saborSelect">
+                                                    <option value="">Selecione um sabor...</option>
+                                                    @foreach (var sabor in Model.TodosSabores)
+                                                    {
+                                                        <option value="@sabor.Value">@sabor.Text</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <input type="number" min="1" value="1" class="form-control" id="quantidadeInput" placeholder="Qtd">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <button type="button" class="btn btn-primary w-100" id="addSaborBtn">
+                                                    <i class="fas fa-plus-circle me-1"></i> Add
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div id="saboresSelecionadosList" class="mb-3">
-                                        @if (Model.SaboresQuantidadesList != null && Model.SaboresQuantidadesList.Any())
+                                <div id="saboresSelecionadosList" class="mb-3">
+                                    @if (Model.SaboresQuantidadesList != null && Model.SaboresQuantidadesList.Any())
+                                    {
+                                        foreach (var sq in Model.SaboresQuantidadesList)
                                         {
-                                            foreach (var sq in Model.SaboresQuantidadesList)
-                                            {
-                                                <div class="card mb-2 border-0 shadow-sm sabor-item">
-                                                    <div class="card-body py-2 px-3">
-                                                        <div class="d-flex justify-content-between align-items-center">
-                                                            <div>
-                                                                <span class="fw-bold text-primary">@sq.Sabor</span>
-                                                                <span class="badge bg-light text-primary ms-2">@sq.Quantidade un.</span>
-                                                            </div>
-                                                            <button type="button" class="btn btn-sm btn-link text-danger remove-sabor">
-                                                                <i class="fas fa-trash-alt"></i>
-                                                            </button>
+                                            <div class="card mb-2 border-0 shadow-sm sabor-item" data-sabor="@sq.Sabor">
+                                                <div class="card-body py-2 px-3">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <span class="fw-bold text-primary">@sq.Sabor</span>
+                                                            <span class="badge bg-light text-primary ms-2">@sq.Quantidade un.</span>
                                                         </div>
-                                                        <input type="hidden" name="SaboresQuantidadesList"
-                                                               value='@Json.Serialize(new { Sabor = sq.Sabor, Quantidade = sq.Quantidade })'>
+                                                        <button type="button" class="btn btn-sm btn-link text-danger remove-sabor">
+                                                            <i class="fas fa-trash-alt"></i>
+                                                        </button>
                                                     </div>
+                                                    <input type="hidden" name="SaboresQuantidadesList"
+                                                           value='@JsonConvert.SerializeObject(new { Sabor = sq.Sabor, Quantidade = sq.Quantidade })'>
                                                 </div>
-                                            }
-                                        }
-                                        else
-                                        {
-                                            <div class="alert alert-light border text-center py-4">
-                                                <i class="fas fa-ice-cream fa-2x text-muted mb-3"></i>
-                                                <p class="mb-0 text-muted">Nenhum sabor adicionado ainda</p>
                                             </div>
                                         }
-                                    </div>
-
-                                    <div class="text-muted small">
-                                        <i class="fas fa-info-circle me-1"></i> Adicione os sabores disponíveis e suas quantidades
-                                    </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="alert alert-light border text-center py-4">
+                                            <i class="fas fa-ice-cream fa-2x text-muted mb-3"></i>
+                                            <p class="mb-0 text-muted">Nenhum sabor adicionado ainda</p>
+                                        </div>
+                                    }
                                 </div>
+
+                                <div class="text-muted small">
+                                    <i class="fas fa-info-circle me-1"></i> Adicione os sabores disponíveis e suas quantidades
+                                </div>
+                            </div>
                             
                                 <div class="mb-4">
                                     <label asp-for="Cor" class="form-label fw-bold text-primary"></label>

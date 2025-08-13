@@ -102,18 +102,19 @@ namespace SitePodsInicial.Controllers
         {
             try
             {
-                // 1. Processar os sabores e quantidades primeiro
+                // 1. Processar Sabores e Quantidades a partir do form
                 var saboresList = new List<ProdutoModel.SaborQuantidade>();
+                produto.SaboresQuantidadesList = saboresList;
 
-                if (Request.Form.TryGetValue("SaboresQuantidadesList", out var saboresQuantidades))
+                if (Request.Form.TryGetValue("SaboresQuantidadesList", out var valoresForm))
                 {
-                    foreach (var sq in saboresQuantidades)
+                    foreach (var item in valoresForm)
                     {
-                        try
+                        if (!string.IsNullOrWhiteSpace(item))
                         {
-                            if (!string.IsNullOrEmpty(sq))
+                            try
                             {
-                                var saborQuantidade = JsonConvert.DeserializeObject<ProdutoModel.SaborQuantidade>(sq);
+                                var saborQuantidade = JsonConvert.DeserializeObject<ProdutoModel.SaborQuantidade>(item);
                                 if (saborQuantidade != null &&
                                     !string.IsNullOrWhiteSpace(saborQuantidade.Sabor) &&
                                     saborQuantidade.Quantidade > 0)
@@ -121,124 +122,57 @@ namespace SitePodsInicial.Controllers
                                     saboresList.Add(saborQuantidade);
                                 }
                             }
-                        }
-                        catch (JsonException)
-                        {
-                            // Ignora entradas inválidas
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"Erro ao desserializar sabor: {ex.Message}");
+                                ModelState.AddModelError("", "Houve um erro ao processar os sabores.");
+                            }
                         }
                     }
                 }
 
-                // Atribui a lista processada ao modelo
-                produto.SaboresQuantidadesList = saboresList;
-                produto.SerializarSaboresQuantidades();
+                // 2. Validação de sabores
+                if (saboresList.Count == 0)
+                {
+                    ModelState.AddModelError("", "Adicione pelo menos um sabor com quantidade válida.");
+                }
 
-                // 2. Remover validação para propriedades não mapeadas
+                // 3. Atualizar estoque total com base nas quantidades
+                produto.Estoque = saboresList.Sum(s => s.Quantidade);
+
+                // 4. Remover validações de propriedades que não serão validadas diretamente
                 ModelState.Remove("Categoria");
-                ModelState.Remove("PedidoItens");
                 ModelState.Remove("ImagemUrl");
-                ModelState.Remove("TodosSabores");
-                ModelState.Remove("SaboresSelecionados");
                 ModelState.Remove("SaboresQuantidadesList");
                 ModelState.Remove("SaboresQuantidades");
 
-                // 3. Processar os preços
-                if (Request.Form.ContainsKey("Preco"))
-                {
-                    var precoString = Request.Form["Preco"].ToString()
-                        .Replace("R$", "")
-                        .Replace(".", "")
-                        .Replace(",", ".");
+                // 5. Serializar sabores para armazenar no banco
+                produto.SerializarSaboresQuantidades();
 
-                    if (decimal.TryParse(precoString, NumberStyles.AllowDecimalPoint,
-                        CultureInfo.InvariantCulture, out var parsedPrice))
-                    {
-                        produto.Preco = parsedPrice;
-                    }
-                    else
-                    {
-                        ModelState.AddModelError("Preco", "O preço informado é inválido.");
-                    }
-                }
-
-                if (Request.Form.ContainsKey("PrecoPromocional") && !string.IsNullOrEmpty(Request.Form["PrecoPromocional"]))
-                {
-                    var precoPromoString = Request.Form["PrecoPromocional"].ToString()
-                        .Replace("R$", "")
-                        .Replace(".", "")
-                        .Replace(",", ".");
-
-                    if (decimal.TryParse(precoPromoString, NumberStyles.AllowDecimalPoint,
-                        CultureInfo.InvariantCulture, out var parsedPromoPrice))
-                    {
-                        produto.PrecoPromocional = parsedPromoPrice;
-                    }
-                    else
-                    {
-                        ModelState.AddModelError("PrecoPromocional", "O preço promocional informado é inválido.");
-                    }
-                }
-
-                // 4. Validações adicionais
-                if (produto.CategoriaId == 0 || !_context.Categorias.Any(c => c.Id == produto.CategoriaId))
-                {
-                    ModelState.AddModelError("CategoriaId", "Selecione uma categoria válida");
-                }
-
-                if (produto.ImagemUpload != null && produto.ImagemUpload.Length > 0)
-                {
-                    if (produto.ImagemUpload.Length > 2 * 1024 * 1024)
-                    {
-                        ModelState.AddModelError("ImagemUpload", "O tamanho da imagem não pode exceder 2MB");
-                    }
-
-                    var allowedExtensions = new[] { ".jpg", ".jpeg", ".png" };
-                    var fileExtension = Path.GetExtension(produto.ImagemUpload.FileName).ToLower();
-                    if (!allowedExtensions.Contains(fileExtension))
-                    {
-                        ModelState.AddModelError("ImagemUpload", "Apenas arquivos JPG, JPEG e PNG são permitidos");
-                    }
-                }
-
-                if (produto.EmPromocao && (!produto.PrecoPromocional.HasValue || produto.PrecoPromocional >= produto.Preco))
-                {
-                    ModelState.AddModelError("PrecoPromocional", "O preço promocional deve ser menor que o preço normal");
-                }
-
-                // Validação customizada para sabores
-                if (produto.SaboresQuantidadesList == null || produto.SaboresQuantidadesList.Count == 0)
-                {
-                    ModelState.AddModelError("", "Adicione pelo menos um sabor com quantidade válida");
-                }
-
-                // 5. Se o modelo for válido, processar o cadastro
+                // 6. Verificar se o ModelState está válido
                 if (ModelState.IsValid)
                 {
-                    // Processar a imagem
+                    // 6.1. Processar imagem se enviada
                     if (produto.ImagemUpload != null && produto.ImagemUpload.Length > 0)
                     {
-                        var uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "imagens/produtos");
-                        if (!Directory.Exists(uploadsFolder))
+                        var pastaUploads = Path.Combine(_hostEnvironment.WebRootPath, "imagens/produtos");
+                        if (!Directory.Exists(pastaUploads))
                         {
-                            Directory.CreateDirectory(uploadsFolder);
+                            Directory.CreateDirectory(pastaUploads);
                         }
 
-                        var uniqueFileName = $"{Guid.NewGuid()}_{produto.ImagemUpload.FileName}";
-                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+                        var nomeArquivo = $"{Guid.NewGuid()}_{Path.GetFileName(produto.ImagemUpload.FileName)}";
+                        var caminhoArquivo = Path.Combine(pastaUploads, nomeArquivo);
 
-                        using (var fileStream = new FileStream(filePath, FileMode.Create))
+                        using (var fileStream = new FileStream(caminhoArquivo, FileMode.Create))
                         {
                             await produto.ImagemUpload.CopyToAsync(fileStream);
                         }
 
-                        produto.ImagemUrl = $"/imagens/produtos/{uniqueFileName}";
+                        produto.ImagemUrl = $"/imagens/produtos/{nomeArquivo}";
                     }
 
-                    // Calcular estoque total
-                    produto.Estoque = produto.SaboresQuantidadesList.Sum(sq => sq.Quantidade);
-                    produto.DataCadastro = DateTime.Now;
-
-                    // Adicionar no banco de dados
+                    // 6.2. Salvar no banco
                     _produtoRepository.Adicionar(produto);
 
                     TempData["MensagemSucesso"] = "Produto cadastrado com sucesso!";
@@ -247,15 +181,17 @@ namespace SitePodsInicial.Controllers
             }
             catch (Exception ex)
             {
-                // Logar o erro completo
+                Console.WriteLine($"Erro no cadastro: {ex}");
                 TempData["MensagemErro"] = $"Erro ao cadastrar produto: {ex.Message}";
             }
 
-            // Recarregar dados para a view em caso de erro
+            // 7. Se chegamos aqui, houve erro → recarrega categorias e sabores
             produto.TodosSabores = ObterTodosSabores();
             CarregarCategorias();
+
             return View(produto);
         }
+
 
 
 
@@ -449,34 +385,24 @@ namespace SitePodsInicial.Controllers
                 return NotFound();
             }
 
-            // Crie o ViewModel e preencha com os dados necessários
+            var saboresDisponiveis = produto.SaboresQuantidadesList?
+                .Where(sq => sq.Quantidade > 0)
+                .Select(sq => sq.Sabor)
+                .ToList() ?? new List<string>();
+
             var viewModel = new ProdutoDetalhesViewModel
             {
                 Produto = produto,
-                SaboresDisponiveis = new List<string>
-        {
-            "Aloe Grape - Aloe Vera e Uva",
-            "Banana Coconut - Banana e Água de Coco",
-            "Banana Ice",
-            "Blueberry Ice - Mirtilo Ice",
-            "Blueberry Straw Coco - Mirtilo, Morango, Coco",
-            "Grape Ice - Uva Ice",
-            "Green Apple - Maçã Verde",
-            "Icy Mint - Menta Ice",
-            "Menthal - Menta e Hortelã Ice",
-            "Pineapple Ice - Abacaxi Ice",
-            "Strawberry Banana - Morango e Banana",
-            "Strawberry Ice - Morango Ice",
-            "Watermelon Ice - Melancia Ice"
-        },
+                SaboresDisponiveis = saboresDisponiveis,
                 ProdutosRelacionados = _context.Produtos
                     .Where(p => p.CategoriaId == produto.CategoriaId && p.Id != produto.Id)
                     .Take(4)
                     .ToList()
             };
 
-            return View("Detalhes", viewModel); // Passe o ViewModel para a view
+            return View("Detalhes", viewModel);
         }
+
 
 
     }

@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using SitePodsInicial.Data;
 using SitePodsInicial.Models;
 using SitePodsInicial.Repository.Interface;
@@ -27,9 +28,28 @@ namespace SitePodsInicial.Repository.Repository
 
         public ProdutoModel ObterPorId(int id)
         {
-            return _context.Produtos
-                .Include(p => p.Categoria)
-                .FirstOrDefault(p => p.Id == id);
+            var produto = _context.Produtos
+        .Include(p => p.Categoria)
+        .FirstOrDefault(p => p.Id == id);
+
+            if (produto != null && !string.IsNullOrEmpty(produto.SaboresQuantidades))
+            {
+                try
+                {
+                    produto.SaboresQuantidadesList = JsonConvert.DeserializeObject<List<ProdutoModel.SaborQuantidade>>(produto.SaboresQuantidades);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Erro ao desserializar SaboresQuantidades: {ex.Message}");
+                    produto.SaboresQuantidadesList = new List<ProdutoModel.SaborQuantidade>();
+                }
+            }
+            else
+            {
+                produto.SaboresQuantidadesList = new List<ProdutoModel.SaborQuantidade>();
+            }
+
+            return produto;
         }
 
         public void Adicionar(ProdutoModel produto)

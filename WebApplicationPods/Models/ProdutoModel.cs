@@ -106,7 +106,8 @@ namespace SitePodsInicial.Models
         public string SaboresDisponiveis { get; set; } = string.Empty;// Armazenará os sabores como JSON
 
         [Display(Name = "Sabores e Quantidades")]
-        [Column("SaboresQuantidades")] // Especifica o nome da coluna
+        [Column("SaboresQuantidades")]
+        [Required(ErrorMessage = "Adicione pelo menos um sabor com quantidade válida.")]
         public string SaboresQuantidades { get; set; }
 
         [NotMapped]
@@ -124,7 +125,9 @@ namespace SitePodsInicial.Models
         // Substitua a classe SaborQuantidade por:
         public class SaborQuantidade
         {
+            [JsonProperty("sabor")] // Adicione isso se os nomes forem diferentes
             public string Sabor { get; set; } = string.Empty;
+            [JsonProperty("quantidade")]
             public int Quantidade { get; set; } = 0;
 
             public SaborQuantidade() { }
@@ -154,6 +157,16 @@ namespace SitePodsInicial.Models
             {
                 SaboresQuantidadesList = new List<SaborQuantidade>();
             }
+        }
+
+        // Método para validar sabores e quantidades
+        public bool ValidarSaboresQuantidades()
+        {
+            if (SaboresQuantidadesList == null || SaboresQuantidadesList.Count == 0)
+                return false;
+
+            return SaboresQuantidadesList.All(sq =>
+                !string.IsNullOrWhiteSpace(sq.Sabor) && sq.Quantidade > 0);
         }
     }
 }
