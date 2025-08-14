@@ -10,5 +10,6 @@ namespace SitePodsInicial.Services.Interface
         void LimparCarrinho();
         decimal ObterTotal();
         int ObterQuantidadeTotalItens();
+        //Task<CarrinhoModel> ObterCarrinhoPorUsuarioAsync(string usuarioId);
     }
 }

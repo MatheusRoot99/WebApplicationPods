@@ -12,6 +12,8 @@
         public int Quantidade { get; set; }
         public decimal PrecoUnitario { get; set; }
         public string Observacoes { get; set; }
+        public string Sabor { get; set; }
+        public string ImagemUrl { get; set; } // Adicionado para exibir a imagem no carrinho
         public decimal Subtotal => Quantidade * PrecoUnitario;
     }
 }

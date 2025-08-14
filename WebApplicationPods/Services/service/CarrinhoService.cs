@@ -1,4 +1,7 @@
-﻿using SitePodsInicial.Helper;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Documents;
+using Microsoft.EntityFrameworkCore;
+using SitePodsInicial.Helper;
 using SitePodsInicial.Models;
 using SitePodsInicial.Services.Interface;
 
@@ -90,5 +93,7 @@ namespace SitePodsInicial.Services.service
         {
             _httpContextAccessor.HttpContext.Session.SetObject(_sessionKey, carrinho);
         }
+
+        
     }
 }
