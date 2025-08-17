@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using SitePodsInicial.Models;
 using SitePodsInicial.Repository.Interface;
@@ -10,7 +9,7 @@ namespace SitePodsInicial.Controllers
     public class CarrinhoController : Controller
     {
         private readonly ICarrinhoRepository _carrinhoRepository;
-        private readonly IProdutoRepository _produtoRepository; // seu repositório de produtos
+        private readonly IProdutoRepository _produtoRepository;
 
         public CarrinhoController(ICarrinhoRepository carrinhoRepository, IProdutoRepository produtoRepository)
         {
@@ -36,52 +35,36 @@ namespace SitePodsInicial.Controllers
                     return RedirectToAction("Index");
                 }
 
-                // Verifica estoque para produtos com sabores
-                if (produto.SaboresQuantidadesList?.Any() == true)
+                // Verifica estoque disponível
+                if (!ValidarEstoque(produto, quantidade, sabor, out string mensagemErro))
                 {
-                    var saborSelecionado = produto.SaboresQuantidadesList.FirstOrDefault(s => s.Sabor == sabor);
-                    if (saborSelecionado == null || saborSelecionado.Quantidade < quantidade)
-                    {
-                        TempData["Erro"] = $"Quantidade indisponível para o sabor {sabor}";
-                        return RedirectToAction("Detalhes", "Produto", new { id = produtoId });
-                    }
-                }
-                else if (produto.Estoque < quantidade) // Verifica estoque para produtos sem sabores
-                {
-                    TempData["Erro"] = $"Quantidade indisponível em estoque (disponível: {produto.Estoque})";
+                    TempData["Erro"] = mensagemErro;
                     return RedirectToAction("Detalhes", "Produto", new { id = produtoId });
                 }
 
                 _carrinhoRepository.AdicionarItem(produto, quantidade, sabor, observacoes);
 
-                if (buyNow)
-                    return RedirectToAction("Resumo");
-
                 TempData["Sucesso"] = $"{produto.Nome} adicionado ao carrinho!";
-                return RedirectToAction("Index");
+                return buyNow ? RedirectToAction("Resumo") : RedirectToAction("Index");
             }
-            catch (Exception ex)
+            catch
             {
-                //ILogger.LogError(ex, "Erro ao adicionar item ao carrinho");
                 TempData["Erro"] = "Ocorreu um erro ao adicionar o produto ao carrinho.";
                 return RedirectToAction("Index");
             }
         }
-
 
         [HttpPost]
         public IActionResult AtualizarItem(int produtoId, int quantidade, string sabor = null)
         {
             try
             {
-                // Verifica se a quantidade é válida
                 if (quantidade <= 0)
                 {
                     TempData["Erro"] = "Quantidade deve ser maior que zero!";
                     return RedirectToAction("Index");
                 }
 
-                // Obtém o produto para verificar estoque
                 var produto = _produtoRepository.ObterPorId(produtoId);
                 if (produto == null)
                 {
@@ -89,33 +72,21 @@ namespace SitePodsInicial.Controllers
                     return RedirectToAction("Index");
                 }
 
-                // Verifica estoque para produtos com sabores
-                if (produto.SaboresQuantidadesList?.Any() == true && !string.IsNullOrEmpty(sabor))
+                if (!ValidarEstoque(produto, quantidade, sabor, out string mensagemErro))
                 {
-                    var saborSelecionado = produto.SaboresQuantidadesList.FirstOrDefault(s => s.Sabor == sabor);
-                    if (saborSelecionado == null || saborSelecionado.Quantidade < quantidade)
-                    {
-                        TempData["Erro"] = $"Quantidade indisponível para o sabor {sabor}";
-                        return RedirectToAction("Index");
-                    }
-                }
-                else if (produto.Estoque < quantidade) // Verifica estoque para produtos sem sabores
-                {
-                    TempData["Erro"] = $"Quantidade indisponível em estoque (disponível: {produto.Estoque})";
+                    TempData["Erro"] = mensagemErro;
                     return RedirectToAction("Index");
                 }
 
-                // Atualiza o item no carrinho
                 var carrinho = _carrinhoRepository.ObterCarrinho();
-                var item = carrinho.Itens.FirstOrDefault(i =>
-                    i.Produto.Id == produtoId &&
-                    i.Sabor == sabor);
+                var item = carrinho.Itens.FirstOrDefault(i => i.Produto.Id == produtoId && i.Sabor == sabor);
 
                 if (item != null)
                 {
                     item.Quantidade = quantidade;
                     _carrinhoRepository.SalvarCarrinho(carrinho);
-                    TempData["Sucesso"] = "Quantidade atualizada com sucesso!";
+
+                    TempData["Sucesso"] = $"Quantidade de {produto.Nome} atualizada para {quantidade}.";
                 }
                 else
                 {
@@ -131,8 +102,33 @@ namespace SitePodsInicial.Controllers
             }
         }
 
+        [HttpPost]
+        public IActionResult RemoverItem(int produtoId, string sabor = null)
+        {
+            try
+            {
+                var carrinho = _carrinhoRepository.ObterCarrinho();
+                var item = carrinho.Itens.FirstOrDefault(i => i.Produto.Id == produtoId && i.Sabor == sabor);
 
+                if (item != null)
+                {
+                    carrinho.Itens.Remove(item);
+                    _carrinhoRepository.SalvarCarrinho(carrinho);
 
+                    TempData["Sucesso"] = $"{item.Produto.Nome} removido do carrinho.";
+                }
+                else
+                {
+                    TempData["Erro"] = "Item não encontrado no carrinho!";
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Erro"] = $"Erro ao remover item: {ex.Message}";
+            }
+
+            return RedirectToAction("Index");
+        }
 
         [HttpPost]
         public IActionResult FinalizarPedido()
@@ -147,7 +143,6 @@ namespace SitePodsInicial.Controllers
                     return RedirectToAction("Index");
                 }
 
-                // Atualiza estoque para cada item
                 foreach (var item in carrinho.Itens)
                 {
                     var produto = _produtoRepository.ObterPorId(item.Produto.Id);
@@ -169,8 +164,6 @@ namespace SitePodsInicial.Controllers
                     _produtoRepository.Atualizar(produto);
                 }
 
-                // TODO: Criar registro do pedido no banco de dados
-
                 _carrinhoRepository.LimparCarrinho();
 
                 TempData["MensagemSucesso"] = "Pedido realizado com sucesso!";
@@ -181,6 +174,35 @@ namespace SitePodsInicial.Controllers
                 TempData["Erro"] = $"Erro ao finalizar pedido: {ex.Message}";
                 return RedirectToAction("Resumo");
             }
+        }
+
+        // 🔹 Método centralizado para validação de estoque
+        private bool ValidarEstoque(ProdutoModel produto, int quantidade, string sabor, out string mensagemErro)
+        {
+            mensagemErro = string.Empty;
+
+            if (produto.SaboresQuantidadesList?.Any() == true && !string.IsNullOrEmpty(sabor))
+            {
+                var saborSelecionado = produto.SaboresQuantidadesList.FirstOrDefault(s => s.Sabor == sabor);
+                if (saborSelecionado == null)
+                {
+                    mensagemErro = "Sabor selecionado inválido.";
+                    return false;
+                }
+
+                if (saborSelecionado.Quantidade < quantidade)
+                {
+                    mensagemErro = $"Estoque insuficiente para o sabor {sabor}. Disponível: {saborSelecionado.Quantidade}";
+                    return false;
+                }
+            }
+            else if (produto.Estoque < quantidade)
+            {
+                mensagemErro = $"Estoque insuficiente. Disponível: {produto.Estoque}";
+                return false;
+            }
+
+            return true;
         }
     }
 }

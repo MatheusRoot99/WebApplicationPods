@@ -40,10 +40,7 @@
                         <tr>
                             <td>
                                 <div class="produto-info">
-                                    @if (!string.IsNullOrEmpty(item.ImagemUrl))
-                                    {
-                                        <img src="@item.ImagemUrl" alt="@item.Produto.Nome" class="produto-imagem">
-                                    }
+                                    <img src="@item.Produto.ImagemUrl" alt="@item.Produto.Nome" class="produto-imagem" />
                                     <div>
                                         <h5 class="produto-nome">@item.Produto.Nome</h5>
                                         @if (!string.IsNullOrEmpty(item.Sabor))
@@ -60,36 +57,22 @@
                                 </div>
                             </td>
                             <td>
-                                <form asp-action="AtualizarItem" method="post" class="d-inline-flex align-items-center">
+                                <form asp-action="AtualizarItem" method="post" class="quantidade-form">
                                     <input type="hidden" name="produtoId" value="@item.Produto.Id" />
                                     <input type="hidden" name="sabor" value="@item.Sabor" />
 
-                                    <div class="input-group" style="width: 150px;">
-                                        <!-- Botão de diminuir -->
+                                    <div class="input-group">
                                         <button type="button" class="btn btn-outline-secondary quantidade-btn" data-action="decrease">
                                             <i class="fas fa-minus"></i>
                                         </button>
 
-                                        <!-- Input de quantidade -->
                                         <input type="number" name="quantidade" value="@item.Quantidade" min="1"
-                                               class="form-control text-center quantidade-input"
-                                               aria-label="Quantidade">
+                                               class="form-control text-center quantidade-input">
 
-                                        <!-- Botão de aumentar -->
                                         <button type="button" class="btn btn-outline-secondary quantidade-btn" data-action="increase">
                                             <i class="fas fa-plus"></i>
                                         </button>
-
-                                        <!-- Botão de atualizar (visível apenas em mobile) -->
-                                        <button type="submit" class="btn btn-primary d-md-none">
-                                            <i class="fas fa-check"></i>
-                                        </button>
                                     </div>
-
-                                    <!-- Botão de atualizar (visível em desktop) -->
-                                    <button type="submit" class="btn btn-link text-primary d-none d-md-inline-block ms-2">
-                                        <i class="fas fa-sync-alt"></i> Atualizar
-                                    </button>
                                 </form>
                             </td>
                             <td>@item.PrecoUnitario.ToString("C", new CultureInfo("pt-BR"))</td>

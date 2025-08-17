@@ -4,7 +4,7 @@
     ViewData["Title"] = Model.Produto.Nome;
 }
 
-<link rel="stylesheet" href="~/css/produto-detalhes.css" asp-append-version="true" /> 
+<link rel="stylesheet" href="~/css/produto-detalhes.css" asp-append-version="true" />
 
 <div class="produto-detalhes-container">
     <!-- Cabeçalho e Navegação -->
@@ -19,6 +19,24 @@
                 <li class="breadcrumb-item active">@Model.Produto.Nome</li>
             </ol>
         </nav>
+    </div>
+
+    <div class="product-header">
+        <h1 class="product-title">@Model.Produto.Nome</h1>
+
+        <div class="product-rating">
+            <div class="stars">
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star-half-alt"></i>
+            </div>
+            <span class="rating-text">4.8 (42 avaliações)</span>
+            <a href="#reviews" class="review-link">Ver avaliações</a>
+        </div>
+
+       
     </div>
 
     <!-- Conteúdo Principal -->
@@ -56,30 +74,14 @@
 
         <!-- Coluna de Informações -->
         <div class="produto-info-column">
-            <div class="product-header">
-                <h1 class="product-title">@Model.Produto.Nome</h1>
-
-                <div class="product-rating">
-                    <div class="stars">
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star-half-alt"></i>
-                    </div>
-                    <span class="rating-text">4.8 (42 avaliações)</span>
-                    <a href="#reviews" class="review-link">Ver avaliações</a>
-                </div>
-
-                @if (Model.Produto.Estoque <= 0)
-                {
-                    <span class="stock-badge out-of-stock">ESGOTADO</span>
-                }
-                else if (Model.Produto.PrecoPromocional.HasValue && Model.Produto.PrecoPromocional < Model.Produto.Preco)
-                {
-                    <span class="stock-badge promotion">PROMOÇÃO</span>
-                }
-            </div>
+            @if (Model.Produto.Estoque <= 0)
+            {
+                <span class="stock-badge out-of-stock">ESGOTADO</span>
+            }
+            else if (Model.Produto.PrecoPromocional.HasValue && Model.Produto.PrecoPromocional < Model.Produto.Preco)
+            {
+                <span class="stock-badge promotion">PROMOÇÃO</span>
+            }
 
             <!-- Preço -->
             <div class="price-section">
@@ -134,10 +136,12 @@
                             </label>
                         </div>
                     }
-                    <div class="mt-3 text-muted" id="estoque-info" style="display:none;">
-                        <i class="fas fa-boxes me-2"></i>
-                        Estoque disponível: <span id="estoque-quantidade" class="fw-bold"></span> unidades
-                    </div>
+                    
+                </div>
+
+                <div class="mt-3 text-muted" id="estoque-info" style="display:none;padding: 4%">
+                    <i class="fas fa-boxes me-2"></i>
+                    Estoque disponível: <span id="estoque-quantidade" class="fw-bold"></span> unidades
                 </div>
 
                 @if (!Model.SaboresDisponiveis.Any())
@@ -179,6 +183,8 @@
                     <i class="fas fa-bolt"></i> COMPRAR AGORA
                 </button>
             </div>
+        </div>
+    </div>
 
     <!-- Descrição e Especificações -->
     <div class="product-details-tabs">
@@ -369,8 +375,6 @@
 </div>
 
 @section Scripts {
-
-            <!-- Inclui o arquivo JS separado -->
-            <script src="~/js/Detalhe-form.js" asp-append-version="true"></script>
-    
+    <!-- Inclui o arquivo JS separado -->
+    <script src="~/js/Detalhe-form.js" asp-append-version="true"></script>
 }
