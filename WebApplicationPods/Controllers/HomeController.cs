@@ -1,11 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using SitePodsInicial.Models;
-using SitePodsInicial.Repository.Interface;
 using System.Diagnostics;
-using SitePodsInicial.Models;
+using WebApplicationPods.Repository.Interface;
+using WebApplicationPods.Models;
 
-namespace SitePodsInicial.Controllers
+namespace WebApplicationPods.Controllers
 {
     public class HomeController : Controller
     {

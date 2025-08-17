@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using SitePodsInicial.Models;
+using WebApplicationPods.Models;
 
-namespace SitePodsInicial.Data
+namespace WebApplicationPods.Data
 {
     public class BancoContext : DbContext
     {
@@ -17,6 +17,7 @@ namespace SitePodsInicial.Data
         public DbSet<EnderecoModel> Enderecos { get; set; }
         public DbSet<PedidoModel> Pedidos { get; set; }
         public DbSet<PedidoItemModel> PedidoItens { get; set; }
+        public DbSet<UsuarioModel> Usuarios { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

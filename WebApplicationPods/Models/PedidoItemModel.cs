@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace SitePodsInicial.Models
+namespace WebApplicationPods.Models
 {
     public class PedidoItemModel
     {

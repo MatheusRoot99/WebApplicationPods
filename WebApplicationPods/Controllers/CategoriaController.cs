@@ -1,10 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using SitePodsInicial.Models;
-using SitePodsInicial.Repository.Interface;
-using System;
+using WebApplicationPods.Models;
+using WebApplicationPods.Repository.Interface;
 
-namespace SitePodsInicial.Controllers
+namespace WebApplicationPods.Controllers
 {
     public class CategoriaController : Controller
     {

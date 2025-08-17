@@ -1,13 +1,11 @@
 using Microsoft.EntityFrameworkCore;
-using SitePodsInicial.Data;
-using SitePodsInicial.Repositories;
-using SitePodsInicial.Repository.Interface;
-using SitePodsInicial.Repository.Repository;
-using SitePodsInicial.Services.Interface;
-using SitePodsInicial.Services.service;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using WebApplicationPods.Data;
 using WebApplicationPods.Repository.Interface;
+using WebApplicationPods.Services.Interface;
+using WebApplicationPods.Services.service;
+using System.Text.Json.Serialization;
+using WebApplicationPods.Repository.Repository;
+using WebApplicationPods.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,6 +44,8 @@ builder.Services.AddScoped<IProdutoRepository, ProdutoRepository>();
 builder.Services.AddScoped<ICategoriaRepository, CategoriaRepository>();
 builder.Services.AddScoped<ICarrinhoRepository, CarrinhoRepository>();
 builder.Services.AddScoped<ICarrinhoService, CarrinhoService>();
+builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
+builder.Services.AddScoped<IPedidoRepository, PedidoRepository>();
 
 var app = builder.Build();
 

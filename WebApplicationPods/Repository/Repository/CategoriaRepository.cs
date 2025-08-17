@@ -1,11 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using SitePodsInicial.Data;
-using SitePodsInicial.Models;
-using SitePodsInicial.Repository.Interface;
-using System.Collections.Generic;
-using System.Linq;
+using WebApplicationPods.Data;
+using WebApplicationPods.Models;
+using WebApplicationPods.Repository.Interface;
 
-namespace SitePodsInicial.Repository.Repository
+namespace WebApplicationPods.Repository.Repository
 {
     public class CategoriaRepository : ICategoriaRepository
     {

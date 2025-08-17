@@ -1,8 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using SitePodsInicial.Services.Interface;
-using SitePodsInicial.Services.service;
+using WebApplicationPods.Services.Interface;
 
-namespace SitePodsInicial.Components
+namespace WebApplicationPods.Components
 {
     public class CarrinhoResumoViewComponent : ViewComponent
     {

@@ -1,7 +1,7 @@
-﻿using SitePodsInicial.Models;
-using System.Collections.Generic;
+﻿
+using WebApplicationPods.Models;
 
-namespace SitePodsInicial.Repository.Interface
+namespace WebApplicationPods.Repository.Interface
 {
     public interface ICategoriaRepository
     {

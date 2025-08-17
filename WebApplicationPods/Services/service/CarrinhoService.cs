@@ -1,11 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Documents;
-using Microsoft.EntityFrameworkCore;
-using SitePodsInicial.Helper;
-using SitePodsInicial.Models;
-using SitePodsInicial.Services.Interface;
+﻿
 
-namespace SitePodsInicial.Services.service
+using WebApplicationPods.Helper;
+using WebApplicationPods.Models;
+using WebApplicationPods.Services.Interface;
+
+namespace WebApplicationPods.Services.service
 {
     public class CarrinhoService : ICarrinhoService
     {

@@ -1,0 +1,38 @@
+﻿@using WebApplicationPods.Models
+@model ClienteModel
+
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="text-center">Login com Telefone</h3>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Login" method="post">
+                        <div class="form-group">
+                            <label for="telefone">Telefone</label>
+                            <input type="tel" id="telefone" name="telefone" class="form-control"
+                                   placeholder="(11) 98765-4321" required />
+                            <small class="form-text text-muted">Informe seu número com DDD</small>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-block mt-4">
+                            Continuar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $('#telefone').inputmask('(99) 99999-9999');
+        });
+    </script>
+}

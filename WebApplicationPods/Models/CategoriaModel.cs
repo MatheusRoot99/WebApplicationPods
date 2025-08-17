@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
 
-namespace SitePodsInicial.Models
+namespace WebApplicationPods.Models
 {
     public class CategoriaModel
     {

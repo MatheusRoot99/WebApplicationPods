@@ -1,12 +1,10 @@
-﻿using Microsoft.AspNetCore.Http;
-using SitePodsInicial.Models;
-using SitePodsInicial.Repository.Interface;
+﻿
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using WebApplicationPods.DTO;
+using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
 
-namespace SitePodsInicial.Repositories
+namespace WebApplicationPods.Repositories
 {
     public class CarrinhoRepository : ICarrinhoRepository
     {

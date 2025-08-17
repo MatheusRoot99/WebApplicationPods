@@ -1,6 +1,7 @@
-﻿using SitePodsInicial.Models;
+﻿
+using WebApplicationPods.Models;
 
-namespace SitePodsInicial.Services.Interface
+namespace WebApplicationPods.Services.Interface
 {
     public interface ICarrinhoService
     {

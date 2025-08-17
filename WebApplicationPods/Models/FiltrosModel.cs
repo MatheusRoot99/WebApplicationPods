@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace SitePodsInicial.Models
+namespace WebApplicationPods.Models
 {
     public class FiltrosModel
     {

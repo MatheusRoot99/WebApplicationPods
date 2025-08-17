@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace SitePodsInicial.Helper
+namespace WebApplicationPods.Helper
 {
     public static class SessionExtensions
     {

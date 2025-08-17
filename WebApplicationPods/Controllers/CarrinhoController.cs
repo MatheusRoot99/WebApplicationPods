@@ -1,20 +1,23 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
-using SitePodsInicial.Models;
-using SitePodsInicial.Repository.Interface;
+using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
 
-namespace SitePodsInicial.Controllers
+namespace WebApplicationPods.Controllers
 {
     public class CarrinhoController : Controller
     {
         private readonly ICarrinhoRepository _carrinhoRepository;
         private readonly IProdutoRepository _produtoRepository;
-
-        public CarrinhoController(ICarrinhoRepository carrinhoRepository, IProdutoRepository produtoRepository)
+        private readonly IClienteRepository _clienteRepository;
+        private readonly IPedidoRepository _pedidoRepository;
+        public CarrinhoController(ICarrinhoRepository carrinhoRepository, IProdutoRepository produtoRepository,
+            IClienteRepository clienteRepository,
+            IPedidoRepository pedidoRepository)
         {
             _carrinhoRepository = carrinhoRepository;
             _produtoRepository = produtoRepository;
+            _clienteRepository = clienteRepository;
+            _pedidoRepository = pedidoRepository;
         }
 
         public IActionResult Index()
@@ -131,43 +134,74 @@ namespace SitePodsInicial.Controllers
         }
 
         [HttpPost]
-        public IActionResult FinalizarPedido()
+        public IActionResult FinalizarPedido(ResumoPedidoViewModel model)
         {
             try
             {
-                var carrinho = _carrinhoRepository.ObterCarrinho();
-
-                if (!carrinho.Itens.Any())
+                // 1. Obter cliente autenticado
+                var telefone = HttpContext.Session.GetString("ClienteTelefone");
+                if (string.IsNullOrEmpty(telefone))
                 {
-                    TempData["Erro"] = "Seu carrinho está vazio!";
+                    return RedirectToAction("Login", "Auth");
+                }
+
+                var cliente = _clienteRepository.ObterPorTelefone(telefone);
+                if (cliente == null)
+                {
+                    return RedirectToAction("Login", "Auth");
+                }
+
+                // 2. Validar endereço selecionado
+                if (model.EnderecoSelecionadoId == 0)
+                {
+                    ModelState.AddModelError("", "Selecione um endereço de entrega");
+                    return View("Resumo", model);
+                }
+
+                // 3. Validar carrinho
+                if (model.Carrinho == null || !model.Carrinho.Itens.Any())
+                {
+                    TempData["Erro"] = "Seu carrinho está vazio";
                     return RedirectToAction("Index");
                 }
 
-                foreach (var item in carrinho.Itens)
+                // 4. Criar pedido
+                var pedido = new PedidoModel
+                {
+                    ClienteId = cliente.Id,
+                    EnderecoId = model.EnderecoSelecionadoId,
+                    Status = "Aguardando Pagamento",
+                    ValorTotal = model.Carrinho.Total,
+                    MetodoPagamento = model.MetodoPagamento,
+                    DataPedido = DateTime.Now,
+                    PedidoItens = model.Carrinho.Itens.Select(item => new PedidoItemModel
+                    {
+                        ProdutoId = item.Produto.Id,
+                        Quantidade = item.Quantidade,
+                        PrecoUnitario = item.PrecoUnitario,
+                        Observacoes = item.Observacoes
+                        // Removido Sabor pois não existe no modelo
+                    }).ToList()
+                };
+
+                // 5. Atualizar estoques (se necessário)
+                foreach (var item in model.Carrinho.Itens)
                 {
                     var produto = _produtoRepository.ObterPorId(item.Produto.Id);
-
-                    if (produto.SaboresQuantidadesList?.Any() == true && !string.IsNullOrEmpty(item.Sabor))
+                    if (produto != null)
                     {
-                        var sabor = produto.SaboresQuantidadesList.FirstOrDefault(s => s.Sabor == item.Sabor);
-                        if (sabor != null)
-                        {
-                            sabor.Quantidade -= item.Quantidade;
-                            produto.SaboresQuantidades = JsonConvert.SerializeObject(produto.SaboresQuantidadesList);
-                        }
-                    }
-                    else
-                    {
+                        // Removida a verificação de Sabor já que não está mais no fluxo
                         produto.Estoque -= item.Quantidade;
+                        _produtoRepository.Atualizar(produto);
                     }
-
-                    _produtoRepository.Atualizar(produto);
                 }
 
+                // 6. Salvar pedido
+                _pedidoRepository.Adicionar(pedido);
                 _carrinhoRepository.LimparCarrinho();
 
-                TempData["MensagemSucesso"] = "Pedido realizado com sucesso!";
-                return RedirectToAction("Index", "Home");
+                // 7. Redirecionar para confirmação
+                return RedirectToAction("Confirmacao", new { id = pedido.Id });
             }
             catch (Exception ex)
             {
@@ -175,6 +209,49 @@ namespace SitePodsInicial.Controllers
                 return RedirectToAction("Resumo");
             }
         }
+
+        public IActionResult Resumo()
+        {
+            // 1. Obter carrinho
+            var carrinho = _carrinhoRepository.ObterCarrinho();
+            if (carrinho == null || !carrinho.Itens.Any())
+            {
+                TempData["Erro"] = "Seu carrinho está vazio";
+                return RedirectToAction("Index");
+            }
+
+            // 2. Verificar autenticação
+            var telefone = HttpContext.Session.GetString("ClienteTelefone");
+            if (string.IsNullOrEmpty(telefone))
+            {
+                TempData["ReturnUrl"] = Url.Action("Resumo", "Carrinho");
+                return RedirectToAction("Login", "Auth");
+            }
+
+            // 3. Obter cliente com endereços
+            var cliente = _clienteRepository.ObterPorTelefone(telefone);
+            if (cliente == null)
+            {
+                TempData["Erro"] = "Cliente não encontrado";
+                return RedirectToAction("Login", "Auth");
+            }
+
+            // 4. Obter endereços do cliente
+            var enderecos = _clienteRepository.ObterEnderecos(cliente.Id) ?? new List<EnderecoModel>();
+
+            // 5. Criar view model
+            var viewModel = new ResumoPedidoViewModel
+            {
+                Carrinho = carrinho,
+                Cliente = cliente,
+                EnderecosDisponiveis = _clienteRepository.ObterEnderecos(cliente.Id)?.ToList() ?? new List<EnderecoModel>(),
+                EnderecoSelecionadoId = enderecos.FirstOrDefault(e => e.Principal)?.Id ?? 0
+            };
+
+            return View(viewModel);
+        }
+
+
 
         // 🔹 Método centralizado para validação de estoque
         private bool ValidarEstoque(ProdutoModel produto, int quantidade, string sabor, out string mensagemErro)

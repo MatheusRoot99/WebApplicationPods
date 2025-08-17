@@ -1,4 +1,4 @@
-﻿namespace SitePodsInicial.Models
+﻿namespace WebApplicationPods.Models
 {
     public class CarrinhoModel
     {

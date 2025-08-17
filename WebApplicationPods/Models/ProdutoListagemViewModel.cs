@@ -1,6 +1,6 @@
-﻿using SitePodsInicial.Models;
+﻿using WebApplicationPods.Models;
 
-namespace SitePodsInicial.Models
+namespace WebApplicationPods.Models
 {
     public class ProdutoListagemViewModel
     {

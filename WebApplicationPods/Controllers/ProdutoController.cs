@@ -1,19 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
-using SitePodsInicial.Data;
-using SitePodsInicial.Models;
-using SitePodsInicial.Models;
-using SitePodsInicial.Repository.Interface;
-using System;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using static SitePodsInicial.Models.ProdutoModel;
+using WebApplicationPods.Data;
+using WebApplicationPods.Models;
+using WebApplicationPods.Repository.Interface;
 
-namespace SitePodsInicial.Controllers
+
+namespace WebApplicationPods.Controllers
 {
     public class ProdutoController : Controller
     {
