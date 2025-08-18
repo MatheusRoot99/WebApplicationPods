@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace WebApplicationPods.Models
@@ -42,6 +43,7 @@ namespace WebApplicationPods.Models
 
         // Relacionamento
         [ForeignKey("ClienteId")]
+        [ValidateNever] // <- evita validar Cliente.Nome/Email/etc ao validar Endereco
         public ClienteModel Cliente { get; set; }
     }
 }

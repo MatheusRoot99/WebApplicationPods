@@ -1,0 +1,582 @@
+﻿/* =========================================================
+   TEMA PRINCIPAL - PALETA LARANJA, PRETO E BRANCO
+   ========================================================= */
+:root {
+    /* CORES PRINCIPAIS */
+    --orange: #FF8C00; /* Laranja principal */
+    --orange-dark: #E67600; /* Laranja escuro (hover) */
+    --orange-light: #FFA726; /* Laranja claro */
+    --orange-soft: #FFF3E0; /* Laranja muito claro (fundos) */
+
+    --black: #000000; /* Preto puro */
+    --black-soft: #222222; /* Preto suave (textos) */
+    --gray-dark: #424242; /* Cinza escuro */
+    --gray-medium: #757575; /* Cinza médio */
+    --gray-light: #F5F5F5; /* Cinza claro (fundos) */
+    --white: #FFFFFF; /* Branco puro */
+    /* SOMBRAS E BORDAS */
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+    --shadow: 0 4px 6px rgba(0,0,0,0.1);
+    --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+    --border-radius: 12px;
+    --border-radius-sm: 8px;
+    /* ESPAÇAMENTOS */
+    --space-xs: 0.5rem;
+    --space-sm: 1rem;
+    --space-md: 1.5rem;
+    --space-lg: 2rem;
+    --space-xl: 3rem;
+}
+
+/* =========================================================
+   ESTILOS GERAIS
+   ========================================================= */
+body {
+    background-color: var(--gray-light);
+    color: var(--black-soft);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    line-height: 1.5;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+    color: var(--black);
+}
+
+a {
+    color: var(--orange);
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+    a:hover {
+        color: var(--orange-dark);
+    }
+
+/* =========================================================
+   COMPONENTES REUTILIZÁVEIS
+   ========================================================= */
+/* Gradiente laranja */
+.bg-gradient-orange {
+    background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+}
+
+/* Círculo de ícone */
+.icon-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Badge laranja suave */
+.badge.bg-orange-soft {
+    background-color: var(--orange-soft);
+    color: var(--orange-dark);
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Switch personalizado */
+.form-switch.switch-lg .form-check-input {
+    width: 3rem;
+    height: 1.5rem;
+}
+
+/* Botão laranja */
+.btn-orange {
+    background-color: var(--orange);
+    border-color: var(--orange);
+    color: var(--white);
+    font-weight: 500;
+}
+
+    .btn-orange:hover {
+        background-color: var(--orange-dark);
+        border-color: var(--orange-dark);
+        color: var(--white);
+    }
+
+/* Caixa de informações */
+.info-box {
+    background-color: var(--white);
+    border-radius: var(--border-radius-sm);
+    padding: var(--space-sm);
+    box-shadow: var(--shadow-sm);
+}
+
+/* =========================================================
+   LAYOUT DA PÁGINA
+   ========================================================= */
+.container-xxl {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 var(--space-md);
+}
+
+/* Cabeçalho da página */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-lg);
+}
+
+/* =========================================================
+   CARD STYLES
+   ========================================================= */
+.card {
+    border: none;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: var(--space-md);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+
+.card-header {
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: none;
+}
+
+.card-body {
+    padding: var(--space-lg);
+}
+
+/* Card sticky na sidebar */
+.card.sticky-top {
+    top: var(--space-lg);
+}
+
+/* =========================================================
+   ITENS DO PEDIDO
+   ========================================================= */
+.order-items {
+    margin-bottom: var(--space-lg);
+}
+
+.order-item {
+    display: flex;
+    align-items: center;
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+    .order-item:last-child {
+        border-bottom: none;
+    }
+
+.item-image {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    margin-right: var(--space-sm);
+    flex-shrink: 0;
+}
+
+    .item-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: var(--border-radius-sm);
+    }
+
+.item-quantity {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background-color: var(--color-primary);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-xs);
+    font-weight: bold;
+}
+
+.item-details {
+    flex-grow: 1;
+}
+
+.item-name {
+    font-weight: 500;
+    margin-bottom: var(--space-xxs);
+    color: var(--color-text);
+}
+
+.item-variant {
+    font-size: var(--text-sm);
+    color: var(--color-text-light);
+    margin-bottom: var(--space-xxs);
+}
+
+.item-price {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.item-actions {
+    display: flex;
+    align-items: center;
+    margin-left: var(--space-sm);
+}
+
+.item-action {
+    background: none;
+    border: none;
+    color: var(--color-primary);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    padding: var(--space-xxs);
+}
+
+    .item-action:hover {
+        opacity: 0.8;
+    }
+
+.order-total {
+    display: flex;
+    justify-content: space-between;
+    margin-top: var(--space-md);
+    padding-top: var(--space-md);
+    border-top: 1px solid rgba(0,0,0,0.1);
+    font-weight: 600;
+}
+
+/* =========================================================
+   RESUMO DO PEDIDO
+   ========================================================= */
+.order-summary {
+    background-color: var(--white);
+    border-radius: var(--border-radius-sm);
+    padding: var(--space-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: var(--space-xs);
+}
+
+    .summary-row.total {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-top: var(--space-sm);
+    }
+
+/* =========================================================
+   FORMULÁRIOS
+   ========================================================= */
+.form-control, .form-select {
+    border-radius: var(--border-radius-sm);
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+}
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--orange);
+        box-shadow: 0 0 0 0.2rem rgba(255,140,0,0.1);
+    }
+
+/* =========================================================
+   ENDEREÇO
+   ========================================================= */
+.address-card {
+    background-color: var(--white);
+    border-radius: var(--border-radius-sm);
+    padding: var(--space-md);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+}
+
+    .address-card.empty {
+        background-color: var(--gray-light);
+        text-align: center;
+        padding: var(--space-lg);
+    }
+
+        .address-card.empty .empty-state {
+            color: var(--gray-medium);
+        }
+
+            .address-card.empty .empty-state i {
+                font-size: 2rem;
+                display: block;
+                margin-bottom: var(--space-xs);
+            }
+
+.address-details {
+    color: var(--gray-dark);
+    line-height: 1.6;
+}
+
+/* =========================================================
+   MÉTODOS DE PAGAMENTO
+   ========================================================= */
+.btn-payment {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: var(--space-sm);
+    border-radius: var(--border-radius-sm);
+    border: 1px solid rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+}
+
+    .btn-payment:hover {
+        border-color: var(--orange);
+        background-color: var(--orange-soft);
+    }
+
+    .btn-payment .payment-icon {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+        color: var(--orange);
+    }
+
+.btn-check:checked + .btn-payment {
+    background-color: var(--orange-soft);
+    border-color: var(--orange);
+    color: var(--orange-dark);
+}
+
+/* =========================================================
+   MODAIS
+   ========================================================= */
+.modal-content {
+    border-radius: var(--border-radius);
+    border: none;
+    box-shadow: var(--shadow-lg);
+}
+
+.modal-header {
+    border-bottom: none;
+    padding: var(--space-lg);
+}
+
+.modal-body {
+    padding: var(--space-lg);
+}
+
+.modal-footer {
+    border-top: none;
+    padding: var(--space-md) var(--space-lg);
+}
+
+/* =========================================================
+   ANIMAÇÕES
+   ========================================================= */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-in {
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* =========================================================
+   CARINHO VAZIO
+   ========================================================= */
+.empty-cart {
+    text-align: center;
+    padding: var(--space-xl) 0;
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+}
+
+    .empty-cart .empty-icon {
+        font-size: 3rem;
+        color: var(--orange);
+        margin-bottom: var(--space-md);
+    }
+
+/* =========================================================
+   RESPONSIVIDADE
+   ========================================================= */
+@media (max-width: 992px) {
+    .card.sticky-top {
+        position: static;
+        margin-top: var(--space-lg);
+    }
+}
+
+@media (max-width: 768px) {
+    .card-body {
+        padding: var(--space-md);
+    }
+
+    .modal-body, .modal-header {
+        padding: var(--space-md);
+    }
+}
+
+@media (max-width: 576px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-sm);
+    }
+
+    .order-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-sm);
+    }
+
+    .item-image {
+        margin-bottom: var(--space-xs);
+    }
+
+    .btn-payment {
+        padding: var(--space-xs);
+    }
+
+        .btn-payment .payment-icon {
+            font-size: 1.25rem;
+        }
+}
+
+/* =========================================================
+   ESTILOS PARA O CEP AUTOMÁTICO
+   ========================================================= */
+.cep-group {
+    position: relative;
+}
+
+.loading-spinner {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    padding: var(--space-xs) 0;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    color: var(--orange);
+}
+
+.cep-group.loading .loading-spinner {
+    opacity: 1;
+}
+
+/* =========================================================
+   BOTÕES DE AÇÃO
+   ========================================================= */
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+    .btn-action i {
+        transition: transform 0.2s ease;
+    }
+
+    .btn-action:hover i {
+        transform: translateX(3px);
+    }
+
+/* =========================================================
+   ESTILOS PARA VALIDAÇÃO
+   ========================================================= */
+.text-danger {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    display: block;
+}
+
+.is-invalid {
+    border-color: #dc3545;
+}
+
+    .is-invalid:focus {
+        box-shadow: 0 0 0 0.2rem rgba(220,53,69,0.25);
+    }
+
+/* =========================================================
+   UTILITÁRIOS
+   ========================================================= */
+.text-orange {
+    color: var(--orange);
+}
+
+.bg-orange-soft {
+    background-color: var(--orange-soft);
+}
+
+.shadow-sm {
+    box-shadow: var(--shadow-sm);
+}
+
+.rounded-lg {
+    border-radius: var(--border-radius);
+}
+
+.mt-1 {
+    margin-top: 0.25rem;
+}
+
+.mt-2 {
+    margin-top: 0.5rem;
+}
+
+.mt-3 {
+    margin-top: 1rem;
+}
+
+.mt-4 {
+    margin-top: 1.5rem;
+}
+
+.mt-5 {
+    margin-top: 3rem;
+}
+
+/* =========================================================
+   ANIMAÇÃO DE CARREGAMENTO
+   ========================================================= */
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.spinner {
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid var(--orange);
+    border-radius: 50%;
+    border-top-color: transparent;
+}

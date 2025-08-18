@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace WebApplicationPods.Models
@@ -22,6 +23,7 @@ namespace WebApplicationPods.Models
         public decimal PrecoUnitario { get; set; }
 
         [StringLength(500, ErrorMessage = "As observações devem ter no máximo 500 caracteres")]
+        [ValidateNever]
         public string Observacoes { get; set; }
 
         // Relacionamentos

@@ -1,10 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 using WebApplicationPods.Data;
+using WebApplicationPods.Payments;
+using WebApplicationPods.Payments.Gateways;
 using WebApplicationPods.Repositories;
 using WebApplicationPods.Repository.Interface;
 using WebApplicationPods.Repository.Repository;
-using WebApplicationPods.Services;
 using WebApplicationPods.Services.Interface;
 using WebApplicationPods.Services.service;
 
@@ -54,6 +55,8 @@ builder.Services.AddScoped<ICarrinhoRepository, CarrinhoRepository>();
 builder.Services.AddScoped<ICarrinhoService, CarrinhoService>();
 builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
 builder.Services.AddScoped<IPedidoRepository, PedidoRepository>();
+builder.Services.AddScoped<IPaymentService, MercadoPagoGateway>(); // ou outro
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 
 var app = builder.Build();

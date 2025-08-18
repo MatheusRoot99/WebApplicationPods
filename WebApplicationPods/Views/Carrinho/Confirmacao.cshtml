@@ -1,0 +1,34 @@
+﻿@model WebApplicationPods.Models.PedidoModel
+
+<div class="container mt-4">
+    <h2>Pedido Confirmado!</h2>
+    <p><strong>Número do Pedido:</strong> @Model.Id</p>
+    <p><strong>Status:</strong> @Model.Status</p>
+    <p><strong>Data:</strong> @Model.DataPedido.ToString("dd/MM/yyyy HH:mm")</p>
+    <p><strong>Total:</strong> @Model.ValorTotal.ToString("C")</p>
+    <p><strong>Pagamento:</strong> @Model.MetodoPagamento</p>
+
+    @if (Model.Endereco != null && Model.EnderecoId > 0)
+    {
+        <p><strong>Entrega em:</strong> @Model.Endereco.Logradouro, @Model.Endereco.Numero</p>
+    }
+    else
+    {
+        <p><strong>Entrega:</strong> Retirada no local</p>
+    }
+
+    <h4>Itens:</h4>
+    <ul>
+        @foreach (var item in Model.PedidoItens)
+        {
+            <li>@item.Quantidade x @item.Produto.Nome - @item.PrecoUnitario.ToString("C")</li>
+        }
+    </ul>
+
+    @if (!string.IsNullOrEmpty(Model.PedidoItens.FirstOrDefault()?.Observacoes))
+    {
+        <p><strong>Observações:</strong> @Model.PedidoItens.FirstOrDefault()?.Observacoes</p>
+    }
+
+    <a asp-controller="Home" asp-action="Index" class="btn btn-primary">Voltar</a>
+</div>

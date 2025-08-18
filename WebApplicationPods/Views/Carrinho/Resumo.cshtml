@@ -3,68 +3,583 @@
 @{
     ViewData["Title"] = "Resumo do Pedido";
 }
-<link rel="stylesheet" href="~/css/carrinho.css" asp-append-version="true" />
 
-<div class="container mt-4">
-    <h2>@ViewData["Title"]</h2>
+@section Styles {
+    <link rel="stylesheet" href="~/css/resumo-componente.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+}
+
+<div class="container-xxl mt-4 animate__animated animate__fadeIn">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0 fw-bold">@ViewData["Title"]</h1>
+        <a asp-action="Index" class="btn btn-outline-dark">
+            <i class="bi bi-arrow-left me-1"></i> Voltar
+        </a>
+    </div>
+
+    <!-- Alertas -->
+    @if (TempData["Sucesso"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["Sucesso"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+        </div>
+    }
+    @if (TempData["Erro"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Erro"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+        </div>
+    }
 
     @if (Model?.Carrinho?.Itens?.Any() == true)
     {
-        <div class="row">
-            <div class="col-md-8">
-                <!-- Seção de Cliente -->
-                <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h4>Dados do Cliente</h4>
+        <div class="row g-4">
+            <!-- COLUNA ESQUERDA - Formulário -->
+            <div class="col-lg-8">
+                <!-- Dados do Cliente -->
+                <div class="card shadow-sm border-0 overflow-hidden">
+                    <div class="card-header bg-gradient-orange text-white d-flex align-items-center">
+                        <div class="icon-circle bg-white bg-opacity-10 me-3">
+                            <i class="bi bi-person-badge text-white"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0">Dados do Cliente</h5>
+                            <small class="opacity-75">Informações para contato</small>
+                        </div>
                     </div>
                     <div class="card-body">
-                        @if (Model.Cliente != null)
-                        {
-                            <p><strong>Nome:</strong> @Model.Cliente.Nome</p>
-                            <p><strong>Telefone:</strong> @Model.Cliente.Telefone</p>
-                            <p><strong>Email:</strong> @Model.Cliente.Email</p>
-                        }
-                        else
-                        {
-                            <p class="text-danger">Dados do cliente não disponíveis</p>
-                        }
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="info-box">
+                                    <small class="text-muted">Nome</small>
+                                    <div class="fw-semibold">@Model.Cliente.Nome</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="info-box">
+                                    <small class="text-muted">Telefone</small>
+                                    <div class="fw-semibold">@Model.Cliente.Telefone</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="info-box">
+                                    <small class="text-muted">Email</small>
+                                    <div class="fw-semibold">@Model.Cliente.Email</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Seção de Endereço -->
-                <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h4>Endereço de Entrega</h4>
+                <!-- Formulário Principal -->
+                <form asp-action="Finalizar" method="post" id="formFinalizar">
+                    @Html.AntiForgeryToken()
+
+                    <!-- Entrega / Retirada -->
+                    <div class="card shadow-sm border-0 mt-4">
+                        <div class="card-header bg-gradient-orange text-white d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-circle bg-white bg-opacity-10 me-3">
+                                    <i class="bi bi-truck text-white"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0">Entrega</h5>
+                                    <small class="opacity-75">Escolha como receber seu pedido</small>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#enderecoModal">
+                                <i class="bi bi-plus-lg me-1"></i> Novo Endereço
+                            </button>
+                        </div>
+
+                        <div class="card-body">
+                            <div class="form-check form-switch switch-lg mb-4">
+                                <input asp-for="RetiradaNoLocal" class="form-check-input" type="checkbox" id="retiradaLocal">
+                                <label class="form-check-label" for="retiradaLocal">
+                                    <span class="d-block fw-semibold">Retirar no local</span>
+                                    <small class="text-muted">Você busca seu pedido no restaurante</small>
+                                </label>
+                            </div>
+
+                            <!-- Container de endereço (some quando for retirada) -->
+                            <div id="containerEntrega" class="@(Model.RetiradaNoLocal ? "d-none" : "") animate__animated animate__fadeIn">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Selecione um endereço</label>
+                                    <div class="d-flex gap-2 mb-3">
+                                        <select asp-for="EnderecoSelecionadoId" class="form-select" id="enderecoSelect">
+                                            <option value="">Selecione...</option>
+                                            @foreach (var e in Model.EnderecosDisponiveis)
+                                            {
+                                                <option value="@e.Id"
+                                                        data-logradouro="@e.Logradouro"
+                                                        data-numero="@e.Numero"
+                                                        data-complemento="@e.Complemento"
+                                                        data-bairro="@e.Bairro"
+                                                        data-cidade="@e.Cidade"
+                                                        data-estado="@e.Estado"
+                                                        data-cep="@e.CEP"
+                                                        data-principal="@(e.Principal ? "true" : "false")">
+                                                    @e.Logradouro, @e.Numero - @e.Bairro
+                                                </option>
+                                            }
+                                        </select>
+                                        <button type="button" class="btn btn-dark flex-shrink-0" data-bs-toggle="modal" data-bs-target="#enderecoModal">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary flex-shrink-0" id="btnEditarEndereco" data-bs-toggle="modal" data-bs-target="#editarEnderecoModal" disabled>
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Detalhes do endereço selecionado -->
+                                <div id="enderecoDetalhes" class="address-card @(Model.EnderecoEntrega == null ? "empty" : "")">
+                                    @if (Model.EnderecoEntrega != null)
+                                    {
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h6 class="mb-0 d-flex align-items-center gap-2">
+                                                <i class="bi bi-house-check text-orange"></i>
+                                                <span>Endereço selecionado</span>
+                                                @if (Model.EnderecoEntrega.Principal)
+                                                {
+                                                    <span class="badge bg-orange-soft">Principal</span>
+                                                }
+                                            </h6>
+                                            <small class="text-muted">CEP: @Model.EnderecoEntrega.CEP</small>
+                                        </div>
+                                        <div class="address-details">
+                                            <div>@Model.EnderecoEntrega.Logradouro, @Model.EnderecoEntrega.Numero</div>
+                                            @if (!string.IsNullOrEmpty(Model.EnderecoEntrega.Complemento))
+                                            {
+                                                <div>@Model.EnderecoEntrega.Complemento</div>
+                                            }
+                                            <div>@Model.EnderecoEntrega.Bairro - @Model.EnderecoEntrega.Cidade/@Model.EnderecoEntrega.Estado</div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="empty-state">
+                                            <i class="bi bi-house-x"></i>
+                                            <span>Nenhum endereço selecionado</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Observações -->
+                    <div class="card shadow-sm border-0 mt-4">
+                        <div class="card-header bg-gradient-orange text-white d-flex align-items-center">
+                            <div class="icon-circle bg-white bg-opacity-10 me-3">
+                                <i class="bi bi-chat-square-text text-white"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0">Observações</h5>
+                                <small class="opacity-75">Instruções especiais para seu pedido</small>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <textarea asp-for="Observacoes" class="form-control" rows="3" placeholder="Ex.: aviso, trocar sabor, horário..."></textarea>
+                            <small class="text-muted">Máximo de 200 caracteres</small>
+                        </div>
+                    </div>
+
+                    <!-- Pagamento -->
+                    <div class="card shadow-sm border-0 mt-4">
+                        <div class="card-header bg-gradient-orange text-white d-flex align-items-center">
+                            <div class="icon-circle bg-white bg-opacity-10 me-3">
+                                <i class="bi bi-credit-card text-white"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0">Pagamento</h5>
+                                <small class="opacity-75">Escolha como deseja pagar</small>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-2">
+                                <div class="col-6 col-md-3">
+                                    <input type="radio" class="btn-check" id="pay1" name="MetodoPagamento" value="Dinheiro" @(Model.MetodoPagamento == "Dinheiro" ? "checked" : "")>
+                                    <label class="btn btn-payment w-100" for="pay1">
+                                        <i class="bi bi-cash-coin payment-icon"></i>
+                                        <span>Dinheiro</span>
+                                    </label>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <input type="radio" class="btn-check" id="pay2" name="MetodoPagamento" value="Pix" @(Model.MetodoPagamento == "Pix" ? "checked" : "")>
+                                    <label class="btn btn-payment w-100" for="pay2">
+                                        <i class="bi bi-qr-code payment-icon"></i>
+                                        <span>Pix</span>
+                                    </label>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <input type="radio" class="btn-check" id="pay3" name="MetodoPagamento" value="Cartão de Crédito" @(Model.MetodoPagamento == "Cartão de Crédito" ? "checked" : "")>
+                                    <label class="btn btn-payment w-100" for="pay3">
+                                        <i class="bi bi-credit-card payment-icon"></i>
+                                        <span>Crédito</span>
+                                    </label>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <input type="radio" class="btn-check" id="pay4" name="MetodoPagamento" value="Cartão de Débito" @(Model.MetodoPagamento == "Cartão de Débito" ? "checked" : "")>
+                                    <label class="btn btn-payment w-100" for="pay4">
+                                        <i class="bi bi-credit-card-2-back payment-icon"></i>
+                                        <span>Débito</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botão Finalizar -->
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-orange btn-lg py-3 fw-bold">
+                            <i class="bi bi-check2-circle me-2"></i> Finalizar Pedido
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- COLUNA DIREITA - Resumo do Pedido -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm border-0 sticky-top">
+                    <div class="card-header bg-dark text-white d-flex align-items-center">
+                        <div class="icon-circle bg-white bg-opacity-10 me-3">
+                            <i class="bi bi-bag-check text-white"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0">Seu Pedido</h5>
+                            <small class="opacity-75">Resumo dos itens</small>
+                        </div>
                     </div>
                     <div class="card-body">
-                        @if (Model.EnderecoEntrega != null)
-                        {
-                            <p>@Model.EnderecoEntrega.Logradouro, @Model.EnderecoEntrega.Numero</p>
-                            @if (!string.IsNullOrEmpty(Model.EnderecoEntrega.Complemento))
+                        <div class="order-items">
+                            @foreach (var item in Model.Carrinho.Itens)
                             {
-                                <p>@Model.EnderecoEntrega.Complemento</p>
+                                <div class="order-item">
+                                    <div class="item-image">
+                                        <img src="@item.Produto.ImagemUrl" alt="@item.Produto.Nome" class="img-fluid rounded">
+                                        <span class="item-quantity">@item.Quantidade</span>
+                                    </div>
+                                    <div class="item-details">
+                                        <h6 class="item-name">@item.Produto.Nome</h6>
+                                        @if (!string.IsNullOrEmpty(item.Sabor))
+                                        {
+                                            <small class="item-flavor">Sabor: @item.Sabor</small>
+                                        }
+                                    </div>
+                                    <div class="item-price">
+                                        <div>@((item.Produto.Preco * item.Quantidade).ToString("C"))</div>
+                                        @if (item.Produto.EstaEmPromocao())
+                                        {
+                                            <small class="text-muted text-decoration-line-through">@(item.Produto.Preco.ToString("C"))</small>
+                                        }
+                                    </div>
+                                </div>
                             }
-                            <p>@Model.EnderecoEntrega.Bairro - @Model.EnderecoEntrega.Cidade/@Model.EnderecoEntrega.Estado</p>
-                            <p>CEP: @Model.EnderecoEntrega.CEP</p>
-                        }
-                        else
-                        {
-                            <p class="text-danger">Nenhum endereço de entrega disponível</p>
-                            <a asp-controller="Cliente" asp-action="AdicionarEndereco" class="btn btn-sm btn-primary">
-                                Adicionar Endereço
-                            </a>
-                        }
+                        </div>
+
+                        <div class="order-summary">
+                            <div class="summary-row">
+                                <span>Subtotal</span>
+                                <strong>@Model.Carrinho.Total.ToString("C")</strong>
+                            </div>
+                            <div class="summary-row">
+                                <span>Taxa de Entrega</span>
+                                <strong id="taxaEntregaLabel">@(Model.RetiradaNoLocal ? "Grátis" : "R$ 5,00")</strong>
+                            </div>
+                            <hr class="my-2">
+                            <div class="summary-row total">
+                                <span>Total</span>
+                                <strong id="totalGeralLabel">
+                                    @((Model.Carrinho.Total + (Model.RetiradaNoLocal ? 0 : 5)).ToString("C"))
+                                </strong>
+                            </div>
+                            <small class="text-muted d-block mt-2">* Taxa pode variar por região</small>
+                        </div>
                     </div>
                 </div>
-
-                <!-- Restante do código da view... -->
             </div>
         </div>
     }
     else
     {
-        <div class="alert alert-warning">
-            Seu carrinho está vazio. <a asp-action="Index">Voltar ao carrinho</a>
+        <div class="empty-cart">
+            <div class="empty-icon">
+                <i class="bi bi-cart-x"></i>
+            </div>
+            <h3>Seu carrinho está vazio</h3>
+            <p class="text-muted">Adicione itens ao seu carrinho antes de finalizar o pedido</p>
+            <a asp-action="Index" class="btn btn-orange mt-3">
+                <i class="bi bi-arrow-left me-2"></i> Voltar ao cardápio
+            </a>
         </div>
     }
 </div>
+
+<!-- Modal: Novo Endereço -->
+<div class="modal fade" id="enderecoModal" tabindex="-1" aria-labelledby="enderecoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0">
+            <div class="modal-header bg-gradient-orange text-white">
+                <h5 class="modal-title" id="enderecoModalLabel">
+                    <i class="bi bi-house-add me-2"></i> Novo Endereço
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+
+            <form asp-action="AdicionarEndereco" method="post" id="formEnderecoModal" autocomplete="off">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="ClienteId" value="@Model.Cliente.Id" />
+
+                <div class="modal-body">
+                    <div class="row g-3" data-cep-scope>
+                        <div class="col-md-8">
+                            <label class="form-label">Logradouro</label>
+                            <input asp-for="EnderecoNovo.Logradouro" class="form-control" data-field="logradouro" required />
+                            <span asp-validation-for="EnderecoNovo.Logradouro" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Número</label>
+                            <input asp-for="EnderecoNovo.Numero" class="form-control" data-field="numero" required />
+                            <span asp-validation-for="EnderecoNovo.Numero" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Complemento</label>
+                            <input asp-for="EnderecoNovo.Complemento" class="form-control" data-field="complemento" />
+                            <small class="text-muted">Opcional</small>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Bairro</label>
+                            <input asp-for="EnderecoNovo.Bairro" class="form-control" data-field="bairro" required />
+                            <span asp-validation-for="EnderecoNovo.Bairro" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-4 cep-group">
+                            <label class="form-label">CEP</label>
+                            <div class="input-group">
+                                <input asp-for="EnderecoNovo.CEP" class="form-control" data-cep required />
+                                <button type="button" class="btn btn-outline-secondary" id="buscarCepBtn">
+                                    <i class="bi bi-search"></i>
+                                </button>
+                            </div>
+                            <div class="loading-spinner">
+                                <span class="spinner-border spinner-border-sm text-orange" role="status"></span> Buscando...
+                            </div>
+                            <span asp-validation-for="EnderecoNovo.CEP" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Cidade</label>
+                            <input asp-for="EnderecoNovo.Cidade" class="form-control" data-field="cidade" required />
+                            <span asp-validation-for="EnderecoNovo.Cidade" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Estado</label>
+                            <input asp-for="EnderecoNovo.Estado" class="form-control" maxlength="2" data-field="estado" required />
+                            <span asp-validation-for="EnderecoNovo.Estado" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="form-text mt-2">
+                        <i class="bi bi-info-circle me-1"></i> Preencha o CEP para autocompletar os demais campos.
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-orange">
+                        <i class="bi bi-save me-1"></i> Salvar Endereço
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Editar Endereço -->
+<div class="modal fade" id="editarEnderecoModal" tabindex="-1" aria-labelledby="editarEnderecoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title" id="editarEnderecoLabel">
+                    <i class="bi bi-house-gear me-2"></i> Editar Endereço
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+
+            <form asp-action="AtualizarEndereco" method="post" id="formEditarEndereco">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="ClienteId" value="@Model.Cliente.Id" />
+                <input type="hidden" name="Id" id="edit_Id" />
+
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Logradouro</label>
+                            <input name="Logradouro" id="edit_Logradouro" class="form-control" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Número</label>
+                            <input name="Numero" id="edit_Numero" class="form-control" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Complemento</label>
+                            <input name="Complemento" id="edit_Complemento" class="form-control" />
+                            <small class="text-muted">Opcional</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Bairro</label>
+                            <input name="Bairro" id="edit_Bairro" class="form-control" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">CEP</label>
+                            <input name="CEP" id="edit_CEP" class="form-control" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Cidade</label>
+                            <input name="Cidade" id="edit_Cidade" class="form-control" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Estado</label>
+                            <input name="Estado" id="edit_Estado" class="form-control" maxlength="2" required />
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="edit_Principal" name="Principal">
+                                <label class="form-check-label" for="edit_Principal">
+                                    Definir como endereço principal
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-text mt-2">
+                        <i class="bi bi-info-circle me-1"></i> Edite os campos e salve para atualizar este endereço.
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-orange">
+                        <i class="bi bi-save me-1"></i> Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/cep-autocomplete.js" asp-append-version="true"></script>
+    <script>
+        // Toggle retirada/entrega com ajuste de taxa e total
+        const retiradaChk = document.getElementById('retiradaLocal');
+        const containerEntrega = document.getElementById('containerEntrega');
+        const taxaEntregaLabel = document.getElementById('taxaEntregaLabel');
+        const totalGeralLabel = document.getElementById('totalGeralLabel');
+        const subtotal = @Model.Carrinho.Total.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        const taxaPadrao = 5;
+
+        function atualizarTotais() {
+            const retirada = retiradaChk.checked;
+            const taxa = retirada ? 0 : taxaPadrao;
+            taxaEntregaLabel.textContent = taxa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            const total = subtotal + taxa;
+            totalGeralLabel.textContent = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+            if (retirada) {
+                containerEntrega.classList.add('d-none');
+            } else {
+                containerEntrega.classList.remove('d-none');
+                containerEntrega.classList.add('animate__animated', 'animate__fadeIn');
+            }
+        }
+
+        retiradaChk?.addEventListener('change', atualizarTotais);
+        atualizarTotais();
+
+        // Quando usuário muda o select de endereço, reflete nos detalhes
+        const selectEndereco = document.getElementById('enderecoSelect');
+        const detalhes = document.getElementById('enderecoDetalhes');
+        selectEndereco?.addEventListener('change', function () {
+            const opt = this.selectedOptions[0];
+            if (!opt) return;
+
+            const log = opt.getAttribute('data-logradouro') || '';
+            const num = opt.getAttribute('data-numero') || '';
+            const comp = opt.getAttribute('data-complemento') || '';
+            const bai = opt.getAttribute('data-bairro') || '';
+            const cid = opt.getAttribute('data-cidade') || '';
+            const uf  = opt.getAttribute('data-estado') || '';
+            const cep = opt.getAttribute('data-cep') || '';
+            const principal = opt.getAttribute('data-principal') === 'true';
+
+            let html = `
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-0 d-flex align-items-center gap-2">
+                        <i class="bi bi-house-check text-orange"></i>
+                        <span>Endereço selecionado</span>
+                        ${principal ? '<span class="badge bg-orange-soft">Principal</span>' : ''}
+                    </h6>
+                    <small class="text-muted">CEP: ${cep}</small>
+                </div>
+                <div class="address-details">
+                    <div>${log}${log && num ? ', ' : ''}${num}</div>
+                    ${comp ? `<div>${comp}</div>` : ''}
+                    <div>${bai} - ${cid}/${uf}</div>
+                </div>`;
+
+            detalhes.innerHTML = html;
+            detalhes.classList.remove('empty');
+        });
+
+        // Botão "Buscar" do CEP no modal: dispara blur no input data-cep
+        document.getElementById('buscarCepBtn')?.addEventListener('click', function () {
+            const modalCep = document.querySelector('#formEnderecoModal [data-cep]');
+            if (modalCep) modalCep.dispatchEvent(new Event('blur'));
+        });
+
+        // Habilita/Desabilita o botão Editar + preenche o modal com o endereço selecionado
+        const btnEditarEndereco = document.getElementById('btnEditarEndereco');
+        const selectEndereco2 = document.getElementById('enderecoSelect');
+
+        function toggleEditar() {
+            const hasValue = !!selectEndereco2?.value;
+            btnEditarEndereco.disabled = !hasValue;
+        }
+        selectEndereco2?.addEventListener('change', toggleEditar);
+        toggleEditar();
+
+        // Ao abrir o modal de edição, puxa os data-* da option selecionada
+        const editarModal = document.getElementById('editarEnderecoModal');
+        editarModal?.addEventListener('show.bs.modal', function () {
+            const opt = selectEndereco2?.selectedOptions[0];
+            if (!opt) return;
+
+            document.getElementById('edit_Id').value          = opt.value;
+            document.getElementById('edit_Logradouro').value  = opt.getAttribute('data-logradouro') || '';
+            document.getElementById('edit_Numero').value      = opt.getAttribute('data-numero') || '';
+            document.getElementById('edit_Complemento').value = opt.getAttribute('data-complemento') || '';
+            document.getElementById('edit_Bairro').value      = opt.getAttribute('data-bairro') || '';
+            document.getElementById('edit_Cidade').value      = opt.getAttribute('data-cidade') || '';
+            document.getElementById('edit_Estado').value      = (opt.getAttribute('data-estado') || '').toUpperCase();
+            document.getElementById('edit_CEP').value         = opt.getAttribute('data-cep') || '';
+
+            const principal = opt.getAttribute('data-principal') === 'true';
+            document.getElementById('edit_Principal').checked = principal;
+        });
+
+        // Validação do formulário antes de enviar
+        document.getElementById('formFinalizar')?.addEventListener('submit', function(e) {
+            if (!retiradaChk.checked && !selectEndereco2.value) {
+                e.preventDefault();
+                alert('Por favor, selecione um endereço de entrega ou marque "Retirar no local"');
+            }
+        });
+    </script>
+}
