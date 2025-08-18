@@ -15,7 +15,7 @@ namespace WebApplicationPods.Models
         [StringLength(100, ErrorMessage = "O nome do produto deve ter no máximo 100 caracteres")]
         public string Nome { get; set; }
 
-        [StringLength(500, ErrorMessage = "A descrição deve ter no máximo 500 caracteres")]
+        [StringLength(2000, ErrorMessage = "A descrição deve ter no máximo 500 caracteres")]
         public string Descricao { get; set; }
 
         [Required(ErrorMessage = "O preço do produto é obrigatório")]

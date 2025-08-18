@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WebApplicationPods.Data;
 
@@ -11,9 +12,11 @@ using WebApplicationPods.Data;
 namespace WebApplicationPods.Migrations
 {
     [DbContext(typeof(BancoContext))]
-    partial class BancoContextModelSnapshot : ModelSnapshot
+    [Migration("20250818183412_AdicinandoPedidosObservacoes")]
+    partial class AdicinandoPedidosObservacoes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -207,18 +210,18 @@ namespace WebApplicationPods.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("CardBrand")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("CardLast4")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ClientSecretOrToken")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("FailureReason")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("Installments")
@@ -234,6 +237,7 @@ namespace WebApplicationPods.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("PixQrBase64Png")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PixQrData")

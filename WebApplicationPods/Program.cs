@@ -11,24 +11,25 @@ using WebApplicationPods.Services.service;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configuração de logging
+// ===== Logging
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
-// Add services to the container.
-builder.Services.AddControllersWithViews()
-    .AddJsonOptions(options =>
+// ===== MVC + JSON (evita ciclo em navegações EF)
+builder.Services
+    .AddControllersWithViews()
+    .AddJsonOptions(o =>
     {
-        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-        options.JsonSerializerOptions.WriteIndented = true;
+        o.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+        o.JsonSerializerOptions.WriteIndented = true;
     });
 
-// Configuração do banco de dados
+// ===== EF Core
 builder.Services.AddDbContext<BancoContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DataBase")));
 
-// Configuração da sessão
+// ===== Sessão
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -38,33 +39,58 @@ builder.Services.AddSession(options =>
     options.Cookie.Name = "SitePods.Session";
 });
 
+// ===== HTTP Client para ViaCEP (exemplo seu)
 builder.Services.AddHttpClient<ICepService, CepService>(client =>
 {
     client.BaseAddress = new Uri("https://viacep.com.br/ws/");
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
-// Configuração de serviços
+// ===== Payment Gateway (Typed HttpClient) + Domain Service
+// Importante: seu MercadoPagoGateway deve ter construtor (HttpClient http, IConfiguration cfg)
+// e dentro dele setar o Authorization Bearer com o AccessToken do appsettings.
+builder.Services.AddHttpClient<IPaymentGateway, MercadoPagoGateway>(client =>
+{
+    client.BaseAddress = new Uri("https://api.mercadopago.com/");
+});
+
+builder.Services.AddHttpClient<IPaymentGateway, MercadoPagoGateway>((sp, http) =>
+{
+    var cfg = sp.GetRequiredService<IConfiguration>();
+    var token = cfg["Payments:MercadoPago:AccessToken"];
+    http.BaseAddress = new Uri("https://api.mercadopago.com/");
+    if (!string.IsNullOrWhiteSpace(token))
+        http.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+});
+
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+
+// ===== Infra
 builder.Services.AddHttpContextAccessor();
 
-
-// Registro dos repositórios e serviços
+// ===== Repositórios / Serviços do domínio
 builder.Services.AddScoped<IProdutoRepository, ProdutoRepository>();
 builder.Services.AddScoped<ICategoriaRepository, CategoriaRepository>();
 builder.Services.AddScoped<ICarrinhoRepository, CarrinhoRepository>();
 builder.Services.AddScoped<ICarrinhoService, CarrinhoService>();
 builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
 builder.Services.AddScoped<IPedidoRepository, PedidoRepository>();
-builder.Services.AddScoped<IPaymentService, MercadoPagoGateway>(); // ou outro
-builder.Services.AddScoped<IPaymentService, PaymentService>();
-
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// ===== Pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
+    // (opcional) desabilitar cache em dev
+    app.Use(async (context, next) =>
+    {
+        context.Response.Headers["Cache-Control"] = "no-cache, no-store";
+        context.Response.Headers["Pragma"] = "no-cache";
+        context.Response.Headers["Expires"] = "-1";
+        await next();
+    });
 }
 else
 {
@@ -77,21 +103,8 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-app.UseAuthorization();
-
 app.UseSession();
-
-// Middleware para limpar cache (opcional, ajuda durante desenvolvimento)
-if (app.Environment.IsDevelopment())
-{
-    app.Use(async (context, next) =>
-    {
-        context.Response.Headers["Cache-Control"] = "no-cache, no-store";
-        context.Response.Headers["Pragma"] = "no-cache";
-        context.Response.Headers["Expires"] = "-1";
-        await next();
-    });
-}
+app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",

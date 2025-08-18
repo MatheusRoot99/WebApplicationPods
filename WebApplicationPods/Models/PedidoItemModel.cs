@@ -23,8 +23,7 @@ namespace WebApplicationPods.Models
         public decimal PrecoUnitario { get; set; }
 
         [StringLength(500, ErrorMessage = "As observações devem ter no máximo 500 caracteres")]
-        [ValidateNever]
-        public string Observacoes { get; set; }
+        public string? Observacoes { get; set; }
 
         // Relacionamentos
         [ForeignKey("PedidoId")]

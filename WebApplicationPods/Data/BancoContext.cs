@@ -33,6 +33,23 @@ namespace WebApplicationPods.Data
                 .HasForeignKey(p => p.EnderecoId)
                 .OnDelete(DeleteBehavior.Restrict); // ESTA É A LINHA QUE EVITA O ERRO
 
+
+            modelBuilder.Entity<PaymentModel>(e =>
+            {
+                e.Property(p => p.CardBrand).IsRequired(false);
+                e.Property(p => p.CardLast4).IsRequired(false);
+                // Se quiser, já garante também que ClientSecretOrToken é opcional:
+                e.Property(p => p.ClientSecretOrToken).IsRequired(false);
+                e.Property(p => p.PixQrBase64Png).IsRequired(false);
+                e.Property(p => p.FailureReason).IsRequired(false);
+            });
+
+            modelBuilder.Entity<PaymentModel>()
+                .HasOne(p => p.Pedido)
+                .WithMany(o => o.Pagamentos)
+                .HasForeignKey(p => p.PedidoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // Configurações adicionais do modelo podem ser feitas aqui
             base.OnModelCreating(modelBuilder);
         }

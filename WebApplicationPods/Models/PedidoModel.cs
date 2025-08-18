@@ -37,6 +37,9 @@ namespace WebApplicationPods.Models
         [StringLength(100, ErrorMessage = "O código da transação deve ter no máximo 100 caracteres")]
         public string CodigoTransacao { get; set; }
 
+        [StringLength(500)]
+        public string? Observacoes { get; set; }
+
         // Relacionamentos
         [ForeignKey("ClienteId")]
         public ClienteModel Cliente { get; set; }
@@ -45,5 +48,7 @@ namespace WebApplicationPods.Models
         public EnderecoModel Endereco { get; set; }
 
         public ICollection<PedidoItemModel> PedidoItens { get; set; }
+
+        public ICollection<PaymentModel> Pagamentos { get; set; } = new List<PaymentModel>();
     }
 }

@@ -1,27 +1,37 @@
-﻿using System.Threading.Tasks;
+﻿using System.Net.Http;
+using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
-using WebApplicationPods.Models;
+using System.Threading.Tasks;
 using WebApplicationPods.Enum;
-using WebApplicationPods.Payments;
+using WebApplicationPods.Models;
 
 namespace WebApplicationPods.Payments.Gateways
 {
     public class MercadoPagoGateway : IPaymentGateway
     {
+        private readonly HttpClient _http;
         private readonly string _accessToken;
         private readonly string _webhookSecret;
 
-        public MercadoPagoGateway(IConfiguration cfg)
+        // ✅ Construtor compatível com AddHttpClient<TService, TImpl>
+        public MercadoPagoGateway(HttpClient http, IConfiguration cfg)
         {
-            _accessToken = cfg["Payments:MercadoPago:AccessToken"];
-            _webhookSecret = cfg["Payments:MercadoPago:WebhookSecret"];
-            // TODO: inicializar SDK do MP com _accessToken
+            _http = http;
+            _accessToken = cfg["Payments:MercadoPago:AccessToken"] ?? "";
+            _webhookSecret = cfg["Payments:MercadoPago:WebhookSecret"] ?? "";
+
+            // Base do MP (pode ajustar conforme API usada)
+            if (_http.BaseAddress == null)
+                _http.BaseAddress = new System.Uri("https://api.mercadopago.com/");
+
+            if (!string.IsNullOrWhiteSpace(_accessToken))
+                _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
         }
 
         public Task<PixInitResult> CreatePixAsync(PedidoModel pedido)
         {
-            // TODO: chamar API do MP para criar cobrança PIX e retornar EMV / QR
+            // TODO: chamar API do MP usando _http
             return Task.FromResult(new PixInitResult
             {
                 ProviderPaymentId = "pix_demo_123",
@@ -32,7 +42,7 @@ namespace WebApplicationPods.Payments.Gateways
 
         public Task<CardInitResult> CreateCardPaymentAsync(PedidoModel pedido, PaymentMethod method)
         {
-            // TODO: criar intent/charge de cartão e retornar client secret/token p/ front
+            // TODO: criar intenção/charge de cartão com _http
             return Task.FromResult(new CardInitResult
             {
                 ProviderPaymentId = "card_demo_123",
@@ -40,24 +50,30 @@ namespace WebApplicationPods.Payments.Gateways
             });
         }
 
-        public Task<bool> ConfirmCardPaymentAsync(string providerPaymentId, string clientPayloadJson)
+        public Task<ConfirmCardResult> ConfirmCardPaymentAsync(string providerPaymentId, string clientPayloadJson)
         {
-            // TODO: confirmar pagamento de cartão usando o token/nonce do front
-            return Task.FromResult(true);
+            // TODO: confirmar com _http e retornar brand/last4 quando possível
+            return Task.FromResult(new ConfirmCardResult
+            {
+                Success = true,
+                Brand = "Visa",
+                Last4 = "4242",
+                FailureReason = null
+            });
         }
 
         public Task<PaymentStatus> GetStatusAsync(string providerPaymentId)
         {
-            // TODO: consultar status no MP
+            // TODO: consultar _http
             return Task.FromResult(PaymentStatus.Paid);
         }
 
         public Task<(string providerPaymentId, PaymentStatus newStatus, decimal? paidAmount, string extra)>
             HandleWebhookAsync(HttpRequest request)
         {
-            // TODO: validar assinatura (se aplicável), ler JSON do MP e mapear status
-            var result = ("pix_demo_123", PaymentStatus.Paid, (decimal?)123.45m, (string)null);
-            return Task.FromResult(result);
+            // TODO: validar assinatura e parse do webhook
+            var tuple = ("pix_demo_123", PaymentStatus.Paid, (decimal?)123.45m, (string)null);
+            return Task.FromResult(tuple);
         }
     }
 }
