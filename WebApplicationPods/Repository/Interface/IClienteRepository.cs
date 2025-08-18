@@ -12,5 +12,10 @@ namespace WebApplicationPods.Repository.Interface
         bool TelefoneExiste(string telefone);
         EnderecoModel ObterEnderecoPrincipal(int clienteId);
         IEnumerable<EnderecoModel> ObterEnderecos(int clienteId);
+        
+
+
     }
+
+
 }

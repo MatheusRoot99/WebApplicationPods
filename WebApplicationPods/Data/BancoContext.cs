@@ -18,6 +18,9 @@ namespace WebApplicationPods.Data
         public DbSet<PedidoModel> Pedidos { get; set; }
         public DbSet<PedidoItemModel> PedidoItens { get; set; }
         public DbSet<UsuarioModel> Usuarios { get; set; }
+        public DbSet<CarrinhoModel> Carrinhos { get; set; }
+        
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

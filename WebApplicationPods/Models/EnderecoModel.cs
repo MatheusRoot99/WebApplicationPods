@@ -30,11 +30,12 @@ namespace WebApplicationPods.Models
         public string Cidade { get; set; }
 
         [Required(ErrorMessage = "O estado é obrigatório")]
-        [StringLength(2, MinimumLength = 2, ErrorMessage = "O estado deve ter 2 caracteres")]
+        [StringLength(2, MinimumLength = 2, ErrorMessage = "UF deve ter 2 caracteres")]
         public string Estado { get; set; }
 
         [Required(ErrorMessage = "O CEP é obrigatório")]
-        [StringLength(10, ErrorMessage = "O CEP deve ter no máximo 10 caracteres")]
+        [RegularExpression(@"^\d{5}-\d{3}$", ErrorMessage = "CEP inválido")]
+        [Display(Name = "CEP")]
         public string CEP { get; set; }
 
         public bool Principal { get; set; } = false;

@@ -1,38 +1,37 @@
-﻿@using WebApplicationPods.Models
-@model ClienteModel
+﻿@model WebApplicationPods.Models.ClienteModel
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/login.css" asp-append-version="true" />
+}
 
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="text-center">Login com Telefone</h3>
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <h2 class="login-title">Acesse sua conta</h2>
+        </div>
+        <div class="login-body">
+            <form asp-action="Login" method="post" class="login-form">
+                <div class="form-group mb-4">
+                    <label for="telefone" class="form-label">Telefone</label>
+                    <input type="tel" id="telefone" name="telefone" class="form-control"
+                           placeholder="(11) 98765-4321" required />
+                    <small class="form-text text-muted">Informe seu WhatsApp com DDD</small>
                 </div>
-                <div class="card-body">
-                    <form asp-action="Login" method="post">
-                        <div class="form-group">
-                            <label for="telefone">Telefone</label>
-                            <input type="tel" id="telefone" name="telefone" class="form-control"
-                                   placeholder="(11) 98765-4321" required />
-                            <small class="form-text text-muted">Informe seu número com DDD</small>
-                        </div>
 
-                        <button type="submit" class="btn btn-primary btn-block mt-4">
-                            Continuar
-                        </button>
-                    </form>
-                </div>
-            </div>
+                <button type="submit" class="btn login-btn btn-block w-100">
+                    Continuar <i class="fas fa-arrow-right ms-2"></i>
+                </button>
+
+                <a href="@Url.Action("Index", "Home")" class="back-btn">
+                    <i class="fas fa-arrow-left me-2"></i> Voltar para a loja
+                </a>
+            </form>
         </div>
     </div>
 </div>
 
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
-    <script>
-        $(document).ready(function(){
-            $('#telefone').inputmask('(99) 99999-9999');
-        });
-    </script>
+    <script src="~/js/login.js" asp-append-version="true"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 }

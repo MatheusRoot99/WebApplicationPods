@@ -252,7 +252,6 @@ namespace WebApplicationPods.Controllers
         }
 
 
-
         // 🔹 Método centralizado para validação de estoque
         private bool ValidarEstoque(ProdutoModel produto, int quantidade, string sabor, out string mensagemErro)
         {

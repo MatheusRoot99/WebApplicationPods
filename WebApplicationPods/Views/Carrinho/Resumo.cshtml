@@ -1,4 +1,4 @@
-﻿@model WebApplicationPods.Models.CarrinhoModel
+﻿@model WebApplicationPods.Models.ResumoPedidoViewModel
 
 @{
     ViewData["Title"] = "Resumo do Pedido";
@@ -8,63 +8,56 @@
 <div class="container mt-4">
     <h2>@ViewData["Title"]</h2>
 
-    @if (Model.Itens.Any())
+    @if (Model?.Carrinho?.Itens?.Any() == true)
     {
         <div class="row">
             <div class="col-md-8">
-                <div class="card">
+                <!-- Seção de Cliente -->
+                <div class="card mb-4">
                     <div class="card-header bg-primary text-white">
-                        <h4>Itens do Pedido</h4>
+                        <h4>Dados do Cliente</h4>
                     </div>
                     <div class="card-body">
-                        @foreach (var item in Model.Itens)
+                        @if (Model.Cliente != null)
                         {
-                            <div class="mb-3 border-bottom pb-3">
-                                <div class="d-flex justify-content-between">
-                                    <h5>@item.Produto.Nome</h5>
-                                    <span>@item.Subtotal.ToString("C")</span>
-                                </div>
-                                <div class="text-muted">
-                                    @item.Quantidade x @item.PrecoUnitario.ToString("C")
-                                </div>
-                                @if (!string.IsNullOrEmpty(item.Observacoes))
-                                {
-                                    <div class="mt-2">
-                                        <strong>Obs:</strong> @item.Observacoes
-                                    </div>
-                                }
-                            </div>
+                            <p><strong>Nome:</strong> @Model.Cliente.Nome</p>
+                            <p><strong>Telefone:</strong> @Model.Cliente.Telefone</p>
+                            <p><strong>Email:</strong> @Model.Cliente.Email</p>
+                        }
+                        else
+                        {
+                            <p class="text-danger">Dados do cliente não disponíveis</p>
                         }
                     </div>
                 </div>
-            </div>
 
-            <div class="col-md-4">
-                <div class="card">
+                <!-- Seção de Endereço -->
+                <div class="card mb-4">
                     <div class="card-header bg-primary text-white">
-                        <h4>Total do Pedido</h4>
+                        <h4>Endereço de Entrega</h4>
                     </div>
                     <div class="card-body">
-                        <div class="d-flex justify-content-between mb-3">
-                            <span>Subtotal:</span>
-                            <span>@Model.Total.ToString("C")</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-3">
-                            <span>Frete:</span>
-                            <span>Grátis</span>
-                        </div>
-                        <div class="d-flex justify-content-between font-weight-bold">
-                            <span>Total:</span>
-                            <span>@Model.Total.ToString("C")</span>
-                        </div>
-
-                        <form method="post" asp-action="FinalizarPedido" class="mt-4">
-                            <button type="submit" class="btn btn-success btn-block">
-                                Confirmar Pedido
-                            </button>
-                        </form>
+                        @if (Model.EnderecoEntrega != null)
+                        {
+                            <p>@Model.EnderecoEntrega.Logradouro, @Model.EnderecoEntrega.Numero</p>
+                            @if (!string.IsNullOrEmpty(Model.EnderecoEntrega.Complemento))
+                            {
+                                <p>@Model.EnderecoEntrega.Complemento</p>
+                            }
+                            <p>@Model.EnderecoEntrega.Bairro - @Model.EnderecoEntrega.Cidade/@Model.EnderecoEntrega.Estado</p>
+                            <p>CEP: @Model.EnderecoEntrega.CEP</p>
+                        }
+                        else
+                        {
+                            <p class="text-danger">Nenhum endereço de entrega disponível</p>
+                            <a asp-controller="Cliente" asp-action="AdicionarEndereco" class="btn btn-sm btn-primary">
+                                Adicionar Endereço
+                            </a>
+                        }
                     </div>
                 </div>
+
+                <!-- Restante do código da view... -->
             </div>
         </div>
     }

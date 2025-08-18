@@ -1,5 +1,6 @@
-﻿
+﻿using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using WebApplicationPods.Data;
 using WebApplicationPods.DTO;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
@@ -12,12 +13,14 @@ namespace WebApplicationPods.Repositories
         private readonly IProdutoRepository _produtoRepository;
         private readonly ILogger<CarrinhoRepository> _logger;
         private const string CarrinhoSessionKey = "Carrinho";
+        private readonly BancoContext _context;
 
-        public CarrinhoRepository(IHttpContextAccessor httpContextAccessor, IProdutoRepository produtoRepository, ILogger<CarrinhoRepository> logger)
+        public CarrinhoRepository(IHttpContextAccessor httpContextAccessor, IProdutoRepository produtoRepository, ILogger<CarrinhoRepository> logger, BancoContext context)
         {
             _httpContextAccessor = httpContextAccessor;
             _produtoRepository = produtoRepository;
             _logger = logger;
+            _context = context;
         }
 
         public CarrinhoModel ObterCarrinho()
@@ -175,6 +178,27 @@ namespace WebApplicationPods.Repositories
         public void LimparCarrinho()
         {
             _httpContextAccessor.HttpContext.Session.Remove(CarrinhoSessionKey);
+        }
+
+
+        public CarrinhoModel ObterCarrinhoPorTelefone(string telefone)
+        {
+            return _context.Carrinhos
+                .Include(c => c.Itens)
+                .ThenInclude(i => i.Produto)
+                .FirstOrDefault(c => c.ClienteTelefone == telefone);
+        }
+
+        public void Atualizar(CarrinhoModel carrinho)
+        {
+            _context.Carrinhos.Update(carrinho);
+            _context.SaveChanges();
+        }
+
+        public void Remover(CarrinhoModel carrinho)
+        {
+            _context.Carrinhos.Remove(carrinho);
+            _context.SaveChanges();
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System.ComponentModel.DataAnnotations;
 
 namespace WebApplicationPods.Models
 {
@@ -15,10 +16,6 @@ namespace WebApplicationPods.Models
         [StringLength(100, ErrorMessage = "O email deve ter no máximo 100 caracteres")]
         public string Email { get; set; }
 
-        [Required(ErrorMessage = "A senha é obrigatória")]
-        [StringLength(255, MinimumLength = 6, ErrorMessage = "A senha deve ter entre 6 e 255 caracteres")]
-        [DataType(DataType.Password)]
-        public string Senha { get; set; }
 
         [Phone(ErrorMessage = "Formato de telefone inválido")]
         public string Telefone { get; set; }
@@ -28,7 +25,7 @@ namespace WebApplicationPods.Models
         public DateTime DataCadastro { get; set; } = DateTime.Now;
 
         // Relacionamentos
-        public ICollection<EnderecoModel> Enderecos { get; set; }
+        public ICollection<EnderecoModel> Enderecos { get; set; } = new List<EnderecoModel>();
         public ICollection<PedidoModel> Pedidos { get; set; }
     }
 }

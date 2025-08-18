@@ -1,11 +1,12 @@
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
 using WebApplicationPods.Data;
+using WebApplicationPods.Repositories;
 using WebApplicationPods.Repository.Interface;
+using WebApplicationPods.Repository.Repository;
+using WebApplicationPods.Services;
 using WebApplicationPods.Services.Interface;
 using WebApplicationPods.Services.service;
-using System.Text.Json.Serialization;
-using WebApplicationPods.Repository.Repository;
-using WebApplicationPods.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,8 +37,15 @@ builder.Services.AddSession(options =>
     options.Cookie.Name = "SitePods.Session";
 });
 
+builder.Services.AddHttpClient<ICepService, CepService>(client =>
+{
+    client.BaseAddress = new Uri("https://viacep.com.br/ws/");
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+
 // Configuração de serviços
 builder.Services.AddHttpContextAccessor();
+
 
 // Registro dos repositórios e serviços
 builder.Services.AddScoped<IProdutoRepository, ProdutoRepository>();
@@ -46,6 +54,7 @@ builder.Services.AddScoped<ICarrinhoRepository, CarrinhoRepository>();
 builder.Services.AddScoped<ICarrinhoService, CarrinhoService>();
 builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
 builder.Services.AddScoped<IPedidoRepository, PedidoRepository>();
+
 
 var app = builder.Build();
 
