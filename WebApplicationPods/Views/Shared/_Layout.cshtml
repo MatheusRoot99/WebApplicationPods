@@ -1,4 +1,6 @@
-﻿<!DOCTYPE html>
+﻿@using System.Text.Json
+
+<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="utf-8" />
@@ -11,75 +13,26 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
-    <!-- Estilos personalizados -->
+    <!-- Estilos gerais -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/sidebar.css" asp-append-version="true" />
+
+    <!-- Estilos específicos do layout -->
     <style>
-        /* Estilo para notificação do carrinho */
-        .nav-link .badge {
-            font-size: 0.6rem;
-            padding: 0.25em 0.4em;
-            min-width: 1.2em;
-        }
-
-        /* Ajustes para mobile */
-        @("@media (max-width: 991.98px)") {
-            #sidebar-wrapper
-
-        {
-            display: none;
-        }
-
-        .navbar-collapse {
-            flex-grow: 0;
-        }
-
-        .navbar-nav .nav-item {
-            margin-left: 0.5rem;
-        }
-
-        .offcanvas-body .list-group-item {
-            padding: 0.75rem 1rem;
-        }
-
-        }
-
-        /* Melhorias gerais */
-        .sidebar-section {
-            margin-bottom: 1rem;
-        }
-
-        .sidebar-section-title {
-            color: #6c757d;
-            padding: 0.5rem 1rem;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-        }
-
-        /* Offcanvas customizado */
-        .offcanvas-start {
-            width: 280px;
-        }
-
-        /* Ícones alinhados */
-        .dropdown-item i {
-            width: 20px;
-            text-align: center;
-            margin-right: 8px;
-        }
+       
     </style>
+
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
     <div class="d-flex" id="wrapper">
         <!-- Sidebar (Desktop) -->
         <div class="bg-dark border-right d-none d-lg-block" id="sidebar-wrapper">
             <div class="sidebar-heading text-white py-4">
-                <i class="fas fa-smoking me-2"></i>
-                <span class="fw-bold">Pods Eletrônicos</span>
+                <i class="fas fa-smoking me-2"></i><span class="fw-bold">Pods Eletrônicos</span>
             </div>
             <div class="list-group list-group-flush">
-                <!-- Seção NAVEGAÇÃO -->
+                <!-- NAVEGAÇÃO -->
                 <div class="sidebar-section">
                     <div class="sidebar-section-title">NAVEGAÇÃO</div>
                     <a asp-controller="Home" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
@@ -87,7 +40,7 @@
                     </a>
                 </div>
 
-                <!-- Seção CLIENTE -->
+                <!-- CLIENTE -->
                 <div class="sidebar-section">
                     <div class="sidebar-section-title">CLIENTE</div>
                     <a asp-controller="Produto" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
@@ -98,7 +51,7 @@
                     </a>
                 </div>
 
-                <!-- Seção LOJISTA (Apenas para usuários autenticados como lojista) -->
+                <!-- LOJISTA -->
                 @if (User.IsInRole("Lojista"))
                 {
                     <div class="sidebar-section">
@@ -115,7 +68,7 @@
                     </div>
                 }
 
-                <!-- Seção ADMIN (Apenas para administradores) -->
+                <!-- ADMIN -->
                 @if (User.IsInRole("Admin"))
                 {
                     <div class="sidebar-section">
@@ -132,7 +85,7 @@
                     </div>
                 }
 
-                <!-- Seção USUÁRIO -->
+                <!-- USUÁRIO -->
                 <div class="sidebar-section">
                     <div class="sidebar-section-title">USUÁRIO</div>
                     @if (User.Identity.IsAuthenticated)
@@ -163,16 +116,23 @@
             <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
                 <div class="container-fluid">
                     <!-- Menu Mobile Toggle -->
-                    <button class="btn btn-sm btn-dark d-lg-none" id="mobile-menu-toggle">
+                    <button class="btn btn-sm btn-dark d-lg-none"
+                            id="mobile-menu-toggle"
+                            type="button"
+                            data-bs-toggle="offcanvas"
+                            data-bs-target="#mobileMenu"
+                            aria-controls="mobileMenu">
                         <i class="fas fa-bars"></i> Menu
                     </button>
 
-                    <!-- Breadcrumb dinâmico -->
+                    <!-- Breadcrumb -->
                     <div class="d-none d-md-block ms-3">
                         <nav aria-label="breadcrumb">
                             <ol class="breadcrumb mb-0">
-                                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fas fa-home"></i></a></li>
-                                @if (ViewContext.RouteData.Values["controller"].ToString() != "Home")
+                                <li class="breadcrumb-item">
+                                    <a asp-controller="Home" asp-action="Index"><i class="fas fa-home"></i></a>
+                                </li>
+                                @if (ViewContext.RouteData.Values["controller"]?.ToString() != "Home")
                                 {
                                     <li class="breadcrumb-item">
                                         <a asp-controller="@ViewContext.RouteData.Values["controller"]" asp-action="Index">
@@ -186,21 +146,25 @@
 
                     <div class="navbar-collapse">
                         <ul class="navbar-nav ms-auto">
-                            <!-- Carrinho visível para clientes -->
+                            <!-- Carrinho (desktop; esconde no mobile para evitar duplicar com bottom nav) -->
                             @if (!User.IsInRole("Admin") && !User.IsInRole("Lojista"))
                             {
-                                <li class="nav-item">
-                                    <a class="nav-link position-relative" asp-controller="Carrinho" asp-action="Index">
-                                        <i class="fas fa-shopping-cart fs-5"></i>
-                                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                            @await Component.InvokeAsync("CarrinhoResumo")
-                                            <span class="visually-hidden">itens no carrinho</span>
+                                <li class="nav-item d-none d-lg-block">
+                                    <a class="nav-link cart-link" asp-controller="Carrinho" asp-action="Index">
+                                        <span class="cart-wrap position-relative d-inline-flex align-items-center">
+                                            <i class="fas fa-shopping-cart fs-5"></i>
+                                            <span id="cart-badge"
+                                                  class="badge rounded-pill bg-danger position-absolute translate-middle"
+                                                  style="top:-10%; left:90%;">
+                                                @await Component.InvokeAsync("CarrinhoResumo")
+                                                <span class="visually-hidden">itens no carrinho</span>
+                                            </span>
                                         </span>
                                     </a>
                                 </li>
                             }
 
-                            <!-- Notificações para lojistas -->
+                            <!-- Notificações (lojista) -->
                             @if (User.IsInRole("Lojista"))
                             {
                                 <li class="nav-item dropdown">
@@ -218,7 +182,7 @@
                                 </li>
                             }
 
-                            <!-- Menu usuário -->
+                            <!-- Usuário -->
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
                                     <i class="fas fa-user-circle me-1"></i>
@@ -254,14 +218,13 @@
     <div class="offcanvas offcanvas-start bg-dark text-white" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel">
         <div class="offcanvas-header">
             <h5 class="offcanvas-title" id="mobileMenuLabel">
-                <i class="fas fa-smoking me-2"></i>
-                <span class="fw-bold">Pods Eletrônicos</span>
+                <i class="fas fa-smoking me-2"></i><span class="fw-bold">Pods Eletrônicos</span>
             </h5>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body">
             <div class="list-group list-group-flush">
-                <!-- Seção NAVEGAÇÃO -->
+                <!-- NAVEGAÇÃO -->
                 <div class="sidebar-section">
                     <div class="sidebar-section-title">NAVEGAÇÃO</div>
                     <a asp-controller="Home" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
@@ -269,7 +232,7 @@
                     </a>
                 </div>
 
-                <!-- Seção CLIENTE -->
+                <!-- CLIENTE -->
                 <div class="sidebar-section">
                     <div class="sidebar-section-title">CLIENTE</div>
                     <a asp-controller="Produto" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
@@ -280,7 +243,7 @@
                     </a>
                 </div>
 
-                <!-- Seção LOJISTA (Apenas para usuários autenticados como lojista) -->
+                <!-- LOJISTA -->
                 @if (User.IsInRole("Lojista"))
                 {
                     <div class="sidebar-section">
@@ -297,7 +260,7 @@
                     </div>
                 }
 
-                <!-- Seção ADMIN (Apenas para administradores) -->
+                <!-- ADMIN -->
                 @if (User.IsInRole("Admin"))
                 {
                     <div class="sidebar-section">
@@ -314,7 +277,7 @@
                     </div>
                 }
 
-                <!-- Seção USUÁRIO -->
+                <!-- USUÁRIO -->
                 <div class="sidebar-section">
                     <div class="sidebar-section-title">USUÁRIO</div>
                     @if (User.Identity.IsAuthenticated)
@@ -340,6 +303,64 @@
         </div>
     </div>
 
+    <!-- Bottom Navigation (mobile-only) -->
+    @{
+        var c = ViewContext.RouteData.Values["controller"]?.ToString();
+        var a = ViewContext.RouteData.Values["action"]?.ToString();
+        Func<string, string, string> IsActive = (ctrl, act) =>
+        (string.Equals(c, ctrl, StringComparison.OrdinalIgnoreCase) &&
+        (act == null || string.Equals(a, act, StringComparison.OrdinalIgnoreCase))) ? "active" : "";
+    }
+    <nav class="mobile-bottom-nav d-lg-none" aria-label="Navegação inferior">
+        <a class="mbn-item @IsActive("Home", "Index")" asp-controller="Home" asp-action="Index" aria-label="Início">
+            <i class="fa-solid fa-house"></i>
+            <span class="mbn-label">Início</span>
+        </a>
+
+        @* <a class="mbn-item @IsActive("Produto", "Index")" asp-controller="Produto" asp-action="Index" aria-label="Catálogo">
+            <i class="fa-solid fa-heart"></i>
+            <span class="mbn-label">Favoritos</span>
+        </a> *@
+
+        <a class="mbn-item @IsActive("Carrinho","Index")" asp-controller="Carrinho" asp-action="Index" aria-label="Carrinho">
+            <i class="fa-solid fa-cart-shopping"></i>
+            <span id="cart-badge-mobile" class="mbn-badge">
+                @await Component.InvokeAsync("CarrinhoResumo") ?? 0
+            </span>
+            <span class="mbn-label">Carrinho</span>
+        </a>
+
+        @* <a class="mbn-item @IsActive("Pedido", "Index")" asp-controller="Pedido" asp-action="Index" aria-label="Pedidos">
+            <i class="fa-solid fa-clipboard-list"></i>
+            <span class="mbn-label">Pedidos</span>
+        </a> *@
+
+        @if (User.Identity.IsAuthenticated)
+        {
+            <a class="mbn-item @IsActive("Cliente", "Perfil")" asp-controller="Cliente" asp-action="Perfil" aria-label="Perfil">
+                <i class="fa-solid fa-user"></i>
+                <span class="mbn-label">Perfil</span>
+            </a>
+        }
+        else
+        {
+            <a class="mbn-item @IsActive("Cliente", "Login")" asp-controller="Cliente" asp-action="Login" aria-label="Entrar">
+                <i class="fa-solid fa-user"></i>
+                <span class="mbn-label">Entrar</span>
+            </a>
+        }
+    </nav>
+
+    <!-- Toast container (notificações) -->
+    <div class="position-fixed top-0 end-0 p-3" style="z-index:1080">
+        <div id="appToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="appToastBody"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fechar"></button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="~/js/jquery.mask.min.js"></script>
@@ -349,22 +370,50 @@
     <script src="~/js/sabores.js" asp-append-version="true"></script>
 
     <script>
-        // Ativar menu offcanvas mobile
-        document.getElementById('mobile-menu-toggle').addEventListener('click', function() {
-            var offcanvas = new bootstrap.Offcanvas(document.getElementById('mobileMenu'));
-            offcanvas.toggle();
-        });
+        (function () {
+          // Normaliza números dos badges (desktop e mobile)
+          function normalizeBadge(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const raw = (el.textContent || '').trim();
+            const num = (raw.match(/\d+/) || ['0'])[0];
+            el.textContent = num;
+          }
+          normalizeBadge('cart-badge');
+          normalizeBadge('cart-badge-mobile');
 
-        // Fechar offcanvas ao clicar em um link
-        document.querySelectorAll('#mobileMenu .list-group-item').forEach(item => {
-            item.addEventListener('click', function() {
-                var offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('mobileMenu'));
-                offcanvas.hide();
+          // Toast via TempData
+          const sucesso = @Html.Raw(JsonSerializer.Serialize(TempData["Sucesso"] ?? ""));
+          const erro    = @Html.Raw(JsonSerializer.Serialize(TempData["Erro"] ?? ""));
+          if (sucesso || erro) {
+            const toastEl = document.getElementById('appToast');
+            const bodyEl  = document.getElementById('appToastBody');
+            if (toastEl && bodyEl) {
+              const ok = !!sucesso;
+              bodyEl.textContent = ok ? sucesso : erro;
+              toastEl.classList.toggle('bg-success', ok);
+              toastEl.classList.toggle('bg-danger', !ok);
+              new bootstrap.Toast(toastEl, { delay: 2500 }).show();
+
+              // anima badge do mobile se relacionado ao carrinho
+              const msg = (sucesso || erro || '').toString();
+              if (/(carrinho|adicionado|atualizada|removido)/i.test(msg)) {
+                const b = document.getElementById('cart-badge-mobile');
+                if (b) { b.classList.remove('mbn-badge-bump'); void b.offsetWidth; b.classList.add('mbn-badge-bump'); }
+              }
+            }
+          }
+
+          // Fechar offcanvas ao clicar em um link
+          document.querySelectorAll('#mobileMenu .list-group-item').forEach(item => {
+            item.addEventListener('click', function () {
+              const off = bootstrap.Offcanvas.getInstance(document.getElementById('mobileMenu'));
+              off && off.hide();
             });
-        });
+          });
+        })();
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)
-    @await RenderSectionAsync("Styles", required: false)
 </body>
 </html>
