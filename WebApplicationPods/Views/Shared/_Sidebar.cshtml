@@ -1,0 +1,100 @@
+﻿@* Sidebar (Desktop) *@
+@{
+    var isAuth = User.Identity?.IsAuthenticated == true;
+    var isAdmin = User.IsInRole("Admin");
+    var isLojista = User.IsInRole("Lojista");
+    var isCliente = isAuth && !isAdmin && !isLojista; // cliente “normal” autenticado
+}
+
+<div class="bg-dark border-right d-none d-lg-block" id="sidebar-wrapper">
+    <div class="sidebar-heading text-white py-4">
+        <i class="fas fa-smoking me-2"></i><span class="fw-bold">Pods Eletrônicos</span>
+    </div>
+
+    <div class="list-group list-group-flush">
+
+        <!-- NAVEGAÇÃO (sempre) -->
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">NAVEGAÇÃO</div>
+            <a asp-controller="Home" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
+                <i class="fas fa-tachometer-alt me-2"></i> Painel
+            </a>
+        </div>
+
+        <!-- CLIENTE: apenas Painel/Carrinho/Pedidos -->
+        @if (!isAdmin && !isLojista)  @* inclui anônimo e cliente normal autenticado *@
+        {
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">CLIENTE</div>
+                <a asp-controller="Carrinho" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
+                    <i class="fas fa-shopping-cart me-2"></i> Carrinho
+                </a>
+                <a asp-controller="Pedido" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
+                    <i class="fas fa-clipboard-list me-2"></i> Pedidos
+                </a>
+            </div>
+        }
+
+        <!-- LOJISTA: relatórios, estoque, pedidos, catálogo, categorias, gerenciar produtos -->
+        @if (isLojista || isAdmin)
+        {
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">LOJISTA</div>
+                <a asp-controller="Relatorio" asp-action="Vendas" class="list-group-item list-group-item-action bg-dark text-white">
+                    <i class="fas fa-chart-line me-2"></i> Relatórios
+                </a>
+                <a asp-controller="Estoque" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
+                    <i class="fas fa-boxes me-2"></i> Estoque
+                </a>
+                <a asp-controller="Pedido" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
+                    <i class="fas fa-clipboard-list me-2"></i> Pedidos
+                </a>
+                <a asp-controller="Produto" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
+                    <i class="fas fa-store me-2"></i> Catálogo
+                </a>
+                <a asp-controller="Categoria" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
+                    <i class="fas fa-tags me-2"></i> Categorias
+                </a>
+                <a asp-controller="Produto" asp-action="Gerenciar" class="list-group-item list-group-item-action bg-dark text-white">
+                    <i class="fas fa-box-open me-2"></i> Gerenciar Produtos
+                </a>
+            </div>
+        }
+
+        <!-- ADMIN extra (tudo + ferramentas administrativas) -->
+        @if (isAdmin)
+        {
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">ADMIN</div>
+                <a asp-controller="Usuario" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
+                    <i class="fas fa-users-cog me-2"></i> Usuários
+                </a>
+            </div>
+        }
+
+        <!-- USUÁRIO -->
+        <div class="sidebar-section">
+            @if (isAuth)
+            {
+            <div class="sidebar-section-title">USUÁRIO</div>
+                <a asp-controller="Cliente" asp-action="Perfil" class="list-group-item list-group-item-action bg-dark text-white">
+                    <i class="fas fa-user-circle me-2"></i> Perfil
+                </a>
+                <form asp-controller="Conta" asp-action="Logout" method="post" class="list-group-item bg-dark">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-link text-white p-0">
+                        <i class="fas fa-sign-out-alt me-2"></i> Sair
+                    </button>
+                </form>
+            }
+            else
+            {
+                @* <a asp-controller="Conta" asp-action="Login" class="list-group-item list-group-item-action bg-dark text-white">
+                    <i class="fas fa-sign-in-alt me-2"></i> Login
+                </a> *@
+                
+            }
+        </div>
+
+    </div>
+</div>

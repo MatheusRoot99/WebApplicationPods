@@ -1,0 +1,34 @@
+﻿@model WebApplicationPods.Models.LoginViewModel
+@{
+    ViewData["Title"] = "Login";
+}
+<h2 class="mb-3">Login (Telefone ou CPF)</h2>
+
+<form asp-action="Login" method="post" asp-antiforgery="true" class="card p-4">
+    @Html.AntiForgeryToken()  <!-- <- força renderizar o token -->
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input type="hidden" asp-for="ReturnUrl" />
+
+    <div class="mb-3">
+        <label asp-for="TelefoneOuCpf" class="form-label"></label>
+        <input asp-for="TelefoneOuCpf" class="form-control" />
+        <span asp-validation-for="TelefoneOuCpf" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Senha" class="form-label"></label>
+        <input asp-for="Senha" class="form-control" />
+        <span asp-validation-for="Senha" class="text-danger"></span>
+    </div>
+
+    <div class="form-check mb-3">
+        <input class="form-check-input" asp-for="LembrarMe" />
+        <label class="form-check-label" asp-for="LembrarMe"></label>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Entrar</button>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,37 @@
+﻿@* Bottom Navigation (mobile-only) *@
+@{
+    var c = ViewContext.RouteData.Values["controller"]?.ToString();
+    var a = ViewContext.RouteData.Values["action"]?.ToString();
+    Func<string, string, string> IsActive = (ctrl, act) =>
+        (string.Equals(c, ctrl, StringComparison.OrdinalIgnoreCase) &&
+        (act == null || string.Equals(a, act, StringComparison.OrdinalIgnoreCase))) ? "active" : "";
+}
+<nav class="mobile-bottom-nav d-lg-none" aria-label="Navegação inferior">
+    <a class="mbn-item @IsActive("Home", "Index")" asp-controller="Home" asp-action="Index" aria-label="Início">
+        <i class="fa-solid fa-house"></i>
+        <span class="mbn-label">Início</span>
+    </a>
+
+    <a class="mbn-item @IsActive("Carrinho","Index")" asp-controller="Carrinho" asp-action="Index" aria-label="Carrinho">
+        <i class="fa-solid fa-cart-shopping"></i>
+        <span id="cart-badge-mobile" class="mbn-badge">
+            @await Component.InvokeAsync("CarrinhoResumo") ?? 0
+        </span>
+        <span class="mbn-label">Carrinho</span>
+    </a>
+
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <a class="mbn-item @IsActive("Cliente", "Perfil")" asp-controller="Cliente" asp-action="Perfil" aria-label="Perfil">
+            <i class="fa-solid fa-user"></i>
+            <span class="mbn-label">Perfil</span>
+        </a>
+    }
+    else
+    {
+        <a class="mbn-item @IsActive("Conta", "Login")" asp-controller="Conta" asp-action="Login" aria-label="Entrar">
+            <i class="fa-solid fa-user"></i>
+            <span class="mbn-label">Entrar</span>
+        </a>
+    }
+</nav>

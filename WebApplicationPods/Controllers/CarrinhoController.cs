@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using WebApplicationPods.Enum;
 using WebApplicationPods.Models;
@@ -34,6 +35,13 @@ namespace WebApplicationPods.Controllers
         {
             var carrinho = _carrinhoRepository.ObterCarrinho();
             return View(carrinho);
+        }
+
+        [HttpGet]
+        public IActionResult GetCarrinhoPartial()
+        {
+            var carrinho = _carrinhoRepository.ObterCarrinho();
+            return PartialView("_CarrinhoTablePartial", carrinho);
         }
 
         public IActionResult Resumo()
@@ -129,60 +137,80 @@ namespace WebApplicationPods.Controllers
         }
 
         [HttpPost]
-        public IActionResult AtualizarItem(int produtoId, int quantidade, string sabor = null)
+        [ValidateAntiForgeryToken]
+        public IActionResult AtualizarItem(int produtoId, int? quantidade, string? sabor, string? op)
         {
             try
             {
-                if (quantidade <= 0)
+                var carrinho = _carrinhoRepository.ObterCarrinho();
+                var chaveSabor = sabor ?? string.Empty;
+
+                var item = carrinho.Itens.FirstOrDefault(i =>
+                    i.Produto.Id == produtoId &&
+                    (i.Sabor ?? string.Empty) == chaveSabor);
+
+                if (item == null)
                 {
-                    TempData["Erro"] = "Quantidade deve ser maior que zero!";
-                    return RedirectToAction("Index");
+                    TempData["Erro"] = "Item não encontrado no carrinho!";
+                    return RedirectToAction(nameof(Index));
                 }
 
+                // Determina a nova quantidade
+                var novaQtd = item.Quantidade;
+                if (string.Equals(op, "inc", StringComparison.OrdinalIgnoreCase))
+                    novaQtd = item.Quantidade + 1;
+                else if (string.Equals(op, "dec", StringComparison.OrdinalIgnoreCase))
+                    novaQtd = item.Quantidade - 1;
+                else if (quantidade.HasValue)
+                    novaQtd = quantidade.Value;
+
+                // Carrega produto e calcula estoque máximo (por sabor ou geral)
                 var produto = _produtoRepository.ObterPorId(produtoId);
                 if (produto == null)
                 {
                     TempData["Erro"] = "Produto não encontrado!";
-                    return RedirectToAction("Index");
+                    return RedirectToAction(nameof(Index));
                 }
 
                 produto.DeserializarSaboresQuantidades();
 
-                if (!ValidarEstoqueAtualizacao(produto, quantidade, sabor, out string mensagemErro))
+                var maxPermitido = produto.Estoque;
+                if (!string.IsNullOrWhiteSpace(chaveSabor) &&
+                    produto.SaboresQuantidadesList?.Any() == true)
                 {
-                    TempData["Erro"] = mensagemErro;
-                    return RedirectToAction("Index");
+                    var sq = produto.SaboresQuantidadesList
+                        .FirstOrDefault(s => string.Equals(s.Sabor, chaveSabor, StringComparison.OrdinalIgnoreCase));
+                    maxPermitido = sq?.Quantidade ?? produto.Estoque;
+                }
+                if (maxPermitido < 1) maxPermitido = 1;
+
+                // Clamp no servidor
+                if (novaQtd < 1) novaQtd = 1;
+
+                if (novaQtd > maxPermitido)
+                {
+                    novaQtd = maxPermitido;
+                    TempData["Erro"] = $"Quantidade ajustada ao máximo disponível ({maxPermitido}).";
                 }
 
-                var carrinho = _carrinhoRepository.ObterCarrinho();
-                var chaveSabor = sabor ?? string.Empty;
+                item.Quantidade = novaQtd;
+                _carrinhoRepository.SalvarCarrinho(carrinho);
 
-                var item = carrinho.Itens.FirstOrDefault(i =>
-                    i.Produto.Id == produtoId &&
-                    (i.Sabor ?? string.Empty) == chaveSabor);
-
-                if (item != null)
-                {
-                    item.Quantidade = quantidade;
-                    _carrinhoRepository.SalvarCarrinho(carrinho);
-                    TempData["Sucesso"] = $"Quantidade de {produto.Nome} atualizada para {quantidade}.";
-                }
-                else
-                {
-                    TempData["Erro"] = "Item não encontrado no carrinho!";
-                }
-
-                return RedirectToAction("Index");
+                TempData["Sucesso"] ??= "Quantidade atualizada.";
+                return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
                 TempData["Erro"] = $"Erro ao atualizar item: {ex.Message}";
-                return RedirectToAction("Index");
+                return RedirectToAction(nameof(Index));
             }
         }
 
+
+
         [HttpPost]
-        public IActionResult RemoverItem(int produtoId, string sabor = null)
+        [ValidateAntiForgeryToken]
+        public IActionResult RemoverItem(int produtoId, string? sabor)
         {
             try
             {
@@ -193,25 +221,28 @@ namespace WebApplicationPods.Controllers
                     i.Produto.Id == produtoId &&
                     (i.Sabor ?? string.Empty) == chaveSabor);
 
-                if (item != null)
-                {
-                    carrinho.Itens.Remove(item);
-                    _carrinhoRepository.SalvarCarrinho(carrinho);
-                    TempData["Sucesso"] = $"{item.Produto.Nome} removido do carrinho.";
-                }
-                else
+                if (item == null)
                 {
                     TempData["Erro"] = "Item não encontrado no carrinho!";
+                    return RedirectToAction(nameof(Index));
                 }
 
-                return  RedirectToAction("Index");
+                carrinho.Itens.Remove(item);
+                _carrinhoRepository.SalvarCarrinho(carrinho);
+
+                TempData["Sucesso"] = $"{item.Produto.Nome} removido do carrinho.";
+                return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
                 TempData["Erro"] = $"Erro ao remover item: {ex.Message}";
-                return RedirectToAction("Index");
+                return RedirectToAction(nameof(Index));
             }
         }
+
+        // sua action Index que devolve a View do carrinho...
+        
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
