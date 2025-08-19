@@ -1,70 +1,190 @@
 ﻿document.addEventListener('DOMContentLoaded', function () {
-    // ================================
-    // FORMULÁRIO DE ADIÇÃO AO CARRINHO
-    // ================================
-    const addToCartForm = document.getElementById('addToCartForm');
-    if (addToCartForm) {
-        addToCartForm.addEventListener('submit', function (e) {
-            e.preventDefault();
+    // Configura os eventos de quantidade
+    setupQuantityControls();
 
-            const saborInput = document.getElementById('saborSelecionado');
-            const saborSelecionado = saborInput ? saborInput.value : '';
-            const radioSelecionado = document.querySelector('.flavor-radio:checked');
+    // Fade out para mensagens de alerta após 5 segundos
+    setTimeout(() => {
+        document.querySelectorAll('#carrinho-alerts .alert').forEach(alert => {
+            alert.style.transition = 'opacity 0.5s';
+            alert.style.opacity = '0';
+            setTimeout(() => alert.remove(), 500);
+        });
+    }, 5000);
+});
 
-            // Verifica se é obrigatório escolher sabor
-            if (saborInput && radioSelecionado && saborSelecionado === '') {
-                alert('Por favor, selecione um sabor');
-                return false;
+function setupQuantityControls() {
+    // Função para garantir que o valor está dentro dos limites
+    const clampByMinMax = (input, value) => {
+        const min = parseInt(input.getAttribute('min')) || 1;
+        const max = parseInt(input.getAttribute('max')) || 999;
+        return Math.min(Math.max(value, min), max);
+    };
+
+    // Atualiza a quantidade via AJAX
+    const updateQuantity = async (form, newValue) => {
+        const formData = new FormData(form);
+        formData.set('quantidade', newValue);
+
+        // Adiciona o token anti-forgery se existir
+        const token = document.querySelector('input[name="__RequestVerificationToken"]');
+        if (token) {
+            formData.append('__RequestVerificationToken', token.value);
+        }
+
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) throw new Error('Erro na requisição');
+
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+
+            // Atualiza a linha do item específico
+            const produtoId = formData.get('produtoId');
+            const sabor = formData.get('sabor') || '';
+            const updatedRow = doc.querySelector(`tr.linha-item[data-produto-id="${produtoId}"][data-sabor="${sabor}"]`);
+
+            if (updatedRow) {
+                const currentRow = document.querySelector(`tr.linha-item[data-produto-id="${produtoId}"][data-sabor="${sabor}"]`);
+                if (currentRow) {
+                    // Animação suave para destacar a mudança
+                    currentRow.style.transition = 'background-color 0.3s';
+                    currentRow.style.backgroundColor = 'rgba(0, 255, 0, 0.1)';
+
+                    setTimeout(() => {
+                        currentRow.innerHTML = updatedRow.innerHTML;
+                        currentRow.style.backgroundColor = '';
+                        // Reconfigura os eventos na linha atualizada
+                        setupQuantityControls();
+                    }, 300);
+                }
             }
 
-            this.submit();
-        });
-    }
-
-    // Atualiza o campo hidden com o sabor escolhido
-    document.querySelectorAll('.flavor-radio').forEach(radio => {
-        radio.addEventListener('change', function () {
-            const saborInput = document.getElementById('saborSelecionado');
-            if (saborInput) {
-                saborInput.value = this.value;
+            // Atualiza o total do carrinho
+            const updatedTotal = doc.getElementById('totalCarrinho');
+            if (updatedTotal) {
+                document.getElementById('totalCarrinho').innerHTML = updatedTotal.innerHTML;
             }
-        });
-    });
 
-    // ================================
-    // CONTROLE DE QUANTIDADE
-    // ================================
-    function updateQuantity(input, change) {
-        let currentValue = parseInt(input.value) || 0;
-        let newValue = currentValue + change;
+            // Mostra mensagens de sucesso/erro
+            const alerts = doc.getElementById('carrinho-alerts');
+            if (alerts && alerts.innerHTML.trim()) {
+                const currentAlerts = document.getElementById('carrinho-alerts');
+                currentAlerts.innerHTML = alerts.innerHTML;
 
-        if (newValue < 1) newValue = 1;
-        if (newValue > 999) newValue = 999;
+                // Configura fade out para as novas mensagens
+                setTimeout(() => {
+                    currentAlerts.querySelectorAll('.alert').forEach(alert => {
+                        alert.style.transition = 'opacity 0.5s';
+                        alert.style.opacity = '0';
+                        setTimeout(() => alert.remove(), 500);
+                    });
+                }, 5000);
+            }
 
-        input.value = newValue;
+        } catch (error) {
+            console.error('Erro ao atualizar quantidade:', error);
+            // Mostra mensagem de erro temporária
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'alert alert-danger';
+            errorMsg.innerHTML = '<i class="fas fa-exclamation-circle"></i> Erro ao atualizar quantidade';
+            document.getElementById('carrinho-alerts').appendChild(errorMsg);
+            setTimeout(() => errorMsg.remove(), 3000);
+        }
+    };
 
-        // Dispara evento de change (caso precise atualizar algo no front)
-        input.dispatchEvent(new Event('change'));
-    }
-
-    // Botões + e -
+    // Configura os eventos nos botões de quantidade
     document.querySelectorAll('.quantidade-btn').forEach(btn => {
         btn.addEventListener('click', function () {
-            const input = this.closest('.input-group')?.querySelector('.quantidade-input');
-            if (input) {
-                const action = this.getAttribute('data-action');
-                updateQuantity(input, action === 'increase' ? 1 : -1);
+            const group = this.closest('.input-group');
+            const input = group.querySelector('.quantidade-input');
+            const form = this.closest('form.quantidade-form');
+
+            if (!input || !form) return;
+
+            const currentValue = parseInt(input.value) || 0;
+            const action = this.getAttribute('data-action');
+            const newValue = clampByMinMax(input,
+                action === 'increase' ? currentValue + 1 : currentValue - 1);
+
+            if (newValue !== currentValue) {
+                input.value = newValue;
+                updateQuantity(form, newValue);
             }
         });
     });
 
-    // Atualização ao editar manualmente
+    // Configura o evento de mudança no input manual
     document.querySelectorAll('.quantidade-input').forEach(input => {
         input.addEventListener('change', function () {
+            const form = this.closest('form.quantidade-form');
+            if (!form) return;
+
             let value = parseInt(this.value) || 1;
-            if (value < 1) value = 1;
-            if (value > 999) value = 999;
+            value = clampByMinMax(this, value);
             this.value = value;
+
+            updateQuantity(form, value);
+        });
+
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.dispatchEvent(new Event('change'));
+            }
         });
     });
-});
+
+    // Configura os forms de remoção para usar AJAX
+    document.querySelectorAll('form[action*="RemoverItem"]').forEach(form => {
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(form);
+            // Adiciona o token anti-forgery se existir
+            const token = document.querySelector('input[name="__RequestVerificationToken"]');
+            if (token) {
+                formData.append('__RequestVerificationToken', token.value);
+            }
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (!response.ok) throw new Error('Erro na requisição');
+
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                // Substitui todo o conteúdo do carrinho-container
+                const updatedContent = doc.querySelector('.carrinho-container');
+                if (updatedContent) {
+                    document.querySelector('.carrinho-container').innerHTML = updatedContent.innerHTML;
+                    // Reconfigura todos os eventos
+                    setupQuantityControls();
+                }
+
+            } catch (error) {
+                console.error('Erro ao remover item:', error);
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'alert alert-danger';
+                errorMsg.innerHTML = '<i class="fas fa-exclamation-circle"></i> Erro ao remover item';
+                document.getElementById('carrinho-alerts').appendChild(errorMsg);
+                setTimeout(() => errorMsg.remove(), 3000);
+            }
+        });
+    });
+}

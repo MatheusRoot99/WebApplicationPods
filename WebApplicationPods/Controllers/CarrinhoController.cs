@@ -1,7 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using WebApplicationPods.Enum;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
+using WebApplicationPods.Repository.Repository;
 
 namespace WebApplicationPods.Controllers
 {
@@ -102,7 +107,10 @@ namespace WebApplicationPods.Controllers
                     return RedirectToAction("Index");
                 }
 
-                if (!ValidarEstoque(produto, quantidade, sabor, out string mensagemErro))
+                // Carrega lista de sabores (se houver) antes de validar
+                produto.DeserializarSaboresQuantidades();
+
+                if (!ValidarEstoqueAoAdicionar(produto, quantidade, sabor, out string mensagemErro))
                 {
                     TempData["Erro"] = mensagemErro;
                     return RedirectToAction("Detalhes", "Produto", new { id = produtoId });
@@ -138,14 +146,20 @@ namespace WebApplicationPods.Controllers
                     return RedirectToAction("Index");
                 }
 
-                if (!ValidarEstoque(produto, quantidade, sabor, out string mensagemErro))
+                produto.DeserializarSaboresQuantidades();
+
+                if (!ValidarEstoqueAtualizacao(produto, quantidade, sabor, out string mensagemErro))
                 {
                     TempData["Erro"] = mensagemErro;
                     return RedirectToAction("Index");
                 }
 
                 var carrinho = _carrinhoRepository.ObterCarrinho();
-                var item = carrinho.Itens.FirstOrDefault(i => i.Produto.Id == produtoId && i.Sabor == sabor);
+                var chaveSabor = sabor ?? string.Empty;
+
+                var item = carrinho.Itens.FirstOrDefault(i =>
+                    i.Produto.Id == produtoId &&
+                    (i.Sabor ?? string.Empty) == chaveSabor);
 
                 if (item != null)
                 {
@@ -173,7 +187,11 @@ namespace WebApplicationPods.Controllers
             try
             {
                 var carrinho = _carrinhoRepository.ObterCarrinho();
-                var item = carrinho.Itens.FirstOrDefault(i => i.Produto.Id == produtoId && i.Sabor == sabor);
+                var chaveSabor = sabor ?? string.Empty;
+
+                var item = carrinho.Itens.FirstOrDefault(i =>
+                    i.Produto.Id == produtoId &&
+                    (i.Sabor ?? string.Empty) == chaveSabor);
 
                 if (item != null)
                 {
@@ -185,13 +203,14 @@ namespace WebApplicationPods.Controllers
                 {
                     TempData["Erro"] = "Item não encontrado no carrinho!";
                 }
+
+                return  RedirectToAction("Index");
             }
             catch (Exception ex)
             {
                 TempData["Erro"] = $"Erro ao remover item: {ex.Message}";
+                return RedirectToAction("Index");
             }
-
-            return RedirectToAction("Index");
         }
 
         [HttpPost]
@@ -381,29 +400,60 @@ namespace WebApplicationPods.Controllers
             }
         }
 
-        // Helper Methods
-        private bool ValidarEstoque(ProdutoModel produto, int quantidade, string sabor, out string mensagemErro)
+        // ===== Helpers de estoque =====
+
+        private int ObterEstoqueDisponivel(ProdutoModel produto, string sabor)
+        {
+            // produto.DeserializarSaboresQuantidades();  // já chamado nos pontos de entrada
+
+            if (produto.SaboresQuantidadesList?.Any() == true && !string.IsNullOrWhiteSpace(sabor))
+            {
+                var sq = produto.SaboresQuantidadesList
+                    .FirstOrDefault(s => s.Sabor.Equals(sabor, StringComparison.OrdinalIgnoreCase));
+                return sq?.Quantidade ?? 0;
+            }
+
+            return produto.Estoque;
+        }
+
+        // Atualização: quantidade ABSOLUTA não pode exceder o disponível
+        private bool ValidarEstoqueAtualizacao(ProdutoModel produto, int quantidade, string sabor, out string mensagemErro)
         {
             mensagemErro = string.Empty;
 
-            if (produto.SaboresQuantidadesList?.Any() == true && !string.IsNullOrEmpty(sabor))
-            {
-                var saborSelecionado = produto.SaboresQuantidadesList.FirstOrDefault(s => s.Sabor == sabor);
-                if (saborSelecionado == null)
-                {
-                    mensagemErro = "Sabor selecionado inválido.";
-                    return false;
-                }
+            var disponivel = ObterEstoqueDisponivel(produto, sabor);
 
-                if (saborSelecionado.Quantidade < quantidade)
-                {
-                    mensagemErro = $"Estoque insuficiente para o sabor {sabor}. Disponível: {saborSelecionado.Quantidade}";
-                    return false;
-                }
-            }
-            else if (produto.Estoque < quantidade)
+            if (quantidade > disponivel)
             {
-                mensagemErro = $"Estoque insuficiente. Disponível: {produto.Estoque}";
+                mensagemErro = string.IsNullOrWhiteSpace(sabor)
+                    ? $"Estoque insuficiente. Disponível: {disponivel}"
+                    : $"Estoque insuficiente para o sabor {sabor}. Disponível: {disponivel}";
+                return false;
+            }
+
+            return true;
+        }
+
+        // Adição: quantidade no carrinho + novaQtd não pode exceder o disponível
+        private bool ValidarEstoqueAoAdicionar(ProdutoModel produto, int novaQtd, string sabor, out string mensagemErro)
+        {
+            mensagemErro = string.Empty;
+
+            var disponivel = ObterEstoqueDisponivel(produto, sabor);
+
+            var carrinho = _carrinhoRepository.ObterCarrinho();
+            var chaveSabor = sabor ?? string.Empty;
+
+            var existente = carrinho.Itens
+                .Where(i => i.Produto.Id == produto.Id && (i.Sabor ?? string.Empty) == chaveSabor)
+                .Sum(i => i.Quantidade);
+
+            if (existente + novaQtd > disponivel)
+            {
+                var resto = Math.Max(disponivel - existente, 0);
+                mensagemErro = string.IsNullOrWhiteSpace(sabor)
+                    ? $"Você já tem {existente}. Só é possível adicionar mais {resto} (estoque total {disponivel})."
+                    : $"Você já tem {existente} do sabor {sabor}. Só é possível adicionar mais {resto} (estoque total {disponivel}).";
                 return false;
             }
 

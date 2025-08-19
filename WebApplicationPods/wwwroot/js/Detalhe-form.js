@@ -1,181 +1,145 @@
-﻿document.addEventListener("DOMContentLoaded", function () {
-    /* -------------------------
-       Tabs
-    ------------------------- */
-    const tabButtons = document.querySelectorAll(".tab-button");
-    const tabPanes = document.querySelectorAll(".tab-pane");
+﻿document.addEventListener("DOMContentLoaded", () => {
+    /* ------------------------- Obter valores do servidor ------------------------- */
+    const productData = document.getElementById('product-data');
+    let estoqueMaximo = parseInt(productData?.dataset.stock || "0");
+    const initialDisabledState = productData?.dataset.isOutOfStock === 'true';
 
-    tabButtons.forEach(button => {
-        button.addEventListener("click", function () {
-            const tabId = this.getAttribute("data-tab");
-            tabButtons.forEach(btn => btn.classList.remove("active"));
-            tabPanes.forEach(pane => pane.classList.remove("active"));
-            this.classList.add("active");
-            document.getElementById(tabId).classList.add("active");
+    /* ------------------------- Tabs com teclado ------------------------- */
+    const tabButtons = Array.from(document.querySelectorAll(".tab-button"));
+    const panes = {
+        description: document.getElementById("tab-description"),
+        specifications: document.getElementById("tab-specifications"),
+        reviews: document.getElementById("tab-reviews")
+    };
+
+    function activateTab(key) {
+        tabButtons.forEach(btn => {
+            const isActive = btn.dataset.tab === key;
+            btn.classList.toggle("active", isActive);
+            btn.setAttribute("aria-selected", String(isActive));
         });
+        Object.entries(panes).forEach(([k, el]) => {
+            const active = k === key;
+            el.classList.toggle("active", active);
+            el.hidden = !active;
+        });
+    }
+
+    tabButtons.forEach(btn => btn.addEventListener("click", () => activateTab(btn.dataset.tab)));
+
+    // Navegação por teclado
+    document.querySelector(".tabs-header")?.addEventListener("keydown", (e) => {
+        const idx = tabButtons.findIndex(b => b.classList.contains("active"));
+        if (["ArrowRight", "ArrowLeft"].includes(e.key)) {
+            e.preventDefault();
+            const next = e.key === "ArrowRight" ? (idx + 1) % tabButtons.length : (idx - 1 + tabButtons.length) % tabButtons.length;
+            tabButtons[next].focus();
+            tabButtons[next].click();
+        }
     });
 
-    /* -------------------------
-       FAQ Accordion
-    ------------------------- */
-    const faqQuestions = document.querySelectorAll(".faq-question");
-    faqQuestions.forEach(question => {
-        question.addEventListener("click", function () {
-            const item = this.parentNode;
-            const answer = this.nextElementSibling;
-            const icon = this.querySelector("i");
-            item.classList.toggle("active");
-
-            if (item.classList.contains("active")) {
-                icon.classList.replace("fa-chevron-down", "fa-chevron-up");
+    /* ------------------------- FAQ Accordion ------------------------- */
+    document.querySelectorAll(".faq-question").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const answer = btn.parentElement.querySelector(".faq-answer");
+            const expanded = btn.getAttribute("aria-expanded") === "true";
+            btn.setAttribute("aria-expanded", String(!expanded));
+            if (!expanded) {
+                answer.hidden = false;
                 answer.style.maxHeight = answer.scrollHeight + "px";
             } else {
-                icon.classList.replace("fa-chevron-up", "fa-chevron-down");
                 answer.style.maxHeight = null;
+                answer.hidden = true;
             }
         });
     });
 
-    // Abre o primeiro item do FAQ automaticamente
-    const firstFaqItem = document.querySelector(".faq-item");
-    if (firstFaqItem) {
-        firstFaqItem.classList.add("active");
-        const firstAnswer = firstFaqItem.querySelector(".faq-answer");
-        const firstIcon = firstFaqItem.querySelector(".faq-question i");
-        firstAnswer.style.maxHeight = firstAnswer.scrollHeight + "px";
-        firstIcon.classList.replace("fa-chevron-down", "fa-chevron-up");
-    }
-
-    /* -------------------------
-       Controle de Quantidade
-    ------------------------- */
-    /* -------------------------
-       Controle de Quantidade
-    ------------------------- */
+    /* ------------------------- Quantidade ------------------------- */
     const minusBtn = document.querySelector(".quantity-btn.minus");
     const plusBtn = document.querySelector(".quantity-btn.plus");
-    const quantityInput = document.querySelector(".quantity-input");
+    const quantityInput = document.getElementById("quantity");
     const quantidadeHidden = document.getElementById("quantidadeHidden");
 
-    // Estoque inicial (caso não haja sabores)
-    let estoqueMaximo = parseInt(document.getElementById("estoque-quantidade")?.textContent || 10);
+    function clamp(v, min, max) { return Math.min(Math.max(v, min), max); }
 
-    function atualizarQuantidade(valor) {
-        let value = parseInt(valor) || 1;
-        value = Math.min(Math.max(value, 1), estoqueMaximo); // clamp entre 1 e estoqueMaximo
-        quantityInput.value = value;
-        quantidadeHidden.value = value;
+    function syncQty(value) {
+        const v = clamp(parseInt(value || 1), 1, Math.max(1, estoqueMaximo));
+        quantityInput.value = v;
+        quantidadeHidden.value = v;
     }
 
-    if (minusBtn && plusBtn && quantityInput && quantidadeHidden) {
-        minusBtn.addEventListener("click", function () {
-            atualizarQuantidade(parseInt(quantityInput.value) - 1);
-        });
+    minusBtn?.addEventListener("click", () => syncQty((+quantityInput.value) - 1));
+    plusBtn?.addEventListener("click", () => syncQty((+quantityInput.value) + 1));
+    quantityInput?.addEventListener("change", (e) => syncQty(e.target.value));
 
-        plusBtn.addEventListener("click", function () {
-            atualizarQuantidade(parseInt(quantityInput.value) + 1);
-        });
-
-        quantityInput.addEventListener("change", function () {
-            atualizarQuantidade(this.value);
-        });
-    }
-
-    /* -------------------------
-       Controle de Sabores e Estoque
-    ------------------------- */
-    /* -------------------------
-       Controle de Sabores e Estoque
-    ------------------------- */
-    const flavorRadios = document.querySelectorAll(".flavor-radio");
+    /* ------------------------- Sabores & Estoque ------------------------- */
+    const radios = Array.from(document.querySelectorAll(".flavor-radio"));
     const saborSelecionado = document.getElementById("saborSelecionado");
     const estoqueInfo = document.getElementById("estoque-info");
     const estoqueQuantidade = document.getElementById("estoque-quantidade");
     const addToCartBtn = document.querySelector(".btn-add-to-cart");
+    const buyNowBtn = document.querySelector(".btn-buy-now");
 
-    function atualizarEstoque() {
+    function setBtnDisabled(disabled) {
+        [addToCartBtn, buyNowBtn].forEach(btn => {
+            if (!btn) return;
+            btn.classList.toggle("disabled", disabled);
+            btn.toggleAttribute("disabled", disabled);
+            btn.setAttribute("aria-disabled", String(disabled));
+            if (addToCartBtn && btn === addToCartBtn) {
+                btn.innerHTML = disabled ? '<i class="fas fa-shopping-cart" aria-hidden="true"></i> ESGOTADO' : '<i class="fas fa-shopping-cart" aria-hidden="true"></i> ADICIONAR AO CARRINHO';
+            }
+        });
+    }
+
+    function atualizarEstoquePorSelecao() {
         const selecionado = document.querySelector(".flavor-radio:checked");
-
         if (selecionado) {
             const estoque = parseInt(selecionado.getAttribute("data-estoque")) || 0;
-            estoqueMaximo = estoque; // atualiza o limite global
+            estoqueMaximo = estoque;
             if (saborSelecionado) saborSelecionado.value = selecionado.value;
-
             if (estoqueInfo && estoqueQuantidade) {
-                estoqueQuantidade.textContent = estoque;
-                estoqueInfo.style.display = "block";
+                estoqueQuantidade.textContent = String(estoque);
+                estoqueInfo.hidden = false;
             }
-
-            // Ajusta a quantidade atual para não ultrapassar o novo estoque
-            atualizarQuantidade(quantityInput.value);
-
-            // Atualiza botão de adicionar ao carrinho
-            if (addToCartBtn) {
-                if (estoque <= 0) {
-                    addToCartBtn.classList.add("disabled");
-                    addToCartBtn.setAttribute("disabled", "disabled");
-                    addToCartBtn.innerHTML =
-                        '<i class="fas fa-shopping-cart"></i> ESGOTADO';
-                } else {
-                    addToCartBtn.classList.remove("disabled");
-                    addToCartBtn.removeAttribute("disabled");
-                    addToCartBtn.innerHTML =
-                        '<i class="fas fa-shopping-cart"></i> ADICIONAR AO CARRINHO';
-                }
-            }
+            syncQty(quantityInput.value);
+            setBtnDisabled(estoque <= 0);
         } else {
-            estoqueMaximo = parseInt(document.getElementById("estoque-quantidade")?.textContent || 10);
-            if (estoqueInfo) estoqueInfo.style.display = "none";
-            if (estoqueQuantidade) estoqueQuantidade.textContent = "";
+            estoqueInfo && (estoqueInfo.hidden = true);
             if (saborSelecionado) saborSelecionado.value = "";
+            estoqueMaximo = parseInt(productData?.dataset.stock || "0");
+            syncQty(quantityInput.value);
+            setBtnDisabled(initialDisabledState);
         }
     }
 
-    if (flavorRadios.length > 0) {
-        flavorRadios.forEach(radio => {
-            radio.addEventListener("change", atualizarEstoque);
-        });
-        atualizarEstoque(); // inicializa
+    // Auto-seleciona o primeiro sabor com estoque
+    const primeiroComEstoque = radios.find(r => !r.disabled && (parseInt(r.dataset.estoque) || 0) > 0);
+    if (primeiroComEstoque) {
+        primeiroComEstoque.checked = true;
     }
+    radios.forEach(r => r.addEventListener("change", atualizarEstoquePorSelecao));
+    atualizarEstoquePorSelecao();
 
-    /* -------------------------
-      Validação antes de adicionar ao carrinho
-   ------------------------- */
+    /* ------------------------- Validação antes de adicionar ------------------------- */
     const addToCartForm = document.getElementById("addToCartForm");
-    if (addToCartForm) {
-        addToCartForm.addEventListener("submit", function (e) {
-            if (flavorRadios.length > 0 && !saborSelecionado.value) {
-                e.preventDefault();
-                alert("Por favor, selecione um sabor antes de adicionar ao carrinho.");
-                return false;
-            }
-            return true;
-        });
-    }
+    addToCartForm?.addEventListener("submit", (e) => {
+        if (radios.length > 0 && !saborSelecionado.value) {
+            e.preventDefault();
+            alert("Por favor, selecione um sabor antes de adicionar ao carrinho.");
+        }
+    });
 
-    /* -------------------------
-       Botão de Compra Rápida
-    ------------------------- */
-    /* -------------------------
-       Botão de Compra Rápida
-    ------------------------- */
-    const buyNowBtn = document.querySelector(".btn-buy-now");
-    if (buyNowBtn && !buyNowBtn.classList.contains("disabled")) {
-        buyNowBtn.addEventListener("click", function () {
-            if (flavorRadios.length > 0 && !saborSelecionado.value) {
-                alert("Por favor, selecione um sabor antes de comprar.");
-                return false;
-            }
-
-            // Adiciona parâmetro hidden para identificar compra rápida
-            const input = document.createElement("input");
-            input.type = "hidden";
-            input.name = "buyNow";
-            input.value = "true";
-            addToCartForm.appendChild(input);
-
-            addToCartForm.submit();
-        });
-    }
-
+    /* ------------------------- Compra Rápida ------------------------- */
+    buyNowBtn?.addEventListener("click", () => {
+        if (buyNowBtn.classList.contains("disabled")) return;
+        if (radios.length > 0 && !saborSelecionado.value) {
+            alert("Por favor, selecione um sabor antes de comprar.");
+            return;
+        }
+        const input = document.createElement("input");
+        input.type = "hidden"; input.name = "buyNow"; input.value = "true";
+        addToCartForm.appendChild(input);
+        addToCartForm.submit();
+    });
 });

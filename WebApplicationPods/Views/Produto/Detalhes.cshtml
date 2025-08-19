@@ -1,74 +1,84 @@
-﻿@using Microsoft.IdentityModel.Tokens
+﻿@using System.Globalization
 @model WebApplicationPods.Models.ProdutoDetalhesViewModel
 @{
-    ViewData["Title"] = Model.Produto.Nome;
+    ViewData["Title"] = Model?.Produto?.Nome ?? "Produto";
+
+    var temPromocao = Model?.Produto?.PrecoPromocional.HasValue == true && Model.Produto.PrecoPromocional!.Value < Model.Produto.Preco;
+    var precoBase = temPromocao ? Model!.Produto!.PrecoPromocional!.Value : Model!.Produto!.Preco;
+    var totalSabores = Model?.SaboresDisponiveis?.Count ?? 0;
+    var totalSaboresComEstoque = Model?.SaboresDisponiveis?.Count(s => s.Quantidade > 0) ?? 0;
 }
 
 <link rel="stylesheet" href="~/css/produto-detalhes.css" asp-append-version="true" />
 
-<div class="produto-detalhes-container">
+<!-- Adicionado elemento para passar dados para o JavaScript -->
+<div id="product-data"
+     data-stock="@Model.Produto.Estoque"
+     data-is-out-of-stock="@(Model.Produto.Estoque <= 0 ? "true" : "false")"
+     hidden></div>
+
+<!-- Estrutura semântica + microdados para SEO -->
+<div class="produto-detalhes-container" itemscope itemtype="https://schema.org/Product">
     <!-- Cabeçalho e Navegação -->
     <div class="navigation-header">
-        <a href="javascript:history.back()" class="btn-voltar">
-            <i class="fas fa-arrow-left"></i> Voltar
+        <a href="javascript:history.back()" class="btn-voltar" aria-label="Voltar para a página anterior">
+            <i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar
         </a>
-        <nav aria-label="breadcrumb">
+        <nav aria-label="Breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
-                <li class="breadcrumb-item"><a href="#">Pods Descartáveis</a></li>
-                <li class="breadcrumb-item active">@Model.Produto.Nome</li>
+                <li class="breadcrumb-item"><a asp-controller="Produtos" asp-action="Index">Produtos</a></li>
+                <li class="breadcrumb-item active" aria-current="page" itemprop="name">@Model.Produto.Nome</li>
             </ol>
         </nav>
     </div>
 
-    <div class="product-header">
-        <h1 class="product-title">@Model.Produto.Nome</h1>
+    <header class="product-header">
+        <h1 class="product-title" itemprop="name">@Model.Produto.Nome</h1>
 
-        <div class="product-rating">
-            <div class="stars">
+        <div class="product-rating" aria-label="Avaliação média 4,8 de 5">
+            <div class="stars" aria-hidden="true">
                 <i class="fas fa-star"></i>
                 <i class="fas fa-star"></i>
                 <i class="fas fa-star"></i>
                 <i class="fas fa-star"></i>
                 <i class="fas fa-star-half-alt"></i>
             </div>
-            <span class="rating-text">4.8 (42 avaliações)</span>
+            <span class="rating-text">
+                <span itemprop="aggregateRating" itemscope itemtype="https://schema.org/AggregateRating">
+                    <span itemprop="ratingValue">4.8</span> (<span itemprop="reviewCount">42</span> avaliações)
+                </span>
+            </span>
             <a href="#reviews" class="review-link">Ver avaliações</a>
         </div>
-
-       
-    </div>
+    </header>
 
     <!-- Conteúdo Principal -->
     <div class="produto-main-content">
         <!-- Coluna da Imagem -->
         <div class="produto-image-column">
             <div class="product-image-container">
-                @if (!string.IsNullOrEmpty(Model.Produto.ImagemUrl))
+                @if (!string.IsNullOrEmpty(Model!.Produto!.ImagemUrl))
                 {
-                    <img src="@Url.Content(Model.Produto.ImagemUrl)" class="product-main-image" alt="@Model.Produto.Nome">
+                    <img src="@Url.Content(Model.Produto.ImagemUrl)"
+                         class="product-main-image"
+                         alt="Imagem do produto @Model.Produto.Nome"
+                         loading="lazy" decoding="async"
+                         width="960" height="960"
+                         itemprop="image" />
                 }
                 else
                 {
-                    <div class="image-placeholder">
-                        <i class="fas fa-image"></i>
+                    <div class="image-placeholder" aria-label="Imagem não disponível">
+                        <i class="fas fa-image" aria-hidden="true"></i>
                     </div>
                 }
 
-                <div class="product-badges">
-                    <div class="badge-item">
-                        <i class="fas fa-shield-alt"></i>
-                        <span>Garantia 6 meses</span>
-                    </div>
-                    <div class="badge-item">
-                        <i class="fas fa-truck"></i>
-                        <span>Entrega Rápida</span>
-                    </div>
-                    <div class="badge-item">
-                        <i class="fas fa-credit-card"></i>
-                        <span>Pagamento Seguro</span>
-                    </div>
-                </div>
+                <ul class="product-badges" aria-label="Diferenciais do produto">
+                    <li class="badge-item"><i class="fas fa-shield-alt" aria-hidden="true"></i><span>Garantia 6 meses</span></li>
+                    <li class="badge-item"><i class="fas fa-truck" aria-hidden="true"></i><span>Entrega Rápida</span></li>
+                    <li class="badge-item"><i class="fas fa-credit-card" aria-hidden="true"></i><span>Pagamento Seguro</span></li>
+                </ul>
             </div>
         </div>
 
@@ -76,129 +86,139 @@
         <div class="produto-info-column">
             @if (Model.Produto.Estoque <= 0)
             {
-                <span class="stock-badge out-of-stock">ESGOTADO</span>
+                <span class="stock-badge out-of-stock" aria-live="polite">ESGOTADO</span>
             }
-            else if (Model.Produto.PrecoPromocional.HasValue && Model.Produto.PrecoPromocional < Model.Produto.Preco)
+            else if (temPromocao)
             {
-                <span class="stock-badge promotion">PROMOÇÃO</span>
+                <span class="stock-badge promotion" aria-live="polite">PROMOÇÃO</span>
             }
 
             <!-- Preço -->
-            <div class="price-section">
-                @if (Model.Produto.PrecoPromocional.HasValue && Model.Produto.PrecoPromocional < Model.Produto.Preco)
+            <section class="price-section" aria-label="Informações de preço" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+                <meta itemprop="priceCurrency" content="BRL" />
+                <meta itemprop="price" content="@precoBase.ToString(CultureInfo.InvariantCulture)" />
+                <link itemprop="availability" href="https://schema.org/@(Model.Produto.Estoque > 0 ? "InStock" : "OutOfStock")" />
+                @if (temPromocao)
                 {
                     <div class="price-wrapper">
                         <span class="original-price">@Model.Produto.Preco.ToString("C")</span>
-                        <span class="current-price">@Model.Produto.PrecoPromocional.Value.ToString("C")</span>
-                        <span class="discount-badge">@((int)(100 - (Model.Produto.PrecoPromocional.Value * 100 / Model.Produto.Preco)))% OFF</span>
+                        <span class="current-price">@precoBase.ToString("C")</span>
+                        <span class="discount-badge">@((int)(100 - (precoBase * 100 / Model.Produto.Preco)))% OFF</span>
                     </div>
                 }
                 else
                 {
-                    <span class="current-price">@Model.Produto.Preco.ToString("C")</span>
+                    <span class="current-price">@precoBase.ToString("C")</span>
                 }
 
                 <div class="payment-info">
                     <div class="payment-option">
-                        <i class="fas fa-credit-card"></i>
-                        <span>em até 5x de @((Model.Produto.Preco / 5).ToString("C")) sem juros</span>
+                        <i class="fas fa-credit-card" aria-hidden="true"></i>
+                        <span>em até 5x de @((precoBase / 5m).ToString("C")) sem juros</span>
                     </div>
                     <div class="payment-option">
-                        <i class="fas fa-barcode"></i>
-                        <span>ou @((Model.Produto.Preco * 0.9m).ToString("C")) à vista (10% OFF)</span>
+                        <i class="fas fa-barcode" aria-hidden="true"></i>
+                        <span>ou @((precoBase * 0.9m).ToString("C")) à vista (10% OFF)</span>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- Seção de Sabores Responsiva -->
-            <div class="flavors-section">
-                <h3 class="section-title">Escolha o sabor:</h3>
+            <!-- Seção de Sabores -->
+            <section class="flavors-section" aria-labelledby="titulo-sabores">
+                <h3 id="titulo-sabores" class="section-title">Escolha o sabor <small class="muted">(@totalSaboresComEstoque de @totalSabores disponíveis)</small>:</h3>
 
-                <div class="flavors-responsive-grid">
-                    @foreach (var sabor in Model.SaboresDisponiveis)
-                    {
-                        var saborId = "flavor-" + sabor.Sabor.GetHashCode();
-                        var parts = sabor.Sabor.Split(new[] { " - " }, StringSplitOptions.None);
+                <fieldset class="flavors-fieldset" role="radiogroup" aria-describedby="estoque-info">
+                    <legend class="sr-only">Sabores</legend>
+                    <div class="flavors-responsive-grid">
+                        @{
+                            var index = 0;
+                        }
+                        @foreach (var sabor in Model.SaboresDisponiveis)
+                        {
+                            var saborId = $"flavor-{index++}"; // Evita GetHashCode (não estável)
+                            var parts = (sabor.Sabor ?? string.Empty).Split(new[] { " - " }, StringSplitOptions.None);
+                            <div class="flavor-card">
+                                <input type="radio" name="flavor" id="@saborId" value="@sabor.Sabor" class="flavor-radio"
+                                       data-estoque="@sabor.Quantidade" @(sabor.Quantidade <= 0 ? "disabled" : null) required />
+                                <label for="@saborId" class="flavor-label" title="@sabor.Sabor">
+                                    @if (parts.Length > 1)
+                                    {
+                                        <span class="flavor-name-en">@parts[0]</span>
+                                        <span class="flavor-name-pt">@parts[1]</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="flavor-name-en">@sabor.Sabor</span>
+                                    }
+                                    @if (sabor.Quantidade <= 0)
+                                    {
+                                        <span class="flavor-badge out">Esgotado</span>
+                                    }
+                                </label>
+                            </div>
+                        }
+                    </div>
+                </fieldset>
 
-                        <div class="flavor-card">
-                            <input type="radio" name="flavor" id="@saborId" value="@sabor.Sabor" class="flavor-radio"
-                                   data-estoque="@sabor.Quantidade" />
-                            <label for="@saborId" class="flavor-label">
-                                @if (parts.Length > 1)
-                                {
-                                    <span class="flavor-name-en">@parts[0]</span>
-                                    <span class="flavor-name-pt">@parts[1]</span>
-                                }
-                                else
-                                {
-                                    <span class="flavor-name-en">@sabor.Sabor</span>
-                                }
-                            </label>
-                        </div>
-                    }
-                    
-                </div>
-
-                <div class="mt-3 text-muted" id="estoque-info" style="display:none;padding: 4%">
-                    <i class="fas fa-boxes me-2"></i>
+                <div class="mt-3 text-muted estoque-info" id="estoque-info" aria-live="polite" hidden>
+                    <i class="fas fa-boxes me-2" aria-hidden="true"></i>
                     Estoque disponível: <span id="estoque-quantidade" class="fw-bold"></span> unidades
                 </div>
 
                 @if (!Model.SaboresDisponiveis.Any())
                 {
-                    <div class="no-flavors">
-                        <p>Nenhum sabor disponível no momento.</p>
-                    </div>
+                    <div class="no-flavors" role="status">Nenhum sabor disponível no momento.</div>
                 }
-            </div>
+            </section>
 
             <div class="action-buttons">
                 <!-- Seletor de quantidade -->
                 <div class="quantity-selector mb-3">
                     <label for="quantity">Quantidade:</label>
                     <div class="quantity-control">
-                        <button type="button" class="quantity-btn minus">-</button>
-                        <input type="number" id="quantity" name="quantity" value="1" min="1" max="10" class="quantity-input">
-                        <button type="button" class="quantity-btn plus">+</button>
+                        <button type="button" class="quantity-btn minus" aria-label="Diminuir quantidade">-</button>
+                        <input type="number" id="quantity" name="quantity" value="1" min="1" max="@Model.Produto.Estoque" class="quantity-input" inputmode="numeric" pattern="[0-9]*">
+                        <button type="button" class="quantity-btn plus" aria-label="Aumentar quantidade">+</button>
                     </div>
                 </div>
 
-                <!-- Botão de adicionar ao carrinho -->
+                <!-- Form Adicionar ao carrinho -->
                 <form asp-controller="Carrinho" asp-action="AdicionarItem" method="post" class="w-100" id="addToCartForm">
+                    @Html.AntiForgeryToken()
                     <input type="hidden" name="produtoId" value="@Model.Produto.Id">
                     <input type="hidden" name="quantidade" id="quantidadeHidden" value="1">
                     <input type="hidden" name="sabor" id="saborSelecionado" value="">
                     <input type="hidden" name="observacoes" id="observacoesProduto" value="">
 
                     <button type="submit" class="btn-add-to-cart @(Model.Produto.Estoque <= 0 ? "disabled" : "")"
-                            @(Model.Produto.Estoque <= 0 ? "disabled" : "")>
-                        <i class="fas fa-shopping-cart"></i>
+                            @(Model.Produto.Estoque <= 0 ? "disabled" : null) aria-disabled="@(Model.Produto.Estoque <= 0)">
+                        <i class="fas fa-shopping-cart" aria-hidden="true"></i>
                         @(Model.Produto.Estoque <= 0 ? "ESGOTADO" : "ADICIONAR AO CARRINHO")
                     </button>
                 </form>
 
                 <!-- Botão de compra rápida -->
-                <button class="btn-buy-now mt-2 @(Model.Produto.Estoque <= 0 ? "disabled" : "")"
-                        @(Model.Produto.Estoque <= 0 ? "disabled" : "")>
-                    <i class="fas fa-bolt"></i> COMPRAR AGORA
+                <button type="button" class="btn-buy-now mt-2 @(Model.Produto.Estoque <= 0 ? "disabled" : "")"
+                        @(Model.Produto.Estoque <= 0 ? "disabled" : null) aria-disabled="@(Model.Produto.Estoque <= 0)">
+                    <i class="fas fa-bolt" aria-hidden="true"></i> COMPRAR AGORA
                 </button>
             </div>
         </div>
     </div>
 
     <!-- Descrição e Especificações -->
-    <div class="product-details-tabs">
-        <div class="tabs-header">
-            <button class="tab-button active" data-tab="description">Descrição</button>
-            <button class="tab-button" data-tab="specifications">Especificações</button>
-            <button class="tab-button" data-tab="reviews">Avaliações</button>
+    <section class="product-details-tabs" aria-label="Detalhes do produto">
+        <div class="tabs-header" role="tablist">
+            <button class="tab-button active" role="tab" aria-selected="true" aria-controls="tab-description" id="tabbtn-description" data-tab="description">Descrição</button>
+            <button class="tab-button" role="tab" aria-selected="false" aria-controls="tab-specifications" id="tabbtn-specifications" data-tab="specifications">Especificações</button>
+            <button class="tab-button" role="tab" aria-selected="false" aria-controls="tab-reviews" id="tabbtn-reviews" data-tab="reviews">Avaliações</button>
         </div>
 
         <div class="tabs-content">
             <!-- Descrição -->
-            <div class="tab-pane active" id="description">
+            <div class="tab-pane active" id="tab-description" role="tabpanel" aria-labelledby="tabbtn-description">
                 <h3>Descrição do Produto</h3>
-                <p>@Model.Produto.Descricao</p>
+                <p itemprop="description">@Model.Produto.Descricao</p>
 
                 <h4>Características:</h4>
                 <ul class="features-list">
@@ -211,167 +231,119 @@
             </div>
 
             <!-- Especificações -->
-            <div class="tab-pane" id="specifications">
+            <div class="tab-pane" id="tab-specifications" role="tabpanel" aria-labelledby="tabbtn-specifications">
                 <h3>Especificações Técnicas</h3>
                 <div class="specs-table">
-                    <div class="spec-row">
-                        <div class="spec-name">Modelo</div>
-                        <div class="spec-value">@Model.Produto.Nome</div>
-                    </div>
-                    <div class="spec-row">
-                        <div class="spec-name">Puffs</div>
-                        <div class="spec-value">@Model.Produto.Puffs puffs</div>
-                    </div>
-                    <div class="spec-row">
-                        <div class="spec-name">Capacidade da Bateria</div>
-                        <div class="spec-value">@Model.Produto.CapacidadeBateria mAh</div>
-                    </div>
-                    <div class="spec-row">
-                        <div class="spec-name">Tipo</div>
-                        <div class="spec-value">Pod Descartável Recarregável</div>
-                    </div>
-                    <div class="spec-row">
-                        <div class="spec-name">Sabores Disponíveis</div>
-                        <div class="spec-value">13 opções</div>
-                    </div>
-                    <div class="spec-row">
-                        <div class="spec-name">Garantia</div>
-                        <div class="spec-value">6 meses contra defeitos de fabricação</div>
-                    </div>
+                    <div class="spec-row"><div class="spec-name">Modelo</div><div class="spec-value">@Model.Produto.Nome</div></div>
+                    <div class="spec-row"><div class="spec-name">Puffs</div><div class="spec-value">@Model.Produto.Puffs puffs</div></div>
+                    <div class="spec-row"><div class="spec-name">Capacidade da Bateria</div><div class="spec-value">@Model.Produto.CapacidadeBateria mAh</div></div>
+                    <div class="spec-row"><div class="spec-name">Tipo</div><div class="spec-value">Pod Descartável Recarregável</div></div>
+                    <div class="spec-row"><div class="spec-name">Sabores Disponíveis</div><div class="spec-value">@totalSabores opções</div></div>
+                    <div class="spec-row"><div class="spec-name">Garantia</div><div class="spec-value">6 meses contra defeitos de fabricação</div></div>
                 </div>
             </div>
 
             <!-- Avaliações -->
-            <div class="tab-pane" id="reviews">
-                <h3>Avaliações dos Clientes</h3>
-
+            <div class="tab-pane" id="tab-reviews" role="tabpanel" aria-labelledby="tabbtn-reviews">
+                <h3 id="reviews">Avaliações dos Clientes</h3>
                 <div class="reviews-summary">
                     <div class="rating-overview">
                         <div class="average-rating">4.8</div>
-                        <div class="stars">
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star-half-alt"></i>
+                        <div class="stars" aria-hidden="true">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
                         </div>
                         <p>Baseado em 42 avaliações</p>
                     </div>
-
                     <div class="reviews-list">
                         <div class="review-item">
                             <div class="review-header">
                                 <h4>Ótimo produto!</h4>
-                                <div class="stars">
-                                    <i class="fas fa-star"></i>
-                                    <i class="fas fa-star"></i>
-                                    <i class="fas fa-star"></i>
-                                    <i class="fas fa-star"></i>
-                                    <i class="fas fa-star"></i>
+                                <div class="stars" aria-hidden="true">
+                                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
                                 </div>
                             </div>
                             <p class="review-text">"Comprei o sabor Melancia Ice e adorei! Duração excelente e sabor muito bom."</p>
                             <p class="review-author">Por: João S. em 15/05/2023</p>
                         </div>
-
                         <div class="review-item">
                             <div class="review-header">
                                 <h4>Recomendo</h4>
-                                <div class="stars">
-                                    <i class="fas fa-star"></i>
-                                    <i class="fas fa-star"></i>
-                                    <i class="fas fa-star"></i>
-                                    <i class="fas fa-star"></i>
-                                    <i class="fas fa-star"></i>
+                                <div class="stars" aria-hidden="true">
+                                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
                                 </div>
                             </div>
                             <p class="review-text">"Já é meu segundo pod dessa marca. O sabor de Menta Ice é refrescante e dura bastante."</p>
                             <p class="review-author">Por: Maria L. em 10/05/2023</p>
                         </div>
-
-                        <button class="btn-view-all-reviews">Ver todas as avaliações</button>
+                        <button class="btn-view-all-reviews" type="button">Ver todas as avaliações</button>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 
     <!-- Produtos Relacionados -->
     @if (Model.ProdutosRelacionados != null && Model.ProdutosRelacionados.Any())
     {
-        <div class="related-products-section">
+        <section class="related-products-section" aria-label="Produtos relacionados">
             <h2 class="section-title">Você também pode gostar:</h2>
-
             <div class="related-products-grid">
                 @foreach (var produto in Model.ProdutosRelacionados)
                 {
-                    <div class="related-product-card">
+                    <article class="related-product-card" itemscope itemtype="https://schema.org/Product">
                         <div class="product-image">
                             @if (!string.IsNullOrEmpty(produto.ImagemUrl))
                             {
-                                <img src="@produto.ImagemUrl" alt="@produto.Nome">
+                                <img src="@produto.ImagemUrl" alt="@produto.Nome" loading="lazy" decoding="async" width="480" height="480" itemprop="image">
                             }
                             else
                             {
-                                <div class="image-placeholder">
-                                    <i class="fas fa-image"></i>
-                                </div>
+                                <div class="image-placeholder"><i class="fas fa-image" aria-hidden="true"></i></div>
                             }
                         </div>
-
                         <div class="product-info">
-                            <h3 class="product-name">@produto.Nome</h3>
-                            <div class="product-price">@produto.Preco.ToString("C")</div>
-
+                            <h3 class="product-name" itemprop="name">@produto.Nome</h3>
+                            <div class="product-price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+                                <meta itemprop="priceCurrency" content="BRL" />
+                                <span itemprop="price">@produto.Preco.ToString("C")</span>
+                            </div>
                             <div class="product-actions">
                                 <a asp-controller="Carrinho" asp-action="Adicionar" asp-route-produtoId="@produto.Id" class="btn-add-to-cart-sm">
-                                    <i class="fas fa-shopping-cart"></i> Adicionar
+                                    <i class="fas fa-shopping-cart" aria-hidden="true"></i> Adicionar
                                 </a>
-                                <a asp-action="Detalhes" asp-route-id="@produto.Id" class="btn-view-details">Ver detalhes</a>
+                                <a asp-action="Detalhes" asp-route-id="@produto.Id" class="btn-view-details" aria-label="Ver detalhes de @produto.Nome">Ver detalhes</a>
                             </div>
                         </div>
-                    </div>
+                    </article>
                 }
             </div>
-        </div>
+        </section>
     }
 
     <!-- FAQ -->
-    <div class="faq-section">
+    <section class="faq-section" aria-label="Perguntas Frequentes">
         <h2 class="section-title">Perguntas Frequentes</h2>
-
         <div class="faq-accordion">
             <div class="faq-item">
-                <button class="faq-question">
-                    Quantos puffs dura este pod?
-                    <i class="fas fa-chevron-down"></i>
-                </button>
-                <div class="faq-answer">
-                    <p>Este pod tem uma capacidade de aproximadamente @Model.Produto.Puffs puffs, variando de acordo com o estilo de uso de cada pessoa.</p>
+                <button class="faq-question" type="button" aria-expanded="false">Quantos puffs dura este pod? <i class="fas fa-chevron-down" aria-hidden="true"></i></button>
+                <div class="faq-answer" hidden>
+                    <p>Este pod tem uma capacidade de aproximadamente @Model.Produto.Puffs puffs, variando conforme o uso.</p>
                 </div>
             </div>
-
             <div class="faq-item">
-                <button class="faq-question">
-                    Posso recarregar este pod?
-                    <i class="fas fa-chevron-down"></i>
-                </button>
-                <div class="faq-answer">
-                    <p>Sim, este pod descartável possui entrada USB para recarga, permitindo aproveitar ao máximo os @Model.Produto.Puffs puffs.</p>
+                <button class="faq-question" type="button" aria-expanded="false">Posso recarregar este pod? <i class="fas fa-chevron-down" aria-hidden="true"></i></button>
+                <div class="faq-answer" hidden>
+                    <p>Sim, este pod descartável possui entrada USB para recarga, aproveitando ao máximo os @Model.Produto.Puffs puffs.</p>
                 </div>
             </div>
-
             <div class="faq-item">
-                <button class="faq-question">
-                    Qual o prazo de entrega?
-                    <i class="fas fa-chevron-down"></i>
-                </button>
-                <div class="faq-answer">
-                    <p>O prazo de entrega varia de 3 a 7 dias úteis, dependendo da sua localização. Para a região Sudeste, normalmente chega em 3 dias úteis.</p>
+                <button class="faq-question" type="button" aria-expanded="false">Qual o prazo de entrega? <i class="fas fa-chevron-down" aria-hidden="true"></i></button>
+                <div class="faq-answer" hidden>
+                    <p>De 3 a 7 dias úteis, dependendo da sua localização. Para a região Sudeste, normalmente 3 dias úteis.</p>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 </div>
 
 @section Scripts {
