@@ -5,10 +5,12 @@ using WebApplicationPods.Models;
 
 namespace WebApplicationPods.Data
 {
-    // Agora seu único contexto faz TUDO: domínio + Identity
+    // Contexto único: domínio + Identity<int>
     public class BancoContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>
     {
         public BancoContext(DbContextOptions<BancoContext> options) : base(options) { }
+
+        public DbSet<MerchantPaymentConfig> MerchantPaymentConfigs => Set<MerchantPaymentConfig>();
 
         // ====== Suas entidades de domínio ======
         public DbSet<CategoriaModel> Categorias { get; set; }
@@ -17,10 +19,7 @@ namespace WebApplicationPods.Data
         public DbSet<EnderecoModel> Enderecos { get; set; }
         public DbSet<PedidoModel> Pedidos { get; set; }
         public DbSet<PedidoItemModel> PedidoItens { get; set; }
-
-        // Se você usa UsuarioModel para CLIENTE “sem identity”, pode manter:
-        public DbSet<UsuarioModel> Usuarios { get; set; }
-
+        public DbSet<UsuarioModel> Usuarios { get; set; } // se você usa este modelo “cliente sem identity”
         public DbSet<CarrinhoModel> Carrinhos { get; set; }
         public DbSet<PaymentModel> Pagamentos { get; set; }
 
@@ -29,15 +28,18 @@ namespace WebApplicationPods.Data
             // 1) Deixe o Identity se configurar
             base.OnModelCreating(modelBuilder);
 
-            base.OnModelCreating(modelBuilder);
+            // 2) Constraints e índices de ApplicationUser
+            // ATENÇÃO: se CPF/PhoneNumber forem opcionais, um índice UNIQUE pode bloquear múltiplos NULLs no SQL Server.
+            // Se forem opcionais, troque por índice filtrado (HasFilter("[CPF] IS NOT NULL"))
+            modelBuilder.Entity<ApplicationUser>()
+                .HasIndex(u => u.CPF)
+                .IsUnique();
 
             modelBuilder.Entity<ApplicationUser>()
-                .HasIndex(u => u.CPF).IsUnique();
+                .HasIndex(u => u.PhoneNumber)
+                .IsUnique();
 
-            modelBuilder.Entity<ApplicationUser>()
-                .HasIndex(u => u.PhoneNumber).IsUnique();
-
-            // deixar explícito que endereço é opcional
+            // Campos opcionais do ApplicationUser
             modelBuilder.Entity<ApplicationUser>(b =>
             {
                 b.Property(u => u.Endereco).IsRequired(false);
@@ -61,7 +63,7 @@ namespace WebApplicationPods.Data
                 .HasForeignKey(p => p.PedidoId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Ajustes em Payment
+            // Ajustes em Payment (colunas opcionais)
             modelBuilder.Entity<PaymentModel>(e =>
             {
                 e.Property(p => p.CardBrand).IsRequired(false);
@@ -71,7 +73,21 @@ namespace WebApplicationPods.Data
                 e.Property(p => p.FailureReason).IsRequired(false);
             });
 
-            // Aqui você pode adicionar outras configs de domínio (tamanho de campos, etc.)
+            // MerchantPaymentConfig -> ApplicationUser (FK forte, int)
+            modelBuilder.Entity<MerchantPaymentConfig>(e =>
+            {
+                e.Property(p => p.Provider).HasMaxLength(100).IsRequired();
+                e.Property(p => p.ConfigJson).IsRequired();
+
+                e.HasIndex(p => new { p.UserId, p.Provider }).IsUnique();
+
+                e.HasOne<ApplicationUser>()     // FK para o seu user (Identity<int>)
+                 .WithMany()
+                 .HasForeignKey(p => p.UserId)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // TODO: adicione aqui outras configurações de domínio (tamanhos, required, etc.)
         }
     }
 }

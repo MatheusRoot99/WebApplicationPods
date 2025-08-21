@@ -9,7 +9,7 @@ using WebApplicationPods.Models;     // ApplicationUser
 
 using WebApplicationPods.Payments;
 using WebApplicationPods.Payments.Gateways;
-
+using WebApplicationPods.Payments.Options;
 using WebApplicationPods.Repositories;
 using WebApplicationPods.Repository.Interface;
 using WebApplicationPods.Repository.Repository;
@@ -85,18 +85,30 @@ builder.Services.AddHttpClient<ICepService, CepService>(client =>
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
+builder.Services.Configure<PaymentsOptions>(builder.Configuration.GetSection("Payments"));
+
 // ===== Payment Gateway + Service
-builder.Services.AddHttpClient<IPaymentGateway, MercadoPagoGateway>((sp, http) =>
+// 1) Registre os tipos concretos (sem mapear direto pra IPaymentGateway)
+builder.Services.AddHttpClient<MercadoPagoGateway>((sp, http) =>
 {
     var cfg = sp.GetRequiredService<IConfiguration>();
     var token = cfg["Payments:MercadoPago:AccessToken"];
-
     http.BaseAddress = new Uri("https://api.mercadopago.com/");
     if (!string.IsNullOrWhiteSpace(token))
         http.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 });
-builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<StripeGateway>();
+
+// 2) Registre a factory Func<string, IPaymentGateway>
+builder.Services.AddScoped<Func<string, IPaymentGateway>>(sp => provider =>
+{
+    if (provider.Equals("MercadoPago", StringComparison.OrdinalIgnoreCase))
+        return sp.GetRequiredService<MercadoPagoGateway>();
+    if (provider.Equals("Stripe", StringComparison.OrdinalIgnoreCase))
+        return sp.GetRequiredService<StripeGateway>();
+    throw new InvalidOperationException($"Provedor não suportado: {provider}");
+});
 
 // ===== Infra
 builder.Services.AddHttpContextAccessor();
@@ -109,6 +121,8 @@ builder.Services.AddScoped<ICarrinhoService, CarrinhoService>();
 builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
 builder.Services.AddScoped<IPedidoRepository, PedidoRepository>();
 builder.Services.AddScoped<IEmailSenderService, GmailEmailSenderService>(); // <--- NOVO
+builder.Services.AddScoped<IPaymentCredentialsResolver, PaymentCredentialsResolver>();
+
 
 // ===== Seed (roles + admin padrão)
 builder.Services.AddHostedService<IdentitySeedHostedService>();

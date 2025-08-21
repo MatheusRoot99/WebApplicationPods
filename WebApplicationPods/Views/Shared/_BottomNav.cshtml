@@ -22,10 +22,10 @@
 
     @if (User.Identity?.IsAuthenticated == true)
     {
-        <a class="mbn-item @IsActive("Cliente", "Perfil")" asp-controller="Cliente" asp-action="Perfil" aria-label="Perfil">
+        @* <a class="mbn-item @IsActive("Cliente", "Perfil")" asp-controller="Cliente" asp-action="Perfil" aria-label="Perfil">
             <i class="fa-solid fa-user"></i>
             <span class="mbn-label">Perfil</span>
-        </a>
+        </a> *@
     }
     else
     {

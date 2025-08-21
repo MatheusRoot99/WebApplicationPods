@@ -61,6 +61,10 @@
                 <a asp-controller="Carrinho" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
                     <i class="fas fa-shopping-cart me-2"></i> Carrinho
                 </a>
+                <a asp-controller="PagamentosAdmin" asp-action="Edit" asp-route-provider="Stripe"
+                   class="list-group-item list-group-item-action bg-dark text-white">
+                    <i class="fas fa-credit-card me-2"></i> Configurações de Pagamento
+                </a>
             </div>
         }
 
