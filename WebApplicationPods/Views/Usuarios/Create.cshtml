@@ -1,8 +1,10 @@
 ﻿@model WebApplicationPods.Models.UserCreateViewModel
+
 @{
     ViewData["Title"] = "Criar Usuário";
     var roles = (string[])ViewBag.Roles;
 }
+
 <h2>Criar Usuário</h2>
 
 @if (TempData["Sucesso"] != null)
@@ -39,7 +41,7 @@
 
     <div class="mb-3">
         <label asp-for="Password" class="form-label"></label>
-        <input asp-for="Password" class="form-control" />
+        <input asp-for="Password" class="form-control" type="password" autocomplete="new-password" />
         <span asp-validation-for="Password" class="text-danger"></span>
     </div>
 
@@ -52,7 +54,6 @@
                 <option value="@r">@r</option>
             }
         </select>
-        <span class="form-text">Escolha <b>Admin</b> para administrador, <b>Lojista</b> para vendedor, ou deixe em branco.</span>
     </div>
 
     <button class="btn btn-success">Salvar</button>

@@ -85,7 +85,7 @@ namespace WebApplicationPods.Controllers
                     if (roles.Contains("Admin"))
                         return RedirectToAction("Index", "Home");
                     if (roles.Contains("Lojista"))
-                        return RedirectToAction("Index", "Painel");
+                        return RedirectToAction("Index", "Home");
 
                     return RedirectToAction("Index", "Home");
                 }
