@@ -1,94 +1,227 @@
 ﻿@model WebApplicationPods.Models.ProdutoModel
-
 @{
     ViewData["Title"] = "Editar Pod Eletrônico";
+    var saboresDisponiveis = Model.TodosSabores ?? new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+    var ptBR = new System.Globalization.CultureInfo("pt-BR");
 }
 
-<div class="container mt-4">
-    <div class="card">
-        <div class="card-header bg-warning text-dark">
-            <h4>@ViewData["Title"]</h4>
-            <small class="text-muted">ID: @Model.Id</small>
+<div class="container mt-4 container-full-lg">
+    <div class="card shadow-sm">
+        <div class="card-header text-white gradient-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-0">@ViewData["Title"]</h4>
+                    <small class="text-white-50">ID: @Model.Id</small>
+                </div>
+                <a asp-action="Index" class="btn btn-outline-light btn-action">
+                    <i class="fas fa-arrow-left me-1"></i> Voltar
+                </a>
+            </div>
         </div>
+
         <div class="card-body">
-            <form asp-action="Editar" enctype="multipart/form-data">
-                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <form asp-action="Editar"
+                  asp-route-id="@Model.Id"
+                  method="post"
+                  enctype="multipart/form-data"
+                  id="produtoForm">
+                @Html.AntiForgeryToken()
+
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
                 <input type="hidden" asp-for="Id" />
                 <input type="hidden" asp-for="DataCadastro" />
-                <input type="hidden" asp-for="ImagemUrl" /> <!-- Campo oculto para manter a URL da imagem -->
+                <input type="hidden" asp-for="ImagemUrl" />
 
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label asp-for="Nome" class="control-label"></label>
+                <div class="row g-4">
+                    <!-- COLUNA ESQUERDA -->
+                    <div class="col-lg-6">
+                        <div class="mb-3">
+                            <label asp-for="Nome" class="form-label"></label>
                             <input asp-for="Nome" class="form-control" />
                             <span asp-validation-for="Nome" class="text-danger"></span>
                         </div>
 
-                        <div class="form-group mb-3">
-                            <label asp-for="Descricao" class="control-label"></label>
+                        <div class="mb-3">
+                            <label asp-for="Descricao" class="form-label"></label>
                             <textarea asp-for="Descricao" class="form-control" rows="4"></textarea>
                             <span asp-validation-for="Descricao" class="text-danger"></span>
                         </div>
 
-                        <div class="form-group mb-3">
-                            <label asp-for="CategoriaId" class="control-label">Categoria</label>
-                            <select asp-for="CategoriaId" class="form-select" asp-items="ViewBag.Categorias">
-                                <option value="">Selecione a categoria</option>
-                            </select>
-                            <span asp-validation-for="CategoriaId" class="text-danger"></span>
+                        <div class="row g-3">
+                            <div class="col-sm-8">
+                                <label asp-for="CategoriaId" class="form-label">Categoria</label>
+                                <select asp-for="CategoriaId" class="form-select" asp-items="ViewBag.Categorias">
+                                    <option value="">Selecione a categoria</option>
+                                </select>
+                                <span asp-validation-for="CategoriaId" class="text-danger"></span>
+                            </div>
+                            <div class="col-sm-4">
+                                <label asp-for="Ativo" class="form-label d-block">Status</label>
+                                <div class="form-check form-switch mt-1">
+                                    <input class="form-check-input" asp-for="Ativo" />
+                                    <label class="form-check-label" for="Ativo">Ativo</label>
+                                </div>
+                            </div>
                         </div>
+
+                        <hr class="my-4">
+
+                        <!-- SABORES + ESTOQUE POR SABOR -->
+                        <h6 class="fw-bold mb-2">Sabores & Estoque</h6>
+                        <div class="table-responsive rounded border mb-2">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:60%">Sabor</th>
+                                        <th style="width:25%">Quantidade</th>
+                                        <th class="text-end" style="width:15%">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="flavorsBody">
+                                    @foreach (var sq in (Model.SaboresQuantidadesList ?? new List<WebApplicationPods.Models.ProdutoModel.SaborQuantidade>()))
+                                    {
+                                        <tr class="flavor-row">
+                                            <td>
+                                                <select class="form-select sabor-select">
+                                                    <option value="">(Selecione)</option>
+                                                    @foreach (var opt in saboresDisponiveis)
+                                                    {
+                                                        var isSelected = string.Equals(opt.Value, sq.Sabor, StringComparison.OrdinalIgnoreCase);
+
+                                                        if (isSelected)
+                                                        {
+                                                            <option value="@opt.Value" selected="selected">@opt.Text</option>
+                                                        }
+                                                        else
+                                                        {
+                                                            <option value="@opt.Value">@opt.Text</option>
+                                                        }
+                                                    }
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <input type="number" class="form-control qty-input" min="0" value="@sq.Quantidade" />
+                                            </td>
+                                            <td class="text-end">
+                                                <button type="button" class="btn btn-outline-danger btn-sm remove-row">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="addFlavor">
+                                <i class="fas fa-plus me-1"></i> Adicionar sabor
+                            </button>
+                            <div class="ms-auto small text-muted">
+                                Total estoque: <span id="totalEstoque">0</span>
+                            </div>
+                        </div>
+
+                        <!-- inputs escondidos para enviar JSONs -->
+                        <div id="flavorsHiddenContainer"></div>
                     </div>
 
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label asp-for="Preco" class="control-label"></label>
-                            <div class="input-group">
-                                <span class="input-group-text">R$</span>
-                                <input asp-for="Preco" id="Preco" class="form-control money-mask" />
-                            </div>
-                            <span asp-validation-for="Preco" class="text-danger"></span>
-                        </div>
-
-                        <div class="form-group mb-3">
-                            <label asp-for="Estoque" class="control-label"></label>
-                            <input asp-for="Estoque" class="form-control" />
-                            <span asp-validation-for="Estoque" class="text-danger"></span>
-                        </div>
-
-                        <!-- Seção da Imagem Atual -->
-                        <div class="form-group mb-3">
-                            <label class="control-label">Imagem Atual</label>
-                            @if (!string.IsNullOrEmpty(Model.ImagemUrl))
-                            {
-                                <div class="mb-2">
-                                    <img src="@Model.ImagemUrl" alt="Imagem do produto" class="img-thumbnail" style="max-height: 200px;" />
+                    <!-- COLUNA DIREITA -->
+                    <div class="col-lg-6">
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <label asp-for="Preco" class="form-label"></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R$</span>
+                                    <input name="Preco" class="form-control" type="text"
+                                           value="@Model.Preco.ToString("N2", ptBR)" />
                                 </div>
-                            }
-                            else
-                            {
-                                <p class="text-muted">Nenhuma imagem cadastrada</p>
-                            }
+                                <span asp-validation-for="Preco" class="text-danger"></span>
+                            </div>
 
-                            <label class="control-label">Alterar Imagem (opcional)</label>
-                            <input type="file" asp-for="ImagemUpload" class="form-control" accept="image/*" />
-                            <small class="text-muted">Deixe em branco para manter a imagem atual</small>
-                            <span asp-validation-for="ImagemUpload" class="text-danger"></span>
-                        </div>
+                            <div class="col-sm-6">
+                                <label asp-for="PrecoPromocional" class="form-label">Preço Promocional</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R$</span>
+                                    <input name="PrecoPromocional" class="form-control" type="text"
+                                           value="@(Model.PrecoPromocional?.ToString("N2", ptBR) ?? "")" />
+                                </div>
+                                <span asp-validation-for="PrecoPromocional" class="text-danger"></span>
+                            </div>
 
-                        <div class="form-group form-check mb-3">
-                            <input class="form-check-input" asp-for="Ativo" />
-                            <label class="form-check-label" asp-for="Ativo"></label>
+                            <div class="col-sm-6">
+                                <label asp-for="EmPromocao" class="form-label d-block">Em promoção?</label>
+                                <div class="form-check form-switch mt-1">
+                                    <input class="form-check-input" asp-for="EmPromocao" />
+                                    <label class="form-check-label" for="EmPromocao">Aplicar preço promocional</label>
+                                </div>
+                            </div>
+
+                            <div class="col-sm-6">
+                                <label asp-for="MaisVendido" class="form-label d-block">Mais vendido?</label>
+                                <div class="form-check form-switch mt-1">
+                                    <input class="form-check-input" asp-for="MaisVendido" />
+                                    <label class="form-check-label" for="MaisVendido">Destacar no catálogo</label>
+                                </div>
+                            </div>
+
+                            @* <div class="col-sm-6">
+                                <label asp-for="Sabor" class="form-label">Sabor principal (opcional)</label>
+                                <input asp-for="Sabor" class="form-control" />
+                            </div> *@
+
+                            <div class="col-sm-6">
+                                <label asp-for="Cor" class="form-label"></label>
+                                <input asp-for="Cor" class="form-control" />
+                            </div>
+
+                            <div class="col-sm-6">
+                                <label asp-for="Puffs" class="form-label"></label>
+                                <input asp-for="Puffs" class="form-control" type="number" min="0" />
+                            </div>
+
+                            <div class="col-sm-6">
+                                <label asp-for="CapacidadeBateria" class="form-label"></label>
+                                <div class="input-group">
+                                    <input asp-for="CapacidadeBateria" class="form-control" type="number" min="0" />
+                                    <span class="input-group-text">mAh</span>
+                                </div>
+                            </div>
+
+                            <div class="col-sm-6">
+                                <label class="form-label">Estoque total</label>
+                                <input asp-for="Estoque" class="form-control" id="Estoque" readonly />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Imagem Atual</label>
+                                @if (!string.IsNullOrEmpty(Model.ImagemUrl))
+                                {
+                                    <div class="mb-2">
+                                        <img src="@Model.ImagemUrl" alt="Imagem do produto @Model.Nome"
+                                             class="img-thumbnail" style="max-height:200px;" loading="lazy" />
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="text-muted">Nenhuma imagem cadastrada</p>
+                                }
+
+                                <label class="form-label">Alterar Imagem (opcional)</label>
+                                <input type="file" asp-for="ImagemUpload" class="form-control" accept="image/*" />
+                                <small class="text-muted">Deixe em branco para manter a imagem atual</small>
+                                <span asp-validation-for="ImagemUpload" class="text-danger"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="form-group mt-4">
-                    <button type="submit" class="btn btn-primary me-2">
-                        <i class="fas fa-save"></i> Salvar Alterações
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary btn-action">
+                        <i class="fas fa-save me-1"></i> Salvar Alterações
                     </button>
-                    <a asp-action="Index" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left"></i> Cancelar
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-action">
+                        <i class="fas fa-arrow-left me-1"></i> Cancelar
                     </a>
                 </div>
             </form>
@@ -96,29 +229,108 @@
     </div>
 </div>
 
+@section Styles {
+<style>
+    /* mesma paleta da Index */
+    .gradient-header{background:linear-gradient(135deg,#6a11cb 0%,#2575fc 100%)}
+    .btn-action{padding:.55rem 1rem;border-radius:999px}
+
+    /* tabela de sabores */
+    .qty-input{max-width:120px}
+    .sabor-select{min-width:220px}
+
+    /* container full no desktop */
+    @@media (min-width:992px){ .container-full-lg{max-width:100%!important} }
+</style>
+}
+
 @section Scripts {
+    @* <partial name="_ValidationScriptsPartial" /> *@
+
     <script>
-        $(document).ready(function () {
-            // Aplica a máscara monetária
-            $('.money-mask').mask('#.##0,00', { reverse: true });
-
-            // Validação do tamanho da imagem
-            $('input[type="file"]').change(function() {
-                const file = this.files[0];
-                if (file) {
-                    if (file.size > 2 * 1024 * 1024) {
-                        alert('O tamanho da imagem não pode exceder 2MB');
-                        $(this).val('');
-                    }
-
-                    const allowedExtensions = ['jpg', 'jpeg', 'png'];
-                    const extension = file.name.split('.').pop().toLowerCase();
-                    if (!allowedExtensions.includes(extension)) {
-                        alert('Apenas arquivos JPG, JPEG e PNG são permitidos');
-                        $(this).val('');
-                    }
-                }
+        // ========== LÓGICA DE SABORES E ESTOQUE ==========
+        function updateTotals() {
+            let total = 0;
+            document.querySelectorAll('#flavorsBody .qty-input').forEach(i => {
+                const n = parseInt(i.value || '0', 10);
+                if (!isNaN(n)) total += n;
             });
+            document.getElementById('totalEstoque').textContent = total;
+            const estoqueEl = document.getElementById('Estoque');
+            if (estoqueEl) estoqueEl.value = total;
+        }
+
+        function addRow(sabor = '', qtd = 0) {
+            const saboresOptions = `@Html.Raw(string.Join("", (saboresDisponiveis.Select(o => $"<option value=\"{o.Value}\">{o.Text}</option>"))))`;
+            const tr = document.createElement('tr');
+            tr.className = 'flavor-row';
+            tr.innerHTML = `
+                <td>
+                    <select class="form-select sabor-select">
+                        <option value="">(Selecione)</option>
+                        ${saboresOptions}
+                    </select>
+                </td>
+                <td><input type="number" class="form-control qty-input" min="0" value="${qtd}"/></td>
+                <td class="text-end">
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-row">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </td>`;
+            document.getElementById('flavorsBody').appendChild(tr);
+
+            if (sabor) tr.querySelector('.sabor-select').value = sabor;
+            tr.querySelector('.qty-input').addEventListener('input', updateTotals);
+            tr.querySelector('.remove-row').addEventListener('click', function() {
+                tr.remove();
+                updateTotals();
+            });
+            updateTotals();
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Event listeners para sabores
+            document.querySelectorAll('#flavorsBody .qty-input').forEach(i => {
+                i.addEventListener('input', updateTotals);
+            });
+
+            document.querySelectorAll('#flavorsBody .remove-row').forEach(b => {
+                b.addEventListener('click', function() {
+                    this.closest('tr').remove();
+                    updateTotals();
+                });
+            });
+
+            document.getElementById('addFlavor')?.addEventListener('click', function() {
+                addRow('', 0);
+            });
+
+            // Processar sabores no submit
+            document.getElementById('produtoForm').addEventListener('submit', function() {
+                const hidden = document.getElementById('flavorsHiddenContainer');
+                hidden.innerHTML = '';
+
+                document.querySelectorAll('#flavorsBody tr').forEach(tr => {
+                    const sabor = tr.querySelector('.sabor-select')?.value || '';
+                    const qtd = parseInt(tr.querySelector('.qty-input')?.value || '0', 10);
+
+                    if (sabor && qtd > 0) {
+                        const inp = document.createElement('input');
+                        inp.type = 'hidden';
+                        inp.name = 'SaboresQuantidadesList';
+                        inp.value = JSON.stringify({ sabor: sabor, quantidade: qtd });
+                        hidden.appendChild(inp);
+                    }
+                });
+
+                updateTotals();
+            });
+
+            // Inicializa totais
+            updateTotals();
         });
     </script>
 }
+
+

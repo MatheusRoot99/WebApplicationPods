@@ -1,9 +1,13 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
+using System.Globalization;
 using WebApplicationPods.Data;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
+using WebApplicationPods.Repository.Repository;
 
 
 namespace WebApplicationPods.Controllers
@@ -29,7 +33,12 @@ namespace WebApplicationPods.Controllers
 
         public IActionResult Index()
         {
-            var produtos = _produtoRepository.ObterTodos();
+            var produtos = _produtoRepository.ObterTodos().ToList();
+
+            // Garante a lista de sabores desserializada para a view
+            foreach (var p in produtos)
+                p.DeserializarSaboresQuantidades();
+
             return View(produtos);
         }
 
@@ -199,123 +208,206 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            // carrega listas auxiliares
+            produto.DeserializarSaboresQuantidades();
+            produto.TodosSabores = ObterTodosSabores();
             CarregarCategorias();
+
             return View(produto);
         }
+
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Editar(int id, ProdutoModel produto)
+        [ActionName("Editar")]
+        public async Task<IActionResult> EditarPost(int id)
         {
-            if (id != produto.Id)
+            var produto = _produtoRepository.ObterPorId(id);
+            if (produto == null)
             {
-                TempData["MensagemErro"] = "ID do produto não corresponde";
+                TempData["MensagemErro"] = "Produto não encontrado";
                 return RedirectToAction(nameof(Index));
             }
 
-            try
+            // ---- Conversão de preços pt-BR
+            static decimal? ParsePtBr(string raw)
             {
-                // Remove as validações desnecessárias
-                ModelState.Remove("Categoria");
-                ModelState.Remove("PedidoItens");
-                ModelState.Remove("ImagemUrl");
-                ModelState.Remove("ImagemUpload");
-                ModelState.Remove("Sabor"); // Adicione esta linha se não removeu a propriedade
-                ModelState.Remove("SaboresDisponiveis"); // Adicione esta linha
-                ModelState.Remove("SaboresSelecionados"); // Adicione esta linha
-                ModelState.Remove("TodosSabores"); // Adicione esta linha
-
-                // Validação de categoria
-                if (produto.CategoriaId == 0 || !_context.Categorias.Any(c => c.Id == produto.CategoriaId))
-                {
-                    ModelState.AddModelError("CategoriaId", "Selecione uma categoria válida");
-                }
-
-                // Validação de sabores
-                var saboresSelecionados = Request.Form["SaboresSelecionados"].ToList();
-                if (saboresSelecionados.Count == 0)
-                {
-                    ModelState.AddModelError("", "Selecione pelo menos um sabor");
-                }
-
-                // Obter o produto existente
-                var produtoExistente = _produtoRepository.ObterPorId(id);
-                if (produtoExistente == null)
-                {
-                    TempData["MensagemErro"] = "Produto não encontrado";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                // Validação da imagem apenas se uma nova for enviada
-                if (produto.ImagemUpload != null && produto.ImagemUpload.Length > 0)
-                {
-                    if (produto.ImagemUpload.Length > 2 * 1024 * 1024)
-                    {
-                        ModelState.AddModelError("ImagemUpload", "O tamanho da imagem não pode exceder 2MB");
-                    }
-
-                    var allowedExtensions = new[] { ".jpg", ".jpeg", ".png" };
-                    var fileExtension = Path.GetExtension(produto.ImagemUpload.FileName).ToLower();
-                    if (!allowedExtensions.Contains(fileExtension))
-                    {
-                        ModelState.AddModelError("ImagemUpload", "Apenas arquivos JPG, JPEG e PNG são permitidos");
-                    }
-                }
-
-                if (ModelState.IsValid)
-                {
-                    // Processamento da imagem (se enviada)
-                    if (produto.ImagemUpload != null && produto.ImagemUpload.Length > 0)
-                    {
-                        var uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "imagens/produtos");
-                        if (!Directory.Exists(uploadsFolder))
-                        {
-                            Directory.CreateDirectory(uploadsFolder);
-                        }
-
-                        // Remove a imagem antiga se existir
-                        if (!string.IsNullOrEmpty(produtoExistente.ImagemUrl))
-                        {
-                            var imagemExistentePath = Path.Combine(_hostEnvironment.WebRootPath,
-                                produtoExistente.ImagemUrl.TrimStart('/'));
-                            if (System.IO.File.Exists(imagemExistentePath))
-                            {
-                                System.IO.File.Delete(imagemExistentePath);
-                            }
-                        }
-
-                        var uniqueFileName = Guid.NewGuid().ToString() + "_" + produto.ImagemUpload.FileName;
-                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                        using (var fileStream = new FileStream(filePath, FileMode.Create))
-                        {
-                            await produto.ImagemUpload.CopyToAsync(fileStream);
-                        }
-
-                        produtoExistente.ImagemUrl = $"/imagens/produtos/{uniqueFileName}";
-                    }
-
-                    // Atualiza os outros campos
-                    produtoExistente.Nome = produto.Nome;
-                    produtoExistente.Descricao = produto.Descricao;
-                    produtoExistente.Preco = produto.Preco;
-                    produtoExistente.Estoque = produto.Estoque;
-                    produtoExistente.CategoriaId = produto.CategoriaId;
-                    produtoExistente.Ativo = produto.Ativo;
-
-                    _produtoRepository.Atualizar(produtoExistente);
-                    TempData["MensagemSucesso"] = "Produto atualizado com sucesso!";
-                    return RedirectToAction(nameof(Index));
-                }
-            }
-            catch (Exception ex)
-            {
-                TempData["MensagemErro"] = $"Erro ao atualizar produto: {ex.Message}";
+                if (string.IsNullOrWhiteSpace(raw)) return null;
+                if (decimal.TryParse(raw, NumberStyles.Currency, new CultureInfo("pt-BR"), out var d))
+                    return d;
+                raw = raw.Replace(".", "").Replace(",", ".");
+                return decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out d) ? d : null;
             }
 
-            CarregarCategorias();
-            return View(produto);
+            var precoRaw = Request.Form[nameof(ProdutoModel.Preco)];
+            var promoRaw = Request.Form[nameof(ProdutoModel.PrecoPromocional)];
+
+            var preco = ParsePtBr(precoRaw);
+            if (preco is null || preco <= 0)
+                ModelState.AddModelError(nameof(ProdutoModel.Preco), "Preço inválido. Ex.: 179,90");
+            else
+            {
+                produto.Preco = preco.Value;
+                ModelState.Remove(nameof(ProdutoModel.Preco));
+            }
+
+            if (string.IsNullOrWhiteSpace(promoRaw))
+            {
+                produto.PrecoPromocional = null;
+                ModelState.Remove(nameof(ProdutoModel.PrecoPromocional));
+            }
+            else
+            {
+                var promo = ParsePtBr(promoRaw);
+                if (promo is null || promo <= 0)
+                    ModelState.AddModelError(nameof(ProdutoModel.PrecoPromocional), "Preço promocional inválido. Ex.: 169,90");
+                else
+                {
+                    produto.PrecoPromocional = promo;
+                    ModelState.Remove(nameof(ProdutoModel.PrecoPromocional));
+                }
+            }
+
+            // ---- Bind restante
+            var ok = await TryUpdateModelAsync(produto, prefix: "",
+                p => p.Nome, p => p.Descricao, p => p.CategoriaId, p => p.Ativo,
+                p => p.EmPromocao, p => p.MaisVendido, p => p.Sabor, p => p.Cor,
+                p => p.Puffs, p => p.CapacidadeBateria);
+
+            if (!ok)
+                ModelState.AddModelError(string.Empty, "Não foi possível vincular os dados do formulário.");
+
+            // ---- Sabores
+            var saboresList = new List<ProdutoModel.SaborQuantidade>();
+            if (Request.Form.TryGetValue("SaboresQuantidadesList", out var itens))
+            {
+                foreach (var item in itens)
+                {
+                    if (string.IsNullOrWhiteSpace(item)) continue;
+                    try
+                    {
+                        var sq = JsonConvert.DeserializeObject<ProdutoModel.SaborQuantidade>(item);
+                        if (sq != null && !string.IsNullOrWhiteSpace(sq.Sabor) && sq.Quantidade > 0)
+                            saboresList.Add(sq);
+                    }
+                    catch
+                    {
+                        ModelState.AddModelError("", "Erro ao processar os sabores.");
+                    }
+                }
+            }
+
+            if (saboresList.Count == 0)
+                ModelState.AddModelError("", "Adicione pelo menos um sabor com quantidade válida.");
+
+            produto.SaboresQuantidadesList = saboresList;
+            produto.Estoque = saboresList.Sum(s => s.Quantidade);
+            produto.SerializarSaboresQuantidades();
+            ModelState.Remove(nameof(ProdutoModel.SaboresQuantidades)); // <- evita falso "required"
+
+            // ---- Regras adicionais
+            if (!_context.Categorias.AsNoTracking().Any(c => c.Id == produto.CategoriaId))
+                ModelState.AddModelError(nameof(ProdutoModel.CategoriaId), "Selecione uma categoria válida.");
+
+            if (produto.EmPromocao)
+            {
+                if (!produto.PrecoPromocional.HasValue)
+                    ModelState.AddModelError(nameof(ProdutoModel.PrecoPromocional), "Informe o preço promocional.");
+                else if (produto.PrecoPromocional.Value >= produto.Preco)
+                    ModelState.AddModelError(nameof(ProdutoModel.PrecoPromocional), "Preço promocional deve ser menor que o preço.");
+            }
+            else
+            {
+                produto.PrecoPromocional = null; // garante consistência
+            }
+
+            // ---- Imagem opcional
+            ModelState.Remove(nameof(ProdutoModel.ImagemUpload));
+            var file = Request.Form.Files[nameof(ProdutoModel.ImagemUpload)];
+            if (file is { Length: > 0 })
+            {
+                if (file.Length > 2 * 1024 * 1024)
+                    ModelState.AddModelError(nameof(ProdutoModel.ImagemUpload), "O tamanho da imagem não pode exceder 2MB");
+
+                var allowed = new[] { ".jpg", ".jpeg", ".png" };
+                var ext = Path.GetExtension(file.FileName);
+                if (!allowed.Contains(ext, StringComparer.OrdinalIgnoreCase))
+                    ModelState.AddModelError(nameof(ProdutoModel.ImagemUpload), "Apenas arquivos JPG, JPEG e PNG são permitidos");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                produto.DeserializarSaboresQuantidades();
+                produto.TodosSabores = ObterTodosSabores();
+                CarregarCategorias();
+                return View("Editar", produto);
+            }
+
+            // ---- Persistência da imagem (se enviada)
+            if (file is { Length: > 0 })
+            {
+                var uploads = Path.Combine(_hostEnvironment.WebRootPath, "imagens/produtos");
+                Directory.CreateDirectory(uploads);
+
+                if (!string.IsNullOrEmpty(produto.ImagemUrl))
+                {
+                    var oldPath = Path.Combine(_hostEnvironment.WebRootPath, produto.ImagemUrl.TrimStart('/'));
+                    if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
+                }
+
+                var fileName = $"{Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
+                using var fs = System.IO.File.Create(Path.Combine(uploads, fileName));
+                await file.CopyToAsync(fs);
+                produto.ImagemUrl = $"/imagens/produtos/{fileName}";
+            }
+
+            _produtoRepository.Atualizar(produto);
+            TempData["MensagemSucesso"] = "Produto atualizado com sucesso!";
+            return RedirectToAction(nameof(Index));
         }
+
+
+        /// <summary>
+        /// //////
+        /// </summary>
+        // Função para converter formato brasileiro para decimal
+        decimal? ConverterParaDecimal(string valor)
+        {
+            if (string.IsNullOrWhiteSpace(valor)) return null;
+
+            // Remove "R$" e espaços
+            valor = valor.Replace("R$", "").Trim();
+
+            // Usa CultureInfo pt-BR para converter
+            if (decimal.TryParse(valor, NumberStyles.Currency,
+                new CultureInfo("pt-BR"), out decimal resultado))
+            {
+                return resultado;
+            }
+
+            // Tenta converter removendo pontos de milhar manualmente
+            valor = valor.Replace(".", "").Replace(",", ".");
+            if (decimal.TryParse(valor, NumberStyles.Any, CultureInfo.InvariantCulture, out resultado))
+            {
+                return resultado;
+            }
+
+            return null;
+        }
+        /// <returns></returns>
+
+
+        // helper
+        private static bool TryReadDecimalAnyCulture(string raw, out decimal value)
+        {
+            var s = (raw ?? "").Trim();
+            var styles = NumberStyles.AllowDecimalPoint | NumberStyles.AllowThousands;
+            return decimal.TryParse(s, styles, CultureInfo.GetCultureInfo("pt-BR"), out value)
+                || decimal.TryParse(s.Replace(".", "").Replace(',', '.'), styles, CultureInfo.InvariantCulture, out value);
+        }
+
+
 
         [HttpGet]
         public IActionResult Excluir(int id)
@@ -380,13 +472,13 @@ namespace WebApplicationPods.Controllers
             }
 
             var saboresDisponiveis = produto.SaboresQuantidadesList?
-    .Where(sq => sq.Quantidade > 0)
-    .Select(sq => new ProdutoModel.SaborQuantidade
-    {
-        Sabor = sq.Sabor,
-        Quantidade = sq.Quantidade
-    })
-    .ToList();
+                    .Where(sq => sq.Quantidade > 0)
+                    .Select(sq => new ProdutoModel.SaborQuantidade
+                    {
+                        Sabor = sq.Sabor,
+                        Quantidade = sq.Quantidade
+                    })
+                    .ToList();
 
             var viewModel = new ProdutoDetalhesViewModel
             {
@@ -400,6 +492,18 @@ namespace WebApplicationPods.Controllers
 
             return View("Detalhes", viewModel);
         }
+
+        //[HttpGet]
+        //public IActionResult ProdutoCard(int id)
+        //{
+        //    var produto = _produtoRepository.ObterPorId(id);
+        //    if (produto == null)
+        //    {
+        //        TempData["MensagemErro"] = "Produto não encontrado";
+        //        return RedirectToAction(nameof(Index));
+        //    }
+        //    return View(produto); // Views/Produto/ProdutoCard.cshtml -> @model ProdutoModel
+        //}
 
     }
 }

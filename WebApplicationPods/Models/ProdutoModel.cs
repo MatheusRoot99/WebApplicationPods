@@ -33,7 +33,8 @@ namespace WebApplicationPods.Models
 
         [NotMapped]
         [Display(Name = "Imagem do Produto")]
-        public IFormFile ImagemUpload { get; set; }
+        [ValidateNever]
+        public IFormFile? ImagemUpload { get; set; }
 
         [Required(ErrorMessage = "A categoria é obrigatória")]
         [Display(Name = "Categoria")]
