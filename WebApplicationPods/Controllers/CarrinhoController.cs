@@ -98,7 +98,7 @@ namespace WebApplicationPods.Controllers
                 TempData["Erro"] = "Pedido não encontrado!";
                 return RedirectToAction("Index");
             }
-
+            ViewBag.PedidoId = pedido.Id; // se quiser usar no layout
             return View(pedido);
         }
 

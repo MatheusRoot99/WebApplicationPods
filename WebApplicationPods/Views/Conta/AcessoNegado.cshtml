@@ -1,7 +1,115 @@
 ﻿@{
     ViewData["Title"] = "Acesso Negado";
+    var isAuth = User.Identity?.IsAuthenticated == true;
 }
-<div class="alert alert-danger mt-4">
-    <h4>Acesso negado</h4>
-    <p>Você não tem permissão para acessar este recurso.</p>
+
+@section Styles {
+    <style>
+        :root {
+            --brand-start: #6a11cb; /* roxo */
+            --brand-end: #2575fc; /* azul */
+            --bg: #f5f5f7;
+        }
+
+        body {
+            background: var(--bg);
+        }
+
+        .auth-shell {
+            width: min(90vw, 1000px);
+            min-height: 70vh;
+            margin-inline: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+
+        .auth-card {
+            width: 100%;
+            max-width: 720px;
+            background: #fff;
+            border: 1px solid #eaeaea;
+            border-radius: 16px;
+            box-shadow: 0 14px 32px rgba(0,0,0,.08);
+            overflow: hidden;
+        }
+
+        .auth-head {
+            background: linear-gradient(135deg,var(--brand-start) 0%,var(--brand-end) 100%);
+            color: #fff;
+            padding: 1.1rem 1.25rem;
+        }
+
+        .auth-body {
+            padding: 1.5rem;
+        }
+
+        .lead {
+            font-size: 1.05rem;
+            color: #374151;
+        }
+
+        .btn-brand {
+            background: linear-gradient(135deg,var(--brand-start) 0%,var(--brand-end) 100%);
+            border: 0;
+            color: #fff;
+            font-weight: 700;
+        }
+
+            .btn-brand:hover {
+                filter: brightness(1.03);
+                box-shadow: 0 10px 20px rgba(37,117,252,.25);
+            }
+
+        @@media (max-width:575.98px) {
+            .auth-body
+
+        {
+            padding: 1rem;
+        }
+
+        }
+    </style>
+}
+
+<div class="auth-shell">
+    <div class="auth-card">
+        <div class="auth-head d-flex align-items-center gap-2">
+            <i class="fa-solid fa-shield-halved"></i>
+            <h2 class="h5 mb-0">Acesso negado</h2>
+        </div>
+
+        <div class="auth-body">
+            <div class="alert alert-danger d-flex align-items-start" role="alert">
+                <i class="fa-solid fa-circle-xmark me-2 mt-1"></i>
+                <div>
+                    <strong>Você não tem permissão para acessar este recurso.</strong>
+                    <div class="small text-muted">Se acredita que isso é um engano, fale com o administrador.</div>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="fa-solid fa-house me-1"></i> Voltar ao início
+                </a>
+
+                @if (!isAuth)
+                {
+                    <a asp-controller="Conta" asp-action="Login" class="btn btn-brand">
+                        <i class="fa-solid fa-right-to-bracket me-1"></i> Entrar
+                    </a>
+                }
+                else
+                {
+                    <form asp-controller="Conta" asp-action="Logout" method="post" class="m-0">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fa-solid fa-arrow-right-from-bracket me-1"></i> Sair da conta
+                        </button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
 </div>

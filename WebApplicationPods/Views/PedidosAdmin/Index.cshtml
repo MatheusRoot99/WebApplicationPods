@@ -1,0 +1,42 @@
+﻿@model IEnumerable<WebApplicationPods.Models.PedidoModel>
+
+<div class="container mt-4">
+    <h2>Pedidos do Dia</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Cliente</th>
+                <th>Data</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in Model.OrderByDescending(x => x.DataPedido))
+            {
+                <tr>
+                    <td>@p.Id</td>
+                    <td>@p.Cliente?.Nome</td>
+                    <td>@p.DataPedido.ToString("dd/MM HH:mm")</td>
+                    <td>@p.ValorTotal.ToString("C")</td>
+                    <td><span class="badge bg-info">@p.Status</span></td>
+                    <td>
+                        <form asp-action="AtualizarStatus" asp-controller="PedidosAdmin" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@p.Id" />
+                            <div class="btn-group btn-group-sm">
+                                <button name="status" value="Em Preparação" class="btn btn-primary">Iniciar</button>
+                                <button name="status" value="Pronto" class="btn btn-warning">Pronto</button>
+                                <button name="status" value="Saiu p/ Entrega" class="btn btn-secondary">Saiu</button>
+                                <button name="status" value="Entregue" class="btn btn-success">Entregue</button>
+                                <button name="status" value="Cancelado" class="btn btn-danger">Cancelar</button>
+                            </div>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

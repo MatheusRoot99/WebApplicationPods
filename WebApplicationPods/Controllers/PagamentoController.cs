@@ -58,21 +58,37 @@ namespace WebApplicationPods.Controllers
             return View(payment);
         }
 
+        private void MarcarPedidoComoPago(int pedidoId)
+        {
+            // Ajuste o texto conforme sua convenção de status
+            _pedidos.AtualizarStatus(pedidoId, "Pago");
+        }
+
         /// <summary>
         /// Endpoint para polling do status (PIX / cartão).
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> Status(int id)
         {
-            var p = await _db.Pagamentos.FindAsync(id);
+            var p = await _db.Pagamentos
+                .Include(x => x.Pedido)
+                .FirstOrDefaultAsync(x => x.Id == id);
+
             if (p == null) return NotFound();
+
+            var isPaid = p.Status == PaymentStatus.Paid;
 
             return Json(new
             {
+                paid = isPaid,
                 status = p.Status.ToString(),
                 last4 = p.CardLast4,
                 brand = p.CardBrand,
-                paidAt = p.PaidAt
+                paidAt = p.PaidAt,
+                pedidoId = p.PedidoId,
+                redirect = isPaid
+                    ? Url.Action("Confirmacao", "Carrinho", new { id = p.PedidoId })
+                    : null
             });
         }
 
@@ -83,8 +99,27 @@ namespace WebApplicationPods.Controllers
         public async Task<IActionResult> ConfirmCard(int id, [FromBody] object clientPayload)
         {
             var ok = await _payments.ConfirmCardAsync(id, clientPayload?.ToString());
-            return Ok(new { success = ok });
+
+            // Carrega o pagamento com o PedidoId
+            var p = await _db.Pagamentos
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+            string? redirect = null;
+
+            if (ok && p != null)
+            {
+                // Garante que o status do pedido fique como "Pago"
+                MarcarPedidoComoPago(p.PedidoId);
+
+                // Monta a URL de confirmação para o front redirecionar
+                redirect = Url.Action("Confirmacao", "Carrinho", new { id = p.PedidoId });
+            }
+
+            // Importante: manter resposta JSON (o Brick chama via fetch/AJAX)
+            return Ok(new { success = ok, redirect });
         }
+
 
         /// <summary>
         /// Webhook do provedor de pagamento (ex.: Mercado Pago).
@@ -116,5 +151,7 @@ namespace WebApplicationPods.Controllers
                 _ => PaymentMethod.Cash
             };
         }
+
+
     }
 }

@@ -1,328 +1,358 @@
 ﻿:root {
-    /* Cores */
-    --primary: #FF6B00;
-    --primary-dark: #cc5800;
-    --primary-light: #ff8c33;
-    --secondary: #1a1a1a;
-    --white: #ffffff;
-    --light-gray: #f5f5f5;
-    --medium-gray: #e0e0e0;
-    --dark-gray: #757575;
-    --error: #d32f2f;
-    --success: #388e3c;
-    /* Espaçamentos */
-    --space-xxs: 0.25rem;
-    --space-xs: 0.5rem;
-    --space-sm: 0.75rem;
-    --space-md: 1rem;
-    --space-lg: 1.5rem;
-    --space-xl: 2rem;
-    --space-xxl: 3rem;
-    /* Bordas */
-    --radius-sm: 4px;
-    --radius-md: 8px;
-    --radius-lg: 12px;
-    --radius-xl: 16px;
-    /* Sombras */
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-    --shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.1);
-    /* Transições */
-    --transition-fast: 0.15s ease;
-    --transition: 0.3s ease;
-    --transition-slow: 0.5s ease;
-}
+    --brand-start: #6a11cb;
+    --brand-end: #2575fc;
+    --bg: #f5f5f7;
+    --text: #1f2937;
+    --border-radius: 12px;
 
-/* Reset e Base */
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+    /* altura do bottom-nav (ajuste se necessário) */
+    --mbn-height: 68px;
 }
 
 body {
-    font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif;
-    line-height: 1.5;
-    color: var(--secondary);
-    background-color: var(--light-gray);
-}
-
-/* Container Principal */
-.cadastro-container {
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
+    background: var(--bg);
     min-height: 100vh;
-    padding: var(--space-xl) var(--space-md);
-    background-color: var(--light-gray);
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    color: var(--text);
 }
 
-/* Card de Cadastro */
+/* Container principal que ocupa toda a altura */
+.cadastro-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* Card principal que se expande conforme conteúdo */
 .cadastro-card {
     width: 100%;
-    max-width: 800px;
-    background: var(--white);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-lg);
+    max-width: 1000px;
+    background: #fff;
+    border-radius: var(--border-radius);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
     overflow: hidden;
-    transition: var(--transition);
+    margin: 20px auto;
 }
 
-    .cadastro-card .card-header {
-        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-        color: var(--white);
-        padding: var(--space-xl) var(--space-lg);
-        text-align: center;
-    }
-
-    .cadastro-card .card-title {
-        font-size: 1.75rem;
-        font-weight: 700;
-        margin-bottom: var(--space-xs);
-    }
-
-    .cadastro-card .card-subtitle {
-        font-size: 1rem;
-        opacity: 0.9;
-        font-weight: 400;
-    }
-
-    .cadastro-card .card-body {
-        padding: var(--space-xl);
-    }
-
-/* Formulário */
-.cadastro-form {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xl);
+/* Header com gradiente */
+.card-header {
+    background: linear-gradient(135deg, var(--brand-start) 0%, var(--brand-end) 100%);
+    color: #fff;
+    padding: 1.5rem 2rem;
 }
 
+.card-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.card-subtitle {
+    opacity: 0.9;
+    font-size: 1rem;
+}
+
+/* Corpo do formulário */
+.card-body {
+    padding: 2rem;
+}
+
+/* Seções do formulário */
 .form-section {
+    /*margin-bottom: 2.5rem;*/
     border: none;
     padding: 0;
-    margin: 0;
 }
 
 .section-title {
     font-size: 1.25rem;
     font-weight: 600;
-    color: var(--primary);
-    margin-bottom: var(--space-lg);
-    padding-bottom: var(--space-sm);
-    border-bottom: 2px solid var(--medium-gray);
-    width: 100%;
+    color: var(--brand-end);
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #eaeaea;
 }
 
+/* Sistema de grid responsivo */
 .form-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-md);
-    margin-bottom: var(--space-md);
+    display: flow; /* <- fix: era 'flow' */
+    grid-template-columns: repeat(12, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
 }
 
 .form-group {
-    flex: 1;
-    min-width: 200px;
-    margin-bottom: var(--space-sm);
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* Permite que os inputs ocupem todo o espaço */
 }
 
+.col-12 { grid-column: span 12; }
+.col-8  { grid-column: span 8;  }
+.col-6  { grid-column: span 6;  }
+.col-4  { grid-column: span 4;  }
+.col-3  { grid-column: span 3;  }
+
+/* Labels e inputs */
 .form-label {
-    display: block;
-    margin-bottom: var(--space-xs);
     font-weight: 600;
-    color: var(--secondary);
-    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+    color: #374151;
 }
 
 .form-control {
-    width: 100%;
-    padding: var(--space-sm) var(--space-md);
-    border: 1px solid var(--medium-gray);
-    border-radius: var(--radius-md);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
     font-size: 1rem;
-    transition: var(--transition-fast);
-    background-color: var(--white);
-    color: var(--secondary);
-    box-shadow: var(--shadow-inset);
+    height: auto;
+    transition: all 0.2s ease;
+}
+.form-control:focus {
+    border-color: var(--brand-end);
+    box-shadow: 0 0 0 0.2rem rgba(37, 117, 252, 0.25);
 }
 
-    .form-control:focus {
-        outline: none;
-        border-color: var(--primary);
-        box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.2);
-    }
-
-.form-hint {
-    display: block;
-    margin-top: var(--space-xs);
-    font-size: 0.75rem;
-    color: var(--dark-gray);
-}
-
-.validation-message {
-    display: block;
-    margin-top: var(--space-xs);
-    font-size: 0.75rem;
-    color: var(--error);
-}
-
-/* Grupos Específicos */
-.cep-group {
-    position: relative;
-    max-width: 200px;
-}
-
-.input-with-feedback {
-    position: relative;
-}
+/* Grupo de CEP com spinner */
+.cep-group { position: relative; }
 
 .loading-spinner {
     position: absolute;
-    right: var(--space-md);
-    top: 50%;
-    transform: translateY(-50%);
-    width: 16px;
-    height: 16px;
-    border: 2px solid var(--medium-gray);
-    border-top-color: var(--primary);
+    right: 12px;
+    top: 42px;
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-top: 2px solid var(--brand-end);
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    animation: spin 1s linear infinite;
     opacity: 0;
-    transition: var(--transition-fast);
+    transition: opacity 0.2s;
+}
+.loading-spinner.visible { opacity: 1; }
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
-.cep-group.loading .loading-spinner {
-    opacity: 1;
+/* Texto de ajuda */
+.form-hint {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
 }
 
 /* Checkbox */
 .form-checkbox {
     display: flex;
     align-items: center;
-    gap: var(--space-sm);
-    margin-top: var(--space-md);
+    margin-top: 1.5rem;
 }
 
 .form-check-input {
     width: 18px;
     height: 18px;
-    accent-color: var(--primary);
+    margin-right: 0.5rem;
+    accent-color: var(--brand-end);
 }
 
-.form-check-label {
-    font-size: 0.875rem;
-    color: var(--secondary);
-}
-
-/* Botões */
+/* Botão de ação */
 .form-actions {
-    margin-top: var(--space-lg);
-}
-
-.btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-sm);
-    padding: var(--space-md) var(--space-xl);
-    border-radius: var(--radius-lg);
-    font-weight: 600;
+    margin-top: 2rem;
     text-align: center;
-    cursor: pointer;
-    transition: var(--transition);
-    border: none;
-    font-size: 1rem;
-    width: 100%;
 }
 
 .btn-primary {
-    background-color: var(--primary);
-    color: var(--white);
+    background: linear-gradient(135deg, var(--brand-start) 0%, var(--brand-end) 100%);
+    border: none;
+    color: white;
+    padding: 0.75rem 2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(37, 117, 252, 0.3);
 }
 
-    .btn-primary:hover {
-        background-color: var(--primary-dark);
-        box-shadow: var(--shadow-md);
-    }
-
-    .btn-primary:active {
-        transform: translateY(1px);
-    }
-
-/* Feedback de CEP */
-.cep-feedback {
-    padding: var(--space-sm);
-    border-radius: var(--radius-sm);
-    margin-top: var(--space-xs);
-    font-size: 0.875rem;
-    font-weight: 500;
-    transition: var(--transition);
+/* Validação */
+.validation-message {
+    color: #dc3545;
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
 }
 
-    .cep-feedback.success {
-        background-color: rgba(56, 142, 60, 0.1);
-        color: var(--success);
-        border: 1px solid var(--success);
+/* ===== Fix: nada atrás do bottom-nav no mobile ===== */
+@media (max-width: 992px){
+    .cadastro-container{
+        /* espaço p/ menu fixo + respiro + safe area iOS */
+        padding-bottom: calc(var(--mbn-height) + 24px + env(safe-area-inset-bottom, 0px));
     }
-
-    .cep-feedback.error {
-        background-color: rgba(211, 47, 47, 0.1);
-        color: var(--error);
-        border: 1px solid var(--error);
-    }
-
-/* Animações */
-@keyframes spin {
-    to {
-        transform: translateY(-50%) rotate(360deg);
-    }
+}
+/* Fallback para navegadores sem env() */
+@supports not (padding: max(0px)) {
+  @media (max-width: 992px){
+    .cadastro-container{ padding-bottom: calc(var(--mbn-height) + 24px); }
+  }
 }
 
 /* Responsividade */
-@media (max-width: 768px) {
-    .cadastro-container {
-        padding: var(--space-md);
-        align-items: stretch;
-    }
-
-    .cadastro-card .card-body {
-        padding: var(--space-lg);
-    }
-
+@media (max-width: 992px) {
+    .cadastro-container { padding: 15px; }
+    .card-body { padding: 1.5rem; }
     .form-row {
-        flex-direction: column;
-        gap: var(--space-sm);
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    .col-12, .col-8, .col-6, .col-4, .col-3 { grid-column: span 1; }
+}
+
+@media (max-width: 576px) {
+    .card-header { padding: 1.25rem; }
+    .card-body   { padding: 1.25rem; }
+    .card-title  { font-size: 1.5rem; }
+    .section-title { font-size: 1.1rem; }
+    .form-control { padding: 0.65rem 0.9rem; }
+}
+
+/* ===== Botão principal – melhorias visuais ===== */
+.btn-primary{
+  position: relative;
+  isolation: isolate;                     /* pseudo-efeitos ficam dentro do botão */
+  background: linear-gradient(135deg,var(--brand-start),var(--brand-end));
+  border: 0;
+  color: #fff;
+  padding: .9rem 2rem;                    /* um pouco mais alto */
+  border-radius: 999px;                   /* pílula */
+  font-weight: 700;
+  letter-spacing: .2px;
+  box-shadow: 0 10px 20px rgba(37,117,252,.25);
+  transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
+}
+
+.btn-primary::after{                       /* brilho sutil no hover */
+  content: "";
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(120% 120% at 10% 10%, rgba(255,255,255,.28) 0%, transparent 40%),
+    radial-gradient(120% 120% at 90% 90%, rgba(255,255,255,.18) 0%, transparent 45%);
+  opacity: 0; pointer-events: none;
+  transition: opacity .25s ease;
+}
+
+.btn-primary:hover{
+  filter: brightness(1.03);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(37,117,252,.28);
+}
+.btn-primary:hover::after{ opacity: .85; }
+
+.btn-primary:active{
+  transform: translateY(0);               /* sensação de clique */
+  box-shadow: 0 8px 18px rgba(37,117,252,.22);
+}
+
+.btn-primary:focus-visible{
+  outline: none;
+  box-shadow:
+    0 0 0 .25rem rgba(37,117,252,.35),    /* anel de foco acessível */
+    0 14px 28px rgba(37,117,252,.25);
+}
+
+/* Desabilitado */
+.btn-primary:disabled,
+.btn-primary[disabled]{
+  opacity: .75;
+  cursor: not-allowed;
+  box-shadow: none;
+  filter: grayscale(.1) brightness(.97);
+}
+
+/* Ícone dentro do botão (opcional) */
+.btn-primary i{ margin-inline: .35rem; }
+
+/* ===== Estado "carregando" opcional =====
+   Basta adicionar a classe .is-loading no botão via JS:
+   document.querySelector('.btn-primary').classList.add('is-loading');
+*/
+.btn-primary.is-loading{
+  color: transparent;                      /* esconde texto */
+  pointer-events: none;
+}
+.btn-primary.is-loading::before{           /* fundo para clique desativado */
+  content:"";
+  position:absolute; inset:0;
+  border-radius:inherit;
+}
+.btn-primary.is-loading::after{            /* spinner */
+  content:"";
+  position:absolute; top:50%; left:50%;
+  width: 1.15em; height: 1.15em;
+  border-radius:50%;
+  border: 2.5px solid rgba(255,255,255,.5);
+  border-top-color:#fff;
+  transform: translate(-50%,-50%);
+  animation: btnSpin .85s linear infinite;
+}
+@keyframes btnSpin { to { transform: translate(-50%,-50%) rotate(360deg); } }
+
+/* Mobile: botão ocupa a largura toda com cantos mais suaves */
+@media (max-width: 576px){
+  .form-actions .btn-primary{
+    width: 100%;
+    border-radius: 14px;
+  }
+}
+/* ===== FIX: botão não ficar atrás do bottom-nav ===== */
+@media (max-width: 992px) {
+    /* para de centralizar verticalmente no mobile (deixa rolar até o fim) */
+    .cadastro-container {
+        align-items: flex-start;
     }
 
-    .form-group {
-        min-width: 100%;
+    /* deixa o card “respirar” acima do menu fixo */
+    .cadastro-card {
+        margin-bottom: calc(var(--mbn-height) + 16px + env(safe-area-inset-bottom, 0px));
+        overflow: visible; /* evita cortar sombras/elementos no fim */
     }
 
-    .cep-group {
-        max-width: 100%;
+    /* espaço interno extra antes de terminar o card */
+    .card-body {
+        padding-bottom: calc(var(--mbn-height) + 24px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* opcional: o bloco do botão fica sempre visível ao rolar */
+    .form-actions {
+        position: sticky;
+        bottom: calc(var(--mbn-height) + 8px);
+        z-index: 1;
+        background: transparent;
+        padding-top: .5rem;
     }
 }
 
-@media (max-width: 480px) {
-    .cadastro-card .card-header {
-        padding: var(--space-lg) var(--space-md);
-    }
+/* Fallback p/ navegadores sem env() */
+@supports not (padding: max(0px)) {
+    @media (max-width: 992px) {
+        .cadastro-card {
+            margin-bottom: calc(var(--mbn-height) + 16px);
+        }
 
-    .cadastro-card .card-title {
-        font-size: 1.5rem;
-    }
+        .card-body {
+            padding-bottom: calc(var(--mbn-height) + 24px);
+        }
 
-    .cadastro-card .card-body {
-        padding: var(--space-md);
-    }
-
-    .section-title {
-        font-size: 1.1rem;
-    }
-
-    .btn {
-        padding: var(--space-sm) var(--space-md);
+        .form-actions {
+            bottom: calc(var(--mbn-height) + 8px);
+        }
     }
 }
+

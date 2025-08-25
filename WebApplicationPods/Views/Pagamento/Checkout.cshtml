@@ -178,77 +178,139 @@
     <script src="https://sdk.mercadopago.com/js/v2"></script>
 
     <script>
+        // ------- Utils -------
+        function copyPix(){
+          const input = document.getElementById('pixCopyPaste');
+          if(!input) return;
+          input.select(); input.setSelectionRange(0, 99999);
+          document.execCommand('copy');
+        }
+    </script>
+
+    <script>
+        // ------- Polling de Status (PIX e fallback geral) -------
+        (function polling(){
+          const paymentId = '@Model.Id';
+          const statusUrl = '@Url.Action("Status", "Pagamento")' + '?id=' + encodeURIComponent(paymentId);
+
+          async function checkPaid(){
+            try{
+              const r = await fetch(statusUrl, { cache: 'no-store' });
+              if (!r.ok) return;
+              const data = await r.json();
+
+              // Atualiza badges se existirem (PIX/cartão)
+              const pixBadge = document.getElementById('pixStatus');
+              if (pixBadge && data.status) pixBadge.textContent = 'Status: ' + data.status;
+
+              const payBadge = document.getElementById('payStatus');
+              if (payBadge && data.status) payBadge.textContent = 'Status: ' + data.status;
+
+              // Se pago, redireciona para confirmação
+              if (data.paid === true && data.redirect) {
+                window.location.href = data.redirect;
+              }
+            } catch(e) {
+              // silencioso
+            }
+          }
+
+          // Botão "Atualizar status" (PIX)
+          const btn = document.getElementById('btnForcarConsulta');
+          if (btn && !btn.dataset.bound){
+            btn.dataset.bound = '1';
+            btn.addEventListener('click', checkPaid);
+          }
+
+          // Dispara agora e a cada 3s
+          checkPaid();
+          setInterval(checkPaid, 3000);
+
+          // Exponibiliza para o fluxo do cartão forçar checagem
+          window.__checkPaid = checkPaid;
+        })();
+    </script>
+
+    <script>
+        // ------- Brick de Cartão -------
         (function initMPBrick(){
           const publicKey = '@(ViewBag.MP_PublicKey ?? "")'.trim();
-          if (!publicKey || publicKey.indexOf('TEST-') !== 0 && publicKey.indexOf('APP_USR-') !== 0) {
+          if (!publicKey || (publicKey.indexOf('TEST-') !== 0 && publicKey.indexOf('APP_USR-') !== 0)) {
             console.error('Mercado Pago PublicKey inválida/ausente:', publicKey);
             return;
           }
 
-          // Evita criar duas vezes (ex.: hot reload / partial duplicado)
+          // Evita criar duas vezes (hot reload / partial duplicado)
           if (window.__mpBrickMounted) return;
           window.__mpBrickMounted = true;
 
           const mp = new MercadoPago(publicKey, { locale: 'pt-BR' });
           const bricks = mp.bricks();
 
-          // Somente monta o brick se o método for cartão
           const hasCardContainer = document.getElementById('cardPaymentBrick_container');
-          if (hasCardContainer) {
-            const amount = Number('@Model.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture)');
+          if (!hasCardContainer) return;
 
-            bricks.create('cardPayment', 'cardPaymentBrick_container', {
-              initialization: { amount },
-              customization: {
-                paymentMethods: { creditCard: 'all', debitCard: 'all' },
-                visual: { style: { theme: 'default' } }
+          const amount = Number('@Model.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture)');
+
+          bricks.create('cardPayment', 'cardPaymentBrick_container', {
+            initialization: { amount },
+            customization: {
+              paymentMethods: { creditCard: 'all', debitCard: 'all' },
+              visual: { style: { theme: 'default' } }
+            },
+            callbacks: {
+              onReady: () => {
+                const b = document.getElementById('mp-pay-btn');
+                if (b) b.disabled = false;
               },
-              callbacks: {
-                onReady: () => {
-                  const b = document.getElementById('mp-pay-btn');
-                  if (b) b.disabled = false;
-                },
-                onSubmit: async (cardFormData) => {
-                  const btn = document.getElementById('mp-pay-btn');
-                  try {
-                    if (btn) btn.disabled = true;
-                    const res = await fetch('/Pagamento/ConfirmCard/@Model.Id', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify(cardFormData)
-                    });
-                    const json = await res.json();
-                    const statusEl = document.getElementById('payStatus');
-                    if (json && json.success) {
-                      if (statusEl) statusEl.textContent = 'Status: Pago';
-                      // window.location.href = '/Carrinho/Confirmacao/@Model.PedidoId';
-                    } else {
-                      if (statusEl) statusEl.textContent = 'Status: Pagamento falhou';
-                      alert('Não foi possível processar o pagamento.');
+              onSubmit: async (cardFormData) => {
+                const btn = document.getElementById('mp-pay-btn');
+                try {
+                  if (btn) btn.disabled = true;
+
+                  // Confirma o pagamento no backend
+                  const res = await fetch('@Url.Action("ConfirmCard", "Pagamento", new { id = Model.Id })', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(cardFormData)
+                  });
+                  const json = await res.json();
+
+                  const statusEl = document.getElementById('payStatus');
+                  if (json && json.success) {
+                    if (statusEl) statusEl.textContent = 'Status: Pago';
+                    // Se o backend já fornecer a URL, redireciona; caso contrário, força o polling
+                    if (json.redirect) {
+                      window.location.href = json.redirect;
+                    } else if (window.__checkPaid) {
+                      window.__checkPaid();
                     }
-                  } catch (e) {
-                    console.error('ConfirmCard error', e);
-                    alert('Erro ao confirmar o pagamento.');
-                  } finally {
-                    if (btn) btn.disabled = false;
+                  } else {
+                    if (statusEl) statusEl.textContent = 'Status: Pagamento falhou';
+                    alert('Não foi possível processar o pagamento.');
                   }
-                },
-                onError: (error) => {
-                  console.error('Brick error:', error);
-                  alert('Erro ao carregar/validar os campos do cartão.');
+                } catch (e) {
+                  console.error('ConfirmCard error', e);
+                  alert('Erro ao confirmar o pagamento.');
+                } finally {
+                  if (btn) btn.disabled = false;
                 }
+              },
+              onError: (error) => {
+                console.error('Brick error:', error);
+                alert('Erro ao carregar/validar os campos do cartão.');
               }
-            });
-          }
+            }
+          });
         })();
     </script>
+
     <script>
-        // Botão Voltar/Cancelar
+        // ------- Botão Voltar/Cancelar -------
         (function wireBackButton() {
           const btn = document.getElementById('mp-cancel-btn');
           if (!btn) return;
 
-          // Evita duplo-bind em hot reload
           if (btn.dataset.bound === "1") return;
           btn.dataset.bound = "1";
 
@@ -257,17 +319,14 @@
 
             try {
               const ref = document.referrer;
-              // se veio de alguma página do mesmo host, usa o histórico
               if (ref && new URL(ref).host === location.host) {
                 history.back();
                 return;
               }
             } catch { /* ignora e usa fallback */ }
 
-            // fallback: vai para o resumo do carrinho
             window.location.href = '@Url.Action("Resumo", "Carrinho")';
           });
         })();
     </script>
 }
-

@@ -1,28 +1,48 @@
 ﻿@model WebApplicationPods.Models.ClienteModel
 
+@{
+    ViewData["Title"] = "Acesse sua conta";
+}
+
 @section Styles {
     <link rel="stylesheet" href="~/css/login.css" asp-append-version="true" />
 }
 
-<div class="login-container">
-    <div class="login-card">
-        <div class="login-header">
-            <h2 class="login-title">Acesse sua conta</h2>
+<div class="auth-shell">
+    <div class="auth-card">
+        <div class="auth-head d-flex align-items-center gap-2">
+            <i class="fa-solid fa-mobile-screen"></i>
+            <h2 class="h5 mb-0">Acesse sua conta</h2>
         </div>
-        <div class="login-body">
-            <form asp-action="Login" method="post" class="login-form">
+
+        <div class="auth-body">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+
+            <form asp-action="Login" method="post" class="login-form" asp-antiforgery="true" novalidate>
+                @Html.AntiForgeryToken()
+
                 <div class="form-group mb-4">
                     <label for="telefone" class="form-label">Telefone</label>
-                    <input type="tel" id="telefone" name="telefone" class="form-control"
-                           placeholder="(11) 98765-4321" required />
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-phone"></i></span>
+                        <input type="tel"
+                               id="telefone"
+                               name="telefone"
+                               class="form-control border-start-0"
+                               placeholder="(11) 98765-4321"
+                               inputmode="numeric"
+                               autocomplete="tel-national"
+                               required />
+                    </div>
                     <small class="form-text text-muted">Informe seu WhatsApp com DDD</small>
+                    <span class="text-danger" data-valmsg-for="telefone" data-valmsg-replace="true"></span>
                 </div>
 
-                <button type="submit" class="btn login-btn btn-block w-100">
+                <button type="submit" class="btn btn-brand w-100">
                     Continuar <i class="fas fa-arrow-right ms-2"></i>
                 </button>
 
-                <a href="@Url.Action("Index", "Home")" class="back-btn">
+                <a href="@Url.Action("Index", "Home")" class="btn btn-outline-secondary w-100 mt-2">
                     <i class="fas fa-arrow-left me-2"></i> Voltar para a loja
                 </a>
             </form>
@@ -34,4 +54,23 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
     <script src="~/js/login.js" asp-append-version="true"></script>
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <script>
+        (function(){
+          const $tel = window.jQuery && jQuery('#telefone');
+          if ($tel && $tel.inputmask){
+            $tel.inputmask({ mask: '(99) 99999-9999' });
+          } else {
+            // fallback: força apenas dígitos e formata simples
+            const el = document.getElementById('telefone');
+            if (!el) return;
+            el.addEventListener('input', () => {
+              let v = (el.value || '').replace(/\D/g,'').slice(0,11);
+              if (v.length > 10) el.value = `(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`;
+              else if (v.length > 6) el.value = `(${v.slice(0,2)}) ${v.slice(2,6)}-${v.slice(6)}`;
+              else if (v.length > 2) el.value = `(${v.slice(0,2)}) ${v.slice(2)}`;
+              else if (v.length > 0) el.value = `(${v}`;
+            });
+          }
+        })();
+    </script>
 }

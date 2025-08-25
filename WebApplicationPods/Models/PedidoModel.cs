@@ -10,6 +10,7 @@ namespace WebApplicationPods.Models
         [Required(ErrorMessage = "O ID do cliente é obrigatório")]
         public int ClienteId { get; set; }
 
+        // Se você permite "Retirada no local", considere tornar este campo anulável (int?)
         [Required(ErrorMessage = "O ID do endereço é obrigatório")]
         public int EnderecoId { get; set; }
 
@@ -18,8 +19,8 @@ namespace WebApplicationPods.Models
         public DateTime DataPedido { get; set; } = DateTime.Now;
 
         [Required(ErrorMessage = "O status do pedido é obrigatório")]
-        [StringLength(20, ErrorMessage = "O status deve ter no máximo 20 caracteres")]
-        public string Status { get; set; }
+        [StringLength(64, ErrorMessage = "O status deve ter no máximo 64 caracteres")]
+        public string Status { get; set; } = "Pendente";
 
         [Display(Name = "Valor Total")]
         [Range(0, double.MaxValue, ErrorMessage = "O valor total deve ser positivo")]
@@ -30,7 +31,7 @@ namespace WebApplicationPods.Models
         public decimal TaxaEntrega { get; set; } = 0;
 
         [Required(ErrorMessage = "O método de pagamento é obrigatório")]
-        [StringLength(20, ErrorMessage = "O método de pagamento deve ter no máximo 20 caracteres")]
+        [StringLength(32, ErrorMessage = "O método de pagamento deve ter no máximo 32 caracteres")]
         public string MetodoPagamento { get; set; }
 
         [Display(Name = "Código da Transação")]

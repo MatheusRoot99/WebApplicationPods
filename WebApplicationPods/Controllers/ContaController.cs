@@ -192,6 +192,26 @@ namespace WebApplicationPods.Controllers
             return View("ForgotPasswordConfirmation");
         }
 
+        // GET: /Conta/CheckAccount?input=...
+        [HttpGet, AllowAnonymous]
+        public async Task<IActionResult> CheckAccount(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return Json(new { exists = false });
+
+            // Mesmo critério do Login: CPF/Telefone (só dígitos) ou e-mail
+            var entradaLimpa = new string(input.Where(char.IsDigit).ToArray());
+
+            var user = await _userManager.Users.FirstOrDefaultAsync(u =>
+                   u.CPF == entradaLimpa
+                || u.PhoneNumber == entradaLimpa
+                || u.Email == input);
+
+            // Não exponho dados sensíveis; devolvo apenas sinal de existência
+            // e um "email" para pré-preencher (pode ser o próprio input)
+            return Json(new { exists = user != null, email = user?.Email ?? input });
+        }
+
         [HttpGet, AllowAnonymous]
         public IActionResult ForgotPasswordConfirmation() => View();
 

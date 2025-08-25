@@ -2,33 +2,213 @@
 @{
     ViewData["Title"] = "Login";
 }
-<h2 class="mb-3">Login (Telefone ou CPF)</h2>
 
-<form asp-action="Login" method="post" asp-antiforgery="true" class="card p-4">
-    @Html.AntiForgeryToken()  <!-- <- força renderizar o token -->
-    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-    <input type="hidden" asp-for="ReturnUrl" />
+@section Styles {
+    <style>
+        :root {
+            --brand-start: #6a11cb; /* roxo */
+            --brand-end: #2575fc; /* azul */
+            --bg: #f5f5f7;
+            --text: #1f2937;
+        }
 
-    <div class="mb-3">
-        <label asp-for="TelefoneOuCpf" class="form-label"></label>
-        <input asp-for="TelefoneOuCpf" class="form-control" />
-        <span asp-validation-for="TelefoneOuCpf" class="text-danger"></span>
+        body {
+            background: var(--bg);
+        }
+
+        .login-shell {
+            width: min(90vw, 1200px);
+            min-height: 50vh;
+            margin-inline: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 820px;
+            border: 1px solid #eaeaea;
+            border-radius: 16px;
+            box-shadow: 0 14px 32px rgba(0,0,0,.08);
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .login-head {
+            background: linear-gradient(135deg,var(--brand-start) 0%,var(--brand-end) 100%);
+            color: #fff;
+            padding: 1.25rem 1.25rem;
+        }
+
+        .login-body {
+            padding: 1.5rem;
+        }
+
+        .form-control:focus {
+            border-color: var(--brand-end);
+            box-shadow: 0 0 0 .2rem rgba(37,117,252,.25);
+        }
+
+        .input-group-text {
+            background: #fff;
+            border-right: 0;
+        }
+
+        .form-control.border-start-0 {
+            border-left: 0;
+        }
+
+        .btn-brand {
+            background: linear-gradient(135deg,var(--brand-start) 0%,var(--brand-end) 100%);
+            border: 0;
+            color: #fff;
+            font-weight: 700;
+            letter-spacing: .2px;
+        }
+
+            .btn-brand:hover {
+                filter: brightness(1.03);
+                box-shadow: 0 10px 20px rgba(37,117,252,.25);
+            }
+
+        .login-links a {
+            color: var(--brand-end);
+            text-decoration: none;
+        }
+
+            .login-links a:hover {
+                text-decoration: underline;
+            }
+
+        /* Link desabilitado (não clicável) */
+        .muted-link.disabled {
+            pointer-events: none;
+            opacity: .55;
+            text-decoration: none !important;
+        }
+
+        @@media (max-width: 575.98px) {
+            .login-body
+
+        {
+            padding: 1rem;
+        }
+
+        }
+    </style>
+}
+
+<div class="login-shell">
+    <div class="login-card">
+
+        <div class="login-head d-flex align-items-center gap-2">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            <h2 class="h5 mb-0">Entrar</h2>
+        </div>
+
+        <div class="login-body">
+            <form asp-action="Login" method="post" asp-antiforgery="true" novalidate>
+                @Html.AntiForgeryToken()
+
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+                <input type="hidden" asp-for="ReturnUrl" />
+
+                <div class="mb-3">
+                    <label asp-for="TelefoneOuCpf" class="form-label">Telefone ou CPF</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-id-card"></i></span>
+                        <input asp-for="TelefoneOuCpf"
+                               class="form-control border-start-0"
+                               autocomplete="username"
+                               id="login-credential" />
+                    </div>
+                    <span asp-validation-for="TelefoneOuCpf" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Senha" class="form-label"></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                        <input asp-for="Senha"
+                               class="form-control border-start-0"
+                               type="password"
+                               autocomplete="current-password" />
+                    </div>
+                    <span asp-validation-for="Senha" class="text-danger"></span>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input class="form-check-input" asp-for="LembrarMe" id="lembrar" />
+                    <label class="form-check-label" for="lembrar">Lembrar-me</label>
+                </div>
+
+                <button type="submit" class="btn btn-brand w-100 py-2">Entrar</button>
+
+                <div class="d-flex justify-content-between login-links mt-3 small align-items-center">
+                    <a id="forgot-link"
+                       class="muted-link disabled"
+                       href="#"
+                       aria-disabled="true"
+                       title="Digite uma credencial válida para habilitar">
+                        Esqueci minha senha
+                    </a>
+                    @* <a asp-controller="Conta" asp-action="Registrar">Criar conta</a> *@
+                </div>
+            </form>
+        </div>
+
     </div>
-
-    <div class="mb-3">
-        <label asp-for="Senha" class="form-label"></label>
-        <input asp-for="Senha" class="form-control" />
-        <span asp-validation-for="Senha" class="text-danger"></span>
-    </div>
-
-    <div class="form-check mb-3">
-        <input class="form-check-input" asp-for="LembrarMe" />
-        <label class="form-check-label" asp-for="LembrarMe"></label>
-    </div>
-
-    <button type="submit" class="btn btn-primary">Entrar</button>
-</form>
+</div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function(){
+          const input = document.getElementById('login-credential');
+          const forgot = document.getElementById('forgot-link');
+          const baseUrl = '@Url.Action("ForgotPassword", "Conta")';
+          const checkUrl = '@Url.Action("CheckAccount", "Conta")';
+          let timer;
+
+          function setForgot(enabled, email){
+            if(enabled){
+              forgot.classList.remove('disabled');
+              forgot.removeAttribute('aria-disabled');
+              // Preenche o e-mail na rota de esqueci senha (se não for e-mail, o controller aceita e ajusta)
+              const param = email || input.value;
+              forgot.href = baseUrl + '?email=' + encodeURIComponent(param);
+              forgot.title = 'Recuperar acesso';
+            }else{
+              forgot.classList.add('disabled');
+              forgot.setAttribute('aria-disabled','true');
+              forgot.href = '#';
+              forgot.title = 'Digite uma credencial válida para habilitar';
+            }
+          }
+
+          async function check(){
+            const val = (input.value || '').trim();
+            if(!val){ setForgot(false); return; }
+            try{
+              const r = await fetch(checkUrl + '?input=' + encodeURIComponent(val), { cache: 'no-store' });
+              if(!r.ok){ setForgot(false); return; }
+              const data = await r.json();
+              setForgot(!!data.exists, data.email);
+            }catch{
+              setForgot(false);
+            }
+          }
+
+          input.addEventListener('input', () => {
+            clearTimeout(timer);
+            timer = setTimeout(check, 250); // debounce
+          });
+          input.addEventListener('blur', check);
+
+          // estado inicial
+          setForgot(false);
+        })();
+    </script>
 }

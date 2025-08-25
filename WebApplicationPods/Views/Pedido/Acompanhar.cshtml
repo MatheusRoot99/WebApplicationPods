@@ -1,0 +1,411 @@
+﻿@model WebApplicationPods.Models.PedidoModel
+@{
+    ViewData["Title"] = "Acompanhar Pedido";
+    var subtotal = Model?.PedidoItens?.Sum(i => i.PrecoUnitario * i.Quantidade) ?? 0m;
+    var total = subtotal + (Model?.TaxaEntrega ?? 0m);
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+    <style>
+        :root {
+            /* ====== PALETA PADRÃO DO SITE (roxo/azul) ====== */
+            --brand-start: #6a11cb; /* roxo */
+            --brand-end: #2575fc; /* azul */
+            --brand-soft: #F2E9FF; /* roxo bem claro */
+            /* mapeia nomes antigos p/ manter os mesmos utilitários */
+            --orange: var(--brand-start);
+            --orange-600: var(--brand-end);
+            --orange-dark: var(--brand-end);
+            --orange-soft: var(--brand-soft);
+            --dark: #1A1A1A;
+            --light: #fff;
+            --muted: #6B7280;
+            --bg: #F5F5F7;
+            --radius: 14px;
+            --shadow: 0 8px 24px rgba(0,0,0,.08);
+            /* altura do bottom-nav (mobile) */
+            --mbn-height: 68px;
+        }
+
+        body {
+            background: var(--bg)
+        }
+
+        .wrap {
+            max-width: 1100px;
+            margin: 1.2rem auto;
+            padding: 0 1rem
+        }
+
+        /* header */
+        .page-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem
+        }
+
+            .page-head h2 {
+                margin: 0;
+                font-weight: 800;
+                color: var(--dark)
+            }
+
+        .subtle {
+            color: var(--muted);
+            font-size: .95rem
+        }
+
+        /* cards */
+        .cardx {
+            background: var(--light);
+            border: 1px solid #eee;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden
+        }
+
+        .cardx-h {
+            padding: .9rem 1.1rem;
+            background: linear-gradient(135deg,var(--brand-start),var(--brand-end));
+            color: #fff;
+            font-weight: 700
+        }
+
+        .cardx-b {
+            padding: 1.1rem
+        }
+
+        /* status badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            background: var(--orange-soft);
+            color: var(--orange-600);
+            border-radius: 999px;
+            padding: .35rem .7rem;
+            font-weight: 800
+        }
+
+        /* stepper */
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(6,1fr);
+            gap: .75rem;
+            margin: .8rem 0 1.2rem
+        }
+
+        .step {
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: .6rem .5rem;
+            text-align: center;
+            min-height: 86px
+        }
+
+            .step .ico {
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                display: grid;
+                place-items: center;
+                margin: 0 auto .35rem;
+                background: #f3f4f6;
+                color: #555
+            }
+
+            .step small {
+                display: block;
+                color: #6b7280;
+                font-size: .78rem;
+                margin-top: .15rem
+            }
+
+            .step.active {
+                border-color: var(--brand-end)
+            }
+
+                .step.active .ico {
+                    background: var(--brand-soft);
+                    color: var(--brand-end)
+                }
+
+            .step.done {
+                border-color: #e5e7eb;
+                background: #fafafa
+            }
+
+                .step.done .ico {
+                    background: var(--brand-end);
+                    color: #fff
+                }
+
+        /* itens */
+        .it {
+            display: flex;
+            gap: .9rem;
+            align-items: center;
+            padding: .7rem 0;
+            border-bottom: 1px solid #f0f0f0
+        }
+
+            .it:last-child {
+                border-bottom: 0
+            }
+
+        .it-img {
+            width: 54px;
+            height: 54px;
+            border-radius: 10px;
+            border: 1px solid #eee;
+            object-fit: cover
+        }
+
+        .it-name {
+            font-weight: 700;
+            color: var(--dark)
+        }
+
+        .it-sabor {
+            color: #6b7280;
+            font-size: .85rem
+        }
+
+        .it-price {
+            margin-left: auto;
+            font-weight: 800
+        }
+
+        /* totais */
+        .tot-row {
+            display: flex;
+            justify-content: space-between;
+            margin: .35rem 0
+        }
+
+            .tot-row.total {
+                font-size: 1.08rem;
+                font-weight: 900;
+                border-top: 1px dashed #eee;
+                padding-top: .6rem
+            }
+
+        /* actions */
+        .actions {
+            display: flex;
+            gap: .6rem;
+            flex-wrap: wrap;
+            margin-top: .8rem
+        }
+
+        .btnx {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            border-radius: 10px;
+            padding: .55rem .9rem;
+            font-weight: 800;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+            color: #111
+        }
+
+            .btnx:hover {
+                background: #f9fafb
+            }
+
+        .btn-brand {
+            background: linear-gradient(135deg,var(--brand-start),var(--brand-end));
+            border-color: transparent;
+            color: #fff
+        }
+
+            .btn-brand:hover {
+                filter: brightness(1.03)
+            }
+
+        /* layout responsivo */
+        @@media (min-width:992px) {
+            .grid-2
+
+        {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1rem
+        }
+
+        }
+
+        /* safe area com bottom-nav no mobile */
+        @@media (max-width:991.98px) {
+            .wrap
+
+        {
+            padding-bottom: calc(var(--mbn-height) + 24px + env(safe-area-inset-bottom,0px))
+        }
+
+        }
+    </style>
+}
+
+<div class="wrap">
+    <div class="page-head">
+        <div>
+            @* <h2>Acompanhar Pedido #@Model.Id</h2> *@
+            <div class="subtle">Realizado em @Model.DataPedido.ToString("dd/MM/yyyy HH:mm")</div>
+        </div>
+        <a asp-controller="Home" asp-action="Index" class="btnx">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    <div class="grid-2">
+        <!-- Coluna esquerda: status e itens -->
+        <div class="cardx">
+            <div class="cardx-h">
+                <div class="d-flex align-items-center justify-content-between">
+                    <span>Andamento do pedido</span>
+                    <span class="status-badge" id="statusBadge">
+                        <i class="bi bi-clock-history"></i>
+                        <span id="statusText">@Model.Status</span>
+                    </span>
+                </div>
+            </div>
+            <div class="cardx-b">
+                <!-- Stepper -->
+                <div class="steps" id="steps">
+                    <div class="step" data-step="0">
+                        <div class="ico"><i class="bi bi-ui-checks"></i></div>
+                        <div>Pendente</div><small>recebido</small>
+                    </div>
+                    <div class="step" data-step="1">
+                        <div class="ico"><i class="bi bi-cash-coin"></i></div>
+                        <div>Pagamento</div><small>aguardando</small>
+                    </div>
+                    <div class="step" data-step="2">
+                        <div class="ico"><i class="bi bi-check2-circle"></i></div>
+                        <div>Pago</div><small>aprovado</small>
+                    </div>
+                    <div class="step" data-step="3">
+                        <div class="ico"><i class="bi bi-gear-wide-connected"></i></div>
+                        <div>Preparando</div><small>em produção</small>
+                    </div>
+                    <div class="step" data-step="4">
+                        <div class="ico"><i class="bi bi-truck"></i></div>
+                        <div>Em rota</div><small>ou retirada</small>
+                    </div>
+                    <div class="step" data-step="5">
+                        <div class="ico"><i class="bi bi-bag-check"></i></div>
+                        <div>Concluído</div><small>entregue</small>
+                    </div>
+                </div>
+
+                <!-- Itens -->
+                <div>
+                    @foreach (var it in Model.PedidoItens)
+                    {
+                        var nome = it?.Produto?.Nome ?? $"Produto #{it.ProdutoId}";
+                        var img = it?.Produto?.ImagemUrl ?? "https://via.placeholder.com/80x80?text=Produto";
+                        var sabor = it?.Observacoes; // se você guarda sabor no Observacoes do item
+                                                     <div class="it">
+                                                         <img class="it-img" src="@img" alt="@nome" />
+                                                         <div>
+                                                             <div class="it-name">@nome x @it.Quantidade</div>
+                                @if (!string.IsNullOrWhiteSpace(sabor))
+                                {
+                                    <div class="it-sabor">Obs: @sabor</div>
+                                }
+                            </div>
+                            <div class="it-price">@((it.PrecoUnitario * it.Quantidade).ToString("C"))</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Coluna direita: Resumo -->
+        <div class="cardx">
+            <div class="cardx-h">Resumo</div>
+            <div class="cardx-b">
+                <div class="tot-row"><span>Subtotal</span><strong>@subtotal.ToString("C")</strong></div>
+                <div class="tot-row"><span>Taxa de entrega</span><strong>@Model.TaxaEntrega.ToString("C")</strong></div>
+                <div class="tot-row total"><span>Total</span><strong id="totalLabel">@total.ToString("C")</strong></div>
+
+                <div class="actions">
+                    <button type="button" id="btnRefresh" class="btnx">
+                        <i class="bi bi-arrow-clockwise"></i> Atualizar agora
+                    </button>
+                    <a asp-controller="Pedido" asp-action="Acompanhar" asp-route-id="@Model.Id" class="btnx btn-brand">
+                        <i class="bi bi-shuffle"></i> Recarregar página
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // URL do status do pedido (crie em PedidoController -> Status(int id) { return Json(new { status = ... }); })
+        const STATUS_URL = '@Url.Action("Status", "Pedido", new { id = Model.Id })';
+
+        // Normaliza texto e mapeia para o passo 0..5
+        function statusToStep(text){
+          const s = (text||'').toLowerCase();
+
+          if (s.includes('cancel')) return -1;            // cancelado
+          if (s.includes('entreg') || s.includes('concl')) return 5;
+          if (s.includes('rota') || s.includes('saiu') || s.includes('entrega') || s.includes('retirada')) return 4;
+          if (s.includes('prepar') || s.includes('produção') || s.includes('producao')) return 3;
+          if (s.includes('pago') || s.includes('aprov')) return 2;
+          if (s.includes('aguard') && s.includes('pag')) return 1;
+          return 0; // pendente
+        }
+
+        function paintSteps(step){
+          const nodes = document.querySelectorAll('.step');
+          nodes.forEach((el, idx) => {
+            el.classList.remove('active','done');
+            if (step < 0){ return; }
+            if (idx < step) el.classList.add('done');
+            if (idx === step) el.classList.add('active');
+          });
+        }
+
+        function setBadge(status){
+          const txt = document.getElementById('statusText');
+          if (txt) txt.textContent = status || '—';
+        }
+
+        async function refreshStatus(){
+          const btn = document.getElementById('btnRefresh');
+          try {
+            if (btn){ btn.disabled = true; btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Verificando...'; }
+            const r = await fetch(STATUS_URL, { cache: 'no-store' });
+            if (!r.ok) return;
+            const data = await r.json();
+            const status = data?.status ?? '';
+            setBadge(status);
+            paintSteps(statusToStep(status));
+          } catch(e){
+            // silêncio
+          } finally {
+            if (btn){ btn.disabled = false; btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Atualizar agora'; }
+          }
+        }
+
+        // Inicializa com o status atual do servidor
+        paintSteps(statusToStep('@(Model.Status ?? "").ToLower()'));
+
+        // Polling automático a cada 10s
+        let timer = setInterval(refreshStatus, 10000);
+        document.getElementById('btnRefresh')?.addEventListener('click', refreshStatus);
+
+        // limpa no unload
+        window.addEventListener('beforeunload', ()=> clearInterval(timer));
+    </script>
+}

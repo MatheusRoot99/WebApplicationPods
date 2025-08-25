@@ -1,24 +1,25 @@
+/* Seu CSS atual */
 html {
-  font-size: 14px;
+    font-size: 14px;
 }
 
 @media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
+    html {
+        font-size: 16px;
+    }
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
 html {
-  position: relative;
-  min-height: 100%;
+    position: relative;
+    min-height: 100%;
 }
 
 body {
-  margin-bottom: 60px;
+    margin-bottom: 60px;
 }
 
 /* Estilos gerais */
@@ -28,8 +29,8 @@ body {
 }
 
 .container-fluid {
-    padding-top: 1.5rem;
-    padding-bottom: 1.5rem;
+    /*padding-top: 1.5rem;
+    padding-bottom: 1.5rem;*/
 }
 
 /* Cards */
@@ -81,8 +82,6 @@ body {
     justify-content: center;
     border-radius: 4px;
 }
-
-
 
 /* Badge do carrinho (navbar desktop) */
 .nav-link .badge {
@@ -201,91 +200,7 @@ body {
     }
 }
 
-/* ======== MOBILE BOTTOM NAV ======== */
-@media (max-width: 991.98px) {
-    .mobile-bottom-nav {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: 64px;
-        background: #fff;
-        border-top: 1px solid rgba(0,0,0,.08);
-        display: flex;
-        justify-content: space-around;
-        align-items: center;
-        padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
-        z-index: 1030;
-    }
-
-        .mobile-bottom-nav .mbn-item {
-            position: relative;
-            text-decoration: none;
-            color: #111827;
-            display: inline-flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            min-width: 56px;
-        }
-
-            .mobile-bottom-nav .mbn-item i {
-                font-size: 20px;
-                line-height: 1;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                width: 36px;
-                height: 36px;
-                border-radius: 50%;
-            }
-
-            .mobile-bottom-nav .mbn-item.active i {
-                background: #111827;
-                color: #fff
-            }
-            /* ativo igual ao mock */
-            .mobile-bottom-nav .mbn-item .mbn-label {
-                font-size: 11px;
-                line-height: 1;
-                color: #374151
-            }
-
-        .mobile-bottom-nav .mbn-badge {
-            position: absolute;
-            top: 2px;
-            right: 8px;
-            transform: translate(50%,-50%);
-            background: #dc3545;
-            color: #fff;
-            border-radius: 999px;
-            font-size: 10px;
-            line-height: 1;
-            padding: 2px 5px;
-            min-width: 16px;
-            text-align: center;
-            box-shadow: 0 0 0 2px #fff;
-        }
-
-    @keyframes mbn-bump {
-        0% {
-            transform: translate(50%,-50%) scale(1)
-        }
-
-        30% {
-            transform: translate(50%,-50%) scale(1.2)
-        }
-
-        100% {
-            transform: translate(50%,-50%) scale(1)
-        }
-    }
-
-    .mbn-badge-bump {
-        animation: mbn-bump .35s ease
-    }
-}
-/* ===== Bottom nav mobile (arquivo .css externo) ===== */
+/* ===== BOTTOM NAV MOBILE MODERNIZADA ===== */
 @media (max-width: 991.98px) {
     /* evita que o conteúdo fique escondido atrás da barra */
     body {
@@ -298,14 +213,17 @@ body {
         left: 0;
         right: 0;
         bottom: 0;
-        height: 64px;
-        background: #fff;
-        border-top: 1px solid rgba(0,0,0,.08);
+        height: 70px;
+        background: rgba(255, 255, 255, 0.97);
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
         display: flex;
         justify-content: space-around;
         align-items: center;
         padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
-        z-index: 1080; /* acima de navbar/offcanvas */
+        z-index: 1080;
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
     }
 
         .mobile-bottom-nav .mbn-item {
@@ -315,16 +233,21 @@ body {
             align-items: center;
             gap: 4px;
             min-width: 56px;
-            color: #111827 !important; /* override do a{color: #0077cc} */
-            text-decoration: none !important; /* tira sublinhado */
+            color: #6c757d !important;
+            text-decoration: none !important;
+            transition: all 0.2s ease;
+            padding: 8px 12px;
+            border-radius: 12px;
         }
 
             .mobile-bottom-nav .mbn-item:visited {
-                color: #111827 !important;
+                color: #6c757d !important;
             }
 
             .mobile-bottom-nav .mbn-item:hover {
                 text-decoration: none;
+                color: #495057 !important;
+                background: rgba(0, 0, 0, 0.03);
             }
 
             .mobile-bottom-nav .mbn-item i {
@@ -333,27 +256,33 @@ body {
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                width: 36px;
-                height: 36px;
+                width: 32px;
+                height: 32px;
                 border-radius: 50%;
+                transition: all 0.2s ease;
             }
 
-            .mobile-bottom-nav .mbn-item.active i {
-                background: #111827;
-                color: #fff;
+            .mobile-bottom-nav .mbn-item.active {
+                color: #0d6efd !important;
             }
+
+                .mobile-bottom-nav .mbn-item.active i {
+                    background: rgba(13, 110, 253, 0.12);
+                    color: #0d6efd;
+                }
 
             .mobile-bottom-nav .mbn-item .mbn-label {
                 font-size: 11px;
                 line-height: 1;
-                color: #374151;
+                color: inherit;
+                font-weight: 500;
             }
 
         .mobile-bottom-nav .mbn-badge {
             position: absolute;
-            top: 2px;
-            right: 8px;
-            transform: translate(50%,-50%);
+            top: 4px;
+            right: 4px;
+            transform: translate(50%, -50%);
             background: #dc3545;
             color: #fff;
             border-radius: 999px;
@@ -362,24 +291,32 @@ body {
             padding: 2px 5px;
             min-width: 16px;
             text-align: center;
-            box-shadow: 0 0 0 2px #fff;
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
+            font-weight: 700;
         }
 
     @keyframes mbn-bump {
         0% {
-            transform: translate(50%,-50%) scale(1)
+            transform: translate(50%, -50%) scale(1)
         }
 
         30% {
-            transform: translate(50%,-50%) scale(1.2)
+            transform: translate(50%, -50%) scale(1.2)
         }
 
         100% {
-            transform: translate(50%,-50%) scale(1)
+            transform: translate(50%, -50%) scale(1)
         }
     }
 
     .mbn-badge-bump {
         animation: mbn-bump .35s ease;
     }
+}
+
+.navbar > .container, .navbar > .container-fluid, .navbar > .container-lg, .navbar > .container-md, .navbar > .container-sm, .navbar > .container-xl, .navbar > .container-xxl {
+    display: ;
+    /* flex-wrap: inherit; */
+    align-items: center;
+    justify-content: space-between;
 }

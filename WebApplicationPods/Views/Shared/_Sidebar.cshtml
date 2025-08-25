@@ -21,17 +21,15 @@
             </a>
         </div>
 
-        <!-- CLIENTE: apenas Painel/Carrinho/Pedidos -->
-        @if (!isAdmin && !isLojista)  @* inclui anônimo e cliente normal autenticado *@
+        <!-- CLIENTE: apenas Painel/Carrinho -->
+        @if (!isAdmin && !isLojista)  @* inclui anônimo e cliente autenticado *@
         {
             <div class="sidebar-section">
                 <div class="sidebar-section-title">CLIENTE</div>
                 <a asp-controller="Carrinho" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
                     <i class="fas fa-shopping-cart me-2"></i> Carrinho
                 </a>
-                <a asp-controller="Pedido" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
-                    <i class="fas fa-clipboard-list me-2"></i> Pedidos
-                </a>
+                @* Não listar "Pedidos" aqui para cliente. O acompanhamento só aparece na página de confirmação. *@
             </div>
         }
 
@@ -46,7 +44,7 @@
                 <a asp-controller="Estoque" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
                     <i class="fas fa-boxes me-2"></i> Estoque
                 </a>
-                <a asp-controller="Pedido" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
+                <a asp-controller="PedidosAdmin" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
                     <i class="fas fa-clipboard-list me-2"></i> Pedidos
                 </a>
                 

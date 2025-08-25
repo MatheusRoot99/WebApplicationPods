@@ -1,34 +1,31 @@
 ﻿@model WebApplicationPods.Models.PedidoModel
+@{
+    ViewData["Title"] = "Pedido confirmado";
+    var pedidoId = Model?.Id;
+}
 
-<div class="container mt-4">
-    <h2>Pedido Confirmado!</h2>
-    <p><strong>Número do Pedido:</strong> @Model.Id</p>
-    <p><strong>Status:</strong> @Model.Status</p>
-    <p><strong>Data:</strong> @Model.DataPedido.ToString("dd/MM/yyyy HH:mm")</p>
-    <p><strong>Total:</strong> @Model.ValorTotal.ToString("C")</p>
-    <p><strong>Pagamento:</strong> @Model.MetodoPagamento</p>
+<div class="container my-4">
+    <div class="alert alert-success">
+        <h4 class="mb-1">Pedido #@pedidoId confirmado!</h4>
+        <div>Obrigado! Você pode acompanhar o andamento em tempo real.</div>
+    </div>
 
-    @if (Model.Endereco != null && Model.EnderecoId > 0)
-    {
-        <p><strong>Entrega em:</strong> @Model.Endereco.Logradouro, @Model.Endereco.Numero</p>
-    }
-    else
-    {
-        <p><strong>Entrega:</strong> Retirada no local</p>
-    }
+    <!-- CTA desktop/tablet -->
+    <div class="d-none d-md-flex gap-2">
+        <a class="btn btn-primary"
+           href="@Url.Action("Acompanhar", "Pedido", new { id = pedidoId })">
+            Acompanhar pedido
+        </a>
+        <a class="btn btn-outline-secondary" href="@Url.Action("Index", "Home")">
+            Voltar à loja
+        </a>
+    </div>
+</div>
 
-    <h4>Itens:</h4>
-    <ul>
-        @foreach (var item in Model.PedidoItens)
-        {
-            <li>@item.Quantidade x @item.Produto.Nome - @item.PrecoUnitario.ToString("C")</li>
-        }
-    </ul>
-
-    @if (!string.IsNullOrEmpty(Model.PedidoItens.FirstOrDefault()?.Observacoes))
-    {
-        <p><strong>Observações:</strong> @Model.PedidoItens.FirstOrDefault()?.Observacoes</p>
-    }
-
-    <a asp-controller="Home" asp-action="Index" class="btn btn-primary">Voltar</a>
+<!-- Barra fixa somente no mobile -->
+<div class="d-md-none fixed-bottom bg-white border-top p-3">
+    <a class="btn btn-primary btn-lg w-100"
+       href="@Url.Action("Acompanhar", "Pedido", new { id = pedidoId })">
+        Acompanhar pedido
+    </a>
 </div>
