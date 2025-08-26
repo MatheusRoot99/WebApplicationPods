@@ -8,7 +8,11 @@ namespace WebApplicationPods.Data
     // Contexto único: domínio + Identity<int>
     public class BancoContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>
     {
-        public BancoContext(DbContextOptions<BancoContext> options) : base(options) { }
+        public BancoContext(DbContextOptions<BancoContext> options) : base(options)
+        {
+              //Cria o banco se não existir (útil para desenvolvimento)
+
+        }
 
         public DbSet<MerchantPaymentConfig> MerchantPaymentConfigs => Set<MerchantPaymentConfig>();
 
@@ -32,12 +36,15 @@ namespace WebApplicationPods.Data
             // ATENÇÃO: se CPF/PhoneNumber forem opcionais, um índice UNIQUE pode bloquear múltiplos NULLs no SQL Server.
             // Se forem opcionais, troque por índice filtrado (HasFilter("[CPF] IS NOT NULL"))
             modelBuilder.Entity<ApplicationUser>()
-                .HasIndex(u => u.CPF)
-                .IsUnique();
+                 .HasIndex(u => u.CPF)
+                 .IsUnique()
+                 .HasFilter("[CPF] IS NOT NULL");
 
             modelBuilder.Entity<ApplicationUser>()
                 .HasIndex(u => u.PhoneNumber)
-                .IsUnique();
+                .IsUnique()
+                .HasFilter("[PhoneNumber] IS NOT NULL");
+
 
             // Campos opcionais do ApplicationUser
             modelBuilder.Entity<ApplicationUser>(b =>
@@ -86,6 +93,15 @@ namespace WebApplicationPods.Data
                  .HasForeignKey(p => p.UserId)
                  .OnDelete(DeleteBehavior.Cascade);
             });
+
+            // dentro do OnModelCreating, após o base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<CategoriaModel>(b =>
+            {
+                b.ToTable("Categorias");                 // usa a tabela que já existe
+                b.Property(x => x.Nome).HasMaxLength(50).IsRequired();
+                b.Property(x => x.Descricao).HasMaxLength(200);
+            });
+
 
             // TODO: adicione aqui outras configurações de domínio (tamanhos, required, etc.)
         }
