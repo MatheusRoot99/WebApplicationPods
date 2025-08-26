@@ -1,58 +1,54 @@
+// Program.cs
 using System.Globalization;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using Microsoft.AspNetCore.Mvc;
-using System.Text.Json.Serialization;
 
 using WebApplicationPods.Data;                 // BancoContext
 using WebApplicationPods.Infra;                // IdentitySeedHostedService
 using WebApplicationPods.Models;               // ApplicationUser
 
-using WebApplicationPods.Payments;
-using WebApplicationPods.Payments.Gateways;
-using WebApplicationPods.Payments.Options;
+using WebApplicationPods.Payments;             // IPaymentService, PaymentService, IPaymentGateway
+using WebApplicationPods.Payments.Gateways;    // MercadoPagoGateway, StripeGateway
+using WebApplicationPods.Payments.Options;     // PaymentsOptions
 
-using WebApplicationPods.Repositories;
-using WebApplicationPods.Repository.Interface;
+using WebApplicationPods.Repositories;         // ICepService, CepService
+using WebApplicationPods.Repository.Interface; // Repositórios
 using WebApplicationPods.Repository.Repository;
 
-using WebApplicationPods.Services.Interface;
+using WebApplicationPods.Services.Interface;   // IEmailSenderService, ICarrinhoService
 using WebApplicationPods.Services.service;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ============ Cultura global pt-BR ============
+// ==================== Cultura global pt-BR ====================
 var ptBR = new CultureInfo("pt-BR");
 ptBR.NumberFormat.NumberDecimalSeparator = ",";
 ptBR.NumberFormat.CurrencyDecimalSeparator = ",";
-
-// Cultura padrão de threads (.NET) — garante binder/ToString/validação em pt-BR
 CultureInfo.DefaultThreadCurrentCulture = ptBR;
 CultureInfo.DefaultThreadCurrentUICulture = ptBR;
 
-// RequestLocalization (permite querystring/cookie/accept-language)
 builder.Services.Configure<RequestLocalizationOptions>(opts =>
 {
     opts.DefaultRequestCulture = new RequestCulture(ptBR);
     opts.SupportedCultures = new[] { ptBR };
     opts.SupportedUICultures = new[] { ptBR };
-
-    opts.RequestCultureProviders = new IRequestCultureProvider[]
-    {
+    opts.RequestCultureProviders = new IRequestCultureProvider[] {
         new QueryStringRequestCultureProvider(),
         new CookieRequestCultureProvider(),
         new AcceptLanguageHeaderRequestCultureProvider()
     };
 });
 
-// ============ Logging ============
+// ==================== Logging ====================
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
-// ============ MVC + JSON + AntiForgery ============
+// ==================== MVC + JSON + AntiForgery ====================
 builder.Services
     .AddControllersWithViews(options =>
     {
@@ -64,11 +60,11 @@ builder.Services
         o.JsonSerializerOptions.WriteIndented = true;
     });
 
-// ============ EF Core ============
+// ==================== EF Core (SQL Server / Azure) ====================
 builder.Services.AddDbContext<BancoContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DataBase")));
 
-// ============ Identity (com BancoContext) ============
+// ==================== Identity ====================
 builder.Services
     .AddIdentity<ApplicationUser, IdentityRole<int>>(options =>
     {
@@ -77,25 +73,24 @@ builder.Services
         options.Password.RequireLowercase = false;
         options.Password.RequireNonAlphanumeric = false;
         options.Password.RequireUppercase = false;
-
-        options.User.RequireUniqueEmail = false;       // login por Telefone/CPF, se quiser
+        options.User.RequireUniqueEmail = false;
         options.SignIn.RequireConfirmedAccount = false;
     })
     .AddEntityFrameworkStores<BancoContext>()
     .AddDefaultTokenProviders();
 
-// ============ Cookie de autenticação ============
+// ==================== Cookie de autenticação ====================
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
-    options.ExpireTimeSpan = TimeSpan.FromHours(2);
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // produção
     options.LoginPath = "/Conta/Login";
     options.AccessDeniedPath = "/Conta/AcessoNegado";
+    options.ExpireTimeSpan = TimeSpan.FromHours(2);
     options.SlidingExpiration = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // em produção, mantenha Always
 });
 
-// ============ Sessão ============
+// ==================== Sessão ====================
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -105,26 +100,23 @@ builder.Services.AddSession(options =>
     options.Cookie.Name = "SitePods.Session";
 });
 
-// ============ HTTP Client ViaCEP ============
+// ==================== HTTP Client ViaCEP ====================
 builder.Services.AddHttpClient<ICepService, CepService>(client =>
 {
     client.BaseAddress = new Uri("https://viacep.com.br/ws/");
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
-// ============ Pagamentos ============
+// ==================== Pagamentos (Options + Gateways + Service) ====================
 builder.Services.Configure<PaymentsOptions>(builder.Configuration.GetSection("Payments"));
 
-// Gateways concretos
-builder.Services.AddHttpClient<MercadoPagoGateway>((sp, http) =>
+// Mercado Pago: base address apenas (NÃO fixe Authorization global aqui)
+builder.Services.AddHttpClient<MercadoPagoGateway>(http =>
 {
-    var cfg = sp.GetRequiredService<IConfiguration>();
-    var token = cfg["Payments:MercadoPago:AccessToken"];
     http.BaseAddress = new Uri("https://api.mercadopago.com/");
-    if (!string.IsNullOrWhiteSpace(token))
-        http.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 });
+
+// Stripe (deixa registrado, mas não será usado enquanto o provider não for "Stripe")
 builder.Services.AddScoped<StripeGateway>();
 
 // Factory para escolher o gateway em runtime
@@ -134,13 +126,15 @@ builder.Services.AddScoped<Func<string, IPaymentGateway>>(sp => provider =>
         return sp.GetRequiredService<MercadoPagoGateway>();
     if (provider.Equals("Stripe", StringComparison.OrdinalIgnoreCase))
         return sp.GetRequiredService<StripeGateway>();
-    throw new InvalidOperationException($"Provedor não suportado: {provider}");
+    throw new InvalidOperationException($"Provedor de pagamento não suportado: {provider}");
 });
 
-// ============ Infra ============
+// Resolver de credenciais e serviço de pagamento
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IPaymentCredentialsResolver, PaymentCredentialsResolver>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 
-// ============ Repositórios / Serviços ============
+// ==================== Infra / Repositórios / Serviços ====================
 builder.Services.AddScoped<IProdutoRepository, ProdutoRepository>();
 builder.Services.AddScoped<ICategoriaRepository, CategoriaRepository>();
 builder.Services.AddScoped<ICarrinhoRepository, CarrinhoRepository>();
@@ -148,23 +142,27 @@ builder.Services.AddScoped<ICarrinhoService, CarrinhoService>();
 builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
 builder.Services.AddScoped<IPedidoRepository, PedidoRepository>();
 builder.Services.AddScoped<IEmailSenderService, GmailEmailSenderService>();
-builder.Services.AddScoped<IPaymentCredentialsResolver, PaymentCredentialsResolver>();
 
-// Seed de Roles/Admin
+// Seed (roles/usuário admin)
 builder.Services.AddHostedService<IdentitySeedHostedService>();
 
 var app = builder.Build();
 
-// ============ Localização (precisa vir cedo no pipeline) ============
-app.UseRequestLocalization(app.Services
-    .GetRequiredService<IOptions<RequestLocalizationOptions>>().Value);
+// ==================== Aplicar migrations automaticamente ====================
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<BancoContext>();
+    db.Database.Migrate();
+}
 
-// ============ Pipeline ============
+// ==================== Pipeline ====================
+app.UseRequestLocalization(app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>().Value);
+
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
 
-    // (Opcional) no-cache em dev
+    // opcional: evitar cache em dev
     app.Use(async (context, next) =>
     {
         context.Response.Headers["Cache-Control"] = "no-cache, no-store";
@@ -186,7 +184,7 @@ app.UseRouting();
 
 app.UseSession();
 
-app.UseAuthentication();   // antes de Authorization
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute(

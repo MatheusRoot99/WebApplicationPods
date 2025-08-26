@@ -1,94 +1,133 @@
 ﻿using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
-using System.Security.Claims;
-using System.Threading.Tasks;
 using WebApplicationPods.Enum;
 using WebApplicationPods.Models;
+using WebApplicationPods.Payments.Options; // <-- credenciais tipadas (MercadoPagoCredentials)
 
 namespace WebApplicationPods.Payments.Gateways
 {
     public class MercadoPagoGateway : IPaymentGateway
     {
         private readonly HttpClient _http;
-        private readonly string _accessToken;
-        private readonly string _webhookSecret;
+        private readonly IPaymentCredentialsResolver _resolver;
+        private readonly IHttpContextAccessor _httpCtx;
+        private readonly IConfiguration _cfg;
 
         public string Provider => "MercadoPago";
 
-        // ✅ compatível com AddHttpClient<MercadoPagoGateway>()
-        public MercadoPagoGateway(HttpClient http, IConfiguration cfg)
+        public MercadoPagoGateway(
+            HttpClient http,
+            IPaymentCredentialsResolver resolver,
+            IHttpContextAccessor httpCtx,
+            IConfiguration cfg)
         {
             _http = http;
-
-            _accessToken = cfg["Payments:MercadoPago:AccessToken"] ?? "";
-            _webhookSecret = cfg["Payments:MercadoPago:WebhookSecret"] ?? "";
+            _resolver = resolver;
+            _httpCtx = httpCtx;
+            _cfg = cfg;
 
             if (_http.BaseAddress == null)
-                _http.BaseAddress = new System.Uri("https://api.mercadopago.com/");
+                _http.BaseAddress = new Uri("https://api.mercadopago.com/");
+        }
 
-            if (!string.IsNullOrWhiteSpace(_accessToken))
-                _http.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", _accessToken);
+        // >>> Agora assíncrono e usando GetAsync<T>(user,"MercadoPago")
+        private async Task<string> ResolveAccessTokenAsync()
+        {
+            var user = _httpCtx.HttpContext?.User;
+            var creds = await _resolver.GetAsync<MercadoPagoOptions>(user!, "MercadoPago");
+            return creds?.AccessToken
+                   ?? _cfg["Payments:MercadoPago:AccessToken"]
+                   ?? string.Empty;
         }
 
         // --------- PIX ----------
-        public Task<PixInitResult> CreatePixAsync(PedidoModel pedido)
+        public async Task<PixInitResult> CreatePixAsync(PedidoModel pedido)
         {
-            // TODO: chame a API de PIX do MP conforme o fluxo que você escolher
-            return Task.FromResult(new PixInitResult
+            var token = await ResolveAccessTokenAsync();
+            if (string.IsNullOrWhiteSpace(token))
+                throw new InvalidOperationException("Mercado Pago AccessToken não configurado.");
+
+            using var req = new HttpRequestMessage(HttpMethod.Post, "v1/payments");
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var body = new
             {
-                ProviderPaymentId = "pix_demo_123",
+                transaction_amount = pedido.ValorTotal,
+                description = $"Pedido #{pedido.Id}",
+                payment_method_id = "pix",
+                payer = new { email = "comprador@teste.com" } // ajuste conforme seu fluxo
+            };
+            req.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+
+            var resp = await _http.SendAsync(req);
+            var txt = await resp.Content.ReadAsStringAsync();
+            resp.EnsureSuccessStatusCode();
+
+            // TODO: parse real do retorno do MP (qr_code, qr_code_base64, id etc.)
+            return new PixInitResult
+            {
+                ProviderPaymentId = "mp_pix_id_demo",
                 QrData = "000201...EMV...",
                 QrBase64Png = null
-            });
+            };
         }
 
-        // --------- Cartão (server-side init) ----------
-        public Task<CardInitResult> CreateCardPaymentAsync(PedidoModel pedido, PaymentMethod method)
+        // --------- Cartão ----------
+        public async Task<CardInitResult> CreateCardPaymentAsync(PedidoModel pedido, PaymentMethod method)
         {
-            // TODO: implemente o fluxo de cartão do MP (Payments / Payment Intent)
-            return Task.FromResult(new CardInitResult
+            var token = await ResolveAccessTokenAsync();
+            if (string.IsNullOrWhiteSpace(token))
+                throw new InvalidOperationException("Mercado Pago AccessToken não configurado.");
+
+            // Com Bricks, normalmente você usa os dados do front para confirmar no backend.
+            return await Task.FromResult(new CardInitResult
             {
-                ProviderPaymentId = "card_demo_123",
+                ProviderPaymentId = "mp_card_id_demo",
                 ClientSecretOrToken = "client_secret_demo"
             });
         }
 
-        public Task<ConfirmCardResult> ConfirmCardPaymentAsync(string providerPaymentId, string clientPayloadJson)
+        public async Task<ConfirmCardResult> ConfirmCardPaymentAsync(string providerPaymentId, string clientPayloadJson)
         {
-            // TODO: confirmar com a API do MP e popular brand/last4 quando disponíveis
-            return Task.FromResult(new ConfirmCardResult
+            var token = await ResolveAccessTokenAsync();
+            if (string.IsNullOrWhiteSpace(token))
+                throw new InvalidOperationException("Mercado Pago AccessToken não configurado.");
+
+            // TODO: confirmar no MP com os dados do clientPayloadJson
+            return await Task.FromResult(new ConfirmCardResult
             {
                 Success = true,
                 Brand = "Visa",
-                Last4 = "4242",
-                FailureReason = null
+                Last4 = "4242"
             });
         }
 
         public Task<PaymentStatus> GetStatusAsync(string providerPaymentId)
-        {
-            // TODO: consultar status no MP
-            return Task.FromResult(PaymentStatus.Paid);
-        }
+            => Task.FromResult(PaymentStatus.Paid);
 
         public Task<(string providerPaymentId, PaymentStatus newStatus, decimal? paidAmount, string extra)>
             HandleWebhookAsync(HttpRequest request)
         {
-            // TODO: validar assinatura do webhook do MP (_webhookSecret) e fazer o parse real
-            var tuple = ("pix_demo_123", PaymentStatus.Paid, (decimal?)123.45m, "");
+            // TODO: validar assinatura e parse real do webhook do MP
+            var tuple = ("mp_pix_id_demo", PaymentStatus.Paid, (decimal?)null, "");
             return Task.FromResult(tuple);
         }
 
-        // --------- Checkout Pro (URL hospedada pelo MP) ----------
+        // --------- Checkout Pro ----------
         public async Task<string> CreateCheckoutAsync(ClaimsPrincipal user, CheckoutRequest req)
         {
-            // monta a preference mínima
+            // Aqui podemos usar diretamente o user que chegou por parâmetro:
+            var creds = await _resolver.GetAsync<MercadoPagoOptions>(user, "MercadoPago");
+            var token = creds?.AccessToken ?? _cfg["Payments:MercadoPago:AccessToken"];
+            if (string.IsNullOrWhiteSpace(token))
+                throw new InvalidOperationException("Mercado Pago AccessToken não configurado.");
+
             var body = new PreferenceCreateRequest
             {
                 Items = new[]
@@ -115,67 +154,46 @@ namespace WebApplicationPods.Payments.Gateways
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             });
 
-            using var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var resp = await _http.PostAsync("checkout/preferences", content);
+            using var reqMsg = new HttpRequestMessage(HttpMethod.Post, "checkout/preferences");
+            reqMsg.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            reqMsg.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var resp = await _http.SendAsync(reqMsg);
             resp.EnsureSuccessStatusCode();
 
-            // resposta tem "init_point" (prod) e "sandbox_init_point" (sandbox).
             using var stream = await resp.Content.ReadAsStreamAsync();
             using var doc = await JsonDocument.ParseAsync(stream);
 
-            // prioriza init_point
             if (doc.RootElement.TryGetProperty("init_point", out var initPointEl) &&
                 initPointEl.ValueKind == JsonValueKind.String)
-            {
                 return initPointEl.GetString()!;
-            }
 
             if (doc.RootElement.TryGetProperty("sandbox_init_point", out var sandboxInitEl) &&
                 sandboxInitEl.ValueKind == JsonValueKind.String)
-            {
                 return sandboxInitEl.GetString()!;
-            }
 
-            // fallback: se não veio nenhuma URL, falha de forma clara
-            throw new System.InvalidOperationException("Não foi possível obter a URL de checkout do Mercado Pago.");
+            throw new InvalidOperationException("Não foi possível obter a URL de checkout do Mercado Pago.");
         }
 
-        // ------------ DTOs (snake_case) para a Preference ------------
+        // ------------ DTOs para a Preference ------------
         private sealed class PreferenceCreateRequest
         {
-            [JsonPropertyName("items")]
-            public PreferenceItem[] Items { get; set; } = System.Array.Empty<PreferenceItem>();
-
-            [JsonPropertyName("back_urls")]
-            public PreferenceBackUrls? BackUrls { get; set; }
-
-            [JsonPropertyName("auto_return")]
-            public string? AutoReturn { get; set; }
+            [JsonPropertyName("items")] public PreferenceItem[] Items { get; set; } = Array.Empty<PreferenceItem>();
+            [JsonPropertyName("back_urls")] public PreferenceBackUrls? BackUrls { get; set; }
+            [JsonPropertyName("auto_return")] public string? AutoReturn { get; set; }
         }
-
         private sealed class PreferenceItem
         {
-            [JsonPropertyName("title")]
-            public string Title { get; set; } = "";
-
-            [JsonPropertyName("quantity")]
-            public int Quantity { get; set; }
-
-            [JsonPropertyName("unit_price")]
-            public decimal UnitPrice { get; set; }
-
-            [JsonPropertyName("currency_id")]
-            public string CurrencyId { get; set; } = "BRL";
+            [JsonPropertyName("title")] public string Title { get; set; } = "";
+            [JsonPropertyName("quantity")] public int Quantity { get; set; }
+            [JsonPropertyName("unit_price")] public decimal UnitPrice { get; set; }
+            [JsonPropertyName("currency_id")] public string CurrencyId { get; set; } = "BRL";
         }
-
         private sealed class PreferenceBackUrls
         {
-            [JsonPropertyName("success")]
-            public string? Success { get; set; }
-            [JsonPropertyName("failure")]
-            public string? Failure { get; set; }
-            [JsonPropertyName("pending")]
-            public string? Pending { get; set; }
+            [JsonPropertyName("success")] public string? Success { get; set; }
+            [JsonPropertyName("failure")] public string? Failure { get; set; }
+            [JsonPropertyName("pending")] public string? Pending { get; set; }
         }
     }
 }

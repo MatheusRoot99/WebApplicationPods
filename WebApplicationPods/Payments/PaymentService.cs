@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
-using WebApplicationPods.Data;              // BancoContext
-using WebApplicationPods.Enum;              // PaymentMethod, PaymentStatus
-using WebApplicationPods.Models;            // PaymentModel, PedidoModel
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+using WebApplicationPods.Data;
+using WebApplicationPods.Enum;
+using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
 
 namespace WebApplicationPods.Payments
@@ -11,31 +12,40 @@ namespace WebApplicationPods.Payments
         private readonly Func<string, IPaymentGateway> _gatewayFactory;
         private readonly IPedidoRepository _pedidos;
         private readonly BancoContext _db;
+        private readonly IHttpContextAccessor _http;
 
-        public PaymentService(Func<string, IPaymentGateway> gatewayFactory,
-                              IPedidoRepository pedidos,
-                              BancoContext db)
+        public PaymentService(
+            Func<string, IPaymentGateway> gatewayFactory,
+            IPedidoRepository pedidos,
+            BancoContext db,
+            IHttpContextAccessor http)
         {
             _gatewayFactory = gatewayFactory;
             _pedidos = pedidos;
             _db = db;
+            _http = http;
+        }
+
+        private int GetUserId()
+            => int.TryParse(_http.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
+
+        /// <summary>
+        /// Decide o provider pelo que foi salvo na tela de Config (tabela MerchantPaymentConfigs).
+        /// Se não houver nada salvo, usa "MercadoPago" por padrão.
+        /// </summary>
+        private string ResolveProviderForCurrentUser()
+        {
+            var userId = GetUserId();
+            var cfg = _db.MerchantPaymentConfigs.FirstOrDefault(x => x.UserId == userId);
+            return string.IsNullOrWhiteSpace(cfg?.Provider) ? "MercadoPago" : cfg!.Provider;
         }
 
         public async Task<PaymentModel> StartPaymentAsync(PedidoModel pedido, PaymentMethod metodo)
         {
-            // 1) Escolhe o provedor (ajuste a regra conforme sua preferência)
-            var provider = metodo switch
-            {
-                PaymentMethod.CardCredit => "Stripe",
-                PaymentMethod.CardDebit => "Stripe",
-                PaymentMethod.Pix => "Stripe",    // troque para "MercadoPago" se preferir
-                PaymentMethod.Cash => "None",
-                _ => "Stripe"
-            };
-
+            var provider = metodo == PaymentMethod.Cash ? "None" : ResolveProviderForCurrentUser();
             var gateway = provider == "None" ? null : _gatewayFactory(provider);
 
-            // 2) Cria o registro do pagamento
+            // Cria o registro do pagamento
             var payment = new PaymentModel
             {
                 PedidoId = pedido.Id,
@@ -55,13 +65,13 @@ namespace WebApplicationPods.Payments
             _db.Add(payment);
             await _db.SaveChangesAsync();
 
-            // 3) Chama o gateway escolhido
+            // Fluxo por método
             if (metodo == PaymentMethod.Pix && gateway is not null)
             {
                 var r = await gateway.CreatePixAsync(pedido);
                 payment.ProviderPaymentId = r.ProviderPaymentId ?? string.Empty;
                 payment.PixQrData = r.QrData ?? string.Empty;
-                payment.PixQrBase64Png = r.QrBase64Png; // pode ser null, ok
+                payment.PixQrBase64Png = r.QrBase64Png; // pode ser null
                 payment.Status = PaymentStatus.Pending;
             }
             else if ((metodo == PaymentMethod.CardCredit || metodo == PaymentMethod.CardDebit) && gateway is not null)
@@ -69,14 +79,14 @@ namespace WebApplicationPods.Payments
                 var r = await gateway.CreateCardPaymentAsync(pedido, metodo);
                 payment.ProviderPaymentId = r.ProviderPaymentId ?? string.Empty;
                 payment.ClientSecretOrToken = r.ClientSecretOrToken ?? string.Empty;
-                payment.Status = PaymentStatus.RequiresAction; // espera confirmação no front
+                payment.Status = PaymentStatus.RequiresAction; // aguarda confirmação no front
             }
             else if (metodo == PaymentMethod.Cash)
             {
                 payment.Status = PaymentStatus.Pending;
             }
 
-            // Garantia extra antes de salvar
+            // Garantia extra
             payment.CardBrand ??= string.Empty;
             payment.CardLast4 ??= string.Empty;
 
@@ -89,7 +99,12 @@ namespace WebApplicationPods.Payments
             var payment = await _db.Set<PaymentModel>().FindAsync(paymentId);
             if (payment == null) return false;
 
-            // Usa o provedor salvo no pagamento
+            if (string.IsNullOrWhiteSpace(payment.Provider))
+                payment.Provider = ResolveProviderForCurrentUser();
+
+            if (string.Equals(payment.Provider, "None", StringComparison.OrdinalIgnoreCase))
+                return false;
+
             var gateway = _gatewayFactory(payment.Provider);
             var result = await gateway.ConfirmCardPaymentAsync(payment.ProviderPaymentId, clientPayloadJson);
 
@@ -114,50 +129,20 @@ namespace WebApplicationPods.Payments
 
         public async Task ApplyWebhookAsync(HttpRequest request)
         {
-            // Se você tiver rotas separadas (/webhooks/stripe e /webhooks/mp), chame direto o gateway certo
-            // Aqui fazemos um dispatcher simples: tenta Stripe; se inválido, tenta MP.
-
-            (string providerPaymentId, PaymentStatus newStatus, decimal? paidAmount, string extra) parsed;
-
-            // 1) Tenta Stripe
-            try
-            {
-                var stripe = _gatewayFactory("Stripe");
-                parsed = await stripe.HandleWebhookAsync(request);
-                if (!string.IsNullOrWhiteSpace(parsed.providerPaymentId) && parsed.extra != "invalid-signature")
-                {
-                    await ApplyWebhookParsedAsync(parsed);
-                    return;
-                }
-            }
-            catch
-            {
-                // ignora e tenta o próximo
-            }
-
-            // 2) Tenta Mercado Pago
-            try
-            {
-                var mp = _gatewayFactory("MercadoPago");
-                parsed = await mp.HandleWebhookAsync(request);
-                if (!string.IsNullOrWhiteSpace(parsed.providerPaymentId) && parsed.extra != "invalid-signature")
-                {
-                    await ApplyWebhookParsedAsync(parsed);
-                    return;
-                }
-            }
-            catch
-            {
-                // nenhum provedor reconheceu
-            }
+            // Somente Mercado Pago (evita acionar Stripe à toa)
+            var mp = _gatewayFactory("MercadoPago");
+            var parsed = await mp.HandleWebhookAsync(request);
+            await ApplyWebhookParsedAsync(parsed);
         }
 
         private async Task ApplyWebhookParsedAsync((string providerPaymentId, PaymentStatus newStatus, decimal? paidAmount, string extra) parsed)
         {
+            if (string.IsNullOrWhiteSpace(parsed.providerPaymentId)) return;
+
             var payment = _db.Set<PaymentModel>().FirstOrDefault(p => p.ProviderPaymentId == parsed.providerPaymentId);
             if (payment == null) return;
 
-            // Idempotência simples: não regride status já 'Paid'
+            // Idempotência básica
             if (payment.Status == PaymentStatus.Paid && parsed.newStatus != PaymentStatus.Paid)
                 return;
 

@@ -1,13 +1,13 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using WebApplicationPods.Data;                 // BancoContext
-using WebApplicationPods.Enum;                 // PaymentMethod / PaymentStatus
-using WebApplicationPods.Models;               // PedidoModel / PaymentModel
-using WebApplicationPods.Payments;             // IPaymentService
-using WebApplicationPods.Repository.Interface; // IPedidoRepository
+using WebApplicationPods.Data;
+using WebApplicationPods.Enum;
+using WebApplicationPods.Models;
+using WebApplicationPods.Payments;
+using WebApplicationPods.Payments.Options;
+using WebApplicationPods.Repository.Interface;
 
 namespace WebApplicationPods.Controllers
 {
@@ -17,23 +17,27 @@ namespace WebApplicationPods.Controllers
         private readonly IPedidoRepository _pedidos;
         private readonly BancoContext _db;
         private readonly IConfiguration _cfg;
+        private readonly IPaymentCredentialsResolver _creds;
+        private readonly UserManager<ApplicationUser> _userManager;
 
         public PagamentoController(
             IPaymentService payments,
             IPedidoRepository pedidos,
             BancoContext db,
-            IConfiguration cfg)
+            IConfiguration cfg,
+            IPaymentCredentialsResolver creds,
+            UserManager<ApplicationUser> userManager)
         {
             _payments = payments;
             _pedidos = pedidos;
             _db = db;
             _cfg = cfg;
+            _creds = creds;
+            _userManager = userManager;
         }
 
-        /// <summary>
-        /// Página de checkout: recebe o pedidoId, cria (ou reaproveita) um Payment
-        /// e envia a PublicKey do MP para a View montar o Brick.
-        /// </summary>
+        /// <summary>Checkout: cria/usa Payment e manda a PublicKey do MP para o Brick.</summary>
+        [AllowAnonymous]
         public async Task<IActionResult> Checkout(int pedidoId)
         {
             var pedido = _pedidos.ObterPorId(pedidoId);
@@ -41,7 +45,6 @@ namespace WebApplicationPods.Controllers
 
             var metodo = MapMetodo(pedido.MetodoPagamento);
 
-            // Reaproveita pagamento pendente (se ainda não foi pago/cancelado/falhou)
             var existing = await _db.Pagamentos
                 .Where(p => p.PedidoId == pedido.Id && p.Metodo == metodo)
                 .Where(p => p.Status != PaymentStatus.Paid &&
@@ -52,22 +55,19 @@ namespace WebApplicationPods.Controllers
 
             var payment = existing ?? await _payments.StartPaymentAsync(pedido, metodo);
 
-            // Public Key do Mercado Pago usada no <script> da View
-            ViewBag.MP_PublicKey = _cfg["Payments:MercadoPago:PublicKey"]?.Trim();
+            // pega credenciais (usuário logado OU default da loja OU appsettings)
+            var mpCreds = await _creds.GetAsync<MercadoPagoOptions>(User, "MercadoPago");
+            ViewBag.MP_PublicKey = mpCreds?.PublicKey ?? _cfg["Payments:MercadoPago:PublicKey"];
 
             return View(payment);
         }
 
-        private void MarcarPedidoComoPago(int pedidoId)
-        {
-            // Ajuste o texto conforme sua convenção de status
+        private void MarcarPedidoComoPago(int pedidoId) =>
             _pedidos.AtualizarStatus(pedidoId, "Pago");
-        }
 
-        /// <summary>
-        /// Endpoint para polling do status (PIX / cartão).
-        /// </summary>
+        /// <summary>Polling de status.</summary>
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> Status(int id)
         {
             var p = await _db.Pagamentos
@@ -92,15 +92,14 @@ namespace WebApplicationPods.Controllers
             });
         }
 
-        /// <summary>
-        /// Confirmação de cartão: recebe o payload gerado pelo Brick/Hosted Fields.
-        /// </summary>
+        /// <summary>Confirmação do cartão (payload do Brick).</summary>
         [HttpPost]
+        [AllowAnonymous] // cliente é anônimo
+        [ValidateAntiForgeryToken] // mantém proteção (enviar token no fetch)
         public async Task<IActionResult> ConfirmCard(int id, [FromBody] object clientPayload)
         {
             var ok = await _payments.ConfirmCardAsync(id, clientPayload?.ToString());
 
-            // Carrega o pagamento com o PedidoId
             var p = await _db.Pagamentos
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.Id == id);
@@ -109,22 +108,14 @@ namespace WebApplicationPods.Controllers
 
             if (ok && p != null)
             {
-                // Garante que o status do pedido fique como "Pago"
                 MarcarPedidoComoPago(p.PedidoId);
-
-                // Monta a URL de confirmação para o front redirecionar
                 redirect = Url.Action("Confirmacao", "Carrinho", new { id = p.PedidoId });
             }
 
-            // Importante: manter resposta JSON (o Brick chama via fetch/AJAX)
             return Ok(new { success = ok, redirect });
         }
 
-
-        /// <summary>
-        /// Webhook do provedor de pagamento (ex.: Mercado Pago).
-        /// Configure a URL pública no painel do gateway.
-        /// </summary>
+        /// <summary>Webhook do provedor (MP).</summary>
         [HttpPost]
         [AllowAnonymous]
         public async Task<IActionResult> Webhook()
@@ -133,9 +124,6 @@ namespace WebApplicationPods.Controllers
             return Ok();
         }
 
-        /// <summary>
-        /// Converte a string do pedido para o enum do domínio.
-        /// </summary>
         private static PaymentMethod MapMetodo(string metodo)
         {
             if (string.IsNullOrWhiteSpace(metodo)) return PaymentMethod.Cash;
@@ -144,14 +132,10 @@ namespace WebApplicationPods.Controllers
             {
                 "dinheiro" => PaymentMethod.Cash,
                 "pix" => PaymentMethod.Pix,
-                "cartão de crédito" => PaymentMethod.CardCredit,
-                "cartao de credito" => PaymentMethod.CardCredit,
-                "cartão de débito" => PaymentMethod.CardDebit,
-                "cartao de debito" => PaymentMethod.CardDebit,
+                "cartão de crédito" or "cartao de credito" => PaymentMethod.CardCredit,
+                "cartão de débito" or "cartao de debito" => PaymentMethod.CardDebit,
                 _ => PaymentMethod.Cash
             };
         }
-
-
     }
 }

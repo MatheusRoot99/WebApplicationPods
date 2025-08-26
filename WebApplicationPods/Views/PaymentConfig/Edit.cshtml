@@ -15,59 +15,44 @@
     <div class="alert alert-danger">@TempData["Erro"]</div>
 }
 
-<form asp-action="Edit" method="post" class="card p-3">
+<form asp-controller="PaymentConfig" asp-action="Edit" method="post" class="card p-3">
     @Html.AntiForgeryToken()
 
-    <!-- guarda o provedor selecionado para o POST -->
-    <input type="hidden" asp-for="Provider" id="ProviderHidden" />
+    <input type="hidden" name="Provider" id="Provider" value="@provider" />
 
-    <!-- Abas de provedores -->
     <ul class="nav nav-tabs" id="providerTabs" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link @(provider == "Stripe" ? "active" : "")"
-                    id="tab-stripe"
-                    type="button"
-                    role="tab"
-                    data-target="#pane-stripe"
-                    aria-controls="pane-stripe"
-                    aria-selected="@(provider == "Stripe")">
+                    id="tab-stripe" type="button" role="tab"
+                    data-target="#pane-stripe" aria-controls="pane-stripe"
+                    aria-selected="@(provider == "Stripe" ? "true" : "false")">
                 Stripe
             </button>
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link @(provider == "MercadoPago" ? "active" : "")"
-                    id="tab-mp"
-                    type="button"
-                    role="tab"
-                    data-target="#pane-mp"
-                    aria-controls="pane-mp"
-                    aria-selected="@(provider == "MercadoPago")">
+                    id="tab-mp" type="button" role="tab"
+                    data-target="#pane-mp" aria-controls="pane-mp"
+                    aria-selected="@(provider == "MercadoPago" ? "true" : "false")">
                 Mercado Pago
             </button>
         </li>
     </ul>
 
     <div class="tab-content border border-top-0 p-3">
-
         <!-- STRIPE -->
-        <div id="pane-stripe"
-             class="tab-pane fade @(provider == "Stripe" ? "show active" : "")"
-             role="tabpanel"
-             aria-labelledby="tab-stripe">
-
+        <div id="pane-stripe" class="tab-pane fade @(provider == "Stripe" ? "show active" : "")" role="tabpanel" aria-labelledby="tab-stripe">
             <div class="mb-3">
                 <label asp-for="StripePublishableKey" class="form-label">Publishable Key</label>
                 <input asp-for="StripePublishableKey" class="form-control" />
                 <span asp-validation-for="StripePublishableKey" class="text-danger"></span>
             </div>
-
             <div class="mb-3">
                 <label asp-for="StripeSecretKey" class="form-label">Secret Key</label>
-                <input asp-for="StripeSecretKey" class="form-control" type="password" />
+                <input asp-for="StripeSecretKey" class="form-control" type="password" autocomplete="off" />
                 <small class="text-muted">Deixe em branco para manter a atual.</small>
                 <span asp-validation-for="StripeSecretKey" class="text-danger"></span>
             </div>
-
             <div class="mb-3">
                 <label asp-for="StripeWebhookSecret" class="form-label">Webhook Secret</label>
                 <input asp-for="StripeWebhookSecret" class="form-control" />
@@ -76,24 +61,18 @@
         </div>
 
         <!-- MERCADO PAGO -->
-        <div id="pane-mp"
-             class="tab-pane fade @(provider == "MercadoPago" ? "show active" : "")"
-             role="tabpanel"
-             aria-labelledby="tab-mp">
-
+        <div id="pane-mp" class="tab-pane fade @(provider == "MercadoPago" ? "show active" : "")" role="tabpanel" aria-labelledby="tab-mp">
             <div class="mb-3">
                 <label asp-for="MpPublicKey" class="form-label">Public Key</label>
                 <input asp-for="MpPublicKey" class="form-control" />
                 <span asp-validation-for="MpPublicKey" class="text-danger"></span>
             </div>
-
             <div class="mb-3">
                 <label asp-for="MpAccessToken" class="form-label">Access Token</label>
-                <input asp-for="MpAccessToken" class="form-control" type="password" />
+                <input asp-for="MpAccessToken" class="form-control" type="password" autocomplete="off" />
                 <small class="text-muted">Deixe em branco para manter o atual.</small>
                 <span asp-validation-for="MpAccessToken" class="text-danger"></span>
             </div>
-
             <div class="mb-3">
                 <label asp-for="MpWebhookSecret" class="form-label">Webhook Secret</label>
                 <input asp-for="MpWebhookSecret" class="form-control" />
@@ -104,13 +83,8 @@
 
     <div class="mt-3">
         <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
-        <button type="submit" class="btn btn-primary">
-            Salvar
-        </button>
-        
-        <a asp-controller="Home" asp-action="Index" class="btn btn-secondary ms-2">
-            Voltar
-        </a>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+        <a asp-controller="Home" asp-action="Index" class="btn btn-secondary ms-2">Voltar</a>
     </div>
 </form>
 
@@ -118,39 +92,28 @@
     <partial name="_ValidationScriptsPartial" />
     <script>
         (function () {
-            const providerHidden = document.getElementById('ProviderHidden');
+            const providerHidden = document.getElementById('Provider'); // <-- aqui
             const tabStripe = document.getElementById('tab-stripe');
             const tabMp = document.getElementById('tab-mp');
             const paneStripe = document.getElementById('pane-stripe');
             const paneMp = document.getElementById('pane-mp');
 
             function activate(tabBtn, pane, providerName) {
-                // abas
                 [tabStripe, tabMp].forEach(b => b.classList.remove('active'));
                 tabBtn.classList.add('active');
 
-                // panes
-                [paneStripe, paneMp].forEach(p => { p.classList.remove('show', 'active'); });
-                pane.classList.add('show', 'active');
+                [paneStripe, paneMp].forEach(p => p.classList.remove('show','active'));
+                pane.classList.add('show','active');
 
-                // hidden Provider (vai pro POST)
-                providerHidden.value = providerName;
+                providerHidden.value = providerName; // mantém Provider preenchido
             }
 
-            tabStripe.addEventListener('click', function () {
-                activate(tabStripe, paneStripe, 'Stripe');
-            });
-            tabMp.addEventListener('click', function () {
-                activate(tabMp, paneMp, 'MercadoPago');
-            });
+            tabStripe.addEventListener('click', () => activate(tabStripe, paneStripe, 'Stripe'));
+            tabMp.addEventListener('click',    () => activate(tabMp, paneMp, 'MercadoPago'));
 
-            // inicializa estado conforme o Model.Provider
             const current = providerHidden.value || 'Stripe';
-            if (current === 'MercadoPago') {
-                activate(tabMp, paneMp, 'MercadoPago');
-            } else {
-                activate(tabStripe, paneStripe, 'Stripe');
-            }
+            if (current === 'MercadoPago') activate(tabMp, paneMp, 'MercadoPago');
+            else activate(tabStripe, paneStripe, 'Stripe');
         })();
     </script>
 }

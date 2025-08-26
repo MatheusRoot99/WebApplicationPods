@@ -1,83 +1,10 @@
-﻿@using System.Globalization
-@using WebApplicationPods.Enum
+﻿@using WebApplicationPods.Enum
 @model WebApplicationPods.Models.PaymentModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
     ViewData["Title"] = "Pagamento";
-}
-
-@section Styles {
-    <style>
-        :root {
-            --brand: #FF8C00;
-            --brand-600: #e67600;
-            --dark: #222;
-            --bg: #f5f5f7;
-        }
-
-        body {
-            background: var(--bg);
-        }
-
-        .card {
-            border-radius: 12px;
-            border: 1px solid #eaeaea;
-            box-shadow: 0 10px 25px rgba(0,0,0,.06);
-            overflow: hidden;
-        }
-
-        .card-header {
-            background: var(--brand);
-            color: #fff;
-            font-weight: 700;
-        }
-
-            .card-header.bg-dark {
-                background: #222;
-            }
-
-        .btn-success {
-            background: var(--brand);
-            border-color: var(--brand);
-        }
-
-            .btn-success:hover {
-                background: var(--brand-600);
-                border-color: var(--brand-600);
-            }
-
-        .btn-dark {
-            background: var(--dark);
-            border-color: var(--dark);
-        }
-
-        .badge-soft {
-            background: #fff4e6;
-            color: #c45f00;
-            border-radius: 999px;
-            padding: .25rem .6rem;
-            font-weight: 600;
-        }
-
-        .qr-placeholder {
-            width: 220px;
-            height: 220px;
-            border-radius: 10px;
-            border: 1px dashed #ddd;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #999;
-        }
-
-        .muted {
-            color: #6f6f6f;
-        }
-
-        .hint {
-            font-size: .9rem;
-            color: #6f6f6f;
-        }
-    </style>
+    // Gera token anti-CSRF e grava cookie; usamos o valor no header do fetch.
+    var afToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
 }
 
 <div class="container-xxl py-4">
@@ -86,8 +13,7 @@
         <!-- COL ESQUERDA -->
         <div class="col-lg-7">
             <div class="card">
-                <div class="card-header d-flex align-items-center gap-2">
-                    <i class="bi bi-shield-lock"></i>
+                <div class="card-header">
                     <h5 class="mb-0">Finalize seu pagamento</h5>
                 </div>
                 <div class="card-body">
@@ -96,7 +22,7 @@
                     @if (Model.Metodo == PaymentMethod.Pix)
                     {
                         <h6 class="mb-2">Pix</h6>
-                        <p class="muted">Escaneie o QR Code ou use “copia e cola”. Confirmaremos automaticamente após o pagamento.</p>
+                        <p class="text-muted">Escaneie o QR Code ou use “copia e cola”. Confirmaremos automaticamente após o pagamento.</p>
 
                         <div class="d-flex gap-3 flex-wrap align-items-start">
                             <div>
@@ -108,7 +34,9 @@
                                 }
                                 else
                                 {
-                                    <div id="pixQr" class="qr-placeholder">QR Code</div>
+                                    <div class="border rounded d-flex align-items-center justify-content-center" style="width:220px;height:220px;color:#999;">
+                                        QR Code
+                                    </div>
                                 }
                             </div>
 
@@ -116,15 +44,15 @@
                                 <label class="form-label">Copia e cola</label>
                                 <div class="input-group">
                                     <input class="form-control" value="@Model.PixQrData" id="pixCopyPaste" readonly />
-                                    <button class="btn btn-dark" type="button" onclick="copyPix()">Copiar</button>
+                                    <button class="btn btn-secondary" type="button" onclick="copyPix()">Copiar</button>
                                 </div>
 
                                 <div class="d-flex align-items-center gap-2 mt-3">
-                                    <div id="pixStatus" class="badge-soft">Status: @Model.Status</div>
+                                    <span id="pixStatus" class="badge bg-light text-dark">Status: @Model.Status</span>
                                     <button class="btn btn-outline-secondary btn-sm" type="button" id="btnForcarConsulta">Atualizar status</button>
                                 </div>
 
-                                <div class="hint mt-2">Valor: <strong>@Model.Amount.ToString("C")</strong></div>
+                                <div class="text-muted mt-2">Valor: <strong>@Model.Amount.ToString("C")</strong></div>
                             </div>
                         </div>
                     }
@@ -134,16 +62,15 @@
                     {
                         <h6 class="mb-3">Cartão @(Model.Metodo == PaymentMethod.CardCredit ? "de Crédito" : "de Débito")</h6>
 
-                        <!-- Container exigido pelo Bricks -->
                         <div id="cardPaymentBrick_container"></div>
 
                         <div class="mt-3 d-flex gap-2">
-                            <button id="mp-pay-btn" class="btn btn-success" disabled>Pagar</button>
+                            <button id="mp-pay-btn" class="btn btn-primary" disabled>Pagar</button>
                             <button id="mp-cancel-btn" type="button" class="btn btn-outline-secondary">Cancelar</button>
                         </div>
 
-                        <div class="hint mt-2">Se necessário, faremos a autenticação 3-D Secure.</div>
-                        <div id="payStatus" class="badge-soft mt-3">Status: @Model.Status</div>
+                        <div class="text-muted mt-2">Se necessário, faremos a autenticação 3-D Secure.</div>
+                        <span id="payStatus" class="badge bg-light text-dark mt-3 d-inline-block">Status: @Model.Status</span>
                     }
 
                     @* ================= DINHEIRO/MAQUININHA ================ *@
@@ -158,14 +85,14 @@
         <!-- COL DIREITA -->
         <div class="col-lg-5">
             <div class="card sticky-top" style="top: 20px;">
-                <div class="card-header bg-dark text-white">
+                <div class="card-header">
                     <h5 class="mb-0">Resumo</h5>
                 </div>
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <span>Total</span><strong>@Model.Amount.ToString("C")</strong>
                     </div>
-                    <div class="mt-3 small muted">Pedido: #@Model.PedidoId • Pagamento: #@Model.Id</div>
+                    <div class="mt-3 small text-muted">Pedido: #@Model.PedidoId • Pagamento: #@Model.Id</div>
                 </div>
             </div>
         </div>
@@ -174,21 +101,19 @@
 </div>
 
 @section Scripts {
-    <!-- SDK Mercado Pago v2 (deve vir antes do init) -->
     <script src="https://sdk.mercadopago.com/js/v2"></script>
 
     <script>
-        // ------- Utils -------
-        function copyPix(){
-          const input = document.getElementById('pixCopyPaste');
-          if(!input) return;
-          input.select(); input.setSelectionRange(0, 99999);
-          document.execCommand('copy');
+        function copyPix() {
+            const input = document.getElementById('pixCopyPaste');
+            if (!input) return;
+            input.select(); input.setSelectionRange(0, 99999);
+            document.execCommand('copy');
         }
     </script>
 
     <script>
-        // ------- Polling de Status (PIX e fallback geral) -------
+        // ------- Polling de Status -------
         (function polling(){
           const paymentId = '@Model.Id';
           const statusUrl = '@Url.Action("Status", "Pagamento")' + '?id=' + encodeURIComponent(paymentId);
@@ -199,34 +124,26 @@
               if (!r.ok) return;
               const data = await r.json();
 
-              // Atualiza badges se existirem (PIX/cartão)
               const pixBadge = document.getElementById('pixStatus');
               if (pixBadge && data.status) pixBadge.textContent = 'Status: ' + data.status;
 
               const payBadge = document.getElementById('payStatus');
               if (payBadge && data.status) payBadge.textContent = 'Status: ' + data.status;
 
-              // Se pago, redireciona para confirmação
               if (data.paid === true && data.redirect) {
                 window.location.href = data.redirect;
               }
-            } catch(e) {
-              // silencioso
-            }
+            } catch(e) {}
           }
 
-          // Botão "Atualizar status" (PIX)
           const btn = document.getElementById('btnForcarConsulta');
           if (btn && !btn.dataset.bound){
             btn.dataset.bound = '1';
             btn.addEventListener('click', checkPaid);
           }
 
-          // Dispara agora e a cada 3s
           checkPaid();
           setInterval(checkPaid, 3000);
-
-          // Exponibiliza para o fluxo do cartão forçar checagem
           window.__checkPaid = checkPaid;
         })();
     </script>
@@ -240,7 +157,6 @@
             return;
           }
 
-          // Evita criar duas vezes (hot reload / partial duplicado)
           if (window.__mpBrickMounted) return;
           window.__mpBrickMounted = true;
 
@@ -256,7 +172,7 @@
             initialization: { amount },
             customization: {
               paymentMethods: { creditCard: 'all', debitCard: 'all' },
-              visual: { style: { theme: 'default' } }
+              visual: { style: { theme: 'default' } } // usa tema padrão
             },
             callbacks: {
               onReady: () => {
@@ -268,23 +184,22 @@
                 try {
                   if (btn) btn.disabled = true;
 
-                  // Confirma o pagamento no backend
                   const res = await fetch('@Url.Action("ConfirmCard", "Pagamento", new { id = Model.Id })', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'RequestVerificationToken': '@afToken'     // << antiforgery
+                    },
                     body: JSON.stringify(cardFormData)
                   });
-                  const json = await res.json();
 
+                  const json = await res.json();
                   const statusEl = document.getElementById('payStatus');
+
                   if (json && json.success) {
                     if (statusEl) statusEl.textContent = 'Status: Pago';
-                    // Se o backend já fornecer a URL, redireciona; caso contrário, força o polling
-                    if (json.redirect) {
-                      window.location.href = json.redirect;
-                    } else if (window.__checkPaid) {
-                      window.__checkPaid();
-                    }
+                    if (json.redirect) window.location.href = json.redirect;
+                    else if (window.__checkPaid) window.__checkPaid();
                   } else {
                     if (statusEl) statusEl.textContent = 'Status: Pagamento falhou';
                     alert('Não foi possível processar o pagamento.');
@@ -301,31 +216,6 @@
                 alert('Erro ao carregar/validar os campos do cartão.');
               }
             }
-          });
-        })();
-    </script>
-
-    <script>
-        // ------- Botão Voltar/Cancelar -------
-        (function wireBackButton() {
-          const btn = document.getElementById('mp-cancel-btn');
-          if (!btn) return;
-
-          if (btn.dataset.bound === "1") return;
-          btn.dataset.bound = "1";
-
-          btn.addEventListener('click', function (e) {
-            e.preventDefault();
-
-            try {
-              const ref = document.referrer;
-              if (ref && new URL(ref).host === location.host) {
-                history.back();
-                return;
-              }
-            } catch { /* ignora e usa fallback */ }
-
-            window.location.href = '@Url.Action("Resumo", "Carrinho")';
           });
         })();
     </script>
