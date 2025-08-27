@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/sidebar.css" asp-append-version="true" />
 
-    @await RenderSectionAsync("Styles", required: false)
+    @await RenderSectionAsync("Styles", required: false)  <!-- Styles só aqui -->
 </head>
 <body>
 
@@ -214,5 +214,6 @@
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)
+
 </body>
 </html>

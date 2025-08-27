@@ -1,0 +1,66 @@
+﻿@model IEnumerable<WebApplicationPods.Models.PedidoModel>
+@using System.Linq
+
+@foreach (var p in Model.OrderByDescending(x => x.DataPedido))
+{
+    var atual = p.Status ?? "";
+    var isCash = string.Equals(p.MetodoPagamento, "dinheiro", StringComparison.OrdinalIgnoreCase);
+
+    // monta a lista de próximas ações válidas conforme o status atual
+    var nexts = new List<(string Label, string Value, string Css)>();
+
+    if (atual.Equals("Aguardando Confirmação (Dinheiro)", StringComparison.OrdinalIgnoreCase))
+    {
+        nexts.Add(("Aprovar (Dinheiro)", "Pago", "btn btn-success"));
+        nexts.Add(("Cancelar", "Cancelado", "btn btn-danger"));
+    }
+    else if (atual.Equals("Pago", StringComparison.OrdinalIgnoreCase))
+    {
+        nexts.Add(("Iniciar", "Em Preparação", "btn btn-primary"));
+        nexts.Add(("Cancelar", "Cancelado", "btn btn-danger"));
+    }
+    else if (atual.Equals("Em Preparação", StringComparison.OrdinalIgnoreCase))
+    {
+        nexts.Add(("Pronto", "Pronto", "btn btn-warning"));
+        nexts.Add(("Cancelar", "Cancelado", "btn btn-danger"));
+    }
+    @* else if (atual.Equals("Pronto", StringComparison.OrdinalIgnoreCase))
+    {
+        nexts.Add(("Saiu", "Saiu p/ Entrega", "btn btn-secondary"));
+        nexts.Add(("Cancelar", "Cancelado", "btn btn-danger"));
+    } *@
+    else if (atual.Equals("Saiu p/ Entrega", StringComparison.OrdinalIgnoreCase))
+    {
+        nexts.Add(("Entregue", "Entregue", "btn btn-dark"));
+        nexts.Add(("Cancelar", "Cancelado", "btn btn-danger"));
+    }
+    else if (atual.Equals("Pagamento Falhou", StringComparison.OrdinalIgnoreCase))
+    {
+        nexts.Add(("Cancelar", "Cancelado", "btn btn-danger"));
+    }
+    // Entregue/Cancelado => sem ações
+
+    <tr>
+        @* <td>@p.Id</td> *@
+        <td>@p.Cliente?.Nome</td>
+        <td>@p.DataPedido.ToString("dd/MM HH:mm")</td>
+        <td>@p.ValorTotal.ToString("C")</td>
+        <td>@p.MetodoPagamento</td>
+        <td><span class="badge bg-info">@p.Status</span></td>
+        <td class="text-end">
+            @if (nexts.Any())
+            {
+                <form asp-action="AtualizarStatus" asp-controller="PedidosAdmin" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@p.Id" />
+                    <div class="btn-group btn-group-sm">
+                        @foreach (var b in nexts)
+                        {
+                            <button name="status" value="@b.Value" class="@b.Css">@b.Label</button>
+                        }
+                    </div>
+                </form>
+            }
+        </td>
+    </tr>
+}

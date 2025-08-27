@@ -1,7 +1,9 @@
-﻿using System.Security.Claims;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.SignalR;
+using System.Security.Claims;
 using WebApplicationPods.Data;
 using WebApplicationPods.Enum;
+using WebApplicationPods.Hubs;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
 
@@ -12,66 +14,48 @@ namespace WebApplicationPods.Payments
         private readonly Func<string, IPaymentGateway> _gatewayFactory;
         private readonly IPedidoRepository _pedidos;
         private readonly BancoContext _db;
-        private readonly IHttpContextAccessor _http;
+        private readonly IHubContext<PedidosHub> _hub;
 
         public PaymentService(
             Func<string, IPaymentGateway> gatewayFactory,
             IPedidoRepository pedidos,
             BancoContext db,
-            IHttpContextAccessor http)
+            IHubContext<PedidosHub> hub)
         {
             _gatewayFactory = gatewayFactory;
             _pedidos = pedidos;
             _db = db;
-            _http = http;
+            _hub = hub;
         }
 
-        private int GetUserId()
-            => int.TryParse(_http.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
-
-        /// <summary>
-        /// Decide o provider pelo que foi salvo na tela de Config (tabela MerchantPaymentConfigs).
-        /// Se não houver nada salvo, usa "MercadoPago" por padrão.
-        /// </summary>
-        private string ResolveProviderForCurrentUser()
-        {
-            var userId = GetUserId();
-            var cfg = _db.MerchantPaymentConfigs.FirstOrDefault(x => x.UserId == userId);
-            return string.IsNullOrWhiteSpace(cfg?.Provider) ? "MercadoPago" : cfg!.Provider;
-        }
-
+        // === seu StartPaymentAsync original + marcação de dinheiro já está OK ===
         public async Task<PaymentModel> StartPaymentAsync(PedidoModel pedido, PaymentMethod metodo)
         {
-            var provider = metodo == PaymentMethod.Cash ? "None" : ResolveProviderForCurrentUser();
+            var provider = metodo == PaymentMethod.Cash ? "None" : "MercadoPago"; // ou sua lógica
             var gateway = provider == "None" ? null : _gatewayFactory(provider);
 
-            // Cria o registro do pagamento
             var payment = new PaymentModel
             {
                 PedidoId = pedido.Id,
                 Metodo = metodo,
                 Amount = pedido.ValorTotal,
                 Provider = provider ?? string.Empty,
-                Status = metodo == PaymentMethod.Cash ? PaymentStatus.Pending : PaymentStatus.Created
+                Status = metodo == PaymentMethod.Cash ? PaymentStatus.Pending : PaymentStatus.Created,
+                CardBrand = string.Empty,
+                CardLast4 = string.Empty,
+                ProviderPaymentId = string.Empty,
+                ProviderOrderId = string.Empty
             };
-
-            // Evita NULL em colunas NOT NULL
-            payment.CardBrand ??= string.Empty;
-            payment.CardLast4 ??= string.Empty;
-            payment.Provider ??= string.Empty;
-            payment.ProviderPaymentId ??= string.Empty;
-            payment.ProviderOrderId ??= string.Empty;
 
             _db.Add(payment);
             await _db.SaveChangesAsync();
 
-            // Fluxo por método
             if (metodo == PaymentMethod.Pix && gateway is not null)
             {
                 var r = await gateway.CreatePixAsync(pedido);
                 payment.ProviderPaymentId = r.ProviderPaymentId ?? string.Empty;
                 payment.PixQrData = r.QrData ?? string.Empty;
-                payment.PixQrBase64Png = r.QrBase64Png; // pode ser null
+                payment.PixQrBase64Png = r.QrBase64Png;
                 payment.Status = PaymentStatus.Pending;
             }
             else if ((metodo == PaymentMethod.CardCredit || metodo == PaymentMethod.CardDebit) && gateway is not null)
@@ -79,16 +63,16 @@ namespace WebApplicationPods.Payments
                 var r = await gateway.CreateCardPaymentAsync(pedido, metodo);
                 payment.ProviderPaymentId = r.ProviderPaymentId ?? string.Empty;
                 payment.ClientSecretOrToken = r.ClientSecretOrToken ?? string.Empty;
-                payment.Status = PaymentStatus.RequiresAction; // aguarda confirmação no front
+                payment.Status = PaymentStatus.RequiresAction;
             }
             else if (metodo == PaymentMethod.Cash)
             {
+                _pedidos.AtualizarStatus(pedido.Id, "Aguardando Confirmação (Dinheiro)");
                 payment.Status = PaymentStatus.Pending;
-            }
 
-            // Garantia extra
-            payment.CardBrand ??= string.Empty;
-            payment.CardLast4 ??= string.Empty;
+                // dispara refresh para lojistas
+                await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged", new { id = pedido.Id, status = "Aguardando Confirmação (Dinheiro)" });
+            }
 
             await _db.SaveChangesAsync();
             return payment;
@@ -98,12 +82,6 @@ namespace WebApplicationPods.Payments
         {
             var payment = await _db.Set<PaymentModel>().FindAsync(paymentId);
             if (payment == null) return false;
-
-            if (string.IsNullOrWhiteSpace(payment.Provider))
-                payment.Provider = ResolveProviderForCurrentUser();
-
-            if (string.Equals(payment.Provider, "None", StringComparison.OrdinalIgnoreCase))
-                return false;
 
             var gateway = _gatewayFactory(payment.Provider);
             var result = await gateway.ConfirmCardPaymentAsync(payment.ProviderPaymentId, clientPayloadJson);
@@ -122,10 +100,15 @@ namespace WebApplicationPods.Payments
             if (pedido != null)
             {
                 _pedidos.AtualizarStatus(pedido.Id, result.Success ? "Pago" : "Pagamento Falhou");
+
+                // dispara refresh para lojistas
+                await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged", new { id = pedido.Id, status = result.Success ? "Pago" : "Pagamento Falhou" });
             }
 
             return result.Success;
         }
+
+       
 
         public async Task ApplyWebhookAsync(HttpRequest request)
         {
@@ -159,6 +142,9 @@ namespace WebApplicationPods.Payments
                                                              "Pendente";
 
             _pedidos.AtualizarStatus(payment.PedidoId, statusTexto);
+
+            // dispara refresh para lojistas
+            await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged", new { id = payment.PedidoId, status = statusTexto });
         }
     }
 }

@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using WebApplicationPods.Data;
 using WebApplicationPods.Models;               // ApplicationUser, MerchantPaymentConfig
-using WebApplicationPods.Payments.Options;    // PaymentsOptions, MercadoPagoOptions, StripeOptions
+using WebApplicationPods.Payments.Options;    // PaymentsOptions
 
 namespace WebApplicationPods.Payments
 {
@@ -26,8 +26,8 @@ namespace WebApplicationPods.Payments
         }
 
         /// <summary>
-        /// 1) tenta credenciais do usuário; 
-        /// 2) se anônimo ou não achar, usa a PRIMEIRA config do provider (loja);
+        /// 1) credenciais do usuário;
+        /// 2) se anônimo/não achou, usa a PRIMEIRA config do provider (loja);
         /// 3) fallback no appsettings (PaymentsOptions).
         /// </summary>
         public async Task<T> GetAsync<T>(ClaimsPrincipal user, string provider) where T : class, new()

@@ -1,0 +1,199 @@
+﻿/* ============ Reports (Admin) ============ */
+/* Depende das variáveis já existentes no site:
+   --brand-start, --brand-end, --primary, --primary-dark,
+   --dark, --light, --gray, --text-dark, --text-light,
+   --primary-grad (gradiente marca) e --mbn-height (altura do bottom-nav)
+*/
+/* ===== Paleta de cores (site) ===== */
+:root {
+    /* marca */
+    --brand-start: #6a11cb; /* roxo */
+    --brand-end: #2575fc; /* azul  */
+    --primary: #2575fc; /* azul sólido para bordas/textos */
+    --primary-dark: #1e56d9;
+    /* base */
+    --dark: #111827; /* quase preto */
+    --light: #ffffff;
+    --gray: #f5f5f7;
+    --text-dark: #111827;
+    --text-light: #6b7280;
+    /* util */
+    --primary-grad: linear-gradient(135deg,var(--brand-start),var(--brand-end));
+    --shadow-1: 0 4px 20px rgba(0,0,0,.08);
+    /* altura do bottom-nav (ajuste se diferente) */
+    --mbn-height: 68px;
+}
+
+/* Espaço extra para não colidir com o bottom-nav em mobile */
+.page-pad {
+    padding-bottom: calc(var(--mbn-height, 68px) + 16px);
+}
+
+/* Títulos */
+h2 {
+    font-weight: 700;
+    color: var(--dark);
+    margin: 0;
+}
+
+/* Toolbar (filtros superiores) */
+.toolbar .form-label {
+    font-weight: 500;
+    color: var(--text-dark);
+}
+
+.toolbar .form-control,
+.toolbar .form-select {
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    transition: border-color .2s, box-shadow .2s;
+    background: var(--light);
+    color: var(--text-dark);
+}
+
+    .toolbar .form-control:focus,
+    .toolbar .form-select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
+    }
+
+.btn-brand {
+    background: var(--primary-grad, linear-gradient(135deg, var(--brand-start), var(--brand-end)));
+    color: #fff;
+    border: 0;
+    border-radius: 8px;
+    padding: .5rem 1.25rem;
+    font-weight: 500;
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+    .btn-brand:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px color-mix(in srgb, var(--primary) 25%, transparent);
+        color: #fff;
+    }
+
+/* Cards base */
+.card {
+    border: 0;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.08);
+    overflow: hidden;
+    background: var(--light);
+    transition: box-shadow .25s, transform .25s;
+}
+
+    .card:hover {
+        box-shadow: 0 6px 25px rgba(0,0,0,.10);
+        transform: translateY(-2px);
+    }
+
+.card-header {
+    background: var(--primary-grad, linear-gradient(135deg, var(--brand-start), var(--brand-end)));
+    color: #fff;
+    font-weight: 600;
+    border: 0;
+    padding: 1rem 1.25rem;
+}
+
+.card-body {
+    padding: 1rem 1.25rem;
+}
+
+/* KPIs */
+.kpi .text-muted {
+    color: var(--text-light);
+}
+
+.kpi .h3 {
+    color: var(--primary);
+    margin: .25rem 0 0 0;
+}
+
+/* Tabela */
+.table-container {
+    background: var(--light);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.08);
+    overflow: hidden;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+    .table thead th {
+        background: #f8fafc;
+        color: var(--text-dark);
+        font-weight: 600;
+        padding: 1rem;
+        border-bottom: 2px solid #e2e8f0;
+    }
+
+    .table td {
+        padding: 1rem;
+        vertical-align: middle;
+        border-color: #f1f5f9;
+    }
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: #fafafb;
+}
+
+.table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}
+
+/* Gráficos responsivos (Chart.js) */
+.chart-wrap {
+    position: relative;
+    width: 100%;
+}
+
+    .chart-wrap.h320 {
+        height: 320px;
+    }
+
+    .chart-wrap.h260 {
+        height: 260px;
+    }
+
+/* Badges auxiliares (se usar) */
+.badge-soft {
+    background: #eef2ff;
+    color: var(--primary);
+    border-radius: 999px;
+    padding: .25rem .6rem;
+    font-weight: 600;
+}
+
+/* Util */
+.text-muted {
+    color: var(--text-light) !important;
+}
+
+/* Mobile tweaks */
+@media (max-width: 992px) {
+    .toolbar {
+        gap: .5rem 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .chart-wrap.h320 {
+        height: 280px;
+    }
+
+    .chart-wrap.h260 {
+        height: 220px;
+    }
+
+    .kpi .h3 {
+        font-size: 1.25rem;
+    }
+}

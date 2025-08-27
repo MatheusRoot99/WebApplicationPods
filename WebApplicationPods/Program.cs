@@ -145,6 +145,7 @@ builder.Services.AddScoped<IEmailSenderService, GmailEmailSenderService>();
 
 // Seed (roles/usuário admin)
 builder.Services.AddHostedService<IdentitySeedHostedService>();
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
@@ -176,7 +177,7 @@ else
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
-
+app.MapHub<WebApplicationPods.Hubs.PedidosHub>("/hubs/pedidos");
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 

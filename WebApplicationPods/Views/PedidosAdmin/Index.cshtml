@@ -1,42 +1,95 @@
 ﻿@model IEnumerable<WebApplicationPods.Models.PedidoModel>
+@using System.Linq
+@{
+    var filtro = (string)(ViewBag.Filtro ?? "abertos");
+    var tableUrl = Url.Action("Table", "PedidosAdmin", new { filtro });
+}
 
-<div class="container mt-4">
-    <h2>Pedidos do Dia</h2>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Cliente</th>
-                <th>Data</th>
-                <th>Total</th>
-                <th>Status</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var p in Model.OrderByDescending(x => x.DataPedido))
-            {
+@section Styles {
+    <link rel="stylesheet" href="~/css/orders-admin.css" asp-append-version="true" />
+}
+
+<div class="container mt-4 orders-admin">
+
+    <!-- Acesso rápido ao relatório -->
+    <div class="mb-3 d-flex gap-2">
+        @if (filtro == "dia")
+        {
+            <a class="btn btn-brand"
+               asp-controller="PedidosAdmin" asp-action="Relatorio"
+               asp-route-modo="dia" asp-route-data="@DateTime.Today.ToString("yyyy-MM-dd")">
+                Relatório (hoje)
+            </a>
+        }
+        else
+        {
+            <a class="btn btn-outline-brand"
+               asp-controller="PedidosAdmin" asp-action="Relatorio"
+               asp-route-modo="mes" asp-route-ano="@DateTime.Today.Year" asp-route-mes="@DateTime.Today.Month">
+                Relatório (mês atual)
+            </a>
+        }
+    </div>
+
+    <div class="header-row d-flex align-items-center justify-content-between mb-3">
+        <h2>Pedidos (@(filtro == "dia" ? "de hoje" : "abertos"))</h2>
+        <div class="btn-group">
+            <a class="btn btn-outline-secondary @(filtro == "abertos" ? "active" : "")"
+               asp-action="Index" asp-route-filtro="abertos">Abertos</a>
+            <a class="btn btn-outline-secondary @(filtro == "dia" ? "active" : "")"
+               asp-action="Index" asp-route-filtro="dia">Hoje</a>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="table table-striped align-middle mb-0">
+            <thead>
                 <tr>
-                    <td>@p.Id</td>
-                    <td>@p.Cliente?.Nome</td>
-                    <td>@p.DataPedido.ToString("dd/MM HH:mm")</td>
-                    <td>@p.ValorTotal.ToString("C")</td>
-                    <td><span class="badge bg-info">@p.Status</span></td>
-                    <td>
-                        <form asp-action="AtualizarStatus" asp-controller="PedidosAdmin" method="post" class="d-inline">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="id" value="@p.Id" />
-                            <div class="btn-group btn-group-sm">
-                                <button name="status" value="Em Preparação" class="btn btn-primary">Iniciar</button>
-                                <button name="status" value="Pronto" class="btn btn-warning">Pronto</button>
-                                <button name="status" value="Saiu p/ Entrega" class="btn btn-secondary">Saiu</button>
-                                <button name="status" value="Entregue" class="btn btn-success">Entregue</button>
-                                <button name="status" value="Cancelado" class="btn btn-danger">Cancelar</button>
-                            </div>
-                        </form>
-                    </td>
+                    <th>Cliente</th>
+                    <th>Data</th>
+                    <th>Total</th>
+                    <th>Pagamento</th>
+                    <th>Status</th>
+                    <th class="text-end">Ações</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody id="tbodyPedidos">
+                @await Html.PartialAsync("_PedidosTableBody", Model)
+            </tbody>
+        </table>
+    </div>
 </div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"
+            integrity="sha512-6r3o8q7yMn3x7b1n3S0tQk/3DBMuQ1E1xm1ANo1sIc9s2yQik3zYgqzZ8qXuqFj2F2f+tSgDjpFzWkOq8ESQ8A=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script>
+        (function(){
+            const tbody = document.getElementById('tbodyPedidos');
+            const tableUrl = '@tableUrl';
+
+            async function refreshTable(){
+                try{
+                    tbody.classList.add('is-loading');
+                    const html = await (await fetch(tableUrl, {cache:'no-store'})).text();
+                    tbody.innerHTML = html;
+                }catch{}finally{
+                    tbody.classList.remove('is-loading');
+                }
+            }
+
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/hubs/pedidos")
+                .withAutomaticReconnect()
+                .build();
+
+            connection.on("PedidosChanged", function(){ refreshTable(); });
+            connection.start().catch(console.error);
+
+            // fallback: refresh a cada 30s
+            setInterval(refreshTable, 30000);
+        })();
+    </script>
+}

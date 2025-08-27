@@ -1,0 +1,183 @@
+﻿/* ============ PedidosAdmin (Orders) ============ */
+/* Depende das variáveis globais do site:
+   --brand-start, --brand-end, --primary, --primary-dark,
+   --dark, --light, --gray, --text-dark, --text-light,
+   --primary-grad, --mbn-height
+*/
+
+/* ===== Paleta de cores (fallback local – remova se já vem do site) ===== */
+:root {
+    /* marca */
+    --brand-start: #6a11cb; /* roxo */
+    --brand-end: #2575fc; /* azul  */
+    --primary: #2575fc; /* azul sólido para bordas/textos */
+    --primary-dark: #1e56d9;
+    /* base */
+    --dark: #111827; /* quase preto */
+    --light: #ffffff;
+    --gray: #f5f5f7;
+    --text-dark: #111827;
+    --text-light: #6b7280;
+    /* util */
+    --primary-grad: linear-gradient(135deg,var(--brand-start),var(--brand-end));
+    --shadow-1: 0 4px 20px rgba(0,0,0,.08);
+    /* altura do bottom-nav (ajuste se diferente) */
+    --mbn-height: 68px;
+}
+
+/* -------- Fix 3: espaço para o bottom-nav não sobrepor o conteúdo -------- */
+.orders-admin {
+    padding-bottom: calc(var(--mbn-height) + 16px);
+}
+
+    .orders-admin h2 {
+        font-weight: 700;
+        color: var(--dark);
+        margin: 0;
+    }
+
+    /* Botões rápidos (relatório) */
+    .orders-admin .btn-brand {
+        background: var(--primary-grad, linear-gradient(135deg, var(--brand-start), var(--brand-end)));
+        color: #fff;
+        border: 0;
+        border-radius: 8px;
+        padding: .5rem 1.25rem;
+        font-weight: 500;
+        transition: transform .15s ease, box-shadow .15s ease;
+    }
+
+        .orders-admin .btn-brand:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px color-mix(in srgb, var(--primary) 25%, transparent);
+            color: #fff;
+        }
+
+    .orders-admin .btn-outline-brand {
+        color: var(--primary);
+        border: 1px solid var(--primary);
+        border-radius: 8px;
+        padding: .5rem 1.25rem;
+        font-weight: 500;
+        background: transparent;
+        transition: background .15s ease, color .15s ease;
+    }
+
+        .orders-admin .btn-outline-brand:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+    /* Cabeçalho da lista */
+    .orders-admin .header-row {
+        background: var(--light);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,.08);
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+
+    /* ---------------- Fix 2: tabela com scroll horizontal no mobile ---------------- */
+    .orders-admin .table-container {
+        background: var(--light);
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,.08);
+        border: 1px solid rgba(0,0,0,0.04);
+        overflow: auto; /* permite rolar horizontal e vertical quando necessário */
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .orders-admin .table {
+        margin-bottom: 0;
+        min-width: 720px; /* força largura mínima para ativar o scroll em telas estreitas */
+    }
+
+        .orders-admin .table thead th {
+            background-color: #f8fafc;
+            color: var(--text-dark);
+            font-weight: 600;
+            padding: 1rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .orders-admin .table td {
+            padding: 1rem;
+            vertical-align: middle;
+            border-color: #f1f5f9;
+        }
+
+    .orders-admin .table-striped tbody tr:nth-of-type(odd) {
+        background-color: #fafafb;
+    }
+
+    .orders-admin .table tbody tr:hover {
+        background-color: #f8fafc;
+    }
+
+    /* Estado de carregamento do tbody (refresh/SignalR) */
+    .orders-admin #tbodyPedidos.is-loading {
+        opacity: .6;
+        filter: grayscale(.05);
+        transition: opacity .2s ease;
+        position: relative;
+    }
+
+        .orders-admin #tbodyPedidos.is-loading::after {
+            content: "Atualizando…";
+            position: absolute;
+            right: .75rem;
+            top: .5rem;
+            font-size: .85rem;
+            color: var(--text-light);
+        }
+
+    /* Botões de ação na tabela */
+    .orders-admin .btn-group .btn {
+        border-radius: 8px;
+    }
+
+    /* --------------- Fix 1: gráficos responsivos (caso essa tela tenha charts) --------------- */
+    .orders-admin .chart-wrap {
+        position: relative;
+        width: 100%;
+        height: 320px; /* altura controlada por CSS */
+    }
+
+        .orders-admin .chart-wrap.h260 {
+            height: 260px;
+        }
+
+        .orders-admin .chart-wrap.h320 {
+            height: 320px;
+        }
+
+        /* o canvas ocupa 100% do container (Chart.js se adapta) */
+        .orders-admin .chart-wrap canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+/* Responsivo */
+@media (max-width: 992px) {
+    .orders-admin .header-row {
+        padding: .85rem 1rem;
+    }
+
+    .orders-admin .btn-group .btn {
+        padding: .4rem .7rem;
+    }
+}
+
+@media (max-width: 576px) {
+    /* Se quiser ocultar a coluna "Data" no mobile, descomente: */
+    /*
+  .orders-admin .table thead th:nth-child(2),
+  .orders-admin .table tbody td:nth-child(2) { display: none; }
+  */
+
+    .orders-admin .chart-wrap {
+        height: 260px;
+    }
+    /* gráficos mais compactos no mobile */
+}

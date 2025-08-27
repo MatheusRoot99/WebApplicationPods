@@ -1,0 +1,225 @@
+﻿@model WebApplicationPods.DTO.ReportsDTO.AdminReportViewModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Relatório de Vendas";
+
+    // dados p/ JS
+    var serieJson = JsonSerializer.Serialize(Model.SeriePorDia.Select(s => new { dia = s.Dia.ToString("yyyy-MM-dd"), qtd = s.Quantidade, total = s.Total }));
+    var metodosJson = JsonSerializer.Serialize(Model.Metodos.Select(m => new { metodo = m.Metodo, qtd = m.Quantidade, total = m.Total }));
+    var topJson = JsonSerializer.Serialize(Model.TopClientes.Select(c => new { nome = c.Nome ?? ("#" + c.ClienteId), qtd = c.Quantidade, total = c.Total }));
+
+    // filtros atuais
+    var qs = ViewContext.HttpContext.Request.Query;
+    var hoje = DateTime.Today;
+    var modoSel = (qs["modo"].ToString() ?? "dia").ToLowerInvariant();
+    var dataSel = qs["data"].ToString();
+    var anoSel = qs["ano"].ToString();
+    var mesSel = qs["mes"].ToString();
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/reports.css" asp-append-version="true" />
+}
+
+<div class="container mt-4 page-pad">
+    <div class="toolbar d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
+        <h2>Relatório — @Model.PeriodoDescricao</h2>
+
+        <form method="get" class="row gx-2 gy-2 align-items-end">
+            <div class="col-auto">
+                <label class="form-label">Modo</label>
+                <select class="form-select" name="modo" id="selModo">
+                    @if (modoSel == "dia")
+                    {
+                        <option value="dia" selected>Dia</option>
+                        <option value="mes">Mês</option>
+                    }
+                    else
+                    {
+                        <option value="dia">Dia</option>
+                        <option value="mes" selected>Mês</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-auto" id="grpDia" style="display:@(modoSel == "dia" ? "block" : "none")">
+                <label class="form-label">Data</label>
+                <input class="form-control" type="date" name="data"
+                       value="@(string.IsNullOrEmpty(dataSel) ? DateTime.Today.ToString("yyyy-MM-dd") : dataSel)" />
+            </div>
+
+            <div class="col-auto" id="grpMes" style="display:@(modoSel == "mes" ? "block" : "none")">
+                <label class="form-label">Ano</label>
+                <input class="form-control" type="number" name="ano" min="2000" max="2100"
+                       value="@(string.IsNullOrEmpty(anoSel) ? hoje.Year.ToString() : anoSel)" />
+            </div>
+
+            <div class="col-auto" id="grpMes2" style="display:@(modoSel == "mes" ? "block" : "none")">
+                <label class="form-label">Mês</label>
+                <input class="form-control" type="number" name="mes" min="1" max="12"
+                       value="@(string.IsNullOrEmpty(mesSel) ? hoje.Month.ToString() : mesSel)" />
+            </div>
+
+            <div class="col-auto">
+                <button class="btn btn-brand">Aplicar</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- KPIs -->
+    <div class="row g-3">
+        <div class="col-md-3 kpi">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted">Pedidos Recebidos</div>
+                    <div class="h3 mb-0">@Model.Resumo.Recebidos</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 kpi">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted">Pedidos Pagos</div>
+                    <div class="h3 mb-0">@Model.Resumo.Pagos</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 kpi">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted">Taxa de Conversão</div>
+                    @{
+                        var conv = Model.Resumo.Recebidos > 0
+                        ? (decimal)Model.Resumo.Pagos / Model.Resumo.Recebidos * 100m
+                        : 0m;
+                    }
+                    <div class="h3 mb-0">@conv.ToString("0.0")%</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 kpi">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted">Total Vendido</div>
+                    <div class="h3 mb-0">@Model.Resumo.TotalVendido.ToString("C")</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="row g-3 mt-1">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">Pedidos e Faturamento por Dia</div>
+                <div class="card-body">
+                    <div class="chart-wrap h320">
+                        <canvas id="chartSerie"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">Formas de Pagamento</div>
+                <div class="card-body">
+                    <div class="chart-wrap h260">
+                        <canvas id="chartMetodos"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Clientes -->
+    <div class="card mt-3">
+        <div class="card-header">Top Clientes</div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Cliente</th>
+                            <th class="text-end">Pedidos</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in Model.TopClientes)
+                        {
+                            <tr>
+                                <td>@(string.IsNullOrWhiteSpace(c.Nome) ? ("#" + c.ClienteId) : c.Nome)</td>
+                                <td class="text-end">@c.Quantidade</td>
+                                <td class="text-end">@c.Total.ToString("C")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        (function () {
+          // alterna campos do filtro
+          const sel = document.getElementById('selModo');
+          if (sel){
+            sel.addEventListener('change', function(){
+              const isMes = this.value === 'mes';
+              document.getElementById('grpDia').style.display  = isMes ? 'none'  : 'block';
+              document.getElementById('grpMes').style.display  = isMes ? 'block' : 'none';
+              document.getElementById('grpMes2').style.display = isMes ? 'block' : 'none';
+            });
+          }
+
+          const serie   = @Html.Raw(serieJson);
+          const metodos = @Html.Raw(metodosJson);
+
+          // --- Série por dia ---
+          const labels = serie.map(x => x.dia);
+          const qtds   = serie.map(x => x.qtd);
+          const totais = serie.map(x => x.total);
+
+          new Chart(document.getElementById('chartSerie'), {
+            type:'line',
+            data:{ labels, datasets:[
+              { label:'Pedidos', data:qtds,    yAxisID:'y1', tension:.25 },
+              { label:'Faturamento', data:totais, yAxisID:'y2', tension:.25 }
+            ]},
+            options:{
+              responsive:true,
+              maintainAspectRatio:false,
+              interaction:{ mode:'index', intersect:false },
+              scales:{
+                x:{ ticks:{ autoSkip:true, maxRotation:0, minRotation:0 } },
+                y1:{ type:'linear', position:'left',  title:{display:true,text:'Qtd'} },
+                y2:{ type:'linear', position:'right', title:{display:true,text:'R$'}, grid:{ drawOnChartArea:false } }
+              },
+              plugins:{ legend:{ position:'top' } }
+            }
+          });
+
+          // --- Métodos de pagamento ---
+          const mLabels = metodos.map(x=>x.metodo);
+          const mQtds   = metodos.map(x=>x.qtd);
+
+          new Chart(document.getElementById('chartMetodos'), {
+            type:'bar',
+            data:{ labels:mLabels, datasets:[{ label:'Pedidos', data:mQtds }] },
+            options:{
+              responsive:true,
+              maintainAspectRatio:false,
+              scales:{
+                x:{ ticks:{
+                  autoSkip:true, maxRotation:0, minRotation:0,
+                  callback:(v)=> (mLabels[v] && mLabels[v].length>14) ? mLabels[v].slice(0,14)+'…' : mLabels[v]
+                }}
+              }
+            }
+          });
+        })();
+    </script>
+}
