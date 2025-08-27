@@ -5,25 +5,40 @@
     ViewData["Title"] = "Excluir Categoria";
 }
 
-<div class="card">
-    <div class="card-header bg-danger text-white">
-        <h4>@ViewData["Title"]</h4>
-    </div>
-    <div class="card-body">
-        <h5>Você tem certeza que deseja excluir esta categoria?</h5>
+@section Styles {
+    <link rel="stylesheet" href="~/css/categories-admin.css" asp-append-version="true" />
+}
 
-        <dl class="row mt-3">
-            <dt class="col-sm-3">Nome:</dt>
-            <dd class="col-sm-9">@Model.Nome</dd>
+<div class="container-fluid px-3 px-md-4 py-3 categories-form">
+    <div class="card shadow-sm">
+        <div class="card-header danger-header">
+            <h4 class="mb-0">
+                <i class="fas fa-trash-alt me-2"></i>@ViewData["Title"]
+            </h4>
+        </div>
 
-            <dt class="col-sm-3">Descrição:</dt>
-            <dd class="col-sm-9">@Model.Descricao</dd>
-        </dl>
+        <div class="card-body">
+            <h5 class="mb-3">Você tem certeza que deseja excluir esta categoria?</h5>
 
-        <form asp-action="ConfirmarExcluir">
-            <input type="hidden" asp-for="Id" />
-            <button type="submit" class="btn btn-danger">Confirmar Exclusão</button>
-            <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
-        </form>
+            <dl class="row dl">
+                <dt class="col-sm-3">Nome:</dt>
+                <dd class="col-sm-9">@Model.Nome</dd>
+
+                <dt class="col-sm-3">Descrição:</dt>
+                <dd class="col-sm-9">@Model.Descricao</dd>
+            </dl>
+
+            <form asp-action="ConfirmarExcluir" class="mt-3">
+                <input type="hidden" asp-for="Id" />
+                <div class="form-actions">
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Confirmar Exclusão
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>

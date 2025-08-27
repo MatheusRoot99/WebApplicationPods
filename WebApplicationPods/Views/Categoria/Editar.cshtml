@@ -5,32 +5,45 @@
     ViewData["Title"] = "Editar Categoria";
 }
 
-<div class="card">
-    <div class="card-header bg-warning">
-        <h4>@ViewData["Title"]</h4>
-    </div>
-    <div class="card-body">
-        <form asp-action="Editar">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <input type="hidden" asp-for="Id" />
+@section Styles {
+    <link rel="stylesheet" href="~/css/categories-admin.css" asp-append-version="true" />
+}
 
-            <div class="form-group mb-3">
-                <label asp-for="Nome" class="control-label"></label>
-                <input asp-for="Nome" class="form-control" />
-                <span asp-validation-for="Nome" class="text-danger"></span>
-            </div>
+<div class="container-fluid px-3 px-md-4 py-3 categories-form">
+    <div class="card shadow-sm">
+        <div class="card-header brand-header">
+            <h4 class="mb-0">
+                <i class="fas fa-pen-to-square me-2"></i>@ViewData["Title"]
+            </h4>
+        </div>
 
-            <div class="form-group mb-3">
-                <label asp-for="Descricao" class="control-label"></label>
-                <textarea asp-for="Descricao" class="form-control" rows="3"></textarea>
-                <span asp-validation-for="Descricao" class="text-danger"></span>
-            </div>
+        <div class="card-body">
+            <form asp-action="Editar" class="needs-validation" novalidate>
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                <input type="hidden" asp-for="Id" />
 
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary">Salvar Alterações</button>
-                <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
-            </div>
-        </form>
+                <div class="mb-3">
+                    <label asp-for="Nome" class="form-label"></label>
+                    <input asp-for="Nome" class="form-control" placeholder="Digite o nome da categoria" />
+                    <span asp-validation-for="Nome" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="Descricao" class="form-label"></label>
+                    <textarea asp-for="Descricao" class="form-control" rows="3" placeholder="Digite uma descrição (opcional)"></textarea>
+                    <span asp-validation-for="Descricao" class="text-danger small"></span>
+                </div>
+
+                <div class="form-actions">
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -38,4 +51,15 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+    <script>
+        (function () {
+            // Validação bootstrap
+            document.querySelectorAll('form.needs-validation').forEach(f => {
+                f.addEventListener('submit', e => {
+                    if (!f.checkValidity()) { e.preventDefault(); e.stopPropagation(); }
+                    f.classList.add('was-validated');
+                }, false);
+            });
+        })();
+    </script>
 }

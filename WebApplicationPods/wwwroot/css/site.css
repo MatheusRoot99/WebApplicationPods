@@ -1,71 +1,128 @@
-/* Seu CSS atual */
-html {
-    font-size: 14px;
+/* =========================
+   Paleta do site (variáveis)
+   ========================= */
+:root {
+    /* marca */
+    --brand-start: #6a11cb;
+    --brand-end: #2575fc;
+    --primary: #2575fc;
+    --primary-dark: #1e56d9;
+    /* base */
+    --dark: #111827;
+    --light: #ffffff;
+    --gray: #f5f5f7;
+    --text-dark: #111827;
+    --text-light: #6b7280;
+    /* util */
+    --primary-grad: linear-gradient(135deg,var(--brand-start),var(--brand-end));
+    --shadow-1: 0 4px 20px rgba(0,0,0,.08);
+    --shadow-2: 0 8px 30px rgba(0,0,0,.12);
+    --radius: 12px;
+    --mbn-height: 68px;
 }
 
-@media (min-width: 768px) {
+/* Bootstrap 5.1 – faz tudo usar sua paleta */
+.bg-primary {
+    background-color: var(--primary) !important;
+}
+
+.text-primary {
+    color: var(--primary) !important;
+}
+
+.border-primary {
+    border-color: var(--primary) !important;
+}
+
+.btn-primary {
+    background-color: var(--primary) !important;
+    border-color: var(--primary) !important;
+}
+
+    .btn-primary:hover, .btn-primary:focus {
+        background-color: var(--primary-dark) !important;
+        border-color: var(--primary-dark) !important;
+    }
+
+.btn-outline-primary {
+    color: var(--primary) !important;
+    border-color: var(--primary) !important;
+}
+
+    .btn-outline-primary:hover, .btn-outline-primary:focus {
+        background-color: var(--primary) !important;
+        border-color: var(--primary) !important;
+        color: #fff !important;
+    }
+
+.badge.bg-primary {
+    background-color: var(--primary) !important;
+}
+
+.link-primary {
+    color: var(--primary) !important;
+}
+
+a.link-primary:hover {
+    color: var(--primary-dark) !important;
+}
+
+
+
+
+/* =========================
+   Base + Bootstrap tweaks
+   ========================= */
+html {
+    font-size: 14px;
+    position: relative;
+    min-height: 100%;
+}
+
+@media (min-width:768px) {
     html {
         font-size: 16px;
     }
 }
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-    position: relative;
-    min-height: 100%;
-}
-
 body {
     margin-bottom: 60px;
+    background-color: var(--gray);
+    color: var(--text-dark);
 }
 
-/* Estilos gerais */
-body {
-    background-color: #f8f9fa;
-    color: #212529;
-}
-
-.container-fluid {
-    /*padding-top: 1.5rem;
-    padding-bottom: 1.5rem;*/
+/* Foco usa a cor primária do tema */
+.btn:focus,
+.btn:active:focus,
+.btn-link.nav-link:focus,
+.form-control:focus,
+.form-check-input:focus {
+    box-shadow: 0 0 0 .1rem #fff, 0 0 0 .25rem color-mix(in srgb, var(--primary) 80%, transparent);
+    border-color: var(--primary);
 }
 
 /* Cards */
 .card {
     border: none;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075);
     margin-bottom: 1.5rem;
+    background: var(--light);
 }
 
 .card-header {
     background-color: #fff;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    border-bottom: 1px solid rgba(0,0,0,.125);
     font-weight: 600;
 }
 
 /* Breadcrumb */
 .breadcrumb {
     background-color: transparent;
-    padding: 0.5rem 0;
+    padding: .5rem 0;
     margin-bottom: 1rem;
 }
 
-/* Responsividade */
-@media (max-width: 767.98px) {
-    .container-fluid {
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-    }
-}
-
-.preco-mask {
-    text-align: right;
-    direction: rtl;
-}
-
+/* Imagens pequenas em tabelas */
 .table-img {
     width: 50px;
     height: 50px;
@@ -91,12 +148,12 @@ body {
     height: 1.25rem;
     display: inline-flex;
     align-items: center;
-    justify-content: center
+    justify-content: center;
 }
 
 /* Sidebar */
 .sidebar-section {
-    margin-bottom: 1rem
+    margin-bottom: 1rem;
 }
 
 .sidebar-section-title {
@@ -104,52 +161,265 @@ body {
     padding: .5rem 1rem;
     font-size: .75rem;
     text-transform: uppercase;
-    letter-spacing: .1em
+    letter-spacing: .1em;
 }
 
 /* Offcanvas */
 .offcanvas-start {
-    width: 280px
+    width: 280px;
 }
 
 /* Ícones alinhados em dropdown */
 .dropdown-item i {
     width: 20px;
     text-align: center;
-    margin-right: 8px
+    margin-right: 8px;
 }
 
-/* ======== RESPONSIVO ======== */
-@media (max-width: 991.98px) {
+/* Preço (máscara RTL para digitação) */
+.preco-mask {
+    text-align: right;
+    direction: rtl;
+}
+
+/* =========================
+   Cores de componentes Bootstrap
+   ========================= */
+a {
+    color: var(--primary);
+}
+
+    a:hover {
+        color: var(--primary-dark);
+    }
+
+.btn-primary {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+    .btn-primary:hover {
+        background: var(--primary-dark);
+        border-color: var(--primary-dark);
+    }
+
+.btn-outline-primary {
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+    .btn-outline-primary:hover {
+        color: #fff;
+        background: var(--primary);
+        border-color: var(--primary);
+    }
+
+/* Gradiente da marca p/ heros/headers/badges custom */
+.bg-brand-grad {
+    background: var(--primary-grad) !important;
+}
+
+.text-light-2 {
+    color: var(--text-light);
+}
+
+/* =========================
+   Navbar + Bottom nav mobile
+   ========================= */
+.navbar > .container,
+.navbar > .container-fluid,
+.navbar > .container-lg,
+.navbar > .container-md,
+.navbar > .container-sm,
+.navbar > .container-xl,
+.navbar > .container-xxl {
+    display: flex; /* corrige 'display: ;' inválido */
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Top navbar: link do carrinho e wrapper para o badge */
+.navbar .nav-link.cart-link {
+    display: inline-flex;
+    width: auto;
+    padding-left: .5rem;
+    padding-right: .5rem;
+    align-items: center;
+}
+
+.navbar .cart-wrap {
+    line-height: 1;
+    position: relative;
+    display: inline-flex;
+}
+
+    .navbar .cart-wrap .badge {
+        min-width: 1.25rem;
+        height: 1.25rem;
+        font-size: .65rem;
+        padding: .25em .4em;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+/* Responsivo navbar */
+@media (max-width:991.98px) {
     #sidebar-wrapper {
-        display: none !important
+        display: none !important;
     }
     /* esconde sidebar no mobile */
     .navbar-collapse {
-        flex-grow: 0
+        flex-grow: 0;
     }
 
     .navbar-nav {
         flex-direction: row;
         align-items: center;
-        gap: .5rem
+        gap: .5rem;
     }
-        /* ícones em linha */
+
         .navbar-nav .nav-item {
-            margin-left: 0
+            margin-left: 0;
         }
 
     .navbar .nav-link {
-        padding: .5rem
+        padding: .5rem;
     }
 
-    body {
-        padding-bottom: 84px
-    }
+        .navbar .nav-link.cart-link {
+            padding-left: .25rem;
+            padding-right: .25rem;
+        }
+
     /* espaço para a bottom nav não cobrir conteúdo */
+    body {
+        padding-bottom: 84px;
+        margin-bottom: 0;
+    }
 }
 
-/* Animação do badge */
+/* BOTTOM NAV MOBILE */
+@media (max-width:991.98px) {
+    .mobile-bottom-nav {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 70px;
+        background: rgba(255,255,255,.97);
+        border-top: 1px solid rgba(0,0,0,.08);
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+        z-index: 1080;
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 -4px 20px rgba(0,0,0,.08);
+    }
+
+        .mobile-bottom-nav .mbn-item {
+            position: relative;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            min-width: 56px;
+            color: #6c757d !important;
+            text-decoration: none !important;
+            transition: all .2s ease;
+            padding: 8px 12px;
+            border-radius: 12px;
+        }
+
+            .mobile-bottom-nav .mbn-item:hover {
+                color: #495057 !important;
+                background: rgba(0,0,0,.03);
+            }
+
+            .mobile-bottom-nav .mbn-item i {
+                font-size: 20px;
+                line-height: 1;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                transition: all .2s ease;
+            }
+
+            .mobile-bottom-nav .mbn-item.active {
+                color: #0d6efd !important;
+            }
+
+                .mobile-bottom-nav .mbn-item.active i {
+                    background: rgba(13,110,253,.12);
+                    color: #0d6efd;
+                }
+
+            .mobile-bottom-nav .mbn-item .mbn-label {
+                font-size: 11px;
+                line-height: 1;
+                font-weight: 500;
+            }
+
+        .mobile-bottom-nav .mbn-badge {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            transform: translate(50%,-50%);
+            background: #dc3545;
+            color: #fff;
+            border-radius: 999px;
+            font-size: 10px;
+            line-height: 1;
+            padding: 2px 5px;
+            min-width: 16px;
+            text-align: center;
+            box-shadow: 0 0 0 2px rgba(255,255,255,.9);
+            font-weight: 700;
+        }
+
+    @keyframes mbn-bump {
+        0% {
+            transform: translate(50%,-50%) scale(1)
+        }
+
+        30% {
+            transform: translate(50%,-50%) scale(1.2)
+        }
+
+        100% {
+            transform: translate(50%,-50%) scale(1)
+        }
+    }
+
+    .mbn-badge-bump {
+        animation: mbn-bump .35s ease;
+    }
+}
+
+/* =========================
+   Utilidades e pequenos ajustes
+   ========================= */
+.container-fluid { /* padding custom opcional */
+    /* padding-top:1.5rem; padding-bottom:1.5rem; */
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.preco-mask {
+    text-align: right;
+    direction: rtl;
+}
+
+/* Animação do badge (desktop) */
 @keyframes bump {
     0% {
         transform: scale(1)
@@ -165,158 +435,13 @@ body {
 }
 
 .badge-bump {
-    animation: bump .35s ease
+    animation: bump .35s ease;
 }
 
-/* Top navbar: link do carrinho e wrapper para o badge */
-.navbar .nav-link.cart-link {
-    display: inline-flex;
-    width: auto;
-    padding-left: .5rem;
-    padding-right: .5rem;
-    align-items: center
-}
-
-.navbar .cart-wrap {
-    line-height: 1;
-    position: relative;
-    display: inline-flex
-}
-
-    .navbar .cart-wrap .badge {
-        min-width: 1.25rem;
-        height: 1.25rem;
-        font-size: .65rem;
-        padding: .25em .4em;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center
+/* Ajustes mobile gerais */
+@media (max-width:767.98px) {
+    .container-fluid {
+        padding-left: .5rem;
+        padding-right: .5rem;
     }
-
-@media (max-width: 991.98px) {
-    .navbar .nav-link.cart-link {
-        padding-left: .25rem;
-        padding-right: .25rem
-    }
-}
-
-/* ===== BOTTOM NAV MOBILE MODERNIZADA ===== */
-@media (max-width: 991.98px) {
-    /* evita que o conteúdo fique escondido atrás da barra */
-    body {
-        padding-bottom: 84px;
-        margin-bottom: 0; /* você tinha margin-bottom:60px global */
-    }
-
-    .mobile-bottom-nav {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: 70px;
-        background: rgba(255, 255, 255, 0.97);
-        border-top: 1px solid rgba(0, 0, 0, 0.08);
-        display: flex;
-        justify-content: space-around;
-        align-items: center;
-        padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
-        z-index: 1080;
-        -webkit-backdrop-filter: blur(10px);
-        backdrop-filter: blur(10px);
-        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
-    }
-
-        .mobile-bottom-nav .mbn-item {
-            position: relative;
-            display: inline-flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            min-width: 56px;
-            color: #6c757d !important;
-            text-decoration: none !important;
-            transition: all 0.2s ease;
-            padding: 8px 12px;
-            border-radius: 12px;
-        }
-
-            .mobile-bottom-nav .mbn-item:visited {
-                color: #6c757d !important;
-            }
-
-            .mobile-bottom-nav .mbn-item:hover {
-                text-decoration: none;
-                color: #495057 !important;
-                background: rgba(0, 0, 0, 0.03);
-            }
-
-            .mobile-bottom-nav .mbn-item i {
-                font-size: 20px;
-                line-height: 1;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                width: 32px;
-                height: 32px;
-                border-radius: 50%;
-                transition: all 0.2s ease;
-            }
-
-            .mobile-bottom-nav .mbn-item.active {
-                color: #0d6efd !important;
-            }
-
-                .mobile-bottom-nav .mbn-item.active i {
-                    background: rgba(13, 110, 253, 0.12);
-                    color: #0d6efd;
-                }
-
-            .mobile-bottom-nav .mbn-item .mbn-label {
-                font-size: 11px;
-                line-height: 1;
-                color: inherit;
-                font-weight: 500;
-            }
-
-        .mobile-bottom-nav .mbn-badge {
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            transform: translate(50%, -50%);
-            background: #dc3545;
-            color: #fff;
-            border-radius: 999px;
-            font-size: 10px;
-            line-height: 1;
-            padding: 2px 5px;
-            min-width: 16px;
-            text-align: center;
-            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
-            font-weight: 700;
-        }
-
-    @keyframes mbn-bump {
-        0% {
-            transform: translate(50%, -50%) scale(1)
-        }
-
-        30% {
-            transform: translate(50%, -50%) scale(1.2)
-        }
-
-        100% {
-            transform: translate(50%, -50%) scale(1)
-        }
-    }
-
-    .mbn-badge-bump {
-        animation: mbn-bump .35s ease;
-    }
-}
-
-.navbar > .container, .navbar > .container-fluid, .navbar > .container-lg, .navbar > .container-md, .navbar > .container-sm, .navbar > .container-xl, .navbar > .container-xxl {
-    display: ;
-    /* flex-wrap: inherit; */
-    align-items: center;
-    justify-content: space-between;
 }
