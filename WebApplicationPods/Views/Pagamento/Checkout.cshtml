@@ -7,6 +7,20 @@
     var afToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
 }
 
+@section Styles{
+    <style>
+        /* Botões ocupam largura total no mobile */
+    @@media (max-width: 576px) {
+      .btn { width: 100%; }
+      .input-group .btn { width: auto; } /* mantém o 'Copiar' encaixado */
+    }
+
+    /* Evita clipes dentro do card */
+    .card-body { overflow: visible; }
+
+    </style>
+}
+
 <div class="container-xxl py-4">
     <div class="row g-4">
 
@@ -28,13 +42,13 @@
                             <div>
                                 @if (!string.IsNullOrEmpty(Model.PixQrBase64Png))
                                 {
-                                    <img src="data:image/png;base64,@Model.PixQrBase64Png"
-                                         alt="QR Code Pix"
+                                    <img src="data:image/png;base64,@Model.PixQrBase64Png" alt="QR Code Pix"
                                          style="width:220px;height:220px;border-radius:10px;border:1px solid #eee;" />
                                 }
                                 else
                                 {
-                                    <div class="border rounded d-flex align-items-center justify-content-center" style="width:220px;height:220px;color:#999;">
+                                    <div class="border rounded d-flex align-items-center justify-content-center"
+                                         style="width:220px;height:220px;color:#999;">
                                         QR Code
                                     </div>
                                 }
@@ -47,15 +61,17 @@
                                     <button class="btn btn-secondary" type="button" onclick="copyPix()">Copiar</button>
                                 </div>
 
-                                <div class="d-flex align-items-center gap-2 mt-3">
+                                <div class="d-flex align-items-center gap-2 mt-3 flex-wrap">
                                     <span id="pixStatus" class="badge bg-light text-dark">Status: @Model.Status</span>
                                     <button class="btn btn-outline-secondary btn-sm" type="button" id="btnForcarConsulta">Atualizar status</button>
+                                    <button class="btn btn-outline-secondary btn-sm" type="button" id="pix-cancel-btn">Cancelar</button>
                                 </div>
 
                                 <div class="text-muted mt-2">Valor: <strong>@Model.Amount.ToString("C")</strong></div>
                             </div>
                         </div>
                     }
+
 
                     @* ===================== CARTÃO ===================== *@
                     @if (Model.Metodo == PaymentMethod.CardCredit || Model.Metodo == PaymentMethod.CardDebit)
@@ -64,9 +80,11 @@
 
                         <div id="cardPaymentBrick_container"></div>
 
-                        <div class="mt-3 d-flex gap-2">
-                            <button id="mp-pay-btn" class="btn btn-primary" disabled>Pagar</button>
-                            <button id="mp-cancel-btn" type="button" class="btn btn-outline-secondary">Cancelar</button>
+                        @* Mantemos somente o CANCELAR da página (o Brick já tem o botão Pagar) *@
+                        <div class="mt-3 d-flex gap-2 flex-wrap">
+                            <button id="mp-cancel-btn" type="button" class="btn btn-outline-secondary flex-grow-1 flex-sm-grow-0">
+                                Cancelar
+                            </button>
                         </div>
 
                         <div class="text-muted mt-2">Se necessário, faremos a autenticação 3-D Secure.</div>
@@ -84,7 +102,7 @@
 
         <!-- COL DIREITA -->
         <div class="col-lg-5">
-            <div class="card sticky-top" style="top: 20px;">
+            <div class="card sticky-lg-top" style="top:-27px;">
                 <div class="card-header">
                     <h5 class="mb-0">Resumo</h5>
                 </div>
@@ -92,7 +110,7 @@
                     <div class="d-flex justify-content-between">
                         <span>Total</span><strong>@Model.Amount.ToString("C")</strong>
                     </div>
-                    <div class="mt-3 small text-muted">Pedido: #@Model.PedidoId • Pagamento: #@Model.Id</div>
+                    <div class="mt-3 small text-muted">Pedido: #@Model.PedidoId</div>
                 </div>
             </div>
         </div>
@@ -174,21 +192,15 @@
               paymentMethods: { creditCard: 'all', debitCard: 'all' },
               visual: { style: { theme: 'default' } } // usa tema padrão
             },
-            callbacks: {
-              onReady: () => {
-                const b = document.getElementById('mp-pay-btn');
-                if (b) b.disabled = false;
-              },
+          callbacks: {
+            onReady: () => { /* nada aqui, o Brick já habilita o próprio botão */ },
               onSubmit: async (cardFormData) => {
-                const btn = document.getElementById('mp-pay-btn');
                 try {
-                  if (btn) btn.disabled = true;
-
                   const res = await fetch('@Url.Action("ConfirmCard", "Pagamento", new { id = Model.Id })', {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
-                      'RequestVerificationToken': '@afToken'     // << antiforgery
+                      'RequestVerificationToken': '@afToken'
                     },
                     body: JSON.stringify(cardFormData)
                   });
@@ -207,8 +219,6 @@
                 } catch (e) {
                   console.error('ConfirmCard error', e);
                   alert('Erro ao confirmar o pagamento.');
-                } finally {
-                  if (btn) btn.disabled = false;
                 }
               },
               onError: (error) => {
@@ -216,6 +226,33 @@
                 alert('Erro ao carregar/validar os campos do cartão.');
               }
             }
+          });
+        })();
+    </script>
+    <script>
+                // ------ Cancelar (comum ao cartão e ao pix) ------
+        (function bindCancel(){
+          const cancelBtns = [
+            document.getElementById('mp-cancel-btn'),
+            document.getElementById('pix-cancel-btn')
+          ].filter(Boolean);
+
+          cancelBtns.forEach(btn => {
+            if (btn.dataset.bound) return;
+            btn.dataset.bound = '1';
+            btn.addEventListener('click', async () => {
+              try {
+                const r = await fetch('@Url.Action("Cancelar", "Pagamento", new { id = Model.Id })', {
+                  method: 'POST',
+                  headers: { 'RequestVerificationToken': '@afToken' }
+                });
+                const data = await r.json().catch(() => ({}));
+                if (data && data.redirect) window.location.href = data.redirect;
+                else window.location.href = '@Url.Action("Index", "Carrinho")';
+              } catch {
+                window.location.href = '@Url.Action("Index", "Carrinho")';
+              }
+            });
           });
         })();
     </script>
