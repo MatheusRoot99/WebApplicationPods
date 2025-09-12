@@ -92,4 +92,37 @@
             setInterval(refreshTable, 30000);
         })();
     </script>
+
+    <script>
+        (function() {
+          function highlightRowIfAny() {
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get('highlight');
+            if (!id) return;
+
+            // pode demorar para a tabela carregar via fetch; tente algumas vezes
+            let tries = 0;
+            const it = setInterval(() => {
+              tries++;
+              const row = document.querySelector(`tr[data-id="${id}"]`);
+              if (row) {
+                row.classList.add('row-highlight');
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                clearInterval(it);
+              }
+              if (tries > 20) clearInterval(it); // ~4s se 200ms
+            }, 200);
+          }
+
+          // chame no load e também após refresh via SignalR
+          highlightRowIfAny();
+
+          // Se você já tem refreshTable(), injete o highlight depois
+          const _old = window.refreshTable;
+          window.refreshTable = async function() {
+            if (typeof _old === 'function') await _old();
+            highlightRowIfAny();
+          };
+        })();
+    </script>
 }

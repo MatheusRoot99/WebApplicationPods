@@ -1,0 +1,134 @@
+﻿@model WebApplicationPods.Models.PedidoModel
+@{
+    ViewData["Title"] = "Resumo do pedido";
+    var subtotal = Model?.PedidoItens?.Sum(i => i.PrecoUnitario * i.Quantidade) ?? 0m;
+    var total = subtotal + (Model?.TaxaEntrega ?? 0m);
+
+    string[] finais = new[] { "Cancelado", "Pagamento Falhou", "Entregue", "Concluído" };
+    bool emAndamento = Model != null && !(finais.Any(f => (Model.Status ?? "").Contains(f, StringComparison.OrdinalIgnoreCase)));
+
+    var firstItem = Model?.PedidoItens?.FirstOrDefault();
+    var thumb = firstItem?.Produto?.ImagemUrl ?? "https://via.placeholder.com/80x80?text=%20";
+    var title = firstItem?.Produto?.Nome ?? "Pedido";
+    var totalUnidades = Model?.PedidoItens?.Sum(i => i.Quantidade) ?? 0;
+    var extras = totalUnidades > 1 ? $"+ {totalUnidades - 1} itens" : $"{totalUnidades} un";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/ResumoPedidoCliente.css" asp-append-version="true" />
+}
+
+
+
+<div class="wrap">
+    <!-- Header -->
+    <div class="cardx">
+        <div class="cardx-h">
+            <div class="hline">
+                <div class="head-mini">
+                    <img class="head-thumb" src="@thumb" alt="@title">
+                    <div>
+                        <div class="head-title">@title <span class="head-sub">(@extras)</span></div>
+                        <div class="head-sub"><i class="bi bi-calendar2"></i> @Model.DataPedido.ToString("dd/MM/yyyy HH:mm")</div>
+                    </div>
+                </div>
+
+                @{
+                    var st = (Model.Status ?? "").ToLowerInvariant();
+                    var badgeClass = st.Contains("cancel") ? "err"
+                    : (st.Contains("entreg") || st.Contains("concl")) ? ""
+                    : (st.Contains("pago") || st.Contains("prepar") || st.Contains("rota")) ? "warn" : "";
+                }
+                <div class="status-badge @(badgeClass)">
+                    <span class="dot"></span> @Model.Status
+                </div>
+            </div>
+        </div>
+
+        <div class="cardx-b">
+            <!-- Resumo rápido -->
+            <div class="rows">
+                <div class="rowx"><i class="bi bi-cash-coin"></i> <span class="muted">Pagamento:</span> <strong>@Model.MetodoPagamento</strong></div>
+                @if (Model.EnderecoId > 0 && Model.Endereco != null)
+                {
+                    <div class="rowx">
+                        <i class="bi bi-geo-alt"></i> <span class="muted">Entrega:</span>
+                        <div><strong>@Model.Endereco.Logradouro, @Model.Endereco.Numero</strong> — @Model.Endereco.Bairro</div>
+                    </div>
+                }
+                else
+                {
+                    <div class="rowx"><i class="bi bi-bag"></i> <span class="muted">Retirada no local</span></div>
+                }
+                @*<div class="rowx"><i class="bi bi-receipt"></i> <span class="muted">Código:</span> <strong>@Model.CodigoTransacao</strong></div>*@
+            </div>
+
+            <!-- Itens -->
+            <div class="mt-3">
+                @foreach (var it in Model.PedidoItens)
+                {
+                    var nome = it?.Produto?.Nome ?? $"Produto #{it.ProdutoId}";
+                    var img = it?.Produto?.ImagemUrl ?? "https://via.placeholder.com/80x80?text=%20";
+                    <div class="it">
+                        <img class="it-img" src="@img" alt="@nome" />
+                        <div>
+                            <div class="it-name">@nome x @it.Quantidade</div>
+                            @if (!string.IsNullOrWhiteSpace(it?.Observacoes))
+                            {
+                                <div class="it-sabor">Obs: @it.Observacoes</div>
+                            }
+                        </div>
+                        <div class="it-price">@((it.PrecoUnitario * it.Quantidade).ToString("C"))</div>
+                    </div>
+                }
+            </div>
+
+            <!-- Totais -->
+            <div class="mt-3 tot">
+                <div class="kv"><span>Subtotal</span><strong>@subtotal.ToString("C")</strong></div>
+                <div class="kv"><span>Taxa de entrega</span><strong>@Model.TaxaEntrega.ToString("C")</strong></div>
+                <div class="kv total"><span>Total</span><strong>@total.ToString("C")</strong></div>
+            </div>
+
+            <!-- Ações -->
+            <div class="actions">
+                @if (emAndamento)
+                {
+                    <a class="btnx btn-brand"
+                       asp-controller="Pedido" asp-action="Acompanhar"
+                       asp-route-id="@Model.Id" asp-route-t="@Model.RastreioToken">
+                        <i class="bi bi-truck"></i> Acompanhar em tempo real
+                    </a>
+                }
+                @*<button type="button" id="btnShare" class="btnx"><i class="bi bi-share"></i> Compartilhar</button>
+                <button type="button" id="btnCopy" class="btnx"><i class="bi bi-link-45deg"></i> Copiar link</button>*@
+                <a class="btnx" asp-controller="Home" asp-action="Index"><i class="bi bi-bag-plus"></i> Continuar comprando</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function(){
+          const url = window.location.href;
+          const shareBtn = document.getElementById('btnShare');
+          const copyBtn  = document.getElementById('btnCopy');
+
+          shareBtn?.addEventListener('click', async ()=>{
+            if (navigator.share){
+              try{ await navigator.share({ title: document.title, url }); }catch{}
+            } else {
+              try{ await navigator.clipboard.writeText(url);}catch{}
+            }
+          });
+
+          copyBtn?.addEventListener('click', async ()=>{
+            try{ await navigator.clipboard.writeText(url);
+              copyBtn.classList.add('btn-brand');
+              setTimeout(()=>copyBtn.classList.remove('btn-brand'),900);
+            }catch{}
+          });
+        })();
+    </script>
+}

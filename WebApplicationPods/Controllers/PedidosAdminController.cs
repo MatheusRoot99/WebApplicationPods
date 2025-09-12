@@ -27,13 +27,17 @@ namespace WebApplicationPods.Controllers
         private static readonly Dictionary<string, string[]> AllowedTransitions =
             new(StringComparer.OrdinalIgnoreCase)
             {
+                ["Pendente"] = new[] { "Cancelado" }, // se quiser permitir "Pago" aqui, adicione
+                ["Aguardando Pagamento"] = new[] { "Pago", "Cancelado" },
+                ["Aguardando Pagamento (Entrega)"] = new[] { "Pago", "Cancelado" },
+
                 ["Aguardando Confirmação (Dinheiro)"] = new[] { "Pago", "Cancelado" },
                 ["Pago"] = new[] { "Em Preparação", "Cancelado" },
                 ["Em Preparação"] = new[] { "Pronto", "Cancelado" },
                 ["Pronto"] = new[] { "Saiu p/ Entrega", "Cancelado" },
                 ["Saiu p/ Entrega"] = new[] { "Entregue", "Cancelado" },
                 ["Pagamento Falhou"] = new[] { "Cancelado" }
-                // "Entregue" e "Cancelado" -> estado final (sem transições)
+                // "Entregue" e "Cancelado" -> finais
             };
 
         // GET /PedidosAdmin?filtro=abertos|dia
@@ -45,6 +49,7 @@ namespace WebApplicationPods.Controllers
                 : _pedidos.ObterAbertos();
 
             ViewBag.Filtro = filtro;
+            ViewBag.Allowed = AllowedTransitions; // <-- expõe para a view/partial
             return View(lista);
         }
 
@@ -56,6 +61,7 @@ namespace WebApplicationPods.Controllers
                 ? _pedidos.ObterDoDia()
                 : _pedidos.ObterAbertos();
 
+            ViewBag.Allowed = AllowedTransitions; // <-- idem
             return PartialView("_PedidosTableBody", lista);
         }
 
@@ -127,5 +133,31 @@ namespace WebApplicationPods.Controllers
 
             return View(vm);
         }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> Excluir(int id)
+        {
+            var pedido = _pedidos.ObterPorId(id);
+            if (pedido is null)
+            {
+                TempData["Erro"] = "Pedido não encontrado.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (!string.Equals(pedido.Status, "Cancelado", StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["Erro"] = "Só é permitido excluir pedidos cancelados.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            _pedidos.ExcluirLogico(id, User.Identity?.Name);
+
+            await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged", new { id, deleted = true });
+            TempData["Sucesso"] = "Pedido excluído.";
+            return RedirectToAction(nameof(Index));
+        }
+
     }
+
+
 }

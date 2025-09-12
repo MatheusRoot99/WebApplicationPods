@@ -1,64 +1,73 @@
-﻿@model IEnumerable<WebApplicationPods.Models.PedidoModel>
-@using System.Linq
+﻿@using WebApplicationPods.Models
+@model IEnumerable<PedidoModel>
+
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+@{
+    // Dicionário de transições permitido exposto pelo controller
+    // Tipo: IDictionary<string, string[]>
+    var allowed = ViewBag.Allowed as IDictionary<string, string[]>;
+}
+
+
 
 @foreach (var p in Model.OrderByDescending(x => x.DataPedido))
 {
-    var atual = p.Status ?? "";
-    var isCash = string.Equals(p.MetodoPagamento, "dinheiro", StringComparison.OrdinalIgnoreCase);
+    var statusAtual = p.Status ?? string.Empty;
 
-    // monta a lista de próximas ações válidas conforme o status atual
-    var nexts = new List<(string Label, string Value, string Css)>();
+    // Próximos estados possíveis conforme o mapa
+    string[] proximas = null;
+    if (allowed != null && allowed.TryGetValue(statusAtual, out var arr))
+    {
+        proximas = arr;
+    }
 
-    if (atual.Equals("Aguardando Confirmação (Dinheiro)", StringComparison.OrdinalIgnoreCase))
-    {
-        nexts.Add(("Aprovar (Dinheiro)", "Pago", "btn btn-success"));
-        nexts.Add(("Cancelar", "Cancelado", "btn btn-danger"));
-    }
-    else if (atual.Equals("Pago", StringComparison.OrdinalIgnoreCase))
-    {
-        nexts.Add(("Iniciar", "Em Preparação", "btn btn-primary"));
-        nexts.Add(("Cancelar", "Cancelado", "btn btn-danger"));
-    }
-    else if (atual.Equals("Em Preparação", StringComparison.OrdinalIgnoreCase))
-    {
-        nexts.Add(("Pronto", "Pronto", "btn btn-warning"));
-        nexts.Add(("Cancelar", "Cancelado", "btn btn-danger"));
-    }
-    @* else if (atual.Equals("Pronto", StringComparison.OrdinalIgnoreCase))
-    {
-        nexts.Add(("Saiu", "Saiu p/ Entrega", "btn btn-secondary"));
-        nexts.Add(("Cancelar", "Cancelado", "btn btn-danger"));
-    } *@
-    else if (atual.Equals("Saiu p/ Entrega", StringComparison.OrdinalIgnoreCase))
-    {
-        nexts.Add(("Entregue", "Entregue", "btn btn-dark"));
-        nexts.Add(("Cancelar", "Cancelado", "btn btn-danger"));
-    }
-    else if (atual.Equals("Pagamento Falhou", StringComparison.OrdinalIgnoreCase))
-    {
-        nexts.Add(("Cancelar", "Cancelado", "btn btn-danger"));
-    }
-    // Entregue/Cancelado => sem ações
-
-    <tr>
-        @* <td>@p.Id</td> *@
-        <td>@p.Cliente?.Nome</td>
+    <tr data-id="@p.Id">
+        <td>@(p.Cliente?.Nome ?? "—")</td>
         <td>@p.DataPedido.ToString("dd/MM HH:mm")</td>
         <td>@p.ValorTotal.ToString("C")</td>
-        <td>@p.MetodoPagamento</td>
-        <td><span class="badge bg-info">@p.Status</span></td>
+        <td>@(p.MetodoPagamento ?? "—")</td>
+        <td>
+            <span class="badge bg-info">@statusAtual</span>
+        </td>
         <td class="text-end">
-            @if (nexts.Any())
+            @* Botões de transição de status *@
+            @if (proximas != null && proximas.Any())
             {
-                <form asp-action="AtualizarStatus" asp-controller="PedidosAdmin" method="post" class="d-inline">
+                <form asp-controller="PedidosAdmin" asp-action="AtualizarStatus" method="post" class="d-inline">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="id" value="@p.Id" />
-                    <div class="btn-group btn-group-sm">
-                        @foreach (var b in nexts)
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Ações do pedido">
+                        @foreach (var prox in proximas)
                         {
-                            <button name="status" value="@b.Value" class="@b.Css">@b.Label</button>
+                            var lowered = prox?.ToLowerInvariant() ?? string.Empty;
+
+                            var label = prox;
+                            var css = "btn btn-outline-secondary";
+
+                            if (lowered.Contains("pago")) { label = "Aprovar"; css = "btn btn-success"; }
+                            else if (lowered.Contains("prepara")) { label = "Iniciar"; css = "btn btn-primary"; }
+                            else if (lowered.Contains("pronto")) { label = "Pronto"; css = "btn btn-warning"; }
+                            else if (lowered.Contains("saiu") && lowered.Contains("entrega")) { label = "Saiu p/ Entrega"; css = "btn btn-secondary"; }
+                            else if (lowered.Contains("entregue")) { label = "Entregue"; css = "btn btn-dark"; }
+                            else if (lowered.Contains("cancel")) { label = "Cancelar"; css = "btn btn-danger"; }
+
+                            <button type="submit" name="status" value="@prox" class="@css">@label</button>
                         }
                     </div>
+                </form>
+            }
+
+            @* Botão de exclusão só aparece para cancelados *@
+            @if (string.Equals(p.Status, "Cancelado", StringComparison.OrdinalIgnoreCase))
+            {
+                <form asp-controller="PedidosAdmin" asp-action="Excluir" method="post" class="d-inline"
+                      onsubmit="return confirm('Excluir este pedido?');">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@p.Id" />
+                    <button type="submit" class="btn btn-sm btn-excluir" title="Excluir">
+                        <i class="bi bi-trash"></i> Excluir
+                    </button>
                 </form>
             }
         </td>

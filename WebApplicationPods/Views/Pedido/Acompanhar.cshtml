@@ -1,348 +1,205 @@
-﻿@model WebApplicationPods.Models.PedidoModel
+﻿@using WebApplicationPods.Models
+@model PedidoModel
 @{
-    ViewData["Title"] = "Acompanhar Pedido";
+    ViewData["Title"] = "Acompanhar pedido";
+
+    // lista de últimos pedidos (pode ser null)
+    var ultimos = ViewBag.Ultimos as IEnumerable<PedidoModel> ?? Enumerable.Empty<PedidoModel>();
+
+    string statusAtual = Model?.Status ?? "";
+    string[] finais = new[] { "Cancelado", "Pagamento Falhou", "Entregue", "Concluído" };
+
+    bool temPedidoAtual = Model != null && !finais.Any(f => statusAtual.Contains(f, StringComparison.OrdinalIgnoreCase));
+
     var subtotal = Model?.PedidoItens?.Sum(i => i.PrecoUnitario * i.Quantidade) ?? 0m;
     var total = subtotal + (Model?.TaxaEntrega ?? 0m);
 }
 
 @section Styles {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-
-    <style>
-        :root {
-            /* ====== PALETA PADRÃO DO SITE (roxo/azul) ====== */
-            --brand-start: #6a11cb; /* roxo */
-            --brand-end: #2575fc; /* azul */
-            --brand-soft: #F2E9FF; /* roxo bem claro */
-            /* mapeia nomes antigos p/ manter os mesmos utilitários */
-            --orange: var(--brand-start);
-            --orange-600: var(--brand-end);
-            --orange-dark: var(--brand-end);
-            --orange-soft: var(--brand-soft);
-            --dark: #1A1A1A;
-            --light: #fff;
-            --muted: #6B7280;
-            --bg: #F5F5F7;
-            --radius: 14px;
-            --shadow: 0 8px 24px rgba(0,0,0,.08);
-            /* altura do bottom-nav (mobile) */
-            --mbn-height: 68px;
-        }
-
-        body {
-            background: var(--bg)
-        }
-
-        .wrap {
-            max-width: 1100px;
-            margin: 1.2rem auto;
-            padding: 0 1rem
-        }
-
-        /* header */
-        .page-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem
-        }
-
-            .page-head h2 {
-                margin: 0;
-                font-weight: 800;
-                color: var(--dark)
-            }
-
-        .subtle {
-            color: var(--muted);
-            font-size: .95rem
-        }
-
-        /* cards */
-        .cardx {
-            background: var(--light);
-            border: 1px solid #eee;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            overflow: hidden
-        }
-
-        .cardx-h {
-            padding: .9rem 1.1rem;
-            background: linear-gradient(135deg,var(--brand-start),var(--brand-end));
-            color: #fff;
-            font-weight: 700
-        }
-
-        .cardx-b {
-            padding: 1.1rem
-        }
-
-        /* status badge */
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: .45rem;
-            background: var(--orange-soft);
-            color: var(--orange-600);
-            border-radius: 999px;
-            padding: .35rem .7rem;
-            font-weight: 800
-        }
-
-        /* stepper */
-        .steps {
-            display: grid;
-            grid-template-columns: repeat(6,1fr);
-            gap: .75rem;
-            margin: .8rem 0 1.2rem
-        }
-
-        .step {
-            background: #fff;
-            border: 1px solid #eee;
-            border-radius: 12px;
-            padding: .6rem .5rem;
-            text-align: center;
-            min-height: 86px
-        }
-
-            .step .ico {
-                width: 36px;
-                height: 36px;
-                border-radius: 50%;
-                display: grid;
-                place-items: center;
-                margin: 0 auto .35rem;
-                background: #f3f4f6;
-                color: #555
-            }
-
-            .step small {
-                display: block;
-                color: #6b7280;
-                font-size: .78rem;
-                margin-top: .15rem
-            }
-
-            .step.active {
-                border-color: var(--brand-end)
-            }
-
-                .step.active .ico {
-                    background: var(--brand-soft);
-                    color: var(--brand-end)
-                }
-
-            .step.done {
-                border-color: #e5e7eb;
-                background: #fafafa
-            }
-
-                .step.done .ico {
-                    background: var(--brand-end);
-                    color: #fff
-                }
-
-        /* itens */
-        .it {
-            display: flex;
-            gap: .9rem;
-            align-items: center;
-            padding: .7rem 0;
-            border-bottom: 1px solid #f0f0f0
-        }
-
-            .it:last-child {
-                border-bottom: 0
-            }
-
-        .it-img {
-            width: 54px;
-            height: 54px;
-            border-radius: 10px;
-            border: 1px solid #eee;
-            object-fit: cover
-        }
-
-        .it-name {
-            font-weight: 700;
-            color: var(--dark)
-        }
-
-        .it-sabor {
-            color: #6b7280;
-            font-size: .85rem
-        }
-
-        .it-price {
-            margin-left: auto;
-            font-weight: 800
-        }
-
-        /* totais */
-        .tot-row {
-            display: flex;
-            justify-content: space-between;
-            margin: .35rem 0
-        }
-
-            .tot-row.total {
-                font-size: 1.08rem;
-                font-weight: 900;
-                border-top: 1px dashed #eee;
-                padding-top: .6rem
-            }
-
-        /* actions */
-        .actions {
-            display: flex;
-            gap: .6rem;
-            flex-wrap: wrap;
-            margin-top: .8rem
-        }
-
-        .btnx {
-            display: inline-flex;
-            align-items: center;
-            gap: .45rem;
-            border-radius: 10px;
-            padding: .55rem .9rem;
-            font-weight: 800;
-            border: 1px solid #e5e7eb;
-            background: #fff;
-            color: #111
-        }
-
-            .btnx:hover {
-                background: #f9fafb
-            }
-
-        .btn-brand {
-            background: linear-gradient(135deg,var(--brand-start),var(--brand-end));
-            border-color: transparent;
-            color: #fff
-        }
-
-            .btn-brand:hover {
-                filter: brightness(1.03)
-            }
-
-        /* layout responsivo */
-        @@media (min-width:992px) {
-            .grid-2
-
-        {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 1rem
-        }
-
-        }
-
-        /* safe area com bottom-nav no mobile */
-        @@media (max-width:991.98px) {
-            .wrap
-
-        {
-            padding-bottom: calc(var(--mbn-height) + 24px + env(safe-area-inset-bottom,0px))
-        }
-
-        }
-    </style>
+    <link rel="stylesheet" href="~/css/acompanharPedido.css" asp-append-version="true" />
 }
 
 <div class="wrap">
     <div class="page-head">
         <div>
-            @* <h2>Acompanhar Pedido #@Model.Id</h2> *@
-            <div class="subtle">Realizado em @Model.DataPedido.ToString("dd/MM/yyyy HH:mm")</div>
+            <h2>Meus pedidos</h2>
+            @if (Model != null)
+            {
+                <div class="subtle">Pedido #@Model.Id • realizado em @Model.DataPedido.ToString("dd/MM/yyyy HH:mm")</div>
+            }
         </div>
-        <a asp-controller="Home" asp-action="Index" class="btnx">
-            <i class="bi bi-arrow-left"></i> Voltar
-        </a>
+        <a asp-controller="Home" asp-action="Index" class="btnx"><i class="bi bi-arrow-left"></i> Voltar</a>
     </div>
 
-    <div class="grid-2">
-        <!-- Coluna esquerda: status e itens -->
-        <div class="cardx">
-            <div class="cardx-h">
-                <div class="d-flex align-items-center justify-content-between">
-                    <span>Andamento do pedido</span>
-                    <span class="status-badge" id="statusBadge">
-                        <i class="bi bi-clock-history"></i>
-                        <span id="statusText">@Model.Status</span>
-                    </span>
-                </div>
-            </div>
-            <div class="cardx-b">
-                <!-- Stepper -->
-                <div class="steps" id="steps">
-                    <div class="step" data-step="0">
-                        <div class="ico"><i class="bi bi-ui-checks"></i></div>
-                        <div>Pendente</div><small>recebido</small>
-                    </div>
-                    <div class="step" data-step="1">
-                        <div class="ico"><i class="bi bi-cash-coin"></i></div>
-                        <div>Pagamento</div><small>aguardando</small>
-                    </div>
-                    <div class="step" data-step="2">
-                        <div class="ico"><i class="bi bi-check2-circle"></i></div>
-                        <div>Pago</div><small>aprovado</small>
-                    </div>
-                    <div class="step" data-step="3">
-                        <div class="ico"><i class="bi bi-gear-wide-connected"></i></div>
-                        <div>Preparando</div><small>em produção</small>
-                    </div>
-                    <div class="step" data-step="4">
-                        <div class="ico"><i class="bi bi-truck"></i></div>
-                        <div>Em rota</div><small>ou retirada</small>
-                    </div>
-                    <div class="step" data-step="5">
-                        <div class="ico"><i class="bi bi-bag-check"></i></div>
-                        <div>Concluído</div><small>entregue</small>
-                    </div>
-                </div>
+    <!-- Abas -->
+    <div class="seg-tabs" id="tabs">
+        @if (temPedidoAtual)
+        {
+            <div class="seg @(temPedidoAtual ? "active" : "")" data-tab="track"><i class="bi bi-truck"></i> Acompanhar</div>
+        }
+        <div class="seg @(!temPedidoAtual ? "active" : "")" data-tab="history"><i class="bi bi-clock-history"></i> Histórico</div>
+    </div>
 
-                <!-- Itens -->
-                <div>
-                    @foreach (var it in Model.PedidoItens)
-                    {
-                        var nome = it?.Produto?.Nome ?? $"Produto #{it.ProdutoId}";
-                        var img = it?.Produto?.ImagemUrl ?? "https://via.placeholder.com/80x80?text=Produto";
-                        var sabor = it?.Observacoes; // se você guarda sabor no Observacoes do item
-                                                     <div class="it">
-                                                         <img class="it-img" src="@img" alt="@nome" />
-                                                         <div>
-                                                             <div class="it-name">@nome x @it.Quantidade</div>
-                                @if (!string.IsNullOrWhiteSpace(sabor))
-                                {
-                                    <div class="it-sabor">Obs: @sabor</div>
-                                }
-                            </div>
-                            <div class="it-price">@((it.PrecoUnitario * it.Quantidade).ToString("C"))</div>
+    <!-- CONTEÚDO -->
+    <div class="tab @(temPedidoAtual ? "active" : "")" id="tab-track">
+        @if (temPedidoAtual)
+        {
+            <div class="grid-2">
+                <!-- Andamento + Itens -->
+                <div class="cardx">
+                    <div class="cardx-h">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span>Andamento do pedido</span>
+                            <span class="status-badge" id="statusBadge">
+                                <i class="bi bi-clock-history"></i>
+                                <span id="statusText">@Model.Status</span>
+                            </span>
                         </div>
-                    }
+                    </div>
+                    <div class="cardx-b">
+                        <div class="steps-wrap">
+                            <div class="steps" id="steps">
+                                <div class="step" data-step="0">
+                                    <div class="ico"><i class="bi bi-ui-checks"></i></div>
+                                    <div>Pendente</div><small>recebido</small>
+                                </div>
+                                <div class="step" data-step="1">
+                                    <div class="ico"><i class="bi bi-cash-coin"></i></div>
+                                    <div>Pagamento</div><small>aguardando</small>
+                                </div>
+                                <div class="step" data-step="2">
+                                    <div class="ico"><i class="bi bi-check2-circle"></i></div>
+                                    <div>Pago</div><small>aprovado</small>
+                                </div>
+                                <div class="step" data-step="3">
+                                    <div class="ico"><i class="bi bi-gear-wide-connected"></i></div>
+                                    <div>Preparando</div><small>em produção</small>
+                                </div>
+                                <div class="step" data-step="4">
+                                    <div class="ico"><i class="bi bi-truck"></i></div>
+                                    <div>Em rota</div><small>ou retirada</small>
+                                </div>
+                                <div class="step" data-step="5">
+                                    <div class="ico"><i class="bi bi-bag-check"></i></div>
+                                    <div>Concluído</div><small>entregue</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Itens -->
+                        <div>
+                            @foreach (var it in Model.PedidoItens)
+                            {
+                                var nome = it?.Produto?.Nome ?? $"Produto #{it.ProdutoId}";
+                                var img = it?.Produto?.ImagemUrl ?? "https://via.placeholder.com/80x80?text=Produto";
+                                var sabor = it?.Observacoes;
+                                <div class="it">
+                                    <img class="it-img" src="@img" alt="@nome" />
+                                    <div>
+                                        <div class="it-name">@nome x @it.Quantidade</div>
+                                        @if (!string.IsNullOrWhiteSpace(sabor))
+                                        {
+                                            <div class="it-sabor">Obs: @sabor</div>
+                                        }
+                                    </div>
+                                    <div class="it-price">@((it.PrecoUnitario * it.Quantidade).ToString("C"))</div>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Ações úteis -->
+                        <div class="actions">
+                            <button type="button" id="btnRefresh" class="btnx"><i class="bi bi-arrow-clockwise"></i> Atualizar agora</button>
+                            <a asp-controller="Pedido" asp-action="Acompanhar" asp-route-id="@Model.Id" asp-route-t="@Model.RastreioToken" class="btnx btn-brand">
+                                <i class="bi bi-shuffle"></i> Recarregar
+                            </a>
+                            @* <button type="button" id="btnShare" class="btnx"><i class="bi bi-share"></i> Compartilhar</button>
+                            // <button type="button" id="btnCopy" class="btnx"><i class="bi bi-link-45deg"></i> Copiar link</button>*@
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resumo -->
+                <div class="cardx">
+                    <div class="cardx-h">Resumo</div>
+                    <div class="cardx-b">
+                        <div class="tot-row"><span>Subtotal</span><strong>@subtotal.ToString("C")</strong></div>
+                        <div class="tot-row"><span>Taxa de entrega</span><strong>@Model.TaxaEntrega.ToString("C")</strong></div>
+                        <div class="tot-row total"><span>Total</span><strong id="totalLabel">@total.ToString("C")</strong></div>
+                        <div class="subtle mt-2">
+                            <div><i class="bi bi-cash-coin"></i> Pagamento: @Model.MetodoPagamento</div>
+                            @if (Model.EnderecoId > 0 && Model.Endereco != null)
+                            {
+                                <div class="mt-1"><i class="bi bi-geo-alt"></i> Entrega: @Model.Endereco.Logradouro, @Model.Endereco.Numero - @Model.Endereco.Bairro</div>
+                            }
+                            else
+                            {
+                                <div class="mt-1"><i class="bi bi-bag"></i> Retirada no local</div>
+                            }
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Coluna direita: Resumo -->
-        <div class="cardx">
-            <div class="cardx-h">Resumo</div>
-            <div class="cardx-b">
-                <div class="tot-row"><span>Subtotal</span><strong>@subtotal.ToString("C")</strong></div>
-                <div class="tot-row"><span>Taxa de entrega</span><strong>@Model.TaxaEntrega.ToString("C")</strong></div>
-                <div class="tot-row total"><span>Total</span><strong id="totalLabel">@total.ToString("C")</strong></div>
-
-                <div class="actions">
-                    <button type="button" id="btnRefresh" class="btnx">
-                        <i class="bi bi-arrow-clockwise"></i> Atualizar agora
-                    </button>
-                    <a asp-controller="Pedido" asp-action="Acompanhar" asp-route-id="@Model.Id" class="btnx btn-brand">
-                        <i class="bi bi-shuffle"></i> Recarregar página
-                    </a>
+        }
+        else
+        {
+            <div class="cardx">
+                <div class="cardx-h">Sem pedido em andamento</div>
+                <div class="cardx-b">
+                    <div class="subtle">Assim que você fizer uma compra, o acompanhamento aparece aqui 👇</div>
                 </div>
+            </div>
+        }
+    </div>
+
+    <!-- HISTÓRICO -->
+    <div class="tab @(!temPedidoAtual ? "active" : "")" id="tab-history">
+        <div class="cardx">
+            <div class="cardx-h">Histórico</div>
+            <div class="cardx-b">
+                @if (ultimos.Any())
+                {
+                    <div class="orders">
+                        @foreach (var p in ultimos.OrderByDescending(x => x.DataPedido).Take(10))
+                        {
+                            var st = (p.Status ?? "").ToLowerInvariant();
+                            var badgeClass = st.Contains("cancel") ? "err"
+                            : (st.Contains("entreg") || st.Contains("concl")) ? "ok"
+                            : (st.Contains("pago") || st.Contains("prepar") || st.Contains("rota")) ? "warn"
+                            : "";
+
+                            var firstItem = p.PedidoItens?.FirstOrDefault();
+                            var img = firstItem?.Produto?.ImagemUrl ?? "https://via.placeholder.com/64x64?text=%20";
+                            var title = firstItem?.Produto?.Nome ?? "Pedido";
+                            var totalUnidades = p.PedidoItens?.Sum(i => i.Quantidade) ?? 0;
+                            var extras = totalUnidades > 1 ? $"+ {totalUnidades - 1} itens" : $"{totalUnidades} un";
+
+                            <div class="order-card">
+                                <img class="order-thumb" src="@img" alt="@title" />
+                                <div class="order-info">
+                                    <div class="order-title">@title <span class="text-muted">(@extras)</span></div>
+                                    <div class="order-extras">
+                                        <span class="badge-soft @badgeClass">@p.Status</span>
+                                        <span><i class="bi bi-clock"></i> @p.DataPedido.ToString("dd/MM HH:mm")</span>
+                                    </div>
+                                </div>
+                                <div class="order-right">
+                                    <div class="order-total">@p.ValorTotal.ToString("C")</div>
+                                    <a class="btnx btn-brand btn-compact"
+                                       asp-controller="Pedido" asp-action="ResumoPedidoCliente"
+                                       asp-route-id="@p.Id" asp-route-t="@p.RastreioToken">
+                                        <i class="bi bi-eye"></i> Ver
+                                    </a>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="subtle">Você ainda não possui pedidos no histórico.</div>
+                }
             </div>
         </div>
     </div>
@@ -350,62 +207,82 @@
 
 @section Scripts {
     <script>
-        // URL do status do pedido (crie em PedidoController -> Status(int id) { return Json(new { status = ... }); })
-        const STATUS_URL = '@Url.Action("Status", "Pedido", new { id = Model.Id })';
+        // Tabs
+        (function(){
+          const tabs = document.getElementById('tabs');
+          if(!tabs) return;
+          tabs.addEventListener('click', (e)=>{
+            const seg = e.target.closest('.seg'); if(!seg) return;
+            tabs.querySelectorAll('.seg').forEach(s=>s.classList.remove('active'));
+            seg.classList.add('active');
+            const which = seg.dataset.tab;
+            document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+            document.getElementById('tab-'+which).classList.add('active');
+          });
+        })();
 
-        // Normaliza texto e mapeia para o passo 0..5
+        // STATUS polling
+        const STATUS_URL = '@(Model != null ? Url.Action("Status", "Pedido", new { id = Model.Id, t = Model.RastreioToken }) : "")';
+
         function statusToStep(text){
           const s = (text||'').toLowerCase();
-
-          if (s.includes('cancel')) return -1;            // cancelado
+          if (s.includes('cancel')) return -1;
           if (s.includes('entreg') || s.includes('concl')) return 5;
           if (s.includes('rota') || s.includes('saiu') || s.includes('entrega') || s.includes('retirada')) return 4;
           if (s.includes('prepar') || s.includes('produção') || s.includes('producao')) return 3;
           if (s.includes('pago') || s.includes('aprov')) return 2;
           if (s.includes('aguard') && s.includes('pag')) return 1;
-          return 0; // pendente
+          return 0;
         }
-
         function paintSteps(step){
           const nodes = document.querySelectorAll('.step');
           nodes.forEach((el, idx) => {
             el.classList.remove('active','done');
-            if (step < 0){ return; }
+            if (step < 0) return;
             if (idx < step) el.classList.add('done');
             if (idx === step) el.classList.add('active');
           });
         }
-
         function setBadge(status){
           const txt = document.getElementById('statusText');
           if (txt) txt.textContent = status || '—';
         }
-
         async function refreshStatus(){
+          if(!STATUS_URL) return;
           const btn = document.getElementById('btnRefresh');
-          try {
+          try{
             if (btn){ btn.disabled = true; btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Verificando...'; }
             const r = await fetch(STATUS_URL, { cache: 'no-store' });
             if (!r.ok) return;
             const data = await r.json();
             const status = data?.status ?? '';
-            setBadge(status);
-            paintSteps(statusToStep(status));
-          } catch(e){
-            // silêncio
-          } finally {
+            setBadge(status); paintSteps(statusToStep(status));
+          } catch(e) {} finally {
             if (btn){ btn.disabled = false; btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Atualizar agora'; }
           }
         }
+        // Inicial
+        @if (temPedidoAtual)
+        {
+              <text>paintSteps(statusToStep('@(statusAtual.ToLower())'));</text>
+              <text>let timer = setInterval(refreshStatus, 10000);
+                    document.getElementById('btnRefresh')?.addEventListener('click', refreshStatus);
+                    window.addEventListener('beforeunload', ()=> clearInterval(timer));</text>
+        }
 
-        // Inicializa com o status atual do servidor
-        paintSteps(statusToStep('@(Model.Status ?? "").ToLower()'));
-
-        // Polling automático a cada 10s
-        let timer = setInterval(refreshStatus, 10000);
-        document.getElementById('btnRefresh')?.addEventListener('click', refreshStatus);
-
-        // limpa no unload
-        window.addEventListener('beforeunload', ()=> clearInterval(timer));
+        // Compartilhar / Copiar
+        (function(){
+          const shareBtn = document.getElementById('btnShare');
+          const copyBtn  = document.getElementById('btnCopy');
+          const url = window.location.href;
+          shareBtn?.addEventListener('click', async ()=>{
+            if (navigator.share){
+              try{ await navigator.share({ title: document.title, url }); } catch{}
+            } else { try{ await navigator.clipboard.writeText(url); copyBtn?.classList.add('btn-brand'); setTimeout(()=>copyBtn?.classList.remove('btn-brand'), 900);} catch{} }
+          });
+          copyBtn?.addEventListener('click', async ()=>{
+            try{ await navigator.clipboard.writeText(url); copyBtn.classList.add('btn-brand'); setTimeout(()=>copyBtn.classList.remove('btn-brand'), 900);}catch{}
+          });
+        })();
     </script>
 }

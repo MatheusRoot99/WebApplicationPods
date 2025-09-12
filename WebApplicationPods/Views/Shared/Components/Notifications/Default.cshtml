@@ -1,0 +1,53 @@
+﻿@using WebApplicationPods.Models
+@model IEnumerable<PedidoModel>
+@{
+    bool isLojista = ViewBag.IsLojista == true;
+}
+
+<ul class="dropdown-menu dropdown-menu-end shadow-sm p-0" style="min-width:240px;">
+    <li><h6 class="dropdown-header">Notificações</h6></li>
+
+    @if (Model?.Any() == true)
+    {
+        @foreach (var p in Model)
+        {
+            if (isLojista)
+            {
+                <li>
+                    <a class="dropdown-item d-flex align-items-center gap-2 py-2"
+                       asp-controller="PedidosAdmin" asp-action="Index"
+                       asp-route-filtro="dia" asp-route-highlight="@p.Id">
+                        <i class="bi bi-receipt"></i>
+                        <span>Pedido #@p.Id</span>
+                    </a>
+                </li>
+            }
+            else
+            {
+                <li>
+                    <a class="dropdown-item d-flex align-items-center gap-2 py-2"
+                       asp-controller="Pedido" asp-action="Acompanhar" asp-route-id="@p.Id">
+                        <i class="bi bi-receipt"></i>
+                        <span>Seu pedido #@p.Id</span>
+                    </a>
+                </li>
+                @* Como o VC já retorna só o último em andamento, não precisamos listar mais *@
+            }
+        }
+    }
+    else
+    {
+        <li><div class="px-3 py-2 text-muted">Sem novas notificações</div></li>
+    }
+
+    @if (isLojista)
+    {
+        <li><hr class="dropdown-divider" /></li>
+        <li>
+            <a class="dropdown-item d-flex align-items-center gap-2 py-2"
+               asp-controller="PedidosAdmin" asp-action="Index" asp-route-filtro="dia">
+                <i class="bi bi-list-ul"></i> <strong>Ver todos</strong>
+            </a>
+        </li>
+    }
+</ul>

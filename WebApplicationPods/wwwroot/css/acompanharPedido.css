@@ -1,0 +1,427 @@
+﻿/* ===========================
+   Tema / Tokens
+=========================== */
+:root {
+    --brand-start: #6a11cb;
+    --brand-end: #2575fc;
+    --brand-soft: #F2E9FF;
+    --dark: #1A1A1A;
+    --light: #fff;
+    --muted: #6B7280;
+    --bg: #F5F5F7;
+    --radius: 14px;
+    --shadow: 0 8px 24px rgba(0,0,0,.08);
+    --mbn-height: 68px;
+}
+
+/* ===========================
+   Base
+=========================== */
+body {
+    background: var(--bg)
+}
+
+.wrap {
+    max-width: 1100px;
+    margin: 1rem auto;
+    /*padding: 0 1rem*/
+}
+
+/* Utilidades rápidas */
+.subtle {
+    color: var(--muted);
+    font-size: .95rem
+}
+
+.kv {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem
+}
+
+.hide {
+    display: none
+}
+
+/* ===========================
+   Cabeçalho da página
+=========================== */
+.page-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: .75rem
+}
+
+    .page-head h2 {
+        margin: 0;
+        font-weight: 800;
+        color: var(--dark)
+    }
+
+/* ===========================
+   Abas (pílulas)
+=========================== */
+.seg-tabs {
+    display: flex;
+    gap: .5rem;
+    margin: .5rem 0 1rem
+}
+
+    .seg-tabs .seg {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: .5rem;
+        border-radius: 999px;
+        padding: .55rem .9rem;
+        font-weight: 800;
+        border: 1px solid #e5e7eb;
+        background: #fff;
+        color: #111;
+        box-shadow: var(--shadow);
+        cursor: pointer
+    }
+
+        .seg-tabs .seg.active {
+            color: #fff;
+            border-color: transparent;
+            background: linear-gradient(135deg,var(--brand-start),var(--brand-end))
+        }
+
+/* ===========================
+   Cartões
+=========================== */
+.cardx {
+    background: var(--light);
+    border: 1px solid #eee;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden
+}
+
+.cardx-h {
+    padding: .85rem 1.05rem;
+    background: linear-gradient(135deg,var(--brand-start),var(--brand-end));
+    color: #fff;
+    font-weight: 800
+}
+
+.cardx-b {
+    padding: 1rem
+}
+
+/* Versões compactas (onde precisar) */
+.cardx--compact .cardx-b {
+    padding: .75rem
+}
+
+/* ===========================
+   Badges
+=========================== */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    background: var(--brand-soft);
+    color: var(--brand-end);
+    border-radius: 999px;
+    padding: .35rem .7rem;
+    font-weight: 800
+}
+
+.badge-soft {
+    border-radius: 999px;
+    padding: .2rem .55rem;
+    font-weight: 700;
+    background: #eef2ff;
+    color: #3b82f6
+}
+
+    .badge-soft.ok {
+        background: #dcfce7;
+        color: #16a34a
+    }
+
+    .badge-soft.warn {
+        background: #fef9c3;
+        color: #ca8a04
+    }
+
+    .badge-soft.err {
+        background: #fee2e2;
+        color: #dc2626
+    }
+
+/* ===========================
+   Stepper (scroll no mobile)
+=========================== */
+.steps-wrap {
+    overflow: auto;
+    padding: .25rem .25rem .35rem
+}
+
+.steps {
+    display: grid;
+    grid-template-columns: repeat(6,minmax(108px,1fr));
+    gap: .75rem;
+    min-width: 648px;
+    margin: .6rem 0 1rem
+}
+
+.step {
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    padding: .55rem .5rem;
+    text-align: center;
+    min-height: 82px
+}
+
+    .step .ico {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        margin: 0 auto .3rem;
+        background: #f3f4f6;
+        color: #555
+    }
+
+    .step small {
+        display: block;
+        color: #6b7280;
+        font-size: .78rem;
+        margin-top: .1rem
+    }
+
+    .step.active {
+        border-color: var(--brand-end)
+    }
+
+        .step.active .ico {
+            background: var(--brand-soft);
+            color: var(--brand-end)
+        }
+
+    .step.done {
+        border-color: #e5e7eb;
+        background: #fafafa
+    }
+
+        .step.done .ico {
+            background: var(--brand-end);
+            color: #fff
+        }
+
+/* ===========================
+   Lista de itens do pedido
+=========================== */
+.it {
+    display: flex;
+    gap: .85rem;
+    align-items: center;
+    padding: .7rem 0;
+    border-bottom: 1px solid #f0f0f0
+}
+
+    .it:last-child {
+        border-bottom: 0
+    }
+
+.it-img {
+    width: 54px;
+    height: 54px;
+    border-radius: 10px;
+    border: 1px solid #eee;
+    object-fit: cover
+}
+
+.it-name {
+    font-weight: 700;
+    color: var(--dark)
+}
+
+.it-sabor {
+    color: #6b7280;
+    font-size: .85rem
+}
+
+.it-price {
+    margin-left: auto;
+    font-weight: 800
+}
+
+/* Totais */
+.tot-row {
+    display: flex;
+    justify-content: space-between;
+    margin: .3rem 0
+}
+
+    .tot-row.total {
+        font-size: 1.06rem;
+        font-weight: 900;
+        border-top: 1px dashed #eee;
+        padding-top: .55rem
+    }
+
+/* ===========================
+   Botões
+=========================== */
+.actions {
+    display: flex;
+    gap: .55rem;
+    flex-wrap: wrap;
+    margin-top: .75rem
+}
+
+.btnx {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    border-radius: 10px;
+    padding: .5rem .85rem;
+    font-weight: 800;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #111
+}
+
+    .btnx:hover {
+        background: #f9fafb
+    }
+
+    .btnx.btn-compact {
+        padding: .42rem .7rem
+    }
+
+.btn-brand {
+    background: linear-gradient(135deg,var(--brand-start),var(--brand-end));
+    border-color: transparent;
+    color: #fff
+}
+
+    .btn-brand:hover {
+        filter: brightness(1.03)
+    }
+
+.btn-muted {
+    background: #f8fafc;
+    border-color: #eef2f7
+}
+
+/* ===========================
+   Cards de histórico / listagem
+=========================== */
+.orders {
+    display: flex;
+    flex-direction: column;
+    gap: .7rem
+}
+
+.order-card {
+    display: flex;
+    align-items: center;
+    gap: .85rem;
+    padding: .75rem;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: var(--shadow)
+}
+
+.order-thumb {
+    width: 46px;
+    height: 46px;
+    border-radius: 10px;
+    border: 1px solid #eee;
+    object-fit: cover;
+    flex: 0 0 46px
+}
+
+.order-info {
+    flex: 1;
+    min-width: 0
+}
+
+.order-title {
+    font-weight: 800;
+    color: var(--dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis
+}
+
+.order-extras {
+    color: #6b7280;
+    font-size: .88rem;
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap
+}
+
+.order-right {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+    align-items: flex-end
+}
+
+.order-total {
+    font-weight: 900
+}
+
+/* ===========================
+   Abas (mostrar/ocultar)
+=========================== */
+.tab {
+    display: none
+}
+
+    .tab.active {
+        display: block
+    }
+
+/* ===========================
+   Layout responsivo
+=========================== */
+@media (min-width:992px) {
+    .grid-2 {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1rem;
+        align-items: start
+    }
+    /* Cartões menos altos no desktop */
+    .cardx-b {
+        padding: 1rem 1rem .9rem
+    }
+}
+
+@media (max-width:991.98px) {
+    .wrap {
+        padding-bottom: calc(var(--mbn-height) + 20px + env(safe-area-inset-bottom,0))
+    }
+    /* Reduz “peso” visual em telas pequenas */
+    .cardx {
+        box-shadow: 0 6px 16px rgba(0,0,0,.06)
+    }
+
+    .order-card {
+        padding: .7rem
+    }
+
+    .steps {
+        gap: .6rem;
+        min-width: 620px
+    }
+}
+
+.px-4 {
+    padding-right: 0;
+    padding-left: 0;
+}

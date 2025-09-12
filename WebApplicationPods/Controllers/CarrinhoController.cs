@@ -7,7 +7,6 @@ using System.Linq;
 using WebApplicationPods.Enum;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
-using WebApplicationPods.Repository.Repository;
 
 namespace WebApplicationPods.Controllers
 {
@@ -30,7 +29,104 @@ namespace WebApplicationPods.Controllers
             _pedidoRepository = pedidoRepository;
         }
 
-        // Actions
+        // =================== Helpers ===================
+
+        // Grava o token de rastreio do último pedido em cookie (30 dias)
+        private void SetLastOrderCookie(string? token)
+        {
+            if (string.IsNullOrWhiteSpace(token)) return;
+
+            var opts = new CookieOptions
+            {
+                Expires = DateTimeOffset.UtcNow.AddDays(30),
+                HttpOnly = false,                 // true se não precisar ler via JS
+                Secure = Request.IsHttps,       // em produção com HTTPS = true
+                SameSite = SameSiteMode.Lax,
+                IsEssential = true
+            };
+            Response.Cookies.Append("last_order_token", token!, opts);
+        }
+
+        private int ObterEstoqueDisponivel(ProdutoModel produto, string sabor)
+        {
+            if (produto.SaboresQuantidadesList?.Any() == true && !string.IsNullOrWhiteSpace(sabor))
+            {
+                var sq = produto.SaboresQuantidadesList
+                    .FirstOrDefault(s => s.Sabor.Equals(sabor, StringComparison.OrdinalIgnoreCase));
+                return sq?.Quantidade ?? 0;
+            }
+            return produto.Estoque;
+        }
+
+        // Atualização: quantidade ABSOLUTA não pode exceder o disponível
+        private bool ValidarEstoqueAtualizacao(ProdutoModel produto, int quantidade, string sabor, out string mensagemErro)
+        {
+            mensagemErro = string.Empty;
+
+            var disponivel = ObterEstoqueDisponivel(produto, sabor);
+
+            if (quantidade > disponivel)
+            {
+                mensagemErro = string.IsNullOrWhiteSpace(sabor)
+                    ? $"Estoque insuficiente. Disponível: {disponivel}"
+                    : $"Estoque insuficiente para o sabor {sabor}. Disponível: {disponivel}";
+                return false;
+            }
+
+            return true;
+        }
+
+        // Adição: quantidade no carrinho + novaQtd não pode exceder o disponível
+        private bool ValidarEstoqueAoAdicionar(ProdutoModel produto, int novaQtd, string sabor, out string mensagemErro)
+        {
+            mensagemErro = string.Empty;
+
+            var disponivel = ObterEstoqueDisponivel(produto, sabor);
+
+            var carrinho = _carrinhoRepository.ObterCarrinho();
+            var chaveSabor = sabor ?? string.Empty;
+
+            var existente = carrinho.Itens
+                .Where(i => i.Produto.Id == produto.Id && (i.Sabor ?? string.Empty) == chaveSabor)
+                .Sum(i => i.Quantidade);
+
+            if (existente + novaQtd > disponivel)
+            {
+                var resto = Math.Max(disponivel - existente, 0);
+                mensagemErro = string.IsNullOrWhiteSpace(sabor)
+                    ? $"Você já tem {existente}. Só é possível adicionar mais {resto} (estoque total {disponivel})."
+                    : $"Você já tem {existente} do sabor {sabor}. Só é possível adicionar mais {resto} (estoque total {disponivel}).";
+                return false;
+            }
+
+            return true;
+        }
+
+        private PaymentMethod? MapearMetodoPagamento(string metodo)
+        {
+            if (string.IsNullOrWhiteSpace(metodo)) return null;
+
+            metodo = metodo.Trim().ToLowerInvariant();
+
+            return metodo switch
+            {
+                "dinheiro" => PaymentMethod.Cash,
+                "pix" => PaymentMethod.Pix,
+                "cartão de crédito" => PaymentMethod.CardCredit,
+                "cartao de credito" => PaymentMethod.CardCredit,
+                "cartão de débito" => PaymentMethod.CardDebit,
+                "cartao de debito" => PaymentMethod.CardDebit,
+                _ => (PaymentMethod?)null
+            };
+        }
+
+        private decimal CalcularTaxaEntrega(EnderecoModel endereco)
+        {
+            return 5m; // ajuste sua regra aqui
+        }
+
+        // =================== Actions ===================
+
         public IActionResult Index()
         {
             var carrinho = _carrinhoRepository.ObterCarrinho();
@@ -98,11 +194,11 @@ namespace WebApplicationPods.Controllers
                 TempData["Erro"] = "Pedido não encontrado!";
                 return RedirectToAction("Index");
             }
-            ViewBag.PedidoId = pedido.Id; // se quiser usar no layout
+
+            ViewBag.PedidoId = pedido.Id; // ex.: usar no layout/botões
             return View(pedido);
         }
 
-        // CRUD Actions
         [HttpPost]
         public IActionResult AdicionarItem(int produtoId, int quantidade, string sabor = null, string observacoes = null, bool buyNow = false)
         {
@@ -115,7 +211,7 @@ namespace WebApplicationPods.Controllers
                     return RedirectToAction("Index");
                 }
 
-                // Carrega lista de sabores (se houver) antes de validar
+                // Carrega sabores/estoques por sabor antes de validar
                 produto.DeserializarSaboresQuantidades();
 
                 if (!ValidarEstoqueAoAdicionar(produto, quantidade, sabor, out string mensagemErro))
@@ -135,6 +231,14 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction("Index");
             }
         }
+
+        [HttpGet]
+        public IActionResult Count()
+        {
+            var count = _carrinhoRepository.ObterCarrinho()?.Itens.Sum(i => i.Quantidade) ?? 0;
+            return Json(new { count });
+        }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -206,8 +310,6 @@ namespace WebApplicationPods.Controllers
             }
         }
 
-
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult RemoverItem(int produtoId, string? sabor)
@@ -240,9 +342,7 @@ namespace WebApplicationPods.Controllers
             }
         }
 
-        // sua action Index que devolve a View do carrinho...
-        
-
+        // =================== Finalização ===================
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -290,10 +390,11 @@ namespace WebApplicationPods.Controllers
             }
 
             var taxaEntrega = model.RetiradaNoLocal ? 0m : CalcularTaxaEntrega(enderecoSelecionado);
+
             var pedido = new PedidoModel
             {
                 ClienteId = cliente.Id,
-                EnderecoId = model.RetiradaNoLocal ? 0 : enderecoSelecionado.Id,
+                EnderecoId = model.RetiradaNoLocal ? 0 : (enderecoSelecionado?.Id ?? 0),
                 DataPedido = DateTime.Now,
                 Status = "Pendente",
                 ValorTotal = carrinho.Total,
@@ -314,18 +415,35 @@ namespace WebApplicationPods.Controllers
             if (pagaNaEntrega)
             {
                 pedido.Status = "Aguardando Pagamento (Entrega)";
+
+                // O repositório deve GERAR pedido.RastreioToken antes de salvar
                 _pedidoRepository.Adicionar(pedido);
+
+                // Grava o cookie com o token de rastreio
+                SetLastOrderCookie(pedido.RastreioToken);
+
                 _carrinhoRepository.LimparCarrinho();
                 TempData["Sucesso"] = "Pedido realizado com sucesso! Pagamento na entrega.";
+
+                // Você pode redirecionar direto ao acompanhamento também:
+                // return RedirectToAction("Acompanhar", "Pedido", new { id = pedido.Id, t = pedido.RastreioToken });
+
                 return RedirectToAction("Confirmacao", new { id = pedido.Id });
             }
             else
             {
                 pedido.Status = "Pendente";
+
                 _pedidoRepository.Adicionar(pedido);
+
+                // Grava o cookie com o token de rastreio
+                SetLastOrderCookie(pedido.RastreioToken);
+
                 return RedirectToAction("Checkout", "Pagamento", new { pedidoId = pedido.Id });
             }
         }
+
+        // =================== Endereço ===================
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -429,89 +547,6 @@ namespace WebApplicationPods.Controllers
                 TempData["Erro"] = $"Não foi possível salvar o endereço: {ex.Message}";
                 return RedirectToAction(nameof(Resumo));
             }
-        }
-
-        // ===== Helpers de estoque =====
-
-        private int ObterEstoqueDisponivel(ProdutoModel produto, string sabor)
-        {
-            // produto.DeserializarSaboresQuantidades();  // já chamado nos pontos de entrada
-
-            if (produto.SaboresQuantidadesList?.Any() == true && !string.IsNullOrWhiteSpace(sabor))
-            {
-                var sq = produto.SaboresQuantidadesList
-                    .FirstOrDefault(s => s.Sabor.Equals(sabor, StringComparison.OrdinalIgnoreCase));
-                return sq?.Quantidade ?? 0;
-            }
-
-            return produto.Estoque;
-        }
-
-        // Atualização: quantidade ABSOLUTA não pode exceder o disponível
-        private bool ValidarEstoqueAtualizacao(ProdutoModel produto, int quantidade, string sabor, out string mensagemErro)
-        {
-            mensagemErro = string.Empty;
-
-            var disponivel = ObterEstoqueDisponivel(produto, sabor);
-
-            if (quantidade > disponivel)
-            {
-                mensagemErro = string.IsNullOrWhiteSpace(sabor)
-                    ? $"Estoque insuficiente. Disponível: {disponivel}"
-                    : $"Estoque insuficiente para o sabor {sabor}. Disponível: {disponivel}";
-                return false;
-            }
-
-            return true;
-        }
-
-        // Adição: quantidade no carrinho + novaQtd não pode exceder o disponível
-        private bool ValidarEstoqueAoAdicionar(ProdutoModel produto, int novaQtd, string sabor, out string mensagemErro)
-        {
-            mensagemErro = string.Empty;
-
-            var disponivel = ObterEstoqueDisponivel(produto, sabor);
-
-            var carrinho = _carrinhoRepository.ObterCarrinho();
-            var chaveSabor = sabor ?? string.Empty;
-
-            var existente = carrinho.Itens
-                .Where(i => i.Produto.Id == produto.Id && (i.Sabor ?? string.Empty) == chaveSabor)
-                .Sum(i => i.Quantidade);
-
-            if (existente + novaQtd > disponivel)
-            {
-                var resto = Math.Max(disponivel - existente, 0);
-                mensagemErro = string.IsNullOrWhiteSpace(sabor)
-                    ? $"Você já tem {existente}. Só é possível adicionar mais {resto} (estoque total {disponivel})."
-                    : $"Você já tem {existente} do sabor {sabor}. Só é possível adicionar mais {resto} (estoque total {disponivel}).";
-                return false;
-            }
-
-            return true;
-        }
-
-        private PaymentMethod? MapearMetodoPagamento(string metodo)
-        {
-            if (string.IsNullOrWhiteSpace(metodo)) return null;
-
-            metodo = metodo.Trim().ToLowerInvariant();
-
-            return metodo switch
-            {
-                "dinheiro" => PaymentMethod.Cash,
-                "pix" => PaymentMethod.Pix,
-                "cartão de crédito" => PaymentMethod.CardCredit,
-                "cartao de credito" => PaymentMethod.CardCredit,
-                "cartão de débito" => PaymentMethod.CardDebit,
-                "cartao de debito" => PaymentMethod.CardDebit,
-                _ => null
-            };
-        }
-
-        private decimal CalcularTaxaEntrega(EnderecoModel endereco)
-        {
-            return 5m;
         }
     }
 }

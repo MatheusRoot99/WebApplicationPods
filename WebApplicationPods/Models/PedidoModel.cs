@@ -41,6 +41,14 @@ namespace WebApplicationPods.Models
         [StringLength(500)]
         public string? Observacoes { get; set; }
 
+        public bool IsDeleted { get; set; }
+        public DateTime? DeletedAt { get; set; }
+        public string? DeletedBy { get; set; }
+
+        // PedidoModel
+        [StringLength(64)]
+        public string? RastreioToken { get; set; }
+
         // Relacionamentos
         [ForeignKey("ClienteId")]
         public ClienteModel Cliente { get; set; }

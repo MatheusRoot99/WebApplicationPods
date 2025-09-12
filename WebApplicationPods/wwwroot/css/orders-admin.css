@@ -181,3 +181,44 @@
     }
     /* gráficos mais compactos no mobile */
 }
+
+/* Botão excluir (sobrescreve o Bootstrap) */
+.btn-excluir {
+    background-color: #dc3545; /* vermelho bootstrap */
+    border-color: #dc3545;
+    color: #fff;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all .2s ease-in-out;
+}
+
+    .btn-excluir:hover {
+        background-color: #bb2d3b; /* vermelho mais escuro */
+        border-color: #b02a37;
+        transform: scale(1.05);
+        color: #fff;
+    }
+
+    .btn-excluir i {
+        font-size: 0.9rem;
+    }
+
+tr.row-highlight {
+    animation: rowFlash 2.5s ease-in-out 1;
+}
+
+@keyframes rowFlash {
+    0% {
+        background-color: #fff3cd;
+    }
+
+    50% {
+        background-color: #ffe69c;
+    }
+
+    100% {
+        background-color: transparent;
+    }
+}

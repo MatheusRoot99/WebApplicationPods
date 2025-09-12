@@ -422,20 +422,24 @@ a {
 /* Animação do badge (desktop) */
 @keyframes bump {
     0% {
-        transform: scale(1)
+        transform: scale(1);
     }
 
-    30% {
-        transform: scale(1.2)
+    25% {
+        transform: scale(1.18);
+    }
+
+    50% {
+        transform: scale(0.95);
     }
 
     100% {
-        transform: scale(1)
+        transform: scale(1);
     }
 }
 
-.badge-bump {
-    animation: bump .35s ease;
+.mbn-badge-bump {
+    animation: bump .35s ease-out;
 }
 
 /* Ajustes mobile gerais */

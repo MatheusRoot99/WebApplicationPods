@@ -102,6 +102,17 @@ namespace WebApplicationPods.Data
                 b.Property(x => x.Descricao).HasMaxLength(200);
             });
 
+            // Oculta pedidos soft-deletados em TODAS as queries
+            modelBuilder.Entity<PedidoModel>()
+                .HasQueryFilter(p => !p.IsDeleted);
+
+            // Garanta cascade para hard delete (caso algum dia precise)
+            modelBuilder.Entity<PedidoItemModel>()
+                .HasOne(i => i.Pedido)
+                .WithMany(p => p.PedidoItens)
+                .HasForeignKey(i => i.PedidoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
 
             // TODO: adicione aqui outras configurações de domínio (tamanhos, required, etc.)
         }

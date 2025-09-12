@@ -11,6 +11,7 @@ namespace WebApplicationPods.Repository.Interface
         void Adicionar(PedidoModel pedido);
         void AtualizarStatus(int pedidoId, string status);
         decimal ObterTotalVendasHoje();
+        PedidoModel? ObterPorToken(string token);
 
         // ─── novos ───
         IEnumerable<PedidoModel> ObterAbertos();   // Pago / Em Preparação / Pronto / Saiu p/ Entrega / Aguardando Confirmação (Dinheiro)
@@ -24,5 +25,10 @@ namespace WebApplicationPods.Repository.Interface
 
         // NOVO
         IEnumerable<PedidoModel> Buscar(AdminOrdersFilterDTO f);
+
+        // ↓↓↓ NOVOS ↓↓↓
+        // ↓↓↓ NOVOS ↓↓↓
+        void ExcluirLogico(int id, string? usuario = null);     // soft delete
+        int PurgaCanceladosAntigos(int dias = 30);              // opcional: limpeza em lote
     }
 }

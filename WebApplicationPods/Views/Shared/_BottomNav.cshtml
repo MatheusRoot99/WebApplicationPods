@@ -22,12 +22,11 @@
         <span class="mbn-label">Início</span>
     </a>
 
-  @*   <!-- Catálogo (lista de produtos) -->
-    <a class="mbn-item @IsActive("Produto", "Index")"
-       asp-controller="Produto" asp-action="Index" aria-label="Catálogo">
+    <a class="mbn-item @IsActive("Pedido", "Ultimo")"
+       asp-controller="Pedido" asp-action="Ultimo" aria-label="Pedidos">
         <i class="fa-solid fa-list"></i>
-        <span class="mbn-label">Catálogo</span>
-    </a> *@
+        <span class="mbn-label">Pedidos</span>
+    </a>
 
     <!-- Carrinho com badge -->
     <a class="mbn-item @IsActive("Carrinho","Index")"

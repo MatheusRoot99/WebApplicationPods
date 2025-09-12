@@ -12,155 +12,174 @@
 }
 
 <div class="carrinho-container">
-
+    <!-- Alerts -->
     <div id="carrinho-alerts">
-        @if (TempData["Sucesso"] != null)
+        @if (TempData["Sucesso"] is string ok && !string.IsNullOrWhiteSpace(ok))
         {
-            <div class="alert alert-success">
-                <i class="fas fa-check-circle"></i> @TempData["Sucesso"]
-            </div>
+            <div class="alert alert-success"><i class="fas fa-check-circle me-1"></i>@ok</div>
         }
-        @if (TempData["Erro"] != null)
+        @if (TempData["Erro"] is string err && !string.IsNullOrWhiteSpace(err))
         {
-            <div class="alert alert-danger">
-                <i class="fas fa-exclamation-circle"></i> @TempData["Erro"]
-            </div>
+            <div class="alert alert-danger"><i class="fas fa-exclamation-circle me-1"></i>@err</div>
         }
     </div>
 
-    <h2>Seu Carrinho de Compras</h2>
+    <h2 class="carrinho-title">Seu carrinho</h2>
 
     @if (Model.Itens.Any())
     {
-        <div class="table-responsive">
-            <table class="carrinho-table">
-                <thead>
-                    <tr>
-                        <th>Produto</th>
-                        <th style="width: 360px;">Quantidade</th>
-                        <th>Preço Normal</th>
-                        <th>Preço com Desconto</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in Model.Itens)
-                    {
-                        item.Produto.DeserializarSaboresQuantidades();
+        <div class="cart-grid">
+            <!-- Lista de itens -->
+            <div>
+                <div class="table-responsive">
+                    <table class="carrinho-table">
+                        <thead>
+                            <tr>
+                                <th>Produto</th>
+                                <th style="width: 360px;"></th>
+                                <th>Preço Normal</th>
+                                <th>Preço com Desconto</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Itens)
+                            {
+                                item.Produto?.DeserializarSaboresQuantidades();
 
-                        var chaveSabor = item.Sabor ?? string.Empty;
-                        int maxPermitido;
-                        if (!string.IsNullOrWhiteSpace(chaveSabor) &&
-                        item.Produto.SaboresQuantidadesList?.Any() == true)
-                        {
-                            var sq = item.Produto.SaboresQuantidadesList
-                            .FirstOrDefault(s => string.Equals(s.Sabor, chaveSabor, StringComparison.OrdinalIgnoreCase));
-                            maxPermitido = sq?.Quantidade ?? item.Produto.Estoque;
-                        }
-                        else
-                        {
-                            maxPermitido = item.Produto.Estoque;
-                        }
-                        if (maxPermitido < 1) maxPermitido = 1;
-
-                        var temPromo = item.Produto.EstaEmPromocao();
-                        var precoNormal = item.Produto.Preco;
-                        decimal? precoPromo = temPromo ? item.Produto.PrecoPromocional : null;
-                        <tr class="linha-item">
-                            <td>
-                                <div class="produto-info">
-                                    <img src="@item.Produto.ImagemUrl" alt="@item.Produto.Nome" class="produto-imagem" />
-                                    <div>
-                                        <h5 class="produto-nome">@item.Produto.Nome</h5>
-                                        @if (!string.IsNullOrEmpty(item.Sabor))
-                                        {
-                                            <div class="produto-sabor"><strong>Sabor:</strong> @item.Sabor</div>
-                                        }
-                                        @if (!string.IsNullOrEmpty(item.Observacoes))
-                                        {
-                                            <div class="produto-observacoes">
-                                                <strong>Obs:</strong> @item.Observacoes
-                                            </div>
-                                        }
-                                    <div class="produto-estoque">
-                                        <small>Estoque disponível: <strong>@maxPermitido</strong></small>
-                                    </div>
-                                </div>
-                            </div>
-                        </td>
-
-                        <td>
-                            <form asp-action="AtualizarItem" method="post" class="quantidade-form">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="produtoId" value="@item.Produto.Id" />
-                                <input type="hidden" name="sabor" value="@item.Sabor" />
-
-                                <div class="input-group">
-                                    <!-- Botão -1 envia op=dec -->
-                                    <button type="submit" name="op" value="dec" class="btn btn-outline-secondary" aria-label="Diminuir">
-                                        <i class="fas fa-minus"></i>
-                                    </button>
-
-                                    <input type="number"
-                                           name="quantidade"
-                                           value="@item.Quantidade"
-                                           min="1"
-                                           max="@maxPermitido"
-                                           class="form-control text-center"
-                                           inputmode="numeric" />
-
-                                    <!-- Botão +1 envia op=inc -->
-                                    <button type="submit" name="op" value="inc" class="btn btn-outline-secondary" aria-label="Aumentar">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-
-                                    <!-- Botão atualizar explícito (usa o valor do input) -->
-                                    <button type="submit" class="btn btn-primary">
-                                        Atualizar
-                                    </button>
-                                </div>
-                            </form>
-                        </td>
-
-                        <td>@precoNormal.ToString("C", ptBR)</td>
-                        <td>
-                            @(precoPromo.HasValue
-                                                    ? precoPromo.Value.ToString("C", ptBR)
-                                                    : Html.Raw("<span title=\"Sem promoção ativa\">—</span>"))
-                    </td>
-
-                            <td>
-                                <form asp-action="RemoverItem" method="post" class="remove-form">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="produtoId" value="@item.Produto.Id" />
-                                    <input type="hidden" name="sabor" value="@item.Sabor" />
-                                    <button type="submit" class="btn btn-danger">
-                                        <i class="fas fa-trash"></i> Remover
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
+                                var chaveSabor = item.Sabor ?? string.Empty;
+                                int maxPermitido;
+                                if (!string.IsNullOrWhiteSpace(chaveSabor) &&
+                                item.Produto?.SaboresQuantidadesList?.Any() == true)
+                                {
+                                    var sq = item.Produto.SaboresQuantidadesList
+                                    .FirstOrDefault(s => string.Equals(s.Sabor, chaveSabor, StringComparison.OrdinalIgnoreCase));
+                                    maxPermitido = sq?.Quantidade ?? item.Produto!.Estoque;
                                 }
-                </tbody>
-            </table>
-        </div>
+                                else
+                                {
+                                    maxPermitido = item.Produto?.Estoque ?? 1;
+                                }
+                                if (maxPermitido < 1) maxPermitido = 1;
 
-        <div class="carrinho-total">
-            <div class="total-container">
-                <div class="total-label">Total:</div>
-                <div class="total-valor">
-                    @Model.Total.ToString("C", ptBR)
+                                var temPromo = item.Produto?.EstaEmPromocao() == true;
+                                var precoNormal = item.Produto?.Preco ?? 0m;
+                                decimal? precoPromo = temPromo ? item.Produto!.PrecoPromocional : null;
+
+                                <tr class="linha-item">
+                                    <!-- PRODUTO -->
+                                    <td data-label="Produto">
+                                        <div class="produto-info">
+                                            <img src="@(item.Produto?.ImagemUrl ?? "https://via.placeholder.com/120x120?text=%20")"
+                                                 alt="@(item.Produto?.Nome ?? "Produto")"
+                                                 class="produto-imagem" />
+                                            <div>
+                                                <h5 class="produto-nome">@item.Produto?.Nome</h5>
+
+                                                @if (!string.IsNullOrEmpty(item.Sabor))
+                                                {
+                                                    <div class="produto-sabor">
+                                                        <strong>Sabor:</strong> @item.Sabor
+                                                    </div>
+                                                }
+                                                @if (!string.IsNullOrEmpty(item.Observacoes))
+                                                {
+                                                    <div class="produto-observacoes">
+                                                        <strong>Obs:</strong> @item.Observacoes
+                                                    </div>
+                                                }
+
+                                            <div class="produto-estoque">
+                                                <small class="text-muted">
+                                                    Estoque disponível: <strong>@maxPermitido</strong>
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- QUANTIDADE -->
+                                <td data-label="">
+                                    <form asp-action="AtualizarItem" method="post" class="quantidade-form">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="produtoId" value="@item.Produto!.Id" />
+                                        <input type="hidden" name="sabor" value="@item.Sabor" />
+
+                                        <div class="input-group">
+                                            <!-- -1 -->
+                                            <button type="submit" name="op" value="dec"
+                                                    class="btn btn-outline btn-outline-secondary"
+                                                    aria-label="Diminuir">
+                                                <i class="fas fa-minus"></i>
+                                            </button>
+
+                                            <input type="number"
+                                                   name="quantidade"
+                                                   value="@item.Quantidade"
+                                                   min="1"
+                                                   max="@maxPermitido"
+                                                   class="form-control text-center quantidade-input"
+                                                   inputmode="numeric" />
+
+                                            <!-- +1 -->
+                                            <button type="submit" name="op" value="inc"
+                                                    class="btn btn-outline btn-outline-secondary"
+                                                    aria-label="Aumentar">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+
+                                            <!-- Atualizar -->
+                                            <button type="submit" class="btn btn-primary">
+                                                Atualizar
+                                            </button>
+                                        </div>
+                                    </form>
+                                </td>
+
+                                <!-- PREÇOS -->
+                                <td data-label="Preço Normal">@precoNormal.ToString("C", ptBR)</td>
+                                <td data-label="Preço com Desconto">
+                                    @(precoPromo.HasValue
+                                                                    ? precoPromo.Value.ToString("C", ptBR)
+                                                                    : Html.Raw("<span title=\"Sem promoção ativa\">—</span>"))
+                            </td>
+
+                                    <!-- AÇÕES -->
+                                    <td data-label="Ações">
+                                        <form asp-action="RemoverItem" method="post" class="remove-form">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="produtoId" value="@item.Produto!.Id" />
+                                            <input type="hidden" name="sabor" value="@item.Sabor" />
+                                            <button type="submit" class="btn btn-danger">
+                                                <i class="fas fa-trash"></i> Remover
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                                }
+                        </tbody>
+                    </table>
                 </div>
             </div>
-        </div>
 
-        <div class="carrinho-actions">
-            <a asp-controller="Home" asp-action="Index" class="btn btn-outline">
-                <i class="fas fa-arrow-left"></i> Continuar Comprando
-            </a>
-            <a asp-action="Resumo" class="btn btn-primary">
-                Finalizar Pedido <i class="fas fa-arrow-right"></i>
-            </a>
+            <!-- Resumo (sticky no desktop) -->
+            <aside>
+                <div class="total-card">
+                    <div class="total-label">Total:</div>
+                    <div class="total-valor">@Model.Total.ToString("C", ptBR)</div>
+
+                    <div class="carrinho-actions">
+                        <a asp-controller="Home" asp-action="Index"
+                           class="btn btn-outline block-mobile">
+                            ← Continuar comprando
+                        </a>
+
+                        <a asp-action="Resumo" class="btn btn-primary block-mobile">
+                            Finalizar pedido →
+                        </a>
+                    </div>
+                </div>
+            </aside>
         </div>
     }
     else
@@ -169,7 +188,7 @@
             <h4>Seu carrinho está vazio</h4>
             <p>Adicione pods eletrônicos ao seu carrinho para continuar.</p>
             <a asp-controller="Home" asp-action="Index" class="btn btn-primary">
-                <i class="fas fa-store"></i> Ver Produtos
+                <i class="fas fa-store me-1"></i> Ver produtos
             </a>
         </div>
     }
@@ -178,13 +197,12 @@
 @section Scripts {
     <script src="~/js/Carrinho-form.js" asp-append-version="true"></script>
     <script>
-        // Apenas para sumir os alerts depois de 5s (não é AJAX)
+        // Fade-out dos alerts
         setTimeout(() => {
-            document.querySelectorAll('#carrinho-alerts .alert').forEach(a => {
-                a.style.transition = 'opacity .5s';
-                a.style.opacity = '0';
-                setTimeout(() => a.remove(), 500);
-            });
+          document.querySelectorAll('#carrinho-alerts .alert').forEach(a => {
+            a.style.transition = 'opacity .5s'; a.style.opacity = '0';
+            setTimeout(() => a.remove(), 500);
+          });
         }, 5000);
     </script>
 }

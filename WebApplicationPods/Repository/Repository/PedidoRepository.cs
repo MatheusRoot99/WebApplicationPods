@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
+using System.Security.Cryptography;
 using WebApplicationPods.Data;
 using WebApplicationPods.DTO;
 using WebApplicationPods.Models;
@@ -47,8 +48,15 @@ namespace WebApplicationPods.Repository.Repository
 
             pedido.DataPedido = DateTime.Now;
 
+            // Gera um token aleatório caso não exista
+            if (string.IsNullOrEmpty(pedido.RastreioToken))
+            {
+                // 16 bytes aleatórios => 32 chars hex (suficiente e legível)
+                pedido.RastreioToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
+            }
+
             _context.Pedidos.Add(pedido);
-            _context.SaveChanges();
+            _context.SaveChanges(); // após isso, pedido.Id e RastreioToken estão persistidos
         }
 
         public void AtualizarStatus(int pedidoId, string status)
@@ -207,6 +215,59 @@ namespace WebApplicationPods.Repository.Repository
             return q.OrderByDescending(p => p.Id)
                     .AsNoTracking()
                     .ToList();
+        }
+
+        public void ExcluirLogico(int id, string? usuario = null)
+        {
+            // O filtro global NÃO atrapalha aqui porque o registro ainda não está deletado
+            var p = _context.Pedidos.FirstOrDefault(x => x.Id == id);
+            if (p == null) return;
+
+            p.IsDeleted = true;
+            p.DeletedAt = DateTime.UtcNow;
+            p.DeletedBy = usuario;
+
+            _context.SaveChanges();
+        }
+
+        // Opcional: apagar de vez pedidos cancelados (e já escondidos) após X dias
+        public int PurgaCanceladosAntigos(int dias = 30)
+        {
+            var limite = DateTime.UtcNow.AddDays(-dias);
+
+            // Precisamos ignorar o filtro global para enxergar soft-deletados
+            var antigos = _context.Pedidos
+                .IgnoreQueryFilters()
+                .Include(p => p.PedidoItens)
+                .Where(p => p.IsDeleted &&
+                            (p.DeletedAt == null || p.DeletedAt < limite))
+                .ToList();
+
+            if (antigos.Count == 0) return 0;
+
+            if (antigos.SelectMany(p => p.PedidoItens ?? Enumerable.Empty<PedidoItemModel>()).Any())
+                _context.PedidoItens.RemoveRange(antigos.SelectMany(p => p.PedidoItens));
+
+            _context.Pedidos.RemoveRange(antigos);
+            return _context.SaveChanges();
+        }
+
+        public void Restaurar(int id)
+        {
+            var p = _context.Pedidos.IgnoreQueryFilters().FirstOrDefault(x => x.Id == id);
+            if (p == null) return;
+            p.IsDeleted = false;
+            p.DeletedAt = null;
+            p.DeletedBy = null;
+            _context.SaveChanges();
+        }
+
+        public PedidoModel? ObterPorToken(string token)
+        {
+            return _context.Pedidos
+                .Include(p => p.Cliente)
+                .Include(p => p.PedidoItens).ThenInclude(i => i.Produto)
+                .FirstOrDefault(p => p.RastreioToken == token);
         }
     }
 }
