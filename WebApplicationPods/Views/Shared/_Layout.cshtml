@@ -14,7 +14,7 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
-    <!-- Estilos gerais -->
+    <!-- Estilos -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/sidebar.css" asp-append-version="true" />
 
@@ -27,14 +27,14 @@
            value="@antiforgery.GetAndStoreTokens(Context).RequestToken" />
 
     <div class="d-flex" id="wrapper">
-        @await Html.PartialAsync("_Sidebar")   @* Sidebar desktop *@
+        @await Html.PartialAsync("_Sidebar")
 
-        <!-- Page Content -->
         <div id="page-content-wrapper">
-            <!-- Top Navigation -->
+            <!-- Topbar -->
             <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
                 <div class="container-fluid">
-                    <!-- Menu Mobile Toggle -->
+
+                    <!-- Toggle menu mobile -->
                     <button class="btn btn-sm btn-dark d-lg-none"
                             id="mobile-menu-toggle"
                             type="button"
@@ -66,13 +66,19 @@
 
                     <div class="navbar-collapse">
                         <ul class="navbar-nav ms-auto">
-                            <!-- Carrinho (desktop) - somente clientes -->
+
+                            <!-- Carrinho (desktop) para clientes -->
                             @if (!User.IsInRole("Admin") && !User.IsInRole("Lojista"))
                             {
                                 <li class="nav-item d-none d-lg-block">
                                     <a class="nav-link cart-link" asp-controller="Carrinho" asp-action="Index">
                                         <span class="cart-wrap position-relative d-inline-flex align-items-center">
                                             <i class="fas fa-shopping-cart fs-5"></i>
+
+                                            <!-- dot persistente -->
+                                            <span id="cart-dot-desktop" class="cart-dot visually-hidden"></span>
+
+                                            <!-- badge numérico -->
                                             <span id="cart-badge"
                                                   class="badge rounded-pill bg-danger position-absolute translate-middle"
                                                   style="top:-10%; left:90%;">
@@ -81,27 +87,29 @@
                                             </span>
                                         </span>
                                     </a>
+
                                 </li>
                             }
 
-                            <!-- Notificações (autenticado) -->
+
+
+                            <!-- Notificações -->
                             @if (User.Identity?.IsAuthenticated == true)
                             {
                                 <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle position-relative" href="#" id="navbarNotifications" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <a class="nav-link dropdown-toggle position-relative" href="#" id="navbarNotifications"
+                                       role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                         <i class="fas fa-bell"></i>
-                                        @* Badge de contagem (opcional). Se não houver VC, esconda com CSS *@
                                         <span id="notif-badge" class="badge bg-danger ms-1 visually-hidden">0</span>
                                     </a>
-
-                                    @* Conteúdo do dropdown decidido pelo VC (lojista x cliente) *@
                                     @await Component.InvokeAsync("Notifications")
                                 </li>
                             }
 
                             <!-- Usuário -->
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown"
+                                   role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="fas fa-user-circle me-1"></i>
                                     <span class="d-none d-sm-inline">@(User.Identity?.IsAuthenticated == true ? User.Identity!.Name : "Conta")</span>
                                 </a>
@@ -127,17 +135,17 @@
                 </div>
             </nav>
 
-            <!-- Main Content -->
-            <div class="container-fluid px-4 py-3">
+            <!-- Content -->
+            <div class="container-fluid py-3">
                 @RenderBody()
             </div>
         </div>
     </div>
 
-    @await Html.PartialAsync("_OffcanvasMenu")  @* Menu mobile *@
-    @await Html.PartialAsync("_BottomNav")      @* Bottom nav mobile *@
+    @await Html.PartialAsync("_OffcanvasMenu")
+    @await Html.PartialAsync("_BottomNav")
 
-    <!-- Toast container -->
+    <!-- Toast -->
     <div class="position-fixed top-0 end-0 p-3" style="z-index:1080">
         <div id="appToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
@@ -147,7 +155,7 @@
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- Scripts base -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="~/js/jquery.mask.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -157,24 +165,57 @@
 
     <script>
         (function () {
-          // Normaliza números dos badges (desktop e mobile)
-          function normalizeBadge(id) {
-            const el = document.getElementById(id);
-            if (!el) return;
-            const raw = (el.textContent || '').trim();
-            const num = (raw.match(/\d+/) || ['0'])[0];
-            if (num === '0') {
-              el.classList.add('visually-hidden');
-            } else {
-              el.classList.remove('visually-hidden');
-              el.textContent = num;
-            }
-          }
-          normalizeBadge('cart-badge');
-          normalizeBadge('cart-badge-mobile');
-          normalizeBadge('notif-badge');
+          // ========================
+          // Constantes de storage
+          // ========================
+          const KEY_COUNT  = 'cart_count';
+          const KEY_UNSEEN = 'cart_unseen';
 
-          // Toast via TempData
+          // ========================
+          // Helpers de UI
+          // ========================
+          function setBadgeCount(n) {
+            const num = Math.max(0, parseInt(n || 0, 10) || 0);
+            ['cart-badge','cart-badge-mobile'].forEach(id => {
+              const el = document.getElementById(id);
+              if (!el) return;
+              if (num > 0) {
+                el.textContent = String(num);
+                el.classList.remove('visually-hidden');
+                el.classList.add('mbn-badge-bump');
+                setTimeout(() => el.classList.remove('mbn-badge-bump'), 400);
+              } else {
+                el.textContent = '0';
+                el.classList.add('visually-hidden');
+              }
+            });
+          }
+          function setDot(on) {
+            document.querySelectorAll('.mbn-item .fa-cart-shopping, .nav-link.cart-link i')
+              .forEach(el => el.classList.toggle('has-unseen', !!on));
+            // se você usa “pontinho” com elementos separados:
+            const dotDesktop = document.getElementById('cart-dot-desktop');
+            const dotMobile  = document.getElementById('cart-new-dot');
+            if (dotDesktop) dotDesktop.classList.toggle('visually-hidden', !on);
+            if (dotMobile)  dotMobile.classList.toggle('visually-hidden', !on);
+          }
+
+          // ========================
+          // Normalização inicial / Toast / Offcanvas
+          // ========================
+          (function normalizeBadgesAtStart () {
+            // se o server renderizou um número, usa; senão 0
+            ['cart-badge','cart-badge-mobile','notif-badge'].forEach(id => {
+              const el = document.getElementById(id);
+              if (!el) return;
+              const m = (el.textContent || '').match(/\d+/);
+              const n = m ? (parseInt(m[0],10)||0) : 0;
+              if (n <= 0) { el.textContent = '0'; el.classList.add('visually-hidden'); }
+              else        { el.textContent = String(n); el.classList.remove('visually-hidden'); }
+            });
+          })();
+
+          // Toast via TempData (mantém teu comportamento)
           const sucesso = @Html.Raw(JsonSerializer.Serialize(TempData["Sucesso"] ?? ""));
           const erro    = @Html.Raw(JsonSerializer.Serialize(TempData["Erro"] ?? ""));
           if (sucesso || erro) {
@@ -185,9 +226,9 @@
               bodyEl.textContent = ok ? sucesso : erro;
               toastEl.classList.toggle('bg-success', ok);
               toastEl.classList.toggle('bg-danger', !ok);
-              new bootstrap.Toast(toastEl, { delay: 2500 }).show();
+              new bootstrap.Toast(toastEl, { delay: 2400 }).show();
 
-              // anima badge do mobile se relacionado ao carrinho
+              // anima badge do mobile quando a msg for de carrinho
               const msg = (sucesso || erro || '').toString();
               if (/(carrinho|adicionado|atualizada|removido)/i.test(msg)) {
                 const b = document.getElementById('cart-badge-mobile');
@@ -196,41 +237,71 @@
             }
           }
 
-          // Fechar offcanvas ao clicar em um link
+          // fechar offcanvas ao clicar em um link (mobile menu)
           document.querySelectorAll('#mobileMenu .list-group-item').forEach(item => {
             item.addEventListener('click', function () {
               const off = bootstrap.Offcanvas.getInstance(document.getElementById('mobileMenu'));
               off && off.hide();
             });
           });
+
+          // ========================
+          // Persistência (count + unseen)
+          // ========================
+          function restoreFromStorage() {
+            let n = 0, unseen = false;
+
+            // tenta restaurar do storage
+            try {
+              n = parseInt(localStorage.getItem(KEY_COUNT) || '0', 10) || 0;
+              unseen = localStorage.getItem(KEY_UNSEEN) === '1';
+            } catch {}
+
+            // se storage estava vazio, lê o que veio do DOM (VC) e salva
+            if (!n) {
+              const m = (document.getElementById('cart-badge')?.textContent || '').match(/\d+/);
+              n = m ? (parseInt(m[0],10)||0) : 0;
+              try { localStorage.setItem(KEY_COUNT, String(n)); } catch {}
+            }
+
+            setBadgeCount(n);
+            setDot(unseen && n > 0);
+          }
+          restoreFromStorage();
+
+          // sincroniza entre abas
+          window.addEventListener('storage', (e) => {
+            if (e.key === KEY_COUNT)  setBadgeCount(parseInt(e.newValue || '0', 10) || 0);
+            if (e.key === KEY_UNSEEN) setDot(e.newValue === '1');
+          });
+
+          // ========================
+          // API Global usada pelo site
+          // ========================
+          window.updateCartBadges = function(count){
+            const n = Math.max(0, parseInt(count || 0, 10) || 0);
+            try { localStorage.setItem(KEY_COUNT, String(n)); } catch {}
+            setBadgeCount(n);
+            if (n === 0) {
+              try { localStorage.removeItem(KEY_UNSEEN); } catch {}
+              setDot(false);
+            }
+          };
+          window.cartMarkUnseen  = function(){ try { localStorage.setItem(KEY_UNSEEN, '1'); } catch{} setDot((parseInt(localStorage.getItem(KEY_COUNT)||'0',10)||0) > 0); };
+          window.cartClearUnseen = function(){ try { localStorage.removeItem(KEY_UNSEEN); } catch{} setDot(false); };
+
         })();
 
-        // Função global para obter anti-forgery token
-        function getAntiForgeryToken() {
-            return document.querySelector('input[name="__RequestVerificationToken"]')?.value;
-        }
-    </script>
-
-    <script>
-        // atualiza as bolinhas do carrinho (desktop + mobile)
-        window.updateCartBadges = function(count){
-          ['cart-badge','cart-badge-mobile'].forEach(id=>{
-            const el = document.getElementById(id);
-            if(!el) return;
-            if(count > 0){
-              el.textContent = count;
-              el.classList.remove('visually-hidden');
-              el.classList.add('mbn-badge-bump');
-              setTimeout(()=> el.classList.remove('mbn-badge-bump'), 400);
-            } else {
-              el.textContent = '0';
-              el.classList.add('visually-hidden');
-            }
-          });
+        // token antiforgery disponível globalmente
+        window.getAntiForgeryToken = function () {
+          return document.querySelector('input[name="__RequestVerificationToken"]')?.value;
         };
     </script>
 
-    @await RenderSectionAsync("Scripts", required: false)
 
+
+
+
+    @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

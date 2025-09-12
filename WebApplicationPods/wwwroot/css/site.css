@@ -449,3 +449,95 @@ a {
         padding-right: .5rem;
     }
 }
+
+
+/* === Carrinho (navbar desktop) === */
+.navbar .nav-link.cart-link {
+    display: inline-flex;
+    align-items: center;
+    padding-left: .25rem;
+    padding-right: .25rem;
+}
+
+.navbar .cart-wrap {
+    position: relative;
+    line-height: 1;
+    display: inline-flex;
+}
+
+#cart-badge {
+    position: absolute;
+    top: -4px; /* ajuste fino conforme seu header */
+    right: -6px; /* idem */
+    transform: translate(50%,-50%);
+    background: #dc3545;
+    color: #fff;
+    border-radius: 999px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: .70rem;
+    box-shadow: 0 0 0 2px rgba(255,255,255,.9);
+}
+
+/* Animação “bump” usada pelo updateCartBadges */
+@keyframes bump {
+    0% {
+        transform: translate(50%,-50%) scale(1);
+    }
+
+    30% {
+        transform: translate(50%,-50%) scale(1.18);
+    }
+
+    100% {
+        transform: translate(50%,-50%) scale(1);
+    }
+}
+
+.mbn-badge-bump {
+    animation: bump .35s ease-out;
+}
+
+/* dot persistente no carrinho (desktop navbar) */
+.cart-wrap .cart-dot {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 10px;
+    height: 10px;
+    background: #dc3545;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px rgba(255,255,255,.95);
+}
+
+/* dot persistente no carrinho (mobile bottom nav) */
+.mbn-dot {
+    position: absolute;
+    top: 6px;
+    right: 10px;
+    width: 9px;
+    height: 9px;
+    background: #dc3545;
+    border-radius: 999px;
+    box-shadow: 0 0 0 2px rgba(255,255,255,.95);
+}
+.fa-cart-shopping.has-unseen {
+    position: relative
+}
+
+    .fa-cart-shopping.has-unseen::after {
+        content: "";
+        position: absolute;
+        top: -2px;
+        right: -4px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #dc3545;
+        box-shadow: 0 0 0 2px rgba(255,255,255,.95);
+    }

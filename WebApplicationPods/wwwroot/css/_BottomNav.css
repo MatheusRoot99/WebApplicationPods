@@ -1,1 +1,84 @@
-﻿
+﻿/* === Bottom Nav (mobile) – badge do carrinho === */
+.mobile-bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 70px;
+    background: rgba(255,255,255,.97);
+    border-top: 1px solid rgba(0,0,0,.08);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+    z-index: 1080;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 -4px 20px rgba(0,0,0,.08);
+}
+
+    .mobile-bottom-nav .mbn-item {
+        position: relative;
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        min-width: 56px;
+        padding: 8px 12px;
+        color: #6c757d;
+        text-decoration: none;
+        border-radius: 12px;
+    }
+
+        .mobile-bottom-nav .mbn-item i {
+            font-size: 20px;
+            width: 32px;
+            height: 32px;
+            display: inline-grid;
+            place-items: center;
+            border-radius: 50%;
+        }
+
+        .mobile-bottom-nav .mbn-item.active {
+            color: #0d6efd;
+        }
+
+            .mobile-bottom-nav .mbn-item.active i {
+                background: rgba(13,110,253,.12);
+                color: #0d6efd;
+            }
+
+    .mobile-bottom-nav .mbn-badge {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        transform: translate(50%,-50%);
+        background: #dc3545;
+        color: #fff;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1;
+        padding: 2px 5px;
+        min-width: 16px;
+        text-align: center;
+        box-shadow: 0 0 0 2px rgba(255,255,255,.9);
+    }
+
+/* mesma animação do desktop (nome igual ao usado no JS) */
+@keyframes mbn-bump {
+    0% {
+        transform: translate(50%,-50%) scale(1);
+    }
+
+    30% {
+        transform: translate(50%,-50%) scale(1.18);
+    }
+
+    100% {
+        transform: translate(50%,-50%) scale(1);
+    }
+}
+
+.mbn-badge-bump {
+    animation: mbn-bump .35s ease;
+}

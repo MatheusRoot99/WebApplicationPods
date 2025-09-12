@@ -11,7 +11,6 @@
     var isAuth = User.Identity?.IsAuthenticated == true;
     var isAdmin = User.IsInRole("Admin");
     var isLojista = User.IsInRole("Lojista");
-    var isCliente = isAuth && !isAdmin && !isLojista;
 }
 
 <nav class="mobile-bottom-nav d-lg-none" aria-label="Navegação inferior">
@@ -22,23 +21,28 @@
         <span class="mbn-label">Início</span>
     </a>
 
+    <!-- Pedidos -->
     <a class="mbn-item @IsActive("Pedido", "Ultimo")"
        asp-controller="Pedido" asp-action="Ultimo" aria-label="Pedidos">
         <i class="fa-solid fa-list"></i>
         <span class="mbn-label">Pedidos</span>
     </a>
 
-    <!-- Carrinho com badge -->
-    <a class="mbn-item @IsActive("Carrinho","Index")"
+    <!-- Carrinho -->
+    <a class="mbn-item @IsActive("Carrinho", "Index")"
        asp-controller="Carrinho" asp-action="Index" aria-label="Carrinho">
         <i class="fa-solid fa-cart-shopping"></i>
-        <span id="cart-badge-mobile" class="mbn-badge">
-            @await Component.InvokeAsync("CarrinhoResumo") ?? 0
-        </span>
+
+        <!-- badge numérico (já existia) -->
+        <span id="cart-badge-mobile" class="mbn-badge">0</span>
+
+        <!-- dot persistente -->
+        <span id="cart-new-dot" class="mbn-dot visually-hidden"></span>
+
         <span class="mbn-label">Carrinho</span>
     </a>
 
-    <!-- Perfil (logado) ou Entrar (anônimo) -->
+    <!-- Perfil/Entrar -->
     @if (isAuth && !isAdmin && !isLojista)
     {
         <a class="mbn-item @IsActive("Cliente", "Perfil")"
@@ -56,5 +60,3 @@
         </a>
     }
 </nav>
-
-

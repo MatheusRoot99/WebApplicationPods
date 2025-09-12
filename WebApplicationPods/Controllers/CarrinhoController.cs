@@ -198,46 +198,64 @@ namespace WebApplicationPods.Controllers
             ViewBag.PedidoId = pedido.Id; // ex.: usar no layout/botões
             return View(pedido);
         }
-
         [HttpPost]
-        public IActionResult AdicionarItem(int produtoId, int quantidade, string sabor = null, string observacoes = null, bool buyNow = false)
+        [ValidateAntiForgeryToken] // opcional, mas recomendado
+        public IActionResult AdicionarItem(int produtoId, int quantidade, string? sabor = null, string? observacoes = null, bool buyNow = false)
         {
+            bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+
             try
             {
                 var produto = _produtoRepository.ObterPorId(produtoId);
                 if (produto == null)
                 {
+                    if (isAjax) return Json(new { ok = false, error = "Produto não encontrado." });
                     TempData["Erro"] = "Produto não encontrado!";
                     return RedirectToAction("Index");
                 }
 
-                // Carrega sabores/estoques por sabor antes de validar
+                // estoque por sabor
                 produto.DeserializarSaboresQuantidades();
 
-                if (!ValidarEstoqueAoAdicionar(produto, quantidade, sabor, out string mensagemErro))
+                if (!ValidarEstoqueAoAdicionar(produto, quantidade, sabor, out var mensagemErro))
                 {
+                    if (isAjax) return Json(new { ok = false, error = mensagemErro });
                     TempData["Erro"] = mensagemErro;
                     return RedirectToAction("Detalhes", "Produto", new { id = produtoId });
                 }
 
                 _carrinhoRepository.AdicionarItem(produto, quantidade, sabor, observacoes);
 
+                // total de itens no carrinho (para o badge)
+                var carrinho = _carrinhoRepository.ObterCarrinho();
+                var count = carrinho?.Itens?.Sum(i => i.Quantidade) ?? 0;
+
+                if (isAjax)
+                {
+                    return Json(new { ok = true, count });
+                }
+
                 TempData["Sucesso"] = $"{produto.Nome} adicionado ao carrinho!";
                 return buyNow ? RedirectToAction("Resumo") : RedirectToAction("Index");
             }
             catch
             {
+                if (isAjax) return Json(new { ok = false, error = "Erro ao adicionar ao carrinho." });
                 TempData["Erro"] = "Ocorreu um erro ao adicionar o produto ao carrinho.";
                 return RedirectToAction("Index");
             }
         }
 
+
         [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Count()
         {
-            var count = _carrinhoRepository.ObterCarrinho()?.Itens.Sum(i => i.Quantidade) ?? 0;
+            var carrinho = _carrinhoRepository.ObterCarrinho();
+            var count = carrinho?.Itens?.Sum(i => i.Quantidade) ?? 0;
             return Json(new { count });
         }
+
 
 
         [HttpPost]
