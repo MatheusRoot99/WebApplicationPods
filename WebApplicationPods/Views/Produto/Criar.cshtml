@@ -5,8 +5,10 @@
     var categorias = ViewBag.Categorias as SelectList ?? new SelectList(new List<SelectListItem>());
 }
 
-<link rel="stylesheet" href="~/css/produtos.css" asp-append-version="true" />
-
+<!-- CSS base da página (seu arquivo atual) -->
+<link rel="stylesheet" href="~/css/produtos-criar.css" asp-append-version="true" />
+<!-- CSS complementar: torna a página full width e adiciona respiros adequados -->
+<link rel="stylesheet" href="~/css/produtos-criar.css" asp-append-version="true" />
 
 <div class="hero-pods py-5 mb-5 text-white">
     <div class="container">
@@ -23,7 +25,8 @@
     </div>
 </div>
 
-<div class="container mb-5">
+<!-- container agora é fluid para usar 100% da tela em desktop -->
+<div class="container-fluid px-3 px-xl-4 mb-5 page-has-bottom-nav produtos-criar-page">
     @if (TempData["MensagemSucesso"] != null)
     {
         <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
@@ -43,14 +46,13 @@
     }
 
     <div class="card shadow-lg border-0">
-        <div class="card-header bg-gradient-primary text-white py-3">
+        <div class="card-header bg-gradient-primary text-white ">
             <h4 class="mb-0"><i class="fas fa-edit me-2"></i>Formulário de Cadastro</h4>
         </div>
+
         <div class="card-body p-4 p-md-5">
             <form asp-action="Criar" enctype="multipart/form-data" class="needs-validation" novalidate>
                 <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-4"></div>
-
-               
 
                 <div class="row g-4">
                     <!-- Coluna Esquerda -->
@@ -72,7 +74,6 @@
                         </div>
 
                         <div class="row g-3">
-                            <!-- Substitua a seção de Sabores e Quantidades por este código -->
                             <div class="mb-4">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <label class="form-label fw-bold text-primary h5">Sabores e Quantidades</label>
@@ -142,16 +143,15 @@
                                     <i class="fas fa-info-circle me-1"></i> Adicione os sabores disponíveis e suas quantidades
                                 </div>
                             </div>
-                            
-                                <div class="mb-4">
-                                    <label asp-for="Cor" class="form-label fw-bold text-primary"></label>
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-light"><i class="fas fa-palette"></i></span>
-                                        <input asp-for="Cor" class="form-control" placeholder="Ex: Preto, Azul" />
-                                    </div>
-                                    <span asp-validation-for="Cor" class="text-danger small"></span>
+
+                            <div class="mb-4">
+                                <label asp-for="Cor" class="form-label fw-bold text-primary"></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="fas fa-palette"></i></span>
+                                    <input asp-for="Cor" class="form-control" placeholder="Ex: Preto, Azul" />
                                 </div>
-                            
+                                <span asp-validation-for="Cor" class="text-danger small"></span>
+                            </div>
                         </div>
                     </div>
 
@@ -189,8 +189,7 @@
                                                required
                                                type="text"
                                                value=""
-                                               inputmode="decimal"
-                                                /> <!-- Remova qualquer value inicial -->
+                                               inputmode="decimal" />
                                     </div>
                                     <span asp-validation-for="Preco" class="text-danger small"></span>
                                 </div>
@@ -205,7 +204,6 @@
                                                placeholder="0.00"
                                                type="text"
                                                inputmode="decimal" />
-
                                     </div>
                                     <span asp-validation-for="PrecoPromocional" class="text-danger small"></span>
                                 </div>
@@ -298,16 +296,13 @@
     </div>
 </div>
 
-
-
 @section Scripts {
     <script>
-        $(document).ready(function() {
+        $(document).ready(function () {
             // Máscara para campos monetários
             $('.money-mask').mask('#.##0,00', { reverse: true });
-        }); // Fechamento adicionado aqui
+        });
     </script>
 
-    <!-- Inclui o arquivo JS separado -->
     <script src="~/js/produto-form.js" asp-append-version="true"></script>
 }

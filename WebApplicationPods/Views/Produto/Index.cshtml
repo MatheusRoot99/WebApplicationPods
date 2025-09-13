@@ -5,9 +5,13 @@
     ViewData["Title"] = "Catálogo de Pods Eletrônicos";
 }
 
-<div class="container-fluid px-0">
+@section Styles {
+    <link rel="stylesheet" href="~/css/produtos-index.css" asp-append-version="true" />
+}
+
+<div class="container-fluid px-0 produtos-page">
     <!-- Header -->
-    <div class="gradient-header py-4 mb-4 shadow">
+    <header class="gradient-header py-4 mb-4 shadow">
         <div class="container">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-center text-center text-md-start">
                 <div class="mb-3 mb-md-0">
@@ -19,7 +23,7 @@
                 </a>
             </div>
         </div>
-    </div>
+    </header>
 
     <!-- Alertas -->
     <div class="container container-full-lg">
@@ -32,9 +36,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
                 </div>
             </div>
-
-            // Limpa a mensagem após exibir para não reaparecer em outras páginas
-            TempData.Remove("MensagemSucesso");
+            { TempData.Remove("MensagemSucesso"); }
         }
 
         @if (TempData["MensagemErro"] != null)
@@ -46,478 +48,356 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
                 </div>
             </div>
-
-            // Limpa a mensagem após exibir
-            TempData.Remove("MensagemErro");
+            { TempData.Remove("MensagemErro"); }
         }
     </div>
 
-    <div class="container-fluid px-0 ">
-
+    <!-- CONTEÚDO (100% largura no desktop) -->
+    <div id="pageRoot" class="container-fluid px-0 page-has-bottom-nav">
         @if (!Model.Any())
         {
-            <div class="alert alert-info shadow-sm text-center">
-                Nenhum produto cadastrado. Clique em <b>Novo Produto</b> para começar.
+            <div class="container">
+                <div class="alert alert-info shadow-sm text-center">
+                    Nenhum produto cadastrado. Clique em <b>Novo Produto</b> para começar.
+                </div>
             </div>
         }
         else
         {
-            <!-- Busca/Filtros -->
-            <div class="row mb-4 g-3 align-items-center">
-                <div class="col-md-6 col-lg-5">
-                    <div class="search-box input-group rounded-pill shadow-sm">
-                        <span class="input-group-text bg-white border-0 ps-4"><i class="fas fa-search"></i></span>
-                        <input type="text" class="form-control border-0" id="searchInput" placeholder="Pesquisar por nome, categoria, sabor...">
+            <!-- Barra de busca -->
+            <div class="container-fluid px-3 px-xl-4 mb-4">
+                <div class="row g-3 align-items-center">
+                    <div class="col-lg-8 col-xl-6">
+                        <div class="search-box input-group rounded-pill shadow-sm">
+                            <span class="input-group-text bg-white border-0 ps-4"><i class="fas fa-search"></i></span>
+                            <input type="text" class="form-control border-0" id="searchInput" placeholder="Pesquisar por nome, categoria, sabor...">
+                        </div>
                     </div>
-                </div>
-                <div class="col-md-6 col-lg-7 text-md-end text-center">
-                    <div class="d-inline-flex flex-wrap gap-2">
+                    <div class="col-lg-4 col-xl-6 text-lg-end text-center">
                         <button class="btn btn-outline-primary rounded-pill filter-btn active" data-filter="all">Todos</button>
-                        @* <button class="btn btn-outline-primary rounded-pill filter-btn" data-filter="in-stock">Em Estoque</button>
-                        <button class="btn btn-outline-primary rounded-pill filter-btn" data-filter="low-stock">Estoque Baixo</button>
-                        <button class="btn btn-outline-primary rounded-pill filter-btn" data-filter="active">Ativos</button> *@
                     </div>
                 </div>
             </div>
 
-            <!-- Tabela Desktop -->
+            <!-- Tabela Desktop (full width) -->
             <div class="d-none d-lg-block">
-                <div class="table-responsive rounded-3 shadow-sm">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr class="text-center">
-                                <th class="ps-4 text-start">Produto</th>
-                                <th>Preço</th>
-                                <th>Promoção</th>
-                                <th>Categoria</th>
-                                <th style="min-width:180px;">Estoque</th>
-                                <th style="min-width:260px;">Sabores (estoque)</th>
-                                <th>Puffs</th>
-                                <th>Bateria</th>
-                                <th>Cadastro</th>
-                                <th>Ativo</th>
-                                <th class="text-end pe-4">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var item in Model)
-                            {
-                                var statusClass = item.Ativo ? "" : "table-secondary opacity-75";
-                                var estoqueClass = item.Estoque <= 5 ? "text-warning" : "text-dark";
-                                var sabores = (item.SaboresQuantidadesList ?? new List<ProdutoModel.SaborQuantidade>())
-                                .Where(sq => sq.Quantidade >= 0)
-                                .OrderByDescending(sq => sq.Quantidade)
-                                .ToList();
+                <div class="container-fluid px-3 px-xl-4">
+                    <div class="table-responsive rounded-3 shadow-sm">
+                        <table class="table table-hover align-middle mb-0 produtos-table">
+                            <thead class="table-light">
+                                <tr class="text-center">
+                                    <th class="ps-4 text-start col-produto">Produto</th>
+                                    <th class="col-preco">Preço</th>
+                                    <th class="col-promocao">Promoção</th>
+                                    <th class="col-categoria">Categoria</th>
+                                    <th class="col-estoque">Estoque</th>
+                                    <th class="col-sabores">Sabores (estoque)</th>
+                                    <th class="col-puffs">Puffs</th>
+                                    <th class="col-bateria">Bateria</th>
+                                    <th class="col-cadastro">Cadastro</th>
+                                    <th class="col-ativo">Ativo</th>
+                                    <th class="text-end pe-4 col-acoes">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model)
+                                {
+                                    var statusClass = item.Ativo ? "" : "table-secondary opacity-75";
+                                    var estoqueClass = item.Estoque <= 5 ? "text-warning" : "text-dark";
+                                    var sabores = (item.SaboresQuantidadesList ?? new List<ProdutoModel.SaborQuantidade>())
+                                    .Where(sq => sq.Quantidade >= 0)
+                                    .OrderByDescending(sq => sq.Quantidade)
+                                    .ToList();
 
-                                var topChips = sabores.Take(4).ToList();
-                                var hiddenChips = sabores.Skip(4).ToList();
-                                var temMais = hiddenChips.Any();
-                                var popoverText = string.Join(", ", hiddenChips.Select(sq => $"{sq.Sabor} ({sq.Quantidade})"));
+                                    var topChips = sabores.Take(4).ToList();
+                                    var hiddenChips = sabores.Skip(4).ToList();
+                                    var temMais = hiddenChips.Any();
+                                    var popoverText = string.Join(", ", hiddenChips.Select(sq => $"{sq.Sabor} ({sq.Quantidade})"));
 
-                                <tr class="@statusClass">
-                                    <!-- Produto -->
-                                    <td class="ps-4">
-                                        <div class="d-flex align-items-center">
-                                            <div class="product-img-container me-3">
-                                                @if (!string.IsNullOrEmpty(item.ImagemUrl))
-                                                {
-                                                    <img src="@item.ImagemUrl" alt="Imagem @item.Nome" class="product-img rounded-3 shadow-sm" loading="lazy">
-                                                }
-                                                else
-                                                {
-                                                    <div class="product-img-placeholder rounded-3 shadow-sm">
-                                                        <i class="fas fa-box"></i>
-                                                    </div>
-                                                }
-                                            </div>
-                                            <div class="text-truncate">
-                                                <div class="fw-bold">@item.Nome</div>
-                                                <small class="text-muted">ID: @item.Id</small>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <!-- Preço -->
-                                    <td class="text-center">
-                                        @if (item.PrecoPromocional.HasValue && item.PrecoPromocional < item.Preco)
-                                        {
-                                            <span class="price-old">@item.Preco.ToString("C")</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="price-normal">@item.Preco.ToString("C")</span>
-                                        }
-                                    </td>
-
-                                    <!-- Promoção -->
-                                    <td class="text-center">
-                                        @if (item.PrecoPromocional.HasValue && item.PrecoPromocional < item.Preco)
-                                        {
-                                            var desconto = Math.Round((1 - (item.PrecoPromocional.Value / item.Preco)) * 100);
-                                            <span class="price-new">@item.PrecoPromocional.Value.ToString("C")</span>
-                                            <span class="discount-badge">-@desconto%</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">—</span>
-                                        }
-                                    </td>
-
-                                    <!-- Categoria -->
-                                    <td class="text-center">
-                                        <span class="badge bg-light text-dark rounded-pill px-3 py-2">@item.Categoria?.Nome</span>
-                                    </td>
-
-                                    <!-- Estoque -->
-                                    <td class="text-center">
-                                        <div class="d-flex flex-column align-items-center">
-                                            <div class="progress w-100" style="height: 10px;">
-                                                <div class="progress-bar @(item.Estoque > 5 ? "bg-success" : "bg-warning")"
-                                                     role="progressbar"
-                                                     style="width: @(Math.Min(item.Estoque * 10, 100))%">
+                                    <tr class="@statusClass">
+                                        <!-- Produto -->
+                                        <td class="ps-4">
+                                            <div class="d-flex align-items-center">
+                                                <div class="product-img-container me-3">
+                                                    @if (!string.IsNullOrEmpty(item.ImagemUrl))
+                                                    {
+                                                        <img src="@item.ImagemUrl" alt="Imagem @item.Nome" class="product-img rounded-3 shadow-sm" loading="lazy">
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="product-img-placeholder rounded-3 shadow-sm">
+                                                            <i class="fas fa-box"></i>
+                                                        </div>
+                                                    }
+                                                </div>
+                                                <div class="text-truncate">
+                                                    <div class="fw-bold">@item.Nome</div>
+                                                    <small class="text-muted">ID: @item.Id</small>
                                                 </div>
                                             </div>
-                                            <div class="mt-1">
-                                                <span class="badge bg-light text-dark border">
-                                                    <i class="fas fa-box me-1"></i>
-                                                    <span class="fw-bold @estoqueClass">@item.Estoque</span>
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </td>
+                                        </td>
 
-                                    <!-- Sabores (estoque) -->
-                                    <td>
-                                        @if (topChips.Any())
-                                        {
-                                            <div class="d-flex flex-wrap gap-2 align-items-center">
-                                                @foreach (var s in topChips)
-                                                {
-                                                    <span class="badge flavor-chip">
-                                                        <span class="chip-dot"></span>
-                                                        @s.Sabor
-                                                        <span class="chip-qty">(@s.Quantidade)</span>
+                                        <!-- Preço -->
+                                        <td class="text-center">
+                                            @if (item.PrecoPromocional.HasValue && item.PrecoPromocional < item.Preco)
+                                            {
+                                                <span class="price-old">@item.Preco.ToString("C")</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="price-normal">@item.Preco.ToString("C")</span>
+                                            }
+                                        </td>
+
+                                        <!-- Promoção -->
+                                        <td class="text-center">
+                                            @if (item.PrecoPromocional.HasValue && item.PrecoPromocional < item.Preco)
+                                            {
+                                                var desconto = Math.Round((1 - (item.PrecoPromocional.Value / item.Preco)) * 100);
+                                                <span class="price-new">@item.PrecoPromocional.Value.ToString("C")</span>
+                                                <span class="discount-badge">-@desconto%</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">—</span>
+                                            }
+                                        </td>
+
+                                        <!-- Categoria -->
+                                        <td class="text-center">
+                                            <span class="badge bg-light text-dark rounded-pill px-3 py-2">@item.Categoria?.Nome</span>
+                                        </td>
+
+                                        <!-- Estoque -->
+                                        <td class="text-center">
+                                            <div class="d-flex flex-column align-items-center">
+                                                <div class="progress w-100" style="height: 10px;">
+                                                    <div class="progress-bar @(item.Estoque > 5 ? "bg-success" : "bg-warning")"
+                                                         role="progressbar"
+                                                         style="width: @(Math.Min(item.Estoque * 10, 100))%">
+                                                    </div>
+                                                </div>
+                                                <div class="mt-1">
+                                                    <span class="badge bg-light text-dark border">
+                                                        <i class="fas fa-box me-1"></i>
+                                                        <span class="fw-bold @estoqueClass">@item.Estoque</span>
                                                     </span>
-                                                }
-
-                                                @if (temMais)
-                                                {
-                                                    <button type="button"
-                                                            class="btn btn-sm btn-outline-secondary rounded-pill"
-                                                            data-bs-toggle="popover"
-                                                            data-bs-placement="top"
-                                                            data-bs-trigger="focus"
-                                                            title="Mais sabores"
-                                                            data-bs-content="@popoverText">
-                                                        +@hiddenChips.Count
-                                                    </button>
-                                                }
+                                                </div>
                                             </div>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">—</span>
-                                        }
-                                    </td>
+                                        </td>
 
-                                    <!-- Puffs -->
-                                    <td class="text-center">@item.Puffs</td>
+                                        <!-- Sabores -->
+                                        <td>
+                                            @if (topChips.Any())
+                                            {
+                                                <div class="d-flex flex-wrap gap-2 align-items-center">
+                                                    @foreach (var s in topChips)
+                                                    {
+                                                        <span class="badge flavor-chip">
+                                                            <span class="chip-dot"></span>
+                                                            @s.Sabor
+                                                            <span class="chip-qty">(@s.Quantidade)</span>
+                                                        </span>
+                                                    }
+                                                    @if (temMais)
+                                                    {
+                                                        <button type="button"
+                                                                class="btn btn-sm btn-outline-secondary rounded-pill"
+                                                                data-bs-toggle="popover"
+                                                                data-bs-placement="top"
+                                                                data-bs-trigger="focus"
+                                                                title="Mais sabores"
+                                                                data-bs-content="@popoverText">
+                                                            +@hiddenChips.Count
+                                                        </button>
+                                                    }
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">—</span>
+                                            }
+                                        </td>
 
-                                    <!-- Bateria -->
-                                    <td class="text-center">@item.CapacidadeBateria mAh</td>
+                                        <td class="text-center">@item.Puffs</td>
+                                        <td class="text-center">@item.CapacidadeBateria mAh</td>
+                                        <td class="text-center">@item.DataCadastro.ToShortDateString()</td>
 
-                                    <!-- Data -->
-                                    <td class="text-center">@item.DataCadastro.ToShortDateString()</td>
+                                        <!-- Ativo -->
+                                        <td class="text-center">
+                                            <span class="badge @(item.Ativo ? "bg-success" : "bg-secondary") px-3 py-2 rounded-pill">
+                                                @(item.Ativo ? "Sim" : "Não")
+                                            </span>
+                                        </td>
 
-                                    <!-- Ativo -->
-                                    <td class="text-center">
-                                        <span class="badge @(item.Ativo ? "bg-success" : "bg-secondary") px-3 py-2 rounded-pill">
-                                            @(item.Ativo ? "Sim" : "Não")
-                                        </span>
-                                    </td>
-
-                                    <!-- Ações -->
-                                    <td class="text-end pe-4">
-                                        <div class="btn-group">
-                                            <a asp-action="Editar" asp-route-id="@item.Id" class="btn btn-outline-primary btn-action">
-                                                <i class="fas fa-edit me-1"></i> Editar
-                                            </a>
-                                            <a asp-action="Excluir" asp-route-id="@item.Id" class="btn btn-outline-danger btn-action">
-                                                <i class="fas fa-trash-alt me-1"></i> Excluir
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                                        <!-- Ações -->
+                                        <td class="text-end pe-4">
+                                            <div class="btn-group">
+                                                <a asp-action="Editar" asp-route-id="@item.Id" class="btn btn-outline-primary btn-action">
+                                                    <i class="fas fa-edit me-1"></i> Editar
+                                                </a>
+                                                <a asp-action="Excluir" asp-route-id="@item.Id" class="btn btn-outline-danger btn-action">
+                                                    <i class="fas fa-trash-alt me-1"></i> Excluir
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
             <!-- Cards Mobile -->
-            <div class="row row-cols-1 row-cols-md-2 g-4 d-lg-none">
-                @foreach (var item in Model)
-                {
-                    var saboresMob = (item.SaboresQuantidadesList ?? new List<ProdutoModel.SaborQuantidade>())
-                    .Where(sq => sq.Quantidade >= 0)
-                    .OrderByDescending(sq => sq.Quantidade)
-                    .Take(6)
-                    .Select(sq => $"{sq.Sabor} ({sq.Quantidade})")
-                    .ToList();
+            <div class="container-fluid px-3 px-xl-4 d-lg-none">
+                <div class="row row-cols-1 row-cols-md-2 g-4">
+                    @foreach (var item in Model)
+                    {
+                        var saboresMob = (item.SaboresQuantidadesList ?? new List<ProdutoModel.SaborQuantidade>())
+                        .Where(sq => sq.Quantidade >= 0)
+                        .OrderByDescending(sq => sq.Quantidade)
+                        .Take(6)
+                        .Select(sq => $"{sq.Sabor} ({sq.Quantidade})")
+                        .ToList();
 
-                    <div class="col">
-                        <div class="card product-card h-100 shadow-sm">
-                            <div class="card-body">
-                                <div class="text-center mb-3">
-                                    <div class="product-img-container mx-auto mb-2">
-                                        @if (!string.IsNullOrEmpty(item.ImagemUrl))
+                        <div class="col">
+                            <div class="card product-card h-100 shadow-sm">
+                                <div class="card-body">
+                                    <div class="text-center mb-3">
+                                        <div class="product-img-container mx-auto mb-2">
+                                            @if (!string.IsNullOrEmpty(item.ImagemUrl))
+                                            {
+                                                <img src="@item.ImagemUrl" alt="@item.Nome" class="product-img rounded-3 shadow-sm" loading="lazy">
+                                            }
+                                            else
+                                            {
+                                                <div class="product-img-placeholder rounded-3 shadow-sm">
+                                                    <i class="fas fa-box"></i>
+                                                </div>
+                                            }
+                                        </div>
+                                        <h5 class="card-title fw-bold mb-1">@item.Nome</h5>
+                                        <div class="small text-muted">ID: @item.Id</div>
+                                    </div>
+
+                                    <div class="text-center mb-3">
+                                        @if (item.PrecoPromocional.HasValue && item.PrecoPromocional < item.Preco)
                                         {
-                                            <img src="@item.ImagemUrl" alt="@item.Nome" class="product-img rounded-3 shadow-sm" loading="lazy">
-                                        }
-                                        else
-                                        {
-                                            <div class="product-img-placeholder rounded-3 shadow-sm">
-                                                <i class="fas fa-box"></i>
+                                            <div class="mb-1"><span class="price-old">@item.Preco.ToString("C")</span></div>
+                                            <div>
+                                                <span class="price-new">@item.PrecoPromocional.Value.ToString("C")</span>
+                                                @{
+                                                    var desconto = Math.Round((1 - (item.PrecoPromocional.Value / item.Preco)) * 100);
+                                                }
+                                                <span class="discount-badge">-@desconto%</span>
                                             </div>
                                         }
-                                    </div>
-                                    <h5 class="card-title fw-bold mb-1">@item.Nome</h5>
-                                    <div class="small text-muted">ID: @item.Id</div>
-                                </div>
-
-                                <div class="text-center mb-3">
-                                    @if (item.PrecoPromocional.HasValue && item.PrecoPromocional < item.Preco)
-                                    {
-                                        <div class="mb-1">
-                                            <span class="price-old">@item.Preco.ToString("C")</span>
-                                        </div>
-                                        <div>
-                                            <span class="price-new">@item.PrecoPromocional.Value.ToString("C")</span>
-                                            @{
-                                                var desconto = Math.Round((1 - (item.PrecoPromocional.Value / item.Preco)) * 100);
-                                            }
-                                            <span class="discount-badge">-@desconto%</span>
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <div class="fw-bold text-primary fs-5">@item.Preco.ToString("C")</div>
-                                    }
-                                </div>
-
-
-                                <div class="row g-2">
-                                    <div class="col-6"><span class="text-muted small">Categoria</span><div>@item.Categoria?.Nome</div></div>
-                                    <div class="col-6"><span class="text-muted small">Estoque</span><div class="fw-bold">@item.Estoque</div></div>
-                                    <div class="col-6"><span class="text-muted small">Puffs</span><div>@item.Puffs</div></div>
-                                    <div class="col-6"><span class="text-muted small">Bateria</span><div>@item.CapacidadeBateria mAh</div></div>
-                                </div>
-
-                                <div class="mt-3">
-                                    <span class="text-muted small d-block mb-1">Sabores</span>
-                                    <div class="d-flex flex-wrap gap-2">
-                                        @if (saboresMob.Any())
-                                        {
-                                            @foreach (var s in saboresMob)
-                                            {
-                                                <span class="badge flavor-chip">@s</span>
-                                            }
-                                        }
                                         else
                                         {
-                                            <span class="text-muted">—</span>
+                                            <div class="fw-bold text-primary fs-5">@item.Preco.ToString("C")</div>
                                         }
                                     </div>
-                                </div>
 
-                                <div class="d-flex justify-content-end gap-2 pt-3 border-top mt-3">
-                                    <a asp-action="Editar" asp-route-id="@item.Id" class="btn btn-primary btn-action">
-                                        <i class="fas fa-edit"></i> Editar
-                                    </a>
-                                    <a asp-action="Excluir" asp-route-id="@item.Id" class="btn btn-danger btn-action">
-                                        <i class="fas fa-trash-alt"></i> Excluir
-                                    </a>
+                                    <div class="row g-2">
+                                        <div class="col-6"><span class="text-muted small">Categoria</span><div>@item.Categoria?.Nome</div></div>
+                                        <div class="col-6"><span class="text-muted small">Estoque</span><div class="fw-bold">@item.Estoque</div></div>
+                                        <div class="col-6"><span class="text-muted small">Puffs</span><div>@item.Puffs</div></div>
+                                        <div class="col-6"><span class="text-muted small">Bateria</span><div>@item.CapacidadeBateria mAh</div></div>
+                                    </div>
+
+                                    <div class="mt-3">
+                                        <span class="text-muted small d-block mb-1">Sabores</span>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            @if (saboresMob.Any())
+                                            {
+                                                @foreach (var s in saboresMob)
+                                                {
+                                                    <span class="badge flavor-chip">@s</span>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">—</span>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex justify-content-end gap-2 pt-3 border-top mt-3">
+                                        <a asp-action="Editar" asp-route-id="@item.Id" class="btn btn-primary btn-action">
+                                            <i class="fas fa-edit"></i> Editar
+                                        </a>
+                                        <a asp-action="Excluir" asp-route-id="@item.Id" class="btn btn-danger btn-action">
+                                            <i class="fas fa-trash-alt"></i> Excluir
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                }
+                    }
+                </div>
             </div>
         }
     </div>
 </div>
 
-@section Styles {
-    <style>
-        /* ===== Header ===== */
-        .gradient-header {
-            background: linear-gradient(135deg,#6a11cb 0%,#2575fc 100%)
-        }
-
-
-        /* ===== Imagens ===== */
-        .product-img-container {
-            width: 60px;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-        }
-
-        .product-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover
-        }
-
-        .product-img-placeholder {
-            width: 100%;
-            height: 100%;
-            background: #f8f9fa;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #adb5bd;
-            font-size: 1.25rem;
-            border-radius: .5rem
-        }
-
-        /* ===== Chips de sabores ===== */
-        .flavor-chip {
-            background: #f1f3f5;
-            color: #333;
-            border: 1px solid #e2e6ea;
-            border-radius: 999px;
-            padding: .35rem .6rem;
-            font-weight: 500
-        }
-
-        .chip-dot {
-            display: inline-block;
-            width: .5rem;
-            height: .5rem;
-            background: #6a11cb;
-            border-radius: 50%;
-            margin-right: .35rem
-        }
-
-        .chip-qty {
-            opacity: .7;
-            margin-left: .25rem
-        }
-
-        /* ===== Cards (mobile) ===== */
-        .product-card {
-            border: none;
-            border-radius: 12px;
-            transition: transform .2s ease, box-shadow .2s ease
-        }
-
-            .product-card:hover {
-                transform: translateY(-4px);
-                box-shadow: 0 10px 20px rgba(0,0,0,.08)
-            }
-
-        /* ===== Busca/Filtros ===== */
-        .search-box {
-            background: #fff;
-            border-radius: 50px !important
-        }
-
-        .filter-btn.active {
-            background-color: #6a11cb;
-            color: #fff;
-            border-color: #6a11cb
-        }
-
-        /* ===== Botões de ação maiores ===== */
-        .btn-action {
-            padding: .55rem 1rem;
-            border-radius: 999px
-        }
-
-        /* ===== Responsivo ===== */
-        @@media (max-width:768px) {
-            .gradient-header
-
-        {
-            padding: 1.5rem 0
-        }
-
-        .product-img-container {
-            width: 56px;
-            height: 56px
-        }
-
-        }
-
-        /* Preços */
-        .price-normal {
-            color: #0d6efd;
-            font-weight: 700;
-        }
-        /* azul, sem promo */
-        .price-old {
-            color: #6c757d;
-            text-decoration: line-through;
-            font-weight: 600;
-        }
-
-        .price-new {
-            color: #198754;
-            font-weight: 800;
-        }
-        /* verde forte */
-        .discount-badge {
-            background: #198754;
-            color: #fff;
-            border-radius: 999px;
-            padding: .2rem .55rem;
-            font-size: .75rem;
-            margin-left: .35rem;
-        }
-    </style>
-}
-
 @section Scripts {
     <script>
-        // Tooltips e Popovers
+        // Tooltips / Popovers
         $(function () {
-            $('[data-bs-toggle="tooltip"]').tooltip();
-            $('[data-bs-toggle="popover"]').popover();
+          $('[data-bs-toggle="tooltip"]').tooltip();
+          $('[data-bs-toggle="popover"]').popover();
         });
 
         // Filtros e busca
         $(document).ready(function () {
-            // filtro
-            $('.filter-btn').click(function () {
-                $('.filter-btn').removeClass('active');
-                $(this).addClass('active');
+          $('.filter-btn').click(function () {
+            $('.filter-btn').removeClass('active');
+            $(this).addClass('active');
 
-                const filter = $(this).data('filter');
-                $('tbody tr, .product-card').hide();
+            const filter = $(this).data('filter');
+            $('tbody tr, .product-card').hide();
 
-                if (filter === 'all') {
-                    $('tbody tr, .product-card').show();
-                } else if (filter === 'in-stock') {
-                    $('tbody tr').filter(function(){ return parseInt($(this).find('td:eq(4) .badge .fw-bold').text() || '0') > 0 }).show();
-                    $('.product-card').filter(function(){ return $(this).find('.fw-bold:contains("Estoque")').text().match(/\d+/) }).show();
-                } else if (filter === 'low-stock') {
-                    $('tbody tr').filter(function(){ return parseInt($(this).find('td:eq(4) .badge .fw-bold').text() || '0') <= 5 }).show();
-                } else if (filter === 'active') {
-                    $('tbody tr').filter(function(){ return !$(this).hasClass('table-secondary') }).show();
-                }
+            if (filter === 'all') {
+              $('tbody tr, .product-card').show();
+            } else if (filter === 'in-stock') {
+              $('tbody tr').filter(function () {
+                return parseInt($(this).find('td:eq(4) .badge .fw-bold').text() || '0') > 0
+              }).show();
+              $('.product-card').filter(function () {
+                return $(this).find('.fw-bold:contains("Estoque")').text().match(/\d+/)
+              }).show();
+            } else if (filter === 'low-stock') {
+              $('tbody tr').filter(function () {
+                return parseInt($(this).find('td:eq(4) .badge .fw-bold').text() || '0') <= 5
+              }).show();
+            } else if (filter === 'active') {
+              $('tbody tr').filter(function () { return !$(this).hasClass('table-secondary') }).show();
+            }
+          });
+
+          $('#searchInput').on('input', function () {
+            const t = $(this).val().toLowerCase();
+            $('tbody tr, .product-card').each(function () {
+              const txt = $(this).text().toLowerCase();
+              $(this).toggle(txt.includes(t));
             });
+          });
+        });
 
-            // busca
-            $('#searchInput').on('input', function () {
-                const t = $(this).val().toLowerCase();
-                $('tbody tr, .product-card').each(function () {
-                    const txt = $(this).text().toLowerCase();
-                    $(this).toggle(txt.includes(t));
-                });
-            });
+        // Define --mbn-height quando existir bottom-nav fixa
+        document.addEventListener('DOMContentLoaded', () => {
+          const nav = document.querySelector('.mobile-bottom-nav, .bottom-nav, .mbn, .navbar-fixed-bottom');
+          const root = document.documentElement;
+          function setMbnHeight(){
+            const h = nav ? nav.offsetHeight : 68;
+            root.style.setProperty('--mbn-height', h + 'px');
+          }
+          setMbnHeight();
+          window.addEventListener('resize', setMbnHeight);
+          if (nav && 'ResizeObserver' in window){
+            new ResizeObserver(setMbnHeight).observe(nav);
+          }
         });
     </script>
 }

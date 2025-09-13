@@ -1,0 +1,277 @@
+﻿/* ====== Paleta / Tema ====== */
+:root {
+    --primary-color: #6e48aa;
+    --secondary-color: #9d50bb;
+    --light-gray: #f8f9fa;
+    --medium-gray: #e9ecef;
+    --dark-gray: #6c757d;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --mbn-height: 68px; /* JS ajusta se houver bottom-nav */
+}
+
+/* ====== Header (hero) ====== */
+.gradient-header {
+    background: linear-gradient(135deg,var(--primary-color) 0%,var(--secondary-color) 100%);
+    border-radius: 0 0 20px 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.1);
+    position: relative;
+    overflow: hidden;
+}
+
+/* ====== Espaço para bottom-nav fixa ====== */
+.page-has-bottom-nav {
+    padding-bottom: calc(var(--mbn-height) + env(safe-area-inset-bottom,0px) + 20px);
+}
+
+@supports(padding:max(0px)) {
+    .page-has-bottom-nav {
+        padding-bottom: max(calc(var(--mbn-height) + 20px), calc(env(safe-area-inset-bottom,0px) + 20px));
+    }
+}
+
+html, body {
+    min-height: 100%;
+}
+
+/* ====== Imagens ====== */
+.product-img-container {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1/1;
+}
+
+.product-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: .5rem;
+}
+
+.product-img-placeholder {
+    width: 100%;
+    height: 100%;
+    background: #f8f9fa;
+    color: #adb5bd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    border-radius: .5rem;
+}
+
+/* ====== Chips de sabores ====== */
+.flavor-chip {
+    background: #f1f3f5;
+    color: #333;
+    border: 1px solid #e2e6ea;
+    border-radius: 999px;
+    padding: .35rem .6rem;
+    font-weight: 500;
+}
+
+.chip-dot {
+    display: inline-block;
+    width: .5rem;
+    height: .5rem;
+    background: var(--primary-color);
+    border-radius: 50%;
+    margin-right: .35rem;
+}
+
+.chip-qty {
+    opacity: .7;
+    margin-left: .25rem;
+}
+
+/* ====== Tabela Desktop ====== */
+.produtos-table .price-normal {
+    color: #0d6efd;
+    font-weight: 700;
+}
+
+.produtos-table .price-old {
+    color: #6c757d;
+    text-decoration: line-through;
+    font-weight: 600;
+}
+
+.produtos-table .price-new {
+    color: #198754;
+    font-weight: 800;
+}
+
+.discount-badge {
+    background: #198754;
+    color: #fff;
+    border-radius: 999px;
+    padding: .2rem .55rem;
+    font-size: .75rem;
+    margin-left: .35rem;
+}
+
+.btn-action {
+    padding: .55rem 1rem;
+    border-radius: 999px;
+}
+
+.search-box {
+    background: #fff;
+    border-radius: 50px !important;
+}
+
+.filter-btn.active {
+    background-color: var(--primary-color);
+    color: #fff;
+    border-color: var(--primary-color);
+}
+
+/* ====== Cards Mobile ====== */
+.product-card {
+    border: none;
+    border-radius: 12px;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+    .product-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 20px rgba(0,0,0,.08);
+    }
+
+@media (max-width:768px) {
+    .gradient-header {
+        padding: 1.5rem 0;
+    }
+
+    .product-img-container {
+        width: 56px;
+        height: 56px;
+    }
+}
+
+@media (max-width:991.98px) {
+    .product-card {
+        margin-bottom: .25rem;
+    }
+
+        .product-card .card-body {
+            padding: 1rem 1rem .75rem;
+        }
+
+    .flavor-chip {
+        padding: .28rem .5rem;
+        font-size: .85rem;
+    }
+}
+
+/* =========================
+   LAYOUT WIDE NO DESKTOP
+   ========================= */
+
+/* 100% largura para todos os containers dentro da página */
+.produtos-page .container,
+.produtos-page .container-lg,
+.produtos-page .container-xl,
+.produtos-page .container-xxl,
+.produtos-page .page-container,
+.produtos-page .container-fluid {
+    max-width: 100%;
+}
+
+/* Remove a barra horizontal do .table-responsive no desktop */
+@media (min-width: 992px) {
+    .produtos-page .table-responsive {
+        overflow-x: visible; /* sem scroll */
+    }
+}
+
+/* Distribuição confortável das colunas em telas grandes */
+@media (min-width: 1200px) {
+    .produtos-table .col-produto {
+        width: 28%;
+    }
+    /* thumb + nome */
+    .produtos-table .col-sabores {
+        width: 28%;
+        white-space: normal;
+    }
+
+    .produtos-table .col-estoque {
+        width: 12%;
+    }
+
+    .produtos-table .col-preco {
+        width: 8%;
+    }
+
+    .produtos-table .col-promocao {
+        width: 10%;
+    }
+
+    .produtos-table .col-categoria {
+        width: 8%;
+    }
+
+    .produtos-table .col-puffs {
+        width: 6%;
+    }
+
+    .produtos-table .col-bateria {
+        width: 6%;
+    }
+
+    .produtos-table .col-cadastro {
+        width: 8%;
+    }
+
+    .produtos-table .col-ativo {
+        width: 6%;
+    }
+
+    .produtos-table .col-acoes {
+        width: 10%;
+    }
+}
+
+/* Evita overflow: só quebra onde faz sentido */
+.produtos-table th, .produtos-table td {
+    white-space: nowrap;
+}
+
+.produtos-table .col-produto,
+.produtos-table .col-sabores {
+    white-space: normal;
+}
+
+    /* Respiros úteis */
+    .produtos-table .col-produto .product-img-container {
+        flex: 0 0 auto;
+    }
+
+    .produtos-table .col-produto .text-truncate {
+        max-width: 100%;
+    }
+
+    .produtos-table .col-sabores .flavor-chip {
+        white-space: nowrap;
+    }
+
+.produtos-table .col-sabores {
+    line-height: 1.15;
+}
+
+/* Barra de progresso compacta */
+.produtos-table .progress {
+    height: 8px;
+}
+
+/* Telas muito largas: margem de conforto */
+@media (min-width:1600px) {
+    .produtos-page .container-fluid.px-3 {
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+    }
+}

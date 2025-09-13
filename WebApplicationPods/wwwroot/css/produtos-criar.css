@@ -341,3 +341,71 @@
     .remove-sabor:hover {
         transform: scale(1.1);
     }
+
+/* ===== ajustes globais úteis ===== */
+:root {
+    /* altura padrão da bottom-nav; se sua nav fixa tiver outra altura, você pode ajustar via JS também */
+    --mbn-height: 68px;
+}
+
+/* Dá respiro no fim da página para a bottom-nav não cobrir o conteúdo */
+.page-has-bottom-nav {
+    padding-bottom: calc(var(--mbn-height) + env(safe-area-inset-bottom,0px) + 20px);
+}
+
+@supports(padding:max(0px)) {
+    .page-has-bottom-nav {
+        padding-bottom: max(calc(var(--mbn-height) + 20px), calc(env(safe-area-inset-bottom,0px) + 20px));
+    }
+}
+
+/* ===== página larga no desktop ===== */
+.produtos-criar-page {
+    max-width: 100%;
+}
+
+/* Melhor controle de respiro em telas muito largas */
+@media (min-width: 1600px) {
+    .produtos-criar-page {
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+    }
+}
+
+/* Os cards de “sabor” quebram bonitinho em várias linhas sem empurrar layout */
+#saboresSelecionadosList .sabor-item .card-body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Evita quebra feia em labels longos dentro dos cards */
+#saboresSelecionadosList .sabor-item {
+    word-break: break-word;
+}
+
+/* File upload: garante clique em toda a faixa */
+.file-upload-wrapper {
+    position: relative;
+}
+
+    .file-upload-wrapper input[type="file"] {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+/* Form: cantos arredondados seguem seu tema, mas sem alterar seu arquivo base */
+.form-control, .form-select {
+    border-radius: 8px;
+}
+
+/* Evita rolagem horizontal no desktop (quando aparecer algum nome enorme) */
+html, body {
+    overflow-x: hidden;
+}
+.py-3 {
+    padding-top: 0rem;
+    padding-bottom: 0rem;
+}

@@ -1,0 +1,78 @@
+﻿/* ===== Paleta / tema (mesma da index) ===== */
+:root {
+    --primary-color: #6e48aa;
+    --secondary-color: #9d50bb;
+    --light-gray: #f8f9fa;
+    --medium-gray: #e9ecef;
+    --dark-gray: #6c757d;
+    --mbn-height: 68px; /* JS atualiza se houver bottom-nav */
+}
+
+/* ===== Espaço para bottom-nav fixa ===== */
+.page-has-bottom-nav {
+    padding-bottom: calc(var(--mbn-height) + env(safe-area-inset-bottom,0px) + 20px);
+}
+
+@supports(padding:max(0px)) {
+    .page-has-bottom-nav {
+        padding-bottom: max(calc(var(--mbn-height) + 20px), calc(env(safe-area-inset-bottom,0px) + 20px));
+    }
+}
+
+/* ===== Header ===== */
+.gradient-header {
+    background: linear-gradient(135deg,#6a11cb 0%,#2575fc 100%);
+}
+
+.btn-action {
+    padding: .55rem 1rem;
+    border-radius: 999px;
+}
+
+/* ===== Página larga no desktop ===== */
+.produtos-editar-page {
+    max-width: 100%;
+}
+
+@media (min-width:992px) {
+    .produtos-editar-page {
+        max-width: 100%;
+    }
+}
+
+/* ===== Form / Inputs ===== */
+.form-control, .form-select {
+    border-radius: 8px;
+}
+
+.input-group-text {
+    background-color: var(--light-gray);
+}
+
+/* ===== Sabores & Estoque ===== */
+.sabores-table .qty-input {
+    max-width: 120px;
+}
+
+.sabores-table .sabor-select {
+    min-width: 220px;
+}
+
+/* ===== Imagem atual ===== */
+.current-img {
+    max-height: 200px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+/* ===== Melhor respiro em telas menores ===== */
+@media (max-width:991.98px) {
+    .sabores-table .sabor-select {
+        min-width: unset;
+    }
+
+    .current-img {
+        max-height: 180px;
+    }
+}
