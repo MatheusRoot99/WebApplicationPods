@@ -1,0 +1,301 @@
+﻿@model WebApplicationPods.Models.EstoqueVM
+@using System.Globalization
+@{
+    ViewData["Title"] = "Estoque";
+    var pt = new CultureInfo("pt-BR");
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/Estoque-index.css" asp-append-version="true" />
+}
+
+<div class="estoque-page">
+    <div class="container-xxl py-3">
+
+        <!-- Alertas -->
+        @if (TempData["MensagemSucesso"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm mb-3" role="alert">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-check-circle me-2 fs-5"></i>
+                    <div class="flex-grow-1">@TempData["MensagemSucesso"]</div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+                </div>
+            </div>
+        }
+        @if (TempData["MensagemErro"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm mb-3" role="alert">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-circle me-2 fs-5"></i>
+                    <div class="flex-grow-1">@TempData["MensagemErro"]</div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+                </div>
+            </div>
+        }
+
+        <!-- Header + Export (sticky) -->
+        <div class="d-flex justify-content-between align-items-center mb-3 page-header">
+            <h1 class="m-0"><i class="fas fa-boxes-stacked me-2"></i>Estoque</h1>
+            <div class="d-flex gap-2">
+                <a asp-action="ExportarCsv"
+                   asp-all-route-data="@(new Dictionary<string, string>
+                   {
+                       [nameof(Model.Filtros.Categoria)] = Model.Filtros.Categoria,
+                       [nameof(Model.Filtros.ApenasBaixoEstoque)] = Model.Filtros.ApenasBaixoEstoque.ToString(),
+                       [nameof(Model.Filtros.ApenasEsgotados)] = Model.Filtros.ApenasEsgotados.ToString(),
+                       [nameof(Model.Filtros.LancamentoDe)] = Model.Filtros.LancamentoDe?.ToString("yyyy-MM-dd"),
+                       [nameof(Model.Filtros.LancamentoAte)] = Model.Filtros.LancamentoAte?.ToString("yyyy-MM-dd"),
+                       [nameof(Model.Filtros.OrdenarPor)] = Model.Filtros.OrdenarPor,
+                       [nameof(Model.Filtros.LimiteBaixoEstoque)] = Model.Filtros.LimiteBaixoEstoque.ToString()
+                   })"
+                   class="btn btn-outline-secondary">
+                    <i class="fas fa-file-csv me-1"></i> Exportar CSV
+                </a>
+            </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="row g-3 mb-3">
+            <div class="col-6 col-md-3">
+                <div class="kpi p-3 bg-white">
+                    <div class="text-muted small">SKUs</div>
+                    <div class="num">@Model.TotalSkus</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi p-3 bg-white">
+                    <div class="text-muted small">Qtd em estoque</div>
+                    <div class="num">@Model.QtdTotalEstoque</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi p-3 bg-white">
+                    <div class="text-muted small">Valor de venda em estoque</div>
+                    <div class="num">@Model.ValorVendaTotal.ToString("C", pt)</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi p-3 bg-white">
+                    <div class="text-muted small">Valor de custo em estoque</div>
+                    <div class="num">@((Model.ValorCustoTotal?.ToString("C", pt)) ?? "—")</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <form asp-action="Index" method="get" class="row g-3 align-items-end" id="filtrosForm">
+                    <div class="col-12 col-md-3">
+                        <label class="form-label">Categoria</label>
+                        <select asp-for="Filtros.Categoria" class="form-select"
+                                asp-items="@(new SelectList(Model.Filtros.CategoriasDisponiveis))">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label">Lançado de</label>
+                        <input asp-for="Filtros.LancamentoDe" type="date" class="form-control" />
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label">até</label>
+                        <input asp-for="Filtros.LancamentoAte" type="date" class="form-control" />
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label">Ordenar por</label>
+                        <select asp-for="Filtros.OrdenarPor" class="form-select"
+                                asp-items="@(new SelectList(Model.Filtros.OpcoesOrdenacao, "Key", "Value", Model.Filtros.OrdenarPor))"></select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label">Limite baixo</label>
+                        <input asp-for="Filtros.LimiteBaixoEstoque" type="number" min="1" class="form-control" />
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" asp-for="Filtros.ApenasBaixoEstoque" />
+                            <label class="form-check-label" asp-for="Filtros.ApenasBaixoEstoque"></label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" asp-for="Filtros.ApenasEsgotados" />
+                            <label class="form-check-label" asp-for="Filtros.ApenasEsgotados"></label>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-3 ms-auto text-end">
+                        <button class="btn btn-primary"><i class="fas fa-filter me-1"></i>Aplicar</button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">Limpar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tabela -->
+        @* ===== DESKTOP: Tabela (visível de md pra cima) ===== *@
+        <div class="table-responsive d-none d-md-block">
+            <table class="table align-middle estoque-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Produto</th>
+                        <th>Categoria</th>
+                        <th class="text-end">Estoque</th>
+                        <th class="text-end">Preço</th>
+                        <th class="text-end">Valor (venda)</th>
+                        <th>Lançamento</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Itens != null && Model.Itens.Any())
+                    {
+                        @foreach (var i in Model.Itens)
+                        {
+                            var precoBase = (i.EmPromocao && i.PrecoPromocional.HasValue) ? i.PrecoPromocional.Value : i.Preco;
+                            <tr>
+                                <td class="prod-cell">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <img class="prod-thumb"
+                                             src="@Url.Content(i.ImagemUrl ?? "/images/placeholder-80.png")"
+                                             alt="@i.Nome" loading="lazy" width="40" height="40" />
+                                        <div>
+                                            <div class="fw-semibold prod-title text-truncate-1">@i.Nome</div>
+                                            <div class="small text-muted">
+                                                <span class="status-dot @(i.Esgotado ? "dot-zero" : i.BaixoEstoque(Model.Filtros.LimiteBaixoEstoque) ? "dot-low" : "dot-ok")"></span>
+                                                @(i.Esgotado ? "Esgotado" : i.BaixoEstoque(Model.Filtros.LimiteBaixoEstoque) ? "Baixo estoque" : "OK")
+                                                @if (i.EmPromocao)
+                                                {
+                                                    <span class="badge bg-success ms-2">Promo</span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>@i.Categoria</td>
+                                <td class="text-end">@i.Estoque</td>
+                                <td class="text-end">
+                                    @precoBase.ToString("C", pt)
+                                    @if (i.EmPromocao)
+                                    {
+                                        <div class="small text-muted"><s>@i.Preco.ToString("C", pt)</s></div>
+                                    }
+                                </td>
+                                <td class="text-end">@i.ValorVendaEmEstoque.ToString("C", pt)</td>
+                                <td>@(i.Lancamento?.ToString("dd/MM/yyyy") ?? "—")</td>
+                                <td class="text-end">
+                                    <a asp-controller="Produto" asp-action="Editar" asp-route-id="@i.Id"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-pen"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <div class="alert alert-info mb-0"><i class="fas fa-info-circle me-2"></i>Nenhum produto encontrado.</div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @* ===== MOBILE: Cards (duas colunas) ===== *@
+        <div class="estoque-cards d-md-none">
+            @if (Model.Itens != null && Model.Itens.Any())
+            {
+                @foreach (var i in Model.Itens)
+                {
+                    var precoBase = (i.EmPromocao && i.PrecoPromocional.HasValue) ? i.PrecoPromocional.Value : i.Preco;
+                    <article class="ec-card">
+                        <header class="ec-head">
+                            <img class="ec-thumb"
+                                 src="@Url.Content(i.ImagemUrl ?? "/images/placeholder-80.png")"
+                                 alt="@i.Nome" loading="lazy" width="52" height="52" />
+                            <div class="ec-title-wrap">
+                                <h3 class="ec-title text-truncate-1">@i.Nome</h3>
+                                <div class="ec-status small text-muted">
+                                    <span class="status-dot @(i.Esgotado ? "dot-zero" : i.BaixoEstoque(Model.Filtros.LimiteBaixoEstoque) ? "dot-low" : "dot-ok")"></span>
+                                    @(i.Esgotado ? "Esgotado" : i.BaixoEstoque(Model.Filtros.LimiteBaixoEstoque) ? "Baixo estoque" : "OK")
+                                    @if (i.EmPromocao)
+                                    {
+                                        <span class="badge bg-success ms-2">Promo</span>
+                                    }
+                                </div>
+                            </div>
+                        </header>
+
+                        <div class="ec-body">
+                            <div class="ec-row">
+                                <div class="ec-label">Categoria</div>
+                                <div class="ec-value">@i.Categoria</div>
+                            </div>
+
+                            <div class="ec-row">
+                                <div class="ec-label">Estoque</div>
+                                <div class="ec-value ec-num">@i.Estoque</div>
+                            </div>
+
+                            <div class="ec-row">
+                                <div class="ec-label">Preço</div>
+                                <div class="ec-value ec-num">
+                                    @precoBase.ToString("C", pt)
+                                    @if (i.EmPromocao)
+                                    {
+                                        <div class="small text-muted"><s>@i.Preco.ToString("C", pt)</s></div>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="ec-row">
+                                <div class="ec-label">Valor (venda)</div>
+                                <div class="ec-value ec-num">@i.ValorVendaEmEstoque.ToString("C", pt)</div>
+                            </div>
+
+                            <div class="ec-row">
+                                <div class="ec-label">Lançamento</div>
+                                <div class="ec-value">
+                                    <span class="badge bg-light text-dark">
+                                        @(i.Lancamento?.ToString("dd/MM/yyyy") ?? "—")
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <footer class="ec-foot">
+                            <a asp-controller="Produto" asp-action="Editar" asp-route-id="@i.Id"
+                               class="btn btn-sm btn-outline-primary w-auto">
+                                <i class="fas fa-pen"></i> Editar
+                            </a>
+                        </footer>
+                    </article>
+                }
+            }
+            else
+            {
+                <div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Nenhum produto encontrado.</div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            setTimeout(() => {
+                document.querySelectorAll('.alert').forEach(a => {
+                    const bs = bootstrap.Alert.getOrCreateInstance(a);
+                    bs.close();
+                });
+            }, 5000);
+
+            const filtrosForm = document.getElementById('filtrosForm');
+            if (filtrosForm) {
+                filtrosForm.querySelectorAll('select, input[type="checkbox"]').forEach(el => {
+                    el.addEventListener('change', () => filtrosForm.submit());
+                });
+            }
+        });
+    </script>
+}

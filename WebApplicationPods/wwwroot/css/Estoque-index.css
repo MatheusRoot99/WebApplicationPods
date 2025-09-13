@@ -1,0 +1,506 @@
+﻿/* ============ Estoque (Index) ============ */
+/* Paleta do site */
+:root {
+    --brand-start: #5b2eff; /* roxo */
+    --brand-end: #2d7bff; /* azul */
+    --primary: #2d7bff;
+    --primary-dk: #1f5ee3;
+    --bg: #f2f3f7; /* cinza de fundo */
+    --text: #111827; /* texto principal */
+    --muted: #6b7280; /* texto secundário */
+    --ok: #10b981; /* verde - OK */
+    --low: #f59e0b; /* amarelo - baixo */
+    --zero: #ef4444; /* vermelho - zerado */
+    --radius: 14px;
+    --shadow-1: 0 6px 18px rgba(0,0,0,.08);
+    --shadow-2: 0 12px 28px rgba(0,0,0,.12);
+    --appbar-height: 56px; /* altura da topbar global (ajuste se preciso) */
+}
+
+/* página */
+.estoque-page {
+    background: var(--bg);
+    padding-bottom: calc(var(--mbn-height, 68px) + 16px);
+}
+
+/* header sticky */
+.page-header {
+    position: sticky;
+    top: var(--appbar-height);
+    z-index: 40;
+    background: rgba(242,243,247,.85);
+    backdrop-filter: saturate(120%) blur(6px);
+    border-radius: 12px;
+    padding: .5rem .75rem;
+    margin-bottom: .75rem;
+    box-shadow: 0 8px 24px -18px rgba(0,0,0,.4);
+}
+
+    .page-header h1 {
+        margin: 0;
+        font-weight: 800;
+        color: var(--text);
+    }
+
+/* KPIs */
+.kpi {
+    border-radius: var(--radius);
+    background: #fff;
+    box-shadow: var(--shadow-1);
+    border: 1px solid rgba(0,0,0,.05);
+    position: relative;
+    overflow: hidden;
+}
+
+    .kpi::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 4px;
+        background: linear-gradient(90deg,var(--brand-start),var(--brand-end));
+    }
+
+    .kpi .text-muted {
+        color: var(--muted) !important;
+    }
+
+    .kpi .num {
+        font-weight: 800;
+        font-size: 1.15rem;
+        color: var(--text);
+    }
+
+/* filtros */
+.estoque-page .card {
+    border-radius: 16px;
+    border: 1px solid rgba(0,0,0,.06);
+    box-shadow: var(--shadow-1);
+}
+
+.estoque-page .form-label {
+    font-weight: 700;
+    color: var(--text);
+}
+
+.estoque-page .form-control, .estoque-page .form-select {
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+}
+
+    .estoque-page .form-control:focus, .estoque-page .form-select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(45,123,255,.18);
+    }
+
+.estoque-page .btn.btn-primary {
+    background: var(--primary);
+    border-color: var(--primary);
+    font-weight: 700;
+}
+
+    .estoque-page .btn.btn-primary:hover {
+        background: var(--primary-dk);
+        border-color: var(--primary-dk);
+    }
+
+/* tabela */
+.table-responsive {
+    border-radius: 14px;
+    box-shadow: var(--shadow-1);
+    background: #fff;
+    border: 1px solid rgba(0,0,0,.05);
+    overflow: auto;
+}
+
+.estoque-table {
+    --head-bg: #f8fafc;
+    --row-border: #e5e7eb;
+    --row-hover: rgba(0,0,0,.025);
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+    .estoque-table thead th {
+        background: var(--head-bg);
+        color: var(--text);
+        font-weight: 800;
+        white-space: nowrap;
+        border-bottom: 1px solid var(--row-border);
+        
+        top: calc(var(--appbar-height) + 64px);
+        z-index: 5; /* sticky do thead */
+    }
+
+    .estoque-table tbody tr {
+        border-bottom: 1px solid var(--row-border);
+    }
+
+        .estoque-table tbody tr:hover {
+            background: var(--row-hover);
+        }
+
+    .estoque-table td {
+        vertical-align: middle;
+        color: var(--text);
+    }
+
+    .estoque-table .text-end {
+        text-align: right;
+    }
+
+    .estoque-table s {
+        color: #9ca3af;
+    }
+
+/* miniatura do produto */
+.prod-thumb {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    background: #fff;
+    border: 1px solid rgba(0,0,0,.06);
+    border-radius: 8px;
+    transition: transform .12s ease;
+}
+
+.prod-cell:hover .prod-thumb {
+    transform: scale(1.04);
+}
+
+.prod-title {
+    max-width: 520px;
+}
+
+.text-truncate-1 {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* status */
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: .4rem;
+}
+
+.dot-ok {
+    background: var(--ok);
+}
+
+.dot-low {
+    background: var(--low);
+}
+
+.dot-zero {
+    background: var(--zero);
+}
+
+/* colunas mais estáveis (opcional) */
+.estoque-table th:nth-child(2), .estoque-table td:nth-child(2) {
+    width: 180px;
+}
+
+.estoque-table th:nth-child(3), .estoque-table td:nth-child(3) {
+    width: 90px;
+}
+
+.estoque-table th:nth-child(4), .estoque-table td:nth-child(4) {
+    width: 140px;
+}
+
+.estoque-table th:nth-child(5), .estoque-table td:nth-child(5) {
+    width: 160px;
+}
+
+.estoque-table th:last-child, .estoque-table td:last-child {
+    width: 80px;
+}
+
+/* ===== Mobile: tabela vira cartões organizados ===== */
+/* ===== Mobile: card em DUAS COLUNAS (labels à esquerda, valores à direita) ===== */
+/* ===== Mobile: card em DUAS COLUNAS (labels à esquerda, valores à direita) ===== */
+@media (max-width: 576.98px) {
+
+    .table-responsive {
+        background: transparent;
+        box-shadow: none;
+        border: 0;
+    }
+
+    .estoque-table {
+        display: block;
+    }
+
+        .estoque-table thead {
+            display: none;
+        }
+
+        .estoque-table tbody {
+            display: grid;
+            gap: .9rem;
+        }
+
+        /* CARD */
+        .estoque-table tr {
+            display: grid;
+            grid-template-columns: 1fr;
+            position: relative;
+            background: #fff;
+            border: 1px solid rgba(0,0,0,.06);
+            border-radius: 16px;
+            box-shadow: var(--shadow-1);
+            overflow: hidden;
+            --label-w: 120px; /* LARGURA da coluna de rótulos (ajuste se quiser) */
+        }
+
+            .estoque-table tr::before {
+                content: "";
+                position: absolute;
+                inset: 0 0 auto 0;
+                height: 3px;
+                background: linear-gradient(90deg,var(--brand-start),var(--brand-end));
+                opacity: .9;
+            }
+
+            /* HEADER (Produto) */
+            .estoque-table tr > td:first-child {
+                display: grid;
+                grid-template-columns: auto 1fr;
+                gap: .7rem;
+                align-items: center;
+                padding: .9rem .95rem .75rem;
+                background: linear-gradient(180deg,#fff,#f9fafb);
+            }
+
+                .estoque-table tr > td:first-child::before {
+                    content: none;
+                }
+
+                .estoque-table tr > td:first-child .prod-thumb {
+                    width: 48px;
+                    height: 48px;
+                    border-radius: 10px;
+                }
+
+                .estoque-table tr > td:first-child .prod-title {
+                    font-weight: 800;
+                    font-size: .98rem;
+                    line-height: 1.15;
+                }
+
+                .estoque-table tr > td:first-child .small {
+                    margin-top: .15rem;
+                }
+
+            /* LINHAS rotuladas em duas colunas fixas */
+            .estoque-table tr > td:not(:first-child) {
+                display: grid;
+                grid-template-columns: var(--label-w) 1fr; /* labels à esquerda, valor à direita */
+                align-items: center;
+                gap: .55rem;
+                padding: .62rem .95rem;
+                border-top: 1px solid #eef2f6;
+            }
+
+                .estoque-table tr > td:not(:first-child)::before {
+                    content: attr(data-label);
+                    font-weight: 700;
+                    color: var(--muted);
+                }
+
+        /* Valores numéricos: à direita e sem quebra (R$ 159,90) */
+        .estoque-table td.text-end {
+            text-align: right;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
+            /* preço antigo pode quebrar numa linha menor */
+            .estoque-table td.text-end .small {
+                white-space: normal;
+                display: block;
+                margin-top: .15rem;
+            }
+
+        /* Lançamento: chip à direita */
+        .estoque-table td[data-label="Lançamento"] .badge {
+            justify-self: end;
+        }
+
+        /* Rodapé de ações (sem rótulo do lado esquerdo) */
+        .estoque-table td:last-child {
+            display: flex;
+            justify-content: flex-end;
+            gap: .55rem;
+            padding: .62rem .95rem .85rem;
+            border-top: 1px solid #eef2f6;
+        }
+
+            .estoque-table td:last-child::before {
+                content: none;
+            }
+}
+
+/* opcional: para telas MUITO estreitas, encolhe um pouco a coluna de rótulos */
+@media (max-width: 360px) {
+    .estoque-table tr {
+        --label-w: 110px;
+    }
+}
+
+/* ====== Cards mobile (aparecem só em < md) ====== */
+.estoque-cards {
+    display: none;
+}
+
+@media (max-width: 767.98px) {
+    .estoque-cards {
+        display: grid;
+        gap: .9rem;
+    }
+
+    .ec-card {
+        position: relative;
+        background: #fff;
+        border: 1px solid rgba(0,0,0,.06);
+        border-radius: 16px;
+        box-shadow: var(--shadow-1);
+        overflow: hidden;
+    }
+        /* filete do tema no topo */
+        .ec-card::before {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 3px;
+            background: linear-gradient(90deg,var(--brand-start),var(--brand-end));
+            opacity: .9;
+        }
+
+    .ec-head {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: .7rem;
+        align-items: center;
+        padding: .9rem .95rem .7rem;
+        background: linear-gradient(180deg,#ffffff,#f9fafb);
+    }
+
+    .ec-thumb {
+        width: 52px;
+        height: 52px;
+        border-radius: 12px;
+        object-fit: contain;
+        background: #fff;
+        border: 1px solid rgba(0,0,0,.06);
+    }
+
+    .ec-title {
+        margin: 0;
+        font-size: .98rem;
+        font-weight: 800;
+        line-height: 1.15;
+    }
+
+    .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: .35rem;
+    }
+
+    .dot-ok {
+        background: var(--ok);
+    }
+
+    .dot-low {
+        background: var(--low);
+    }
+
+    .dot-zero {
+        background: var(--zero);
+    }
+
+    .ec-body {
+        padding: .35rem .95rem .2rem;
+        display: grid;
+        gap: .1rem;
+    }
+
+    /* duas colunas fixas: label | valor */
+    .ec-row {
+        --label-w: 120px; /* ajuste fino conforme seu gosto */
+        display: grid;
+        grid-template-columns: var(--label-w) 1fr;
+        align-items: center;
+        padding: .55rem 0;
+        border-top: 1px solid #eef2f6;
+    }
+
+        .ec-row:first-child {
+            border-top: 0;
+        }
+
+    .ec-label {
+        font-weight: 700;
+        color: var(--muted);
+    }
+
+    .ec-value {
+        color: var(--text);
+        text-align: right;
+    }
+
+    .ec-num {
+        text-align: right;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+    }
+
+        .ec-num .small {
+            display: block;
+            margin-top: .15rem;
+            white-space: normal;
+        }
+
+    .ec-foot {
+        display: flex;
+        justify-content: flex-end;
+        gap: .5rem;
+        padding: .6rem .95rem .85rem;
+        border-top: 1px solid #eef2f6;
+    }
+
+    /* Telas muito estreitas: encolhe label */
+    @media (max-width: 360px) {
+        .ec-row {
+            --label-w: 108px;
+        }
+    }
+}
+
+/* Miniaturas/títulos também são usados no desktop */
+.prod-thumb {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    background: #fff;
+    border: 1px solid rgba(0,0,0,.06);
+    border-radius: 8px;
+}
+
+.prod-cell:hover .prod-thumb {
+    transform: scale(1.04);
+    transition: transform .12s ease;
+}
+
+.prod-title.text-truncate-1 {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 520px;
+}
+

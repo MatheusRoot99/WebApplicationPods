@@ -125,6 +125,9 @@ namespace WebApplicationPods.Models
             SaboresQuantidades = JsonConvert.SerializeObject(SaboresQuantidadesList ?? new List<SaborQuantidade>());
         }
 
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? Custo { get; set; }
+
         public void DeserializarSaboresQuantidades()
         {
             try

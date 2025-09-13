@@ -13,6 +13,7 @@ namespace WebApplicationPods.Repository.Interface
         void Remover(int id);
         IEnumerable<ProdutoModel> ObterPorCategoria(int categoriaId);
         IEnumerable<ProdutoModel> ObterMaisVendidos(int quantidade);
+        IQueryable<ProdutoModel> Query();
 
         List<ProdutoModel> FiltrarProdutos(FiltrosModel filtros);
         List<string> ObterCategoriasDistintas();

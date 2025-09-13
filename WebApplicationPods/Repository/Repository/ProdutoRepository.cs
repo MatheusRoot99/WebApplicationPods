@@ -24,21 +24,24 @@ namespace WebApplicationPods.Repository.Repository
                 .ToList();
         }
 
-        public ProdutoModel ObterPorId(int id)
+        public ProdutoModel? ObterPorId(int id)
         {
             var produto = _context.Produtos
-        .Include(p => p.Categoria)
-        .FirstOrDefault(p => p.Id == id);
+                .Include(p => p.Categoria)
+                .FirstOrDefault(p => p.Id == id);
 
-            if (produto != null && !string.IsNullOrEmpty(produto.SaboresQuantidades))
+            if (produto == null) return null;   // <- evita NRE
+
+            if (!string.IsNullOrEmpty(produto.SaboresQuantidades))
             {
                 try
                 {
-                    produto.SaboresQuantidadesList = JsonConvert.DeserializeObject<List<ProdutoModel.SaborQuantidade>>(produto.SaboresQuantidades);
+                    produto.SaboresQuantidadesList =
+                        JsonConvert.DeserializeObject<List<ProdutoModel.SaborQuantidade>>(produto.SaboresQuantidades)
+                        ?? new List<ProdutoModel.SaborQuantidade>();
                 }
-                catch (Exception ex)
+                catch
                 {
-                    Console.WriteLine($"Erro ao desserializar SaboresQuantidades: {ex.Message}");
                     produto.SaboresQuantidadesList = new List<ProdutoModel.SaborQuantidade>();
                 }
             }
@@ -165,6 +168,14 @@ namespace WebApplicationPods.Repository.Repository
                 .Distinct()
                 .OrderBy(c => c)
                 .ToList();
+        }
+
+        public IQueryable<ProdutoModel> Query()
+        {
+            return _context.Produtos
+                .Include(p => p.Categoria)
+                .Where(p => p.Ativo)      // só ativos (ajuste se quiser)
+                .AsNoTracking();           // leitura
         }
 
     }
