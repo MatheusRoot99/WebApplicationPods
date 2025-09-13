@@ -25,19 +25,30 @@
     <div class="container container-full-lg">
         @if (TempData["MensagemSucesso"] != null)
         {
-            <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm" role="alert">
-                <i class="fas fa-check-circle me-2"></i>
-                @TempData["MensagemSucesso"]
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm mb-3" role="alert">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-check-circle me-2 fs-5"></i>
+                    <div class="flex-grow-1">@TempData["MensagemSucesso"]</div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+                </div>
             </div>
+
+            // Limpa a mensagem após exibir para não reaparecer em outras páginas
+            TempData.Remove("MensagemSucesso");
         }
+
         @if (TempData["MensagemErro"] != null)
         {
-            <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm" role="alert">
-                <i class="fas fa-times-circle me-2"></i>
-                @TempData["MensagemErro"]
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm mb-3" role="alert">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-circle me-2 fs-5"></i>
+                    <div class="flex-grow-1">@TempData["MensagemErro"]</div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+                </div>
             </div>
+
+            // Limpa a mensagem após exibir
+            TempData.Remove("MensagemErro");
         }
     </div>
 

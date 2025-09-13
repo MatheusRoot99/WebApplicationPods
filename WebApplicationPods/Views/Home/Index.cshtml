@@ -2,34 +2,48 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/home-index.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 }
 
 <div class="home-index">
 
+    <!-- Topbar (filtros/ordenação estilo mobile app) -->
+    <div class="topbar container-fluid">
+        <div class="topbar-inner container px-0">
+            <button class="topbar-btn" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#filtersCollapse"
+                    aria-expanded="false" aria-controls="filtersCollapse">
+                <i class="fa-solid fa-sliders"></i>
+                <span>Filtrar</span>
+            </button>
+
+            <div class="topbar-select">
+                <label for="Filtros_OrdenarPor" class="form-label m-0">Ordenar por</label>
+                <select id="Filtros_OrdenarPor" name="Filtros.OrdenarPor" class="form-select form-select-sm">
+                    @foreach (var kv in Model.Filtros.OpcoesOrdenacao)
+                    {
+                        <option value="@kv.Key" selected="@(Model.Filtros.OrdenarPor == kv.Key)">
+                            @kv.Value
+                        </option>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+
     <!-- Hero -->
-    <section class="hero-section text-center text-white mb-4">
+    <section class="hero-section text-center text-white mb-3">
         <div class="container">
-            <h1 class="display-4 fw-bold">Bem-vindo à PodsPlatform</h1>
-            <p class="lead fs-5 mb-0">Os melhores pods eletrônicos do mercado!</p>
+            <h1 class="display-6 fw-bold mb-1">Bem-vindo à PodsPlatform</h1>
+            <p class="lead fs-6 mb-0">Os melhores pods eletrônicos do mercado!</p>
         </div>
     </section>
 
-    <!-- Filtros e Ordenação -->
+    <!-- Filtros (collapse no mobile) -->
     <div class="container mb-3">
-        <div class="d-flex justify-content-between align-items-center mb-2 filters-toolbar">
-            <h5 class="mb-0 fw-bold">Buscar produtos</h5>
-            <!-- Toggle dos filtros no mobile -->
-            <button class="filters-toggle d-lg-none" type="button"
-                    data-bs-toggle="collapse" data-bs-target="#filtersCollapse"
-                    aria-expanded="false" aria-controls="filtersCollapse">
-                <i class="fas fa-sliders-h"></i> Filtros e Ordenação
-            </button>
-        </div>
-
         <div class="collapse d-lg-block" id="filtersCollapse">
-            <form asp-action="Index" method="get" class="filters-card card border-0 p-3 mb-3">
+            <form asp-action="Index" method="get" class="filters-card card border-0 p-3 mb-3" id="filtersForm">
                 <div class="row g-3">
-                    <!-- Categoria -->
                     <div class="col-12 col-md-6 col-lg-3">
                         <label asp-for="Filtros.Categoria" class="form-label">Categoria</label>
                         <select asp-for="Filtros.Categoria" class="form-select"
@@ -38,7 +52,6 @@
                         </select>
                     </div>
 
-                    <!-- Sabor -->
                     <div class="col-12 col-md-6 col-lg-3">
                         <label asp-for="Filtros.Sabor" class="form-label">Sabor</label>
                         <select asp-for="Filtros.Sabor" class="form-select"
@@ -47,27 +60,23 @@
                         </select>
                     </div>
 
-                    <!-- Preço Mín -->
                     <div class="col-6 col-lg-2">
                         <label asp-for="Filtros.PrecoMin" class="form-label">Preço mín</label>
                         <input asp-for="Filtros.PrecoMin" type="number" step="0.01" min="0" class="form-control" placeholder="R$">
                     </div>
 
-                    <!-- Preço Máx -->
                     <div class="col-6 col-lg-2">
                         <label asp-for="Filtros.PrecoMax" class="form-label">Preço máx</label>
                         <input asp-for="Filtros.PrecoMax" type="number" step="0.01" min="0" class="form-control" placeholder="R$">
                     </div>
 
-                    <!-- Ordenar por -->
-                    <div class="col-12 col-lg-2">
+                    <div class="col-12 col-lg-2 d-none d-lg-block">
                         <label asp-for="Filtros.OrdenarPor" class="form-label">Ordenar por</label>
                         <select asp-for="Filtros.OrdenarPor" class="form-select"
                                 asp-items="@(new SelectList(Model.Filtros.OpcoesOrdenacao, "Key", "Value"))">
                         </select>
                     </div>
 
-                    <!-- Checkboxes + Botões -->
                     <div class="col-12">
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                             <div>
@@ -96,108 +105,167 @@
         </div>
     </div>
 
-    <!-- Lista de Produtos -->
-    <div class="container mb-5">
-        <div class="row g-4">
-            @if (Model.Produtos != null && Model.Produtos.Any())
-            {
+    <!-- Grade de Produtos (2 colunas no mobile) -->
+    <div class="container mb-4">
+        @if (Model.Produtos != null && Model.Produtos.Any())
+        {
+            <div class="product-grid">
                 @foreach (var produto in Model.Produtos)
                 {
-                    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                        <div class="card h-100 produto-card">
-                            <!-- Imagem + badge -->
+                    var temPromo = produto.EmPromocao && produto.PrecoPromocional.HasValue;
+                    var precoBase = temPromo ? produto.PrecoPromocional!.Value : produto.Preco;
+                    <article class="produto-card h-100">
+                        <!-- Capa (clique leva aos detalhes) -->
+                        <a asp-controller="Produto" asp-action="DetalhesProdutos" asp-route-id="@produto.Id"
+                           class="thumb-link" aria-label="@produto.Nome">
                             <div class="product-thumb">
                                 @if (!string.IsNullOrEmpty(produto.ImagemUrl))
                                 {
-                                    <a asp-controller="Produto" asp-action="DetalhesProdutos" asp-route-id="@produto.Id" class="d-block">
-                                        <img src="@Url.Content(produto.ImagemUrl)" alt="@produto.Nome" />
-                                    </a>
+                                    <img src="@Url.Content(produto.ImagemUrl)" alt="@produto.Nome" />
                                 }
                                 else
                                 {
-                                    <a asp-controller="Produto" asp-action="DetalhesProdutos" asp-route-id="@produto.Id" class="d-flex align-items-center justify-content-center" style="height:100%; background:#f3f4f6;">
-                                        <i class="fas fa-image fa-2x text-secondary"></i>
-                                    </a>
+                                    <div class="no-image">
+                                        <i class="fas fa-image"></i>
+                                    </div>
                                 }
 
                                 @if (produto.Estoque <= 0)
                                 {
-                                    <span class="badge bg-danger badge-top-right">ESGOTADO</span>
+                                    <span class="badge badge-top-right bg-danger">ESGOTADO</span>
                                 }
                                 else if (produto.EmPromocao)
                                 {
-                                    <span class="badge bg-success badge-top-right">PROMOÇÃO</span>
+                                    <span class="badge badge-top-right bg-success">PROMOÇÃO</span>
                                 }
                             </div>
+                        </a>
 
-                            <div class="card-body d-flex flex-column">
-                                <a asp-controller="Produto" asp-action="DetalhesProdutos" asp-route-id="@produto.Id" class="text-decoration-none">
-                                    <h5 class="card-title mb-1">@produto.Nome</h5>
-                                </a>
+                        <!-- Conteúdo -->
+                        <div class="card-body">
+                            <a asp-controller="Produto" asp-action="DetalhesProdutos" asp-route-id="@produto.Id"
+                               class="stretched-link text-decoration-none">
+                                <h6 class="title text-truncate-2">@produto.Nome</h6>
+                            </a>
 
-                                <p class="card-text text-muted small flex-grow-1">
-                                    <i class="fas fa-smoking me-1"></i>@produto.Puffs puffs &nbsp;&nbsp;
-                                    <i class="fas fa-battery-three-quarters me-1"></i>@produto.CapacidadeBateria mAh
-                                </p>
+                            <div class="specs small text-muted">
+                                <span><i class="fa-solid fa-smoking me-1"></i>@produto.Puffs puffs</span>
+                                <span>•</span>
+                                <span><i class="fa-solid fa-battery-three-quarters me-1"></i>@produto.CapacidadeBateria mAh</span>
+                            </div>
 
-                                <!-- Preços -->
-                                <div class="price-line mb-2">
-                                    @{
-                                        var temPromo = produto.EmPromocao && produto.PrecoPromocional.HasValue;
-                                        var precoBase = temPromo ? produto.PrecoPromocional.Value : produto.Preco;
-                                    }
-                                    @if (temPromo)
-                                    {
-                                        <span class="old">@produto.Preco.ToString("C")</span>
-                                        <span class="current fs-5 ms-2">@precoBase.ToString("C")</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="current fs-5">@precoBase.ToString("C")</span>
-                                    }
-                                </div>
-
-                                <!-- Parcelamento -->
-                                <p class="small text-muted mb-3">
-                                    2x de @((precoBase / 2).ToString("C")) sem juros<br />
-                                    ou @((precoBase * 0.9m).ToString("C")) à vista (10% OFF)
-                                </p>
-
-                                <!-- Comprar -->
-                                <a asp-controller="Carrinho" asp-action="Adicionar" asp-route-produtoId="@produto.Id"
-                                   class="btn btn-primary btn-buy w-100 mt-auto @(produto.Estoque <= 0 ? "disabled" : "")">
-                                    @(produto.Estoque <= 0 ? "ESGOTADO" : "COMPRAR")
-                                </a>
+                            <div class="price-line">
+                                @if (temPromo)
+                                {
+                                    <span class="old">@produto.Preco.ToString("C")</span>
+                                    <span class="current">@precoBase.ToString("C")</span>
+                                }
+                                else
+                                {
+                                    <span class="current">@precoBase.ToString("C")</span>
+                                }
                             </div>
                         </div>
-                    </div>
-                }
-            }
-            else
-            {
-                <div class="col-12">
-                    <div class="alert alert-info text-center py-4">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Nenhum produto encontrado com os filtros selecionados.
-                    </div>
-                </div>
-            }
-        </div>
-    </div>
+                        <!-- Ação rápida (POST direto p/ AdicionarItem) -->
+                        <form asp-controller="Carrinho" asp-action="AdicionarItem" method="post" class="quick-add-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="produtoId" value="@produto.Id" />
+                            <input type="hidden" name="quantidade" value="1" />
+                            <input type="hidden" name="sabor" value="" />
+                            <input type="hidden" name="observacoes" value="" />
 
+                            <button type="submit"
+                                    class="quick-add @(produto.Estoque <= 0 ? "disabled" : "")"
+                                    @(produto.Estoque <= 0 ? "disabled" : null)
+                                    aria-disabled="@(produto.Estoque <= 0)"
+                                    title="Adicionar ao carrinho" aria-label="Adicionar @produto.Nome ao carrinho">
+                                <i class="fa-solid fa-cart-plus"></i>
+                            </button>
+                        </form>
+                    </article>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info text-center py-4">
+                <i class="fas fa-info-circle me-2"></i>
+                Nenhum produto encontrado com os filtros selecionados.
+            </div>
+        }
+    </div>
 </div>
 
 @section Scripts {
     <script>
-        document.addEventListener('DOMContentLoaded', function(){
-            // Auto-submit ao trocar ordenação
-            const selOrdenar = document.getElementById('Filtros_OrdenarPor');
-            if (selOrdenar) {
-                selOrdenar.addEventListener('change', function(){
-                    const form = this.closest('form');
-                    form && form.submit();
+                document.addEventListener('DOMContentLoaded', function () {
+            // Configuração do select de ordenação na topbar
+            const topbarSelect = document.getElementById('Filtros_OrdenarPor');
+            const form = document.getElementById('filtersForm');
+
+            if (topbarSelect && form) {
+                topbarSelect.addEventListener('change', function () {
+                    // Atualiza o select dentro do form (se existir)
+                    const formSelect = form.querySelector('[name="Filtros.OrdenarPor"]');
+                    if (formSelect) {
+                        formSelect.value = this.value;
+                    }
+                    form.submit();
                 });
             }
+
+            // Configuração para submit automático dos filtros quando alterados
+            const filterElements = form.querySelectorAll('select, input[type="number"], input[type="checkbox"]');
+            filterElements.forEach(element => {
+                // Não aplica auto-submit no select de ordenação da topbar
+                if (element.id !== 'Filtros_OrdenarPor') {
+                    element.addEventListener('change', function () {
+                        form.submit();
+                    });
+                }
+            });
+
+            // Inicializa o collapse com Bootstrap
+            const filtersCollapse = document.getElementById('filtersCollapse');
+            if (filtersCollapse) {
+                // Mantém aberto em desktop, fecha em mobile
+                if (window.innerWidth >= 992) {
+                    filtersCollapse.classList.add('show');
+                }
+
+                // Atualiza ao redimensionar
+                window.addEventListener('resize', function() {
+                    if (window.innerWidth >= 992) {
+                        filtersCollapse.classList.add('show');
+                    } else {
+                        filtersCollapse.classList.remove('show');
+                    }
+                });
+            }
+
+            // Adiciona interação aos botões de adicionar ao carrinho
+            document.querySelectorAll('.quick-add-form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    const button = this.querySelector('.quick-add');
+                    if (button.classList.contains('disabled')) {
+                        e.preventDefault();
+                        return false;
+                    }
+
+                    // Feedback visual
+                    const originalHtml = button.innerHTML;
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    button.style.opacity = '0.7';
+
+                    // Restaura após 2 segundos se algo der errado
+                    setTimeout(() => {
+                        button.innerHTML = originalHtml;
+                        button.style.opacity = '1';
+                    }, 2000);
+
+                    return true;
+                });
+            });
         });
     </script>
 }
