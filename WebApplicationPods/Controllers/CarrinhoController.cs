@@ -198,11 +198,21 @@ namespace WebApplicationPods.Controllers
             ViewBag.PedidoId = pedido.Id; // ex.: usar no layout/botões
             return View(pedido);
         }
+
+
         [HttpPost]
         [ValidateAntiForgeryToken] // opcional, mas recomendado
-        public IActionResult AdicionarItem(int produtoId, int quantidade, string? sabor = null, string? observacoes = null, bool buyNow = false)
+        public IActionResult AdicionarItem(
+    int produtoId,
+    int quantidade,
+    string? sabor = null,
+    string? observacoes = null,
+    bool buyNow = false)
         {
-            bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+            bool isAjax = string.Equals(
+                Request.Headers["X-Requested-With"],
+                "XMLHttpRequest",
+                StringComparison.OrdinalIgnoreCase);
 
             try
             {
@@ -214,10 +224,11 @@ namespace WebApplicationPods.Controllers
                     return RedirectToAction("Index");
                 }
 
-                // estoque por sabor
+                // estoque por sabor (se aplicável)
                 produto.DeserializarSaboresQuantidades();
 
-                if (!ValidarEstoqueAoAdicionar(produto, quantidade, sabor, out var mensagemErro))
+                // valida estoque: existente + nova quantidade não pode exceder o disponível
+                if (!ValidarEstoqueAoAdicionar(produto, quantidade, sabor ?? string.Empty, out var mensagemErro))
                 {
                     if (isAjax) return Json(new { ok = false, error = mensagemErro });
                     TempData["Erro"] = mensagemErro;
@@ -226,19 +237,20 @@ namespace WebApplicationPods.Controllers
 
                 _carrinhoRepository.AdicionarItem(produto, quantidade, sabor, observacoes);
 
-                // total de itens no carrinho (para o badge)
+                // total de itens para atualizar o badge
                 var carrinho = _carrinhoRepository.ObterCarrinho();
                 var count = carrinho?.Itens?.Sum(i => i.Quantidade) ?? 0;
 
                 if (isAjax)
                 {
-                    return Json(new { ok = true, count });
+                    // IMPORTANTE: devolve também o nome para o toast do front
+                    return Json(new { ok = true, count, nome = produto.Nome });
                 }
 
                 TempData["Sucesso"] = $"{produto.Nome} adicionado ao carrinho!";
                 return buyNow ? RedirectToAction("Resumo") : RedirectToAction("Index");
             }
-            catch
+            catch (Exception)
             {
                 if (isAjax) return Json(new { ok = false, error = "Erro ao adicionar ao carrinho." });
                 TempData["Erro"] = "Ocorreu um erro ao adicionar o produto ao carrinho.";
@@ -247,6 +259,7 @@ namespace WebApplicationPods.Controllers
         }
 
 
+        [HttpGet]
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Count()
@@ -262,6 +275,8 @@ namespace WebApplicationPods.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult AtualizarItem(int produtoId, int? quantidade, string? sabor, string? op)
         {
+            bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+
             try
             {
                 var carrinho = _carrinhoRepository.ObterCarrinho();
@@ -273,6 +288,7 @@ namespace WebApplicationPods.Controllers
 
                 if (item == null)
                 {
+                    if (isAjax) return Json(new { ok = false, error = "Item não encontrado no carrinho!" });
                     TempData["Erro"] = "Item não encontrado no carrinho!";
                     return RedirectToAction(nameof(Index));
                 }
@@ -290,6 +306,7 @@ namespace WebApplicationPods.Controllers
                 var produto = _produtoRepository.ObterPorId(produtoId);
                 if (produto == null)
                 {
+                    if (isAjax) return Json(new { ok = false, error = "Produto não encontrado!" });
                     TempData["Erro"] = "Produto não encontrado!";
                     return RedirectToAction(nameof(Index));
                 }
@@ -312,17 +329,35 @@ namespace WebApplicationPods.Controllers
                 if (novaQtd > maxPermitido)
                 {
                     novaQtd = maxPermitido;
+                    if (isAjax) return Json(new { ok = false, error = $"Quantidade ajustada ao máximo disponível ({maxPermitido})." });
                     TempData["Erro"] = $"Quantidade ajustada ao máximo disponível ({maxPermitido}).";
                 }
 
                 item.Quantidade = novaQtd;
                 _carrinhoRepository.SalvarCarrinho(carrinho);
 
+                // Total de itens no carrinho (para o badge)
+                var count = carrinho.Itens.Sum(i => i.Quantidade);
+                // Total monetário do carrinho (para o card de resumo)
+                var total = carrinho.Total.ToString("C", CultureInfo.GetCultureInfo("pt-BR"));
+
+                if (isAjax)
+                {
+                    return Json(new
+                    {
+                        ok = true,
+                        count,
+                        total,
+                        message = "Quantidade atualizada."
+                    });
+                }
+
                 TempData["Sucesso"] ??= "Quantidade atualizada.";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
+                if (isAjax) return Json(new { ok = false, error = $"Erro ao atualizar item: {ex.Message}" });
                 TempData["Erro"] = $"Erro ao atualizar item: {ex.Message}";
                 return RedirectToAction(nameof(Index));
             }
@@ -332,6 +367,8 @@ namespace WebApplicationPods.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult RemoverItem(int produtoId, string? sabor)
         {
+            bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+
             try
             {
                 var carrinho = _carrinhoRepository.ObterCarrinho();
@@ -343,6 +380,7 @@ namespace WebApplicationPods.Controllers
 
                 if (item == null)
                 {
+                    if (isAjax) return Json(new { ok = false, error = "Item não encontrado no carrinho!" });
                     TempData["Erro"] = "Item não encontrado no carrinho!";
                     return RedirectToAction(nameof(Index));
                 }
@@ -350,14 +388,39 @@ namespace WebApplicationPods.Controllers
                 carrinho.Itens.Remove(item);
                 _carrinhoRepository.SalvarCarrinho(carrinho);
 
-                TempData["Sucesso"] = $"{item.Produto.Nome} removido do carrinho.";
+                var count = carrinho.Itens.Sum(i => i.Quantidade);
+                var total = carrinho.Total.ToString("C", CultureInfo.GetCultureInfo("pt-BR"));
+                var nomeProduto = item.Produto.Nome;
+                var isEmpty = !carrinho.Itens.Any();
+
+                if (isAjax)
+                {
+                    return Json(new
+                    {
+                        ok = true,
+                        count,
+                        total,
+                        isEmpty,
+                        message = $"{nomeProduto} removido do carrinho."
+                    });
+                }
+
+                TempData["Sucesso"] = $"{nomeProduto} removido do carrinho.";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
+                if (isAjax) return Json(new { ok = false, error = $"Erro ao remover item: {ex.Message}" });
                 TempData["Erro"] = $"Erro ao remover item: {ex.Message}";
                 return RedirectToAction(nameof(Index));
             }
+        }
+
+        [HttpGet]
+        public IActionResult GetTotal()
+        {
+            var carrinho = _carrinhoRepository.ObterCarrinho();
+            return Json(new { total = carrinho.Total.ToString("C", CultureInfo.GetCultureInfo("pt-BR")) });
         }
 
         // =================== Finalização ===================

@@ -323,3 +323,52 @@
         width: 70px;
     }
 }
+
+/* Animação para destacar atualização de valores */
+.total-valor.highlight-update {
+    animation: highlight-update 1s ease;
+    color: #28a745; /* Verde para positivo, pode ajustar */
+}
+
+@keyframes highlight-update {
+    0% {
+        transform: scale(1);
+        color: inherit;
+    }
+
+    50% {
+        transform: scale(1.1);
+        color: #28a745;
+        font-weight: bold;
+    }
+
+    100% {
+        transform: scale(1);
+        color: inherit;
+    }
+}
+
+/* Para remoção (valores diminuindo) pode usar outra cor */
+.total-valor.highlight-remove {
+    animation: highlight-remove 1s ease;
+}
+
+@keyframes highlight-remove {
+    0% {
+        transform: scale(1);
+        color: inherit;
+    }
+
+    50% {
+        transform: scale(0.95);
+        color: #dc3545; /* Vermelho para negativo */
+        font-weight: bold;
+    }
+
+    100% {
+        transform: scale(1);
+        color: inherit;
+    }
+}
+
+

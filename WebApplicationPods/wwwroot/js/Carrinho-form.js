@@ -1,307 +1,305 @@
-﻿document.addEventListener('DOMContentLoaded', function () {
-    //setupQuantityControls();
-   // setupRemoveForms();
+﻿// carrinho-form.js (revisado)
+(() => {
+    "use strict";
 
-    // Fade out para mensagens de alerta após 5 segundos
-    setTimeout(() => {
-        document.querySelectorAll('#carrinho-alerts .alert').forEach(alert => {
-            alert.style.transition = 'opacity 0.5s';
-            alert.style.opacity = '0';
-            setTimeout(() => alert.remove(), 500);
-        });
-    }, 5000);
-});
+    document.addEventListener("DOMContentLoaded", () => {
+        initCartUI();
 
-function setupQuantityControls() {
-    // Função para garantir que o valor está dentro dos limites
+        // Fade out para mensagens de alerta após 5s
+        setTimeout(() => {
+            document.querySelectorAll("#carrinho-alerts .alert").forEach((alert) => {
+                alert.style.transition = "opacity 0.5s";
+                alert.style.opacity = "0";
+                setTimeout(() => alert.remove(), 500);
+            });
+        }, 5000);
+    });
+
+    // ========================= Helpers =========================
+    const qs = (s, r = document) => r.querySelector(s);
+    const qsa = (s, r = document) => Array.from(r.querySelectorAll(s));
+
+    const parseCurrency = (str) => {
+        if (!str) return 0;
+        return parseFloat(String(str).replace(/[^\d,]/g, "").replace(",", "."));
+    };
+
     const clampByMinMax = (input, value) => {
-        const min = parseInt(input.getAttribute('min')) || 1;
-        const max = parseInt(input.getAttribute('max')) || 999;
+        const min = parseInt(input.getAttribute("min")) || 1;
+        const max = parseInt(input.getAttribute("max")) || 999;
         return Math.min(Math.max(value, min), max);
     };
 
-    // Atualiza a quantidade via AJAX
-    const updateQuantity = async (form, newValue) => {
-        const formData = new FormData(form);
-        formData.set('quantidade', newValue);
+    const getAFToken = (form) =>
+        (typeof window.getAntiForgeryToken === "function" && window.getAntiForgeryToken()) ||
+        form?.querySelector('input[name="__RequestVerificationToken"]')?.value ||
+        qs('input[name="__RequestVerificationToken"]')?.value ||
+        "";
 
-        // Adiciona o token anti-forgery se existir
-        const token = document.querySelector('input[name="__RequestVerificationToken"]');
-        if (token) {
-            formData.append('__RequestVerificationToken', token.value);
+    const setTotalAnimated = (newTotalString) => {
+        const totalEl = qs(".total-valor");
+        if (!totalEl) return;
+
+        const oldVal = parseCurrency(totalEl.textContent);
+        const newVal = parseCurrency(newTotalString);
+
+        totalEl.textContent = newTotalString;
+
+        if (newVal > oldVal) {
+            totalEl.classList.add("highlight-update");
+            totalEl.classList.remove("highlight-remove");
+        } else if (newVal < oldVal) {
+            totalEl.classList.add("highlight-remove");
+            totalEl.classList.remove("highlight-update");
+        } else {
+            totalEl.classList.remove("highlight-update", "highlight-remove");
         }
+        setTimeout(() => {
+            totalEl.classList.remove("highlight-update", "highlight-remove");
+        }, 1000);
+    };
+
+    const updateBadges = (count) => {
+        if (typeof window.updateCartBadges === "function") {
+            window.updateCartBadges(count);
+        }
+    };
+
+    const showAlert = (type, message) => {
+        const alerts = qs("#carrinho-alerts");
+        if (!alerts) return;
+
+        // Evita duplicar alert do mesmo tipo
+        qsa(`.alert-${type}`, alerts).forEach((a) => a.remove());
+
+        const div = document.createElement("div");
+        div.className = `alert alert-${type === "success" ? "success" : "danger"} alert-dismissible fade show`;
+        div.innerHTML = `
+      <i class="fas ${type === "success" ? "fa-check-circle" : "fa-exclamation-circle"} me-1"></i>
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+    `;
+        alerts.appendChild(div);
+
+        // Bootstrap dismiss
+        if (window.bootstrap?.Alert) new bootstrap.Alert(div);
+
+        setTimeout(() => {
+            if (div.parentNode) {
+                const bs = window.bootstrap?.Alert?.getOrCreateInstance(div);
+                bs ? bs.close() : div.remove();
+            }
+        }, 5000);
+    };
+
+    const toggleEmptyStateIfNeeded = (isEmptyHint = null) => {
+        // prioridade para flag do servidor; senão, conta linhas atuais
+        const noItems =
+            typeof isEmptyHint === "boolean"
+                ? isEmptyHint
+                : qsa(".linha-item").length === 0;
+
+        const resumo = qs("#resumo-card");
+        const empty = qs("#empty-state");
+
+        if (noItems) {
+            resumo?.classList.add("d-none");
+            empty?.classList.remove("d-none");
+        } else {
+            resumo?.classList.remove("d-none");
+            empty?.classList.add("d-none");
+        }
+    };
+
+    const mustReload = (resp) => {
+        const ct = resp.headers.get("content-type");
+        return !ct || !ct.includes("application/json");
+    };
+
+    // =================== Atualização de quantidade ===================
+    const handleQuantityUpdate = async (form, newValue) => {
+        const formData = new FormData(form);
+        formData.set("quantidade", newValue);
 
         try {
-            const response = await fetch(form.action, {
-                method: 'POST',
+            const resp = await fetch(form.action, {
+                method: "POST",
                 body: formData,
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json'
-                }
+                    "X-Requested-With": "XMLHttpRequest",
+                    "RequestVerificationToken": getAFToken(form),
+                },
             });
 
-            // Verifica se a resposta é JSON
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Resposta do servidor não é JSON');
+            if (mustReload(resp)) {
+                window.location.reload();
+                return;
             }
 
-            const result = await response.json();
+            const result = await resp.json();
 
-            if (!response.ok) {
-                throw new Error(result.message || `Erro ${response.status}`);
-            }
-
-            if (result.success) {
-                // Atualiza o subtotal da linha
-                const produtoId = formData.get('produtoId');
-                const sabor = formData.get('sabor') || '';
-
-                // Encontra a linha correta (subtotal está na 4ª coluna)
-                const row = document.querySelector(`tr.linha-item[data-produto-id="${produtoId}"][data-sabor="${sabor}"]`);
-                if (row) {
-                    const subtotalCell = row.querySelector('td:nth-child(4)');
-                    if (subtotalCell) {
-                        subtotalCell.textContent = result.subtotal;
-                    }
-                }
-
-                // Atualiza o total do carrinho
-                const totalElement = document.getElementById('totalCarrinho');
-                if (totalElement) {
-                    totalElement.textContent = result.total;
-                }
-
-                showAlert('success', result.message);
+            if (result.ok) {
+                updateBadges(result.count);
+                if (result.total) setTotalAnimated(result.total);
+                toggleEmptyStateIfNeeded(result.isEmpty);
+                showAlert("success", result.message || "Quantidade atualizada com sucesso");
             } else {
-                showAlert('danger', result.message);
-                // Reverte o valor do input em caso de erro
-                const input = form.querySelector('.quantidade-input');
-                input.value = input.getAttribute('data-old-value') || input.value;
+                // se o servidor diz que o item não existe mais, re-sincroniza
+                if ((result.error || "").toLowerCase().includes("não encontrado")) {
+                    window.location.reload();
+                    return;
+                }
+                showAlert("danger", result.error || "Erro ao atualizar quantidade");
+
+                // Reverte o valor do input
+                const input = form.querySelector(".quantidade-input");
+                if (input) input.value = input.getAttribute("data-old-value") || input.value;
             }
-
-        } catch (error) {
-            console.error('Erro ao atualizar quantidade:', error);
-            showAlert('danger', error.message || 'Erro ao atualizar quantidade');
-
-            // Reverte o valor do input
-            const input = form.querySelector('.quantidade-input');
-            input.value = input.getAttribute('data-old-value') || input.value;
+        } catch (err) {
+            console.error("Erro ao atualizar quantidade:", err);
+            showAlert("danger", "Erro de conexão ao atualizar quantidade");
+            const input = form.querySelector(".quantidade-input");
+            if (input) input.value = input.getAttribute("data-old-value") || input.value;
         }
     };
 
-    // Configura os eventos nos botões de quantidade
-    document.querySelectorAll('.quantidade-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
-            const group = this.closest('.input-group');
-            const input = group.querySelector('.quantidade-input');
-            const form = this.closest('form.quantidade-form');
+    // ===================== Remoção de item (AJAX) =====================
+    const handleRemove = async (form) => {
+        const formData = new FormData(form);
 
-            if (!input || !form) return;
+        try {
+            const resp = await fetch(form.action, {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest",
+                    "RequestVerificationToken": getAFToken(form),
+                },
+            });
 
-            const currentValue = parseInt(input.value) || 0;
-            const action = this.getAttribute('data-action');
-            const newValue = clampByMinMax(input,
-                action === 'increase' ? currentValue + 1 : currentValue - 1);
-
-            if (newValue !== currentValue) {
-                // Salva o valor antigo antes de mudar
-                input.setAttribute('data-old-value', input.value);
-                input.value = newValue;
-                updateQuantity(form, newValue);
+            if (mustReload(resp)) {
+                window.location.reload();
+                return;
             }
-        });
-    });
 
-    // Configura o evento de mudança no input manual
-    document.querySelectorAll('.quantidade-input').forEach(input => {
-        // Salva o valor inicial
-        input.setAttribute('data-old-value', input.value);
+            const result = await resp.json();
 
-        input.addEventListener('change', function () {
-            const form = this.closest('form.quantidade-form');
-            if (!form) return;
+            if (result.ok) {
+                updateBadges(result.count);
 
-            let value = parseInt(this.value) || 1;
-            value = clampByMinMax(this, value);
+                // Remove a linha com animação
+                const row = form.closest(".linha-item");
+                if (row) {
+                    row.style.transition = "opacity .3s, transform .3s";
+                    row.style.opacity = "0";
+                    row.style.transform = "translateX(-100px)";
+                    setTimeout(() => {
+                        row.remove();
+                        if (result.total) setTotalAnimated(result.total);
+                        toggleEmptyStateIfNeeded(result.isEmpty);
+                    }, 300);
+                } else {
+                    // Sem linha (já foi removida). Só sincroniza totais/estado.
+                    if (result.total) setTotalAnimated(result.total);
+                    toggleEmptyStateIfNeeded(result.isEmpty);
+                }
 
-            // Salva o valor atual antes de atualizar
-            this.setAttribute('data-old-value', this.value);
-            this.value = value;
-
-            updateQuantity(form, value);
-        });
-
-        input.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                this.setAttribute('data-old-value', this.value);
-                this.dispatchEvent(new Event('change'));
+                showAlert("success", result.message || "Item removido com sucesso");
+            } else {
+                // Se não encontrou o item, nossa DOM está defasada: recarrega
+                if ((result.error || "").toLowerCase().includes("não encontrado")) {
+                    window.location.reload();
+                    return;
+                }
+                showAlert("danger", result.error || "Erro ao remover item");
             }
-        });
+        } catch (err) {
+            console.error("Erro ao remover item:", err);
+            showAlert("danger", "Erro de conexão ao remover item");
+            setTimeout(() => window.location.reload(), 1000);
+        }
+    };
 
-        // Salva o valor quando o usuário começa a editar
-        input.addEventListener('focus', function () {
-            this.setAttribute('data-old-value', this.value);
-        });
-    });
-}
+    // =================== Inicialização / Delegação ===================
+    function initCartUI() {
+        // Delegação para botões +/- dentro de .quantidade-form
+        document.addEventListener("click", (e) => {
+            const btn = e.target.closest(".quantidade-form .btn-outline");
+            if (!btn) return;
 
-function setupRemoveForms() {
-    // Configura os forms de remoção para usar AJAX
-    document.querySelectorAll('form[action*="RemoverItem"]').forEach(form => {
-        form.addEventListener('submit', async function (e) {
             e.preventDefault();
 
-            const formData = new FormData(form);
-            // Adiciona o token anti-forgery se existir
-            const token = document.querySelector('input[name="__RequestVerificationToken"]');
-            if (token) {
-                formData.append('__RequestVerificationToken', token.value);
-            }
+            const form = btn.closest("form");
+            const input = form?.querySelector(".quantidade-input");
+            if (!form || !input) return;
 
-            try {
-                const response = await fetch(form.action, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json'
-                    }
-                });
+            const currentValue = parseInt(input.value) || 0;
+            let newValue = currentValue;
 
-                // Verifica se a resposta é JSON
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    const errorText = await response.text();
-                    throw new Error(errorText || 'Resposta do servidor não é JSON');
-                }
+            if (btn.querySelector(".fa-plus")) newValue = currentValue + 1;
+            if (btn.querySelector(".fa-minus")) newValue = currentValue - 1;
 
-                const result = await response.json();
+            newValue = clampByMinMax(input, newValue);
 
-                if (!response.ok) {
-                    throw new Error(result.message || `Erro ${response.status}`);
-                }
-
-                if (result.success) {
-                    // Remove a linha do item
-                    const produtoId = formData.get('produtoId');
-                    const sabor = formData.get('sabor') || '';
-                    const row = document.querySelector(`tr.linha-item[data-produto-id="${produtoId}"][data-sabor="${sabor}"]`);
-
-                    if (row) {
-                        // Animação de fade out
-                        row.style.transition = 'opacity 0.3s, transform 0.3s';
-                        row.style.opacity = '0';
-                        row.style.transform = 'translateX(-100px)';
-
-                        setTimeout(() => {
-                            row.remove();
-
-                            // Atualiza o total do carrinho
-                            const totalElement = document.getElementById('totalCarrinho');
-                            if (totalElement) {
-                                totalElement.textContent = result.total;
-                            }
-
-                            // Se não há mais itens, recarrega a página
-                            if (document.querySelectorAll('.linha-item').length === 0) {
-                                setTimeout(() => {
-                                    location.reload();
-                                }, 1000);
-                            }
-                        }, 300);
-                    }
-
-                    showAlert('success', result.message);
-
-                } else {
-                    showAlert('danger', result.message);
-                }
-
-            } catch (error) {
-                console.error('Erro ao remover item:', error);
-                showAlert('danger', error.message || 'Erro ao remover item');
+            if (newValue !== currentValue) {
+                input.setAttribute("data-old-value", input.value);
+                input.value = newValue;
+                handleQuantityUpdate(form, newValue);
             }
         });
-    });
-}
 
-function showAlert(type, message) {
-    const alertsContainer = document.getElementById('carrinho-alerts');
-    if (!alertsContainer) {
-        console.warn('Container de alerts não encontrado');
-        return;
-    }
+        // Delegação para botão "Atualizar" manual
+        document.addEventListener("click", (e) => {
+            const btn = e.target.closest(".quantidade-form .btn-primary");
+            if (!btn) return;
 
-    // Limpa alerts antigos do mesmo tipo para evitar duplicação
-    const existingAlerts = alertsContainer.querySelectorAll(`.alert-${type}`);
-    existingAlerts.forEach(alert => alert.remove());
+            e.preventDefault();
+            const form = btn.closest("form");
+            const input = form?.querySelector(".quantidade-input");
+            if (!form || !input) return;
 
-    const alert = document.createElement('div');
-    alert.className = `alert alert-${type} alert-dismissible fade show`;
-    alert.innerHTML = `
-        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-    `;
+            const value = parseInt(input.value) || 1;
+            input.setAttribute("data-old-value", input.value);
+            handleQuantityUpdate(form, value);
+        });
 
-    alertsContainer.appendChild(alert);
+        // Delegação para mudanças no input de quantidade
+        document.addEventListener("change", (e) => {
+            const input = e.target.closest(".quantidade-input");
+            if (!input) return;
 
-    // Auto-remove após 5 segundos
-    setTimeout(() => {
-        if (alert.parentNode) {
-            alert.style.transition = 'opacity 0.5s';
-            alert.style.opacity = '0';
-            setTimeout(() => {
-                if (alert.parentNode) {
-                    alert.remove();
-                }
-            }, 500);
-        }
-    }, 5000);
+            const form = input.closest("form");
+            let value = parseInt(input.value) || 1;
+            value = clampByMinMax(input, value);
+            input.setAttribute("data-old-value", input.value);
+            input.value = value;
+            handleQuantityUpdate(form, value);
+        });
 
-    // Adiciona funcionalidade ao botão de fechar
-    const closeBtn = alert.querySelector('.btn-close');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', function () {
-            alert.style.transition = 'opacity 0.5s';
-            alert.style.opacity = '0';
-            setTimeout(() => {
-                if (alert.parentNode) {
-                    alert.remove();
-                }
-            }, 500);
+        document.addEventListener("keydown", (e) => {
+            const input = e.target.closest(".quantidade-input");
+            if (!input) return;
+            if (e.key === "Enter") {
+                e.preventDefault();
+                input.setAttribute("data-old-value", input.value);
+                input.dispatchEvent(new Event("change"));
+            }
+        });
+
+        document.addEventListener("focusin", (e) => {
+            const input = e.target.closest(".quantidade-input");
+            if (input) input.setAttribute("data-old-value", input.value);
+        });
+
+        // Delegação para remoção
+        document.addEventListener("submit", (e) => {
+            const form = e.target.closest(".remove-form");
+            if (!form) return;
+
+            e.preventDefault();
+            if (!confirm("Tem certeza que deseja remover este item do carrinho?")) return;
+
+            handleRemove(form);
         });
     }
-}
-
-// Função auxiliar para debounce (evitar múltiplas chamadas rápidas)
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// Adiciona suporte para Bootstrap 5 se necessário
-if (typeof bootstrap !== 'undefined') {
-    // Habilita tooltips se existirem
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
-    // Habilita popovers se existirem
-    const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
-    popoverTriggerList.map(function (popoverTriggerEl) {
-        return new bootstrap.Popover(popoverTriggerEl);
-    });
-}
+})();
