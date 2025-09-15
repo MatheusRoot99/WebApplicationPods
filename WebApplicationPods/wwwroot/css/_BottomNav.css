@@ -82,3 +82,7 @@
 .mbn-badge-bump {
     animation: mbn-bump .35s ease;
 }
+
+.mbn-item--auth {
+    display: none !important;
+}

@@ -43,9 +43,10 @@
     </a>
 
     <!-- Perfil/Entrar -->
+    @* REMOVIDO: Perfil/Entrar na nav mobile *@
     @if (isAuth && !isAdmin && !isLojista)
     {
-        <a class="mbn-item @IsActive("Cliente", "Perfil")"
+        <a class="mbn-item mbn-item--auth @IsActive("Cliente", "Perfil")"
            asp-controller="Cliente" asp-action="Perfil" aria-label="Perfil">
             <i class="fa-solid fa-user"></i>
             <span class="mbn-label">Perfil</span>
@@ -53,7 +54,7 @@
     }
     else
     {
-        <a class="mbn-item @IsActive("Conta", "Login")"
+        <a class="mbn-item mbn-item--auth @IsActive("Conta", "Login")"
            asp-controller="Conta" asp-action="Login" aria-label="Entrar">
             <i class="fa-solid fa-user"></i>
             <span class="mbn-label">Entrar</span>
