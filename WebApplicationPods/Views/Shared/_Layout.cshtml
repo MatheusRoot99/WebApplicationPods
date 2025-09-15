@@ -3,7 +3,18 @@
 @using WebApplicationPods.Services
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery
 @inject ILojaConfigService LojaSvc
+@{
+    // Busca config uma única vez
+    var cfg = await LojaSvc.GetAsync();
+    var baseUrl = $"{Context.Request?.Scheme}://{Context.Request?.Host}";
+    var headerVM = LojaSvc.BuildHeader(cfg, baseUrl, Url.Action("Perfil", "Loja"));
 
+    // Deixa pronto pro partial _StoreHeader
+    ViewData["StoreHeader"] = headerVM;
+
+    // Nome para a barra mobile
+    var mobileBrand = headerVM?.Nome ?? "Pods Eletrônicos";
+}
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -22,6 +33,10 @@
     <link rel="stylesheet" href="~/css/sidebar.css" asp-append-version="true" />
 
     @await RenderSectionAsync("Styles", required: false)
+
+    <style>
+        
+    </style>
 </head>
 <body>
 
@@ -34,86 +49,57 @@
 
         <div id="page-content-wrapper">
             <!-- Topbar -->
-            <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
+            <nav class="navbar navbar-dark bg-dark border-bottom">
                 <div class="container-fluid">
 
-                    <!-- Toggle menu mobile -->
-                    <button class="btn btn-sm btn-dark d-lg-none"
-                            id="mobile-menu-toggle"
-                            type="button"
-                            data-bs-toggle="offcanvas"
-                            data-bs-target="#mobileMenu"
-                            aria-controls="mobileMenu"
-                            aria-label="Abrir menu">
-                        <i class="fas fa-bars"></i> Menu
-                    </button>
+                    <!-- ===== MOBILE TOOLBAR (até lg) ===== -->
+                    <div class="mobile-toolbar d-lg-none w-100">
+                        <!-- menu -->
+                        <button class="icon-btn"
+                                type="button"
+                                data-bs-toggle="offcanvas"
+                                data-bs-target="#mobileMenu"
+                                aria-controls="mobileMenu"
+                                aria-label="Abrir menu">
+                            <i class="fas fa-bars"></i>
+                        </button>
 
-                    <!-- Breadcrumb -->
-                    <div class="d-none d-md-block ms-3">
-                        <nav aria-label="breadcrumb">
-                            <ol class="breadcrumb mb-0">
-                                <li class="breadcrumb-item">
-                                    <a asp-controller="Home" asp-action="Index"><i class="fas fa-home"></i></a>
-                                </li>
-                                @if (!string.Equals(ViewContext.RouteData.Values["controller"]?.ToString(), "Home", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    <li class="breadcrumb-item">
-                                        <a asp-controller="@ViewContext.RouteData.Values["controller"]" asp-action="Index">
-                                            @ViewContext.RouteData.Values["controller"]
-                                        </a>
-                                    </li>
-                                }
-                            </ol>
-                        </nav>
-                    </div>
+                        <!-- título/brand -->
+                        <!-- título/brand -->
+                        <div class="mobile-brand text-truncate">@mobileBrand</div>
 
-                    <div class="navbar-collapse">
-                        <ul class="navbar-nav ms-auto">
-
-                            <!-- Carrinho (desktop) para clientes) -->
+                        <!-- ações -->
+                        <div class="toolbar-actions">
+                            @* Carrinho (cliente) *@
                             @if (!User.IsInRole("Admin") && !User.IsInRole("Lojista"))
                             {
-                                <li class="nav-item d-none d-lg-block">
-                                    <a class="nav-link cart-link" asp-controller="Carrinho" asp-action="Index">
-                                        <span class="cart-wrap position-relative d-inline-flex align-items-center">
-                                            <i class="fas fa-shopping-cart fs-5"></i>
-
-                                            <!-- dot persistente -->
-                                            <span id="cart-dot-desktop" class="cart-dot visually-hidden"></span>
-
-                                            <!-- badge numérico -->
-                                            <span id="cart-badge"
-                                                  class="badge rounded-pill bg-danger position-absolute translate-middle"
-                                                  style="top:-10%; left:90%;">
-                                                @await Component.InvokeAsync("CarrinhoResumo")
-                                                <span class="visually-hidden">itens no carrinho</span>
-                                            </span>
-                                        </span>
-                                    </a>
-                                </li>
+                                <a class="icon-btn position-relative" asp-controller="Carrinho" asp-action="Index" aria-label="Carrinho">
+                                    <i class="fas fa-shopping-cart"></i>
+                                    <span id="cart-badge-mobile" class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle visually-hidden">
+                                        @await Component.InvokeAsync("CarrinhoResumo")
+                                        <span class="visually-hidden">itens no carrinho</span>
+                                    </span>
+                                </a>
                             }
 
-                            <!-- Notificações -->
+                            @* Notificações *@
                             @if (User.Identity?.IsAuthenticated == true)
                             {
-                                <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle position-relative" href="#" id="navbarNotifications"
-                                       role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <div class="dropdown">
+                                    <button class="icon-btn position-relative" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notificações">
                                         <i class="fas fa-bell"></i>
                                         <span id="notif-badge" class="badge bg-danger ms-1 visually-hidden">0</span>
-                                    </a>
+                                    </button>
                                     @await Component.InvokeAsync("Notifications")
-                                </li>
+                                </div>
                             }
 
-                            <!-- Usuário -->
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown"
-                                   role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fas fa-user-circle me-1"></i>
-                                    <span class="d-none d-sm-inline">@(User.Identity?.IsAuthenticated == true ? User.Identity!.Name : "Conta")</span>
-                                </a>
-                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                            @* Conta *@
+                            <div class="dropdown">
+                                <button class="icon-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Conta">
+                                    <i class="fas fa-user-circle"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
                                     @if (User.Identity?.IsAuthenticated != true)
                                     {
                                         <li><a class="dropdown-item" asp-controller="Conta" asp-action="Login"><i class="fas fa-sign-in-alt me-2"></i>Login</a></li>
@@ -129,19 +115,87 @@
                                         </li>
                                     }
                                 </ul>
-                            </li>
-                        </ul>
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- ===== DESKTOP NAV (lg+) ===== -->
+                    <div class="d-none d-lg-flex align-items-center w-100">
+                        <!-- Breadcrumb à esquerda -->
+                        <div class="d-flex align-items-center">
+                            <nav aria-label="breadcrumb" class="ms-1">
+                                <ol class="breadcrumb mb-0">
+                                    <li class="breadcrumb-item">
+                                        <a asp-controller="Home" asp-action="Index" class="text-decoration-none">
+                                            <i class="fas fa-home text-white"></i>
+                                        </a>
+                                    </li>
+                                    @if (!string.Equals(ViewContext.RouteData.Values["controller"]?.ToString(), "Home", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <li class="breadcrumb-item">
+                                            <a asp-controller="@ViewContext.RouteData.Values["controller"]" asp-action="Index" class="text-decoration-none text-white-50">
+                                                @ViewContext.RouteData.Values["controller"]
+                                            </a>
+                                        </li>
+                                    }
+                                </ol>
+                            </nav>
+                        </div>
+
+                        <!-- Ações à direita -->
+                        <div class="ms-auto d-flex align-items-center gap-2">
+                            @if (!User.IsInRole("Admin") && !User.IsInRole("Lojista"))
+                            {
+                                <a class="nav-link cart-link text-white" asp-controller="Carrinho" asp-action="Index">
+                                    <span class="position-relative d-inline-flex align-items-center">
+                                        <i class="fas fa-shopping-cart fs-5"></i>
+                                        <span id="cart-badge" class="badge rounded-pill bg-danger position-absolute translate-middle visually-hidden" style="top:-10%; left:90%;">
+                                            @await Component.InvokeAsync("CarrinhoResumo")
+                                        </span>
+                                    </span>
+                                </a>
+                            }
+
+                            @if (User.Identity?.IsAuthenticated == true)
+                            {
+                                <div class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="dropdown">
+                                        <i class="fas fa-bell"></i>
+                                    </a>
+                                    @await Component.InvokeAsync("Notifications")
+                                </div>
+                            }
+
+                            <div class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-white d-flex align-items-center" href="#" data-bs-toggle="dropdown">
+                                    <i class="fas fa-user-circle me-1"></i>
+                                    <span>@(User.Identity?.IsAuthenticated == true ? User.Identity!.Name : "Conta")</span>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    @if (User.Identity?.IsAuthenticated != true)
+                                    {
+                                        <li><a class="dropdown-item" asp-controller="Conta" asp-action="Login"><i class="fas fa-sign-in-alt me-2"></i>Login</a></li>
+                                    }
+                                    else
+                                    {
+                                        <li><a class="dropdown-item" asp-controller="Cliente" asp-action="Perfil"><i class="fas fa-user me-2"></i>Perfil</a></li>
+                                        <li>
+                                            <form asp-controller="Conta" asp-action="Logout" method="post" class="px-3">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-link p-0"><i class="fas fa-sign-out-alt me-2"></i>Sair</button>
+                                            </form>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </nav>
 
             @* ===== Store Header (Top Bar) vindo do banco ===== *@
-            @{
-                var cfg = await LojaSvc.GetAsync();
-                var baseUrl = $"{Context.Request?.Scheme}://{Context.Request?.Host}";
-                ViewData["StoreHeader"] = LojaSvc.BuildHeader(cfg, baseUrl, Url.Action("Perfil", "Loja"));
-            }
-            @await Html.PartialAsync("_StoreHeader")
+           
 
             <!-- Content -->
             <div class="container-fluid py-3">
@@ -231,6 +285,7 @@
             }
           }
 
+          // fecha o offcanvas quando clicar em um link do menu
           document.querySelectorAll('#mobileMenu .list-group-item').forEach(item => {
             item.addEventListener('click', function () {
               const off = bootstrap.Offcanvas.getInstance(document.getElementById('mobileMenu'));

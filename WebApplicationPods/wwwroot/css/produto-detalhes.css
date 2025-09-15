@@ -137,19 +137,20 @@ body {
 
 .product-badges {
     display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
+    /*flex-wrap: wrap;*/
+    /*gap: 1rem;*/
     justify-content: center;
-    margin-top: 1.5rem
+    /*margin-top: 1.5rem*/
 }
 
 .badge-item {
     display: flex;
     align-items: center;
     background: var(--light-color);
-    border-radius: .5rem;
-    padding: .5rem 1rem;
-    min-width: 120px
+    /* border-radius: .5rem; */
+    /* padding: .5rem 1rem; */
+    min-width: 120px;
+    margin-right: 6%;
 }
 
     .badge-item i {
@@ -708,7 +709,7 @@ body {
     display: grid;
     grid-template-columns: repeat(auto-fill,minmax(250px,1fr));
     gap: 1.5rem;
-    margin-top: 1.5rem
+    /*margin-top: 1.5rem*/
 }
 
 .related-product-card {
@@ -854,4 +855,4 @@ body {
     transition: max-height .3s ease
 }
 
-</style >
+
