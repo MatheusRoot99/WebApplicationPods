@@ -1,24 +1,21 @@
 // Program.cs
-using System.Globalization;
-using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-
+using System.Globalization;
+using System.Text.Json.Serialization;
 using WebApplicationPods.Data;                 // BancoContext
 using WebApplicationPods.Infra;                // IdentitySeedHostedService
 using WebApplicationPods.Models;               // ApplicationUser
-
 using WebApplicationPods.Payments;             // IPaymentService, PaymentService, IPaymentGateway
 using WebApplicationPods.Payments.Gateways;    // MercadoPagoGateway, StripeGateway
 using WebApplicationPods.Payments.Options;     // PaymentsOptions
-
 using WebApplicationPods.Repositories;         // ICepService, CepService
 using WebApplicationPods.Repository.Interface; // Repositórios
 using WebApplicationPods.Repository.Repository;
-
+using WebApplicationPods.Services;
 using WebApplicationPods.Services.Interface;   // IEmailSenderService, ICarrinhoService
 using WebApplicationPods.Services.service;
 
@@ -59,6 +56,12 @@ builder.Services
         o.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
         o.JsonSerializerOptions.WriteIndented = true;
     });
+
+//Continuar usando política "Admin"
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
+});
 
 // ==================== EF Core (SQL Server / Azure) ====================
 builder.Services.AddDbContext<BancoContext>(options =>
@@ -142,6 +145,7 @@ builder.Services.AddScoped<ICarrinhoService, CarrinhoService>();
 builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
 builder.Services.AddScoped<IPedidoRepository, PedidoRepository>();
 builder.Services.AddScoped<IEmailSenderService, GmailEmailSenderService>();
+builder.Services.AddScoped<ILojaConfigService, LojaConfigService>();
 
 // Seed (roles/usuário admin)
 builder.Services.AddHostedService<IdentitySeedHostedService>();

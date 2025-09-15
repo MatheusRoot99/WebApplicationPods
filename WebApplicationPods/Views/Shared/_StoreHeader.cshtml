@@ -1,0 +1,104 @@
+﻿@using WebApplicationPods.Models
+@{
+    var hdr = (StoreHeaderViewModel?)ViewData["StoreHeader"]
+              ?? (StoreHeaderViewModel?)ViewBag.StoreHeader
+              ?? new StoreHeaderViewModel();
+
+    // Texto horário
+    string textoHorario = hdr.FechaAs.HasValue
+        ? $"Aberto até {hdr.FechaAs.Value.Hours:D2}h{hdr.FechaAs.Value.Minutes:D2}"
+        : (hdr.AbertoAgora ? "Aberto agora" : "Fechado");
+
+    // URL absoluta para compartilhar
+    var baseUrl = $"{Context.Request?.Scheme}://{Context.Request?.Host}";
+    string urlCompartilhar = hdr.UrlParaCompartilhar
+        ?? baseUrl + (Context.Request?.PathBase.HasValue == true ? Context.Request.PathBase.Value : "/");
+}
+<div class="storebar">
+    <div class="storebar-top">
+        <div class="storebar-brand">
+            <div class="storebar-logo">
+                @if (!string.IsNullOrWhiteSpace(hdr.LogoUrl))
+                {
+                    <img src="@hdr.LogoUrl" alt="Logo do estabelecimento" />
+                }
+                else
+                {
+                    <div class="storebar-logo-fallback">
+                        <i class="fas fa-store"></i>
+                    </div>
+                }
+            </div>
+            <div class="storebar-name">@hdr.Nome</div>
+        </div>
+
+        <div class="storebar-actions">
+            <button class="storebar-share" type="button"
+                    data-share-title="@hdr.Nome"
+                    data-share-url="@urlCompartilhar">
+                <i class="fas fa-share-nodes" aria-hidden="true"></i>
+                <span class="visually-hidden">Compartilhar</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="storebar-bottom">
+        <div class="storebar-meta">
+            <span class="badge-status @(hdr.AbertoAgora ? "open" : "closed")">
+                @(hdr.AbertoAgora ? "Aberto" : "Fechado")
+            </span>
+            <span class="dot">•</span>
+            <span>@textoHorario</span>
+
+            @* Mensagem opcional *@
+            @if (!string.IsNullOrWhiteSpace(hdr.MensagemStatus))
+            {
+                <span class="dot">•</span>
+                <span>@hdr.MensagemStatus</span>
+            }
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(hdr.PerfilDaLojaUrl))
+        {
+            <a href="@hdr.PerfilDaLojaUrl" class="storebar-link">Perfil da loja</a>
+        }
+    </div>
+</div>
+
+<script>
+    (function () {
+        // Compartilhar (Web Share API + fallback)
+        const btn = document.querySelector('.storebar-share');
+        if (!btn) return;
+
+        btn.addEventListener('click', async () => {
+            const title = btn.getAttribute('data-share-title') || document.title;
+            const url = btn.getAttribute('data-share-url') || window.location.href;
+
+            if (navigator.share) {
+                try {
+                    await navigator.share({ title, url });
+                } catch(e) {
+                    // cancelado/erro
+                }
+            } else {
+                try {
+                    await navigator.clipboard.writeText(url);
+                    toast('Link copiado!');
+                } catch {
+                    window.prompt('Copie o link:', url);
+                }
+            }
+        });
+
+        // Toast simples
+        function toast(msg) {
+            const el = document.createElement('div');
+            el.className = 'storebar-toast';
+            el.textContent = msg;
+            document.body.appendChild(el);
+            setTimeout(() => el.classList.add('show'));
+            setTimeout(() => { el.classList.remove('show'); el.remove(); }, 2500);
+        }
+    })();
+</script>

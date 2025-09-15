@@ -1,0 +1,110 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using WebApplicationPods.Models
+@model WebApplicationPods.Models.LojaConfig
+@inject IAuthorizationService Authz
+
+@{
+    ViewData["Title"] = "Configurações da Loja";
+    // Checa a política "Admin" que você registrou no Program.cs
+    var authResult = await Authz.AuthorizeAsync(User, policyName: "Admin");
+    var isAdmin = authResult.Succeeded || (User?.Identity?.IsAuthenticated == true && User.IsInRole("Admin"));
+}
+<link rel="stylesheet" href="~/css/loja-settings.css" asp-append-version="true" />
+
+<div class="container py-4 loja-settings" id="loja-settings">
+    <h3 class="mb-3"><i class="fas fa-store me-2"></i>Configurações da Loja</h3>
+
+    <!-- FORM PRINCIPAL (Editar) -->
+    <form asp-action="Editar" method="post" enctype="multipart/form-data" class="card p-3 shadow-sm">
+        <input asp-for="Id" type="hidden" />
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="Nome" class="form-label">Nome do Estabelecimento</label>
+                <input asp-for="Nome" class="form-control" />
+                <span asp-validation-for="Nome" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Logo (PNG/JPG/WEBP)</label>
+                <input type="file" name="logoFile" class="form-control" accept=".png,.jpg,.jpeg,.webp" />
+                @if (!string.IsNullOrWhiteSpace(Model.LogoPath))
+                {
+                    <div class="mt-2 d-flex align-items-center gap-2">
+                        <img src="@Model.LogoPath" alt="Logo atual" style="width:48px;height:48px;object-fit:cover;border-radius:999px;" />
+                        <span class="text-muted small">@Model.LogoPath</span>
+                    </div>
+                }
+                <span asp-validation-for="LogoPath" class="text-danger"></span>
+            </div>
+
+            <div class="col-sm-6 col-md-3">
+                <label class="form-label">Abre às</label>
+                <input asp-for="HorarioAbertura" type="time" class="form-control" />
+                <span asp-validation-for="HorarioAbertura" class="text-danger"></span>
+            </div>
+
+            <div class="col-sm-6 col-md-3">
+                <label class="form-label">Fecha às</label>
+                <input asp-for="HorarioFechamento" type="time" class="form-control" />
+                <span asp-validation-for="HorarioFechamento" class="text-danger"></span>
+                <div class="form-text">suporta virar o dia (ex: 18:00 → 02:00)</div>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label d-block">Dias abertos</label>
+                @foreach (DiasSemanaFlags d in Enum.GetValues(typeof(DiasSemanaFlags)))
+                {
+                    if (d == DiasSemanaFlags.Nenhum || d == DiasSemanaFlags.Todos) { continue; }
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox"
+                               name="DiasAbertos" value="@((int)d)"
+                               @(Model.DiasAbertos.HasFlag(d) ? "checked" : "") />
+                        <label class="form-check-label">@d</label>
+                    </div>
+                }
+                <input type="hidden" name="DiasAbertos" value="0" />
+            </div>
+
+            <div class="col-md-3">
+                <div class="form-check mt-4">
+                    <input class="form-check-input" asp-for="Ativo" />
+                    <label class="form-check-label" asp-for="Ativo">Loja ativa</label>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="form-check mt-4">
+                    <input class="form-check-input" asp-for="ForcarFechado" />
+                    <label class="form-check-label" asp-for="ForcarFechado">Forçar fechado</label>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <label asp-for="MensagemStatus" class="form-label">Mensagem (opcional)</label>
+                <input asp-for="MensagemStatus" class="form-control" placeholder="Ex.: Voltamos às 19h" />
+                <span asp-validation-for="MensagemStatus" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="mt-3 d-flex gap-2">
+            <button class="btn btn-success"><i class="fas fa-save me-2"></i>Salvar</button>
+            <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">Voltar</a>
+        </div>
+    </form>
+
+    @* FORM SEPARADO (apenas Admin): Limpar duplicatas *@
+    @if (isAdmin)
+    {
+        <form asp-action="LimparDuplicatas" method="post" class="mt-3">
+            @Html.AntiForgeryToken()
+            <button class="btn btn-outline-danger" onclick="return confirm('Tem certeza?');">
+                <i class="fas fa-broom me-2"></i>Limpar duplicatas
+            </button>
+        </form>
+    }
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

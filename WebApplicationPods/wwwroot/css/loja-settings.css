@@ -1,0 +1,91 @@
+﻿/* ===== Ajustes gerais da página de Configurações ===== */
+
+/* altura real do bottom-nav; ajuste se o seu for diferente */
+:root {
+    --mbn-h: 64px;
+    --page-safe-bottom: calc(var(--mbn-h) + 16px);
+}
+
+/* Card e tipografia — aplicamos se tiver classe OU id; se não tiver, cai no fallback do form/card */
+#loja-settings .card,
+.loja-settings .card {
+    border: 0;
+    border-radius: 14px;
+    box-shadow: 0 10px 24px rgba(0,0,0,.06);
+}
+
+#loja-settings h3,
+.loja-settings h3 {
+    font-weight: 800;
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+/* Inputs mais confortáveis */
+#loja-settings .form-label,
+.loja-settings .form-label {
+    font-weight: 600;
+}
+
+#loja-settings .form-control,
+.loja-settings .form-control {
+    border-radius: 10px;
+}
+
+#loja-settings .form-check-input,
+.loja-settings .form-check-input {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+#loja-settings .form-check-inline,
+.loja-settings .form-check-inline {
+    margin-right: .75rem;
+    margin-bottom: .35rem;
+}
+
+#loja-settings .btn,
+.loja-settings .btn {
+    border-radius: 10px;
+    padding: .55rem 1rem;
+}
+
+#loja-settings img[alt="Logo atual"],
+.loja-settings img[alt="Logo atual"] {
+    border: 1px solid rgba(0,0,0,.06);
+    box-shadow: 0 3px 10px rgba(0,0,0,.08);
+}
+
+#loja-settings .form-text,
+.loja-settings .form-text {
+    color: #6c757d;
+    font-size: .85rem;
+}
+
+/* ===== Resolver o problema do bottom-nav sobre o conteúdo (MOBILE) ===== */
+/* Empurra o conteúdo pra cima do nav fixo no rodapé */
+@media (max-width: 991.98px) {
+    /* aplica no wrapper do conteúdo */
+    #page-content-wrapper,
+    #page-content-wrapper .container,
+    #page-content-wrapper  {
+        padding-bottom: var(--page-safe-bottom);
+    }
+
+    /* se a navbar de cima for fixed-top, garante espaço no topo */
+    .navbar.fixed-top + #page-content-wrapper {
+        padding-top: 56px; /* altura padrão da navbar */
+    }
+}
+
+/* (Opcional) informe a altura real do seu bottom nav para ajudar em layouts que dependem da altura */
+@media (max-width: 991.98px) {
+    /* ajuste os seletores conforme seu partial _BottomNav */
+    #bottomNav,
+    .mbn, /* comum no seu projeto */
+    .mobile-bottom-nav { /* se existir */
+        height: var(--mbn-h);
+    }
+}

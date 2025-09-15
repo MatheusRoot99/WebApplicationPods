@@ -117,3 +117,193 @@ html, body {
 #page-content-wrapper {
     overflow-x: hidden;
 }
+
+
+/* ===== Store Header (Top Bar) — usando paleta do site ===== */
+.storebar {
+    position: relative;
+    margin: 0 0 16px 0;
+    /* gradiente da marca */
+    background: linear-gradient(90deg, var(--brand-start, #6a11cb), var(--brand-end, #2575fc));
+    color: var(--white, #fff);
+    border-bottom: 1px solid rgba(0,0,0,.06);
+}
+
+/* faixa superior (logo + nome + share) */
+.storebar-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: .75rem 1rem;
+}
+
+/* marca (logo + nome) */
+.storebar-brand {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+}
+
+.storebar-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: color-mix(in sRGB, var(--white, #fff) 20%, transparent);
+    display: grid;
+    place-items: center;
+    box-shadow: var(--shadow, 0 4px 6px rgba(0,0,0,.10));
+}
+
+    .storebar-logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+.storebar-logo-fallback {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    color: var(--white, #fff);
+    font-size: 1rem;
+}
+
+.storebar-name {
+    font-weight: 800;
+    font-size: 1.05rem;
+    text-shadow: 0 1px 2px rgba(0,0,0,.15);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ações (compartilhar) */
+.storebar-actions {
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+}
+
+.storebar-share {
+    border: 0;
+    outline: 0;
+    background: color-mix(in sRGB, var(--white, #fff) 20%, transparent);
+    color: var(--white, #fff);
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    box-shadow: var(--shadow, 0 4px 6px rgba(0,0,0,.10));
+    transition: transform .12s ease, background .12s ease;
+}
+
+    .storebar-share:hover {
+        transform: translateY(-1px);
+        background: color-mix(in sRGB, var(--white, #fff) 28%, transparent);
+    }
+
+    .storebar-share:active {
+        transform: translateY(0);
+    }
+
+/* faixa inferior (meta + link perfil) */
+.storebar-bottom {
+    background: var(--white, #fff);
+    color: var(--black-soft, #222);
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    padding: .6rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    box-shadow: var(--shadow-lg, 0 8px 18px rgba(0,0,0,.06));
+}
+
+.storebar-meta {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .92rem;
+}
+
+    .storebar-meta .dot {
+        opacity: .5;
+    }
+
+/* badges de status */
+.badge-status {
+    padding: .2rem .5rem;
+    border-radius: 999px;
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .2px;
+}
+
+    .badge-status.open {
+        /* verde suave com fallback */
+        background: #e8f8ef;
+        color: #1e8a4a;
+    }
+
+    .badge-status.closed {
+        /* vermelho suave com fallback */
+        background: #fdecea;
+        color: #b42318;
+    }
+
+/* link do perfil com a cor da marca */
+.storebar-link {
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--brand-end, #2575fc);
+}
+
+    .storebar-link:hover {
+        text-decoration: underline;
+    }
+
+/* Toast */
+.storebar-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%) translateY(8px);
+    background: rgba(0,0,0,.8);
+    color: var(--white, #fff);
+    padding: .6rem .9rem;
+    border-radius: 10px;
+    opacity: 0;
+    transition: all .25s ease;
+    z-index: 1100;
+    font-size: .9rem;
+}
+
+    .storebar-toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+
+/* Acessibilidade */
+.visually-hidden {
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+}
+
+/* Responsivo */
+@media (max-width: 420px) {
+    .storebar-name {
+        max-width: 160px;
+    }
+}
+
+

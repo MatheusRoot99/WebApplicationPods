@@ -1,5 +1,8 @@
 ﻿@using System.Text.Json
+@using WebApplicationPods.Models
+@using WebApplicationPods.Services
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery
+@inject ILojaConfigService LojaSvc
 
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -67,7 +70,7 @@
                     <div class="navbar-collapse">
                         <ul class="navbar-nav ms-auto">
 
-                            <!-- Carrinho (desktop) para clientes -->
+                            <!-- Carrinho (desktop) para clientes) -->
                             @if (!User.IsInRole("Admin") && !User.IsInRole("Lojista"))
                             {
                                 <li class="nav-item d-none d-lg-block">
@@ -87,11 +90,8 @@
                                             </span>
                                         </span>
                                     </a>
-
                                 </li>
                             }
-
-
 
                             <!-- Notificações -->
                             @if (User.Identity?.IsAuthenticated == true)
@@ -135,6 +135,14 @@
                 </div>
             </nav>
 
+            @* ===== Store Header (Top Bar) vindo do banco ===== *@
+            @{
+                var cfg = await LojaSvc.GetAsync();
+                var baseUrl = $"{Context.Request?.Scheme}://{Context.Request?.Host}";
+                ViewData["StoreHeader"] = LojaSvc.BuildHeader(cfg, baseUrl, Url.Action("Perfil", "Loja"));
+            }
+            @await Html.PartialAsync("_StoreHeader")
+
             <!-- Content -->
             <div class="container-fluid py-3">
                 @RenderBody()
@@ -165,15 +173,9 @@
 
     <script>
         (function () {
-          // ========================
-          // Constantes de storage
-          // ========================
           const KEY_COUNT  = 'cart_count';
           const KEY_UNSEEN = 'cart_unseen';
 
-          // ========================
-          // Helpers de UI
-          // ========================
           function setBadgeCount(n) {
             const num = Math.max(0, parseInt(n || 0, 10) || 0);
             ['cart-badge','cart-badge-mobile'].forEach(id => {
@@ -193,18 +195,13 @@
           function setDot(on) {
             document.querySelectorAll('.mbn-item .fa-cart-shopping, .nav-link.cart-link i')
               .forEach(el => el.classList.toggle('has-unseen', !!on));
-            // se você usa “pontinho” com elementos separados:
             const dotDesktop = document.getElementById('cart-dot-desktop');
             const dotMobile  = document.getElementById('cart-new-dot');
             if (dotDesktop) dotDesktop.classList.toggle('visually-hidden', !on);
             if (dotMobile)  dotMobile.classList.toggle('visually-hidden', !on);
           }
 
-          // ========================
-          // Normalização inicial / Toast / Offcanvas
-          // ========================
           (function normalizeBadgesAtStart () {
-            // se o server renderizou um número, usa; senão 0
             ['cart-badge','cart-badge-mobile','notif-badge'].forEach(id => {
               const el = document.getElementById(id);
               if (!el) return;
@@ -215,7 +212,6 @@
             });
           })();
 
-          // Toast via TempData (mantém teu comportamento)
           const sucesso = @Html.Raw(JsonSerializer.Serialize(TempData["Sucesso"] ?? ""));
           const erro    = @Html.Raw(JsonSerializer.Serialize(TempData["Erro"] ?? ""));
           if (sucesso || erro) {
@@ -227,8 +223,6 @@
               toastEl.classList.toggle('bg-success', ok);
               toastEl.classList.toggle('bg-danger', !ok);
               new bootstrap.Toast(toastEl, { delay: 2400 }).show();
-
-              // anima badge do mobile quando a msg for de carrinho
               const msg = (sucesso || erro || '').toString();
               if (/(carrinho|adicionado|atualizada|removido)/i.test(msg)) {
                 const b = document.getElementById('cart-badge-mobile');
@@ -237,7 +231,6 @@
             }
           }
 
-          // fechar offcanvas ao clicar em um link (mobile menu)
           document.querySelectorAll('#mobileMenu .list-group-item').forEach(item => {
             item.addEventListener('click', function () {
               const off = bootstrap.Offcanvas.getInstance(document.getElementById('mobileMenu'));
@@ -245,39 +238,27 @@
             });
           });
 
-          // ========================
-          // Persistência (count + unseen)
-          // ========================
           function restoreFromStorage() {
             let n = 0, unseen = false;
-
-            // tenta restaurar do storage
             try {
               n = parseInt(localStorage.getItem(KEY_COUNT) || '0', 10) || 0;
               unseen = localStorage.getItem(KEY_UNSEEN) === '1';
             } catch {}
-
-            // se storage estava vazio, lê o que veio do DOM (VC) e salva
             if (!n) {
               const m = (document.getElementById('cart-badge')?.textContent || '').match(/\d+/);
               n = m ? (parseInt(m[0],10)||0) : 0;
               try { localStorage.setItem(KEY_COUNT, String(n)); } catch {}
             }
-
             setBadgeCount(n);
             setDot(unseen && n > 0);
           }
           restoreFromStorage();
 
-          // sincroniza entre abas
           window.addEventListener('storage', (e) => {
             if (e.key === KEY_COUNT)  setBadgeCount(parseInt(e.newValue || '0', 10) || 0);
             if (e.key === KEY_UNSEEN) setDot(e.newValue === '1');
           });
 
-          // ========================
-          // API Global usada pelo site
-          // ========================
           window.updateCartBadges = function(count){
             const n = Math.max(0, parseInt(count || 0, 10) || 0);
             try { localStorage.setItem(KEY_COUNT, String(n)); } catch {}
@@ -292,15 +273,10 @@
 
         })();
 
-        // token antiforgery disponível globalmente
         window.getAntiForgeryToken = function () {
           return document.querySelector('input[name="__RequestVerificationToken"]')?.value;
         };
     </script>
-
-
-
-
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

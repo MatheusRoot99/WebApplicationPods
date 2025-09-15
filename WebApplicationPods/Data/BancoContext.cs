@@ -26,6 +26,8 @@ namespace WebApplicationPods.Data
         public DbSet<UsuarioModel> Usuarios { get; set; } // se você usa este modelo “cliente sem identity”
         public DbSet<CarrinhoModel> Carrinhos { get; set; }
         public DbSet<PaymentModel> Pagamentos { get; set; }
+        public DbSet<LojaConfig> LojaConfigs { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
