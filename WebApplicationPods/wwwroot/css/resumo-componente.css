@@ -4,7 +4,7 @@
 :root {
     --brand-start: #6a11cb; /* roxo */
     --brand-end: #2575fc; /* azul */
-    --brand-soft: #F2E9FF;
+    --brand-soft: #F2E9FF; /* roxo bem claro */
     /* mapeamento legado */
     --orange: var(--brand-start);
     --orange-dark: var(--brand-end);
@@ -21,7 +21,7 @@
     --shadow-lg: 0 10px 25px rgba(0,0,0,.10);
     --border-radius: 12px;
     --border-radius-sm: 8px;
-    --mbn-height: 68px;
+    --mbn-height: 68px; /* altura do bottom-nav mobile (se houver) */
 }
 
 /* gradiente/CTA */
@@ -54,7 +54,7 @@
     background: var(--orange-soft);
 }
 
-/* inputs */
+/* inputs foco */
 .form-control:focus, .form-select:focus {
     border-color: var(--brand-end);
     box-shadow: 0 0 0 .2rem rgba(37,117,252,.15);
@@ -70,32 +70,7 @@
 /* PAGAMENTO (3 OPÇÕES)  */
 /* ===================== */
 
-/* grid responsivo para 3 botões */
-.payments-grid {
-    display: grid;
-    grid-template-columns: repeat(3,minmax(0,1fr));
-    gap: .75rem;
-}
-
-@media (max-width: 992px) {
-    .payments-grid {
-        grid-template-columns: repeat(3,1fr);
-    }
-}
-
-@media (max-width: 600px) {
-    .payments-grid {
-        grid-template-columns: repeat(2,1fr);
-    }
-}
-
-@media (max-width: 420px) {
-    .payments-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* botão-cartão “selectable” */
+/* Botão "selecionável" para os métodos de pagamento */
 .btn-payment {
     --ring: rgba(37,117,252,.18);
     display: flex;
@@ -109,7 +84,7 @@
     color: #111;
     border-radius: 12px;
     box-shadow: var(--shadow-sm);
-    transition: border-color .15s ease, box-shadow .15s ease, transform .05s ease;
+    transition: border-color .15s ease, box-shadow .15s ease, transform .05s ease, background-color .15s ease;
     min-height: 54px;
     text-align: center;
 }
@@ -129,8 +104,7 @@
         outline: none;
         box-shadow: 0 0 0 .25rem var(--ring);
     }
-
-/* estado selecionado (usa .btn-check do Bootstrap) */
+/* estado selecionado (com .btn-check do Bootstrap) */
 .btn-check:checked + .btn-payment {
     border-color: var(--brand-end);
     background: var(--orange-soft);
@@ -138,15 +112,14 @@
     box-shadow: 0 8px 20px rgba(37,117,252,.20);
     transform: translateY(-1px);
 }
-
-/* deixa todos com a mesma altura */
+/* mesma altura de label */
 .btn-payment span {
     display: inline-block;
     line-height: 1.2;
 }
 
 /* ===================== */
-/* BOLINHA QUANTIDADE    */
+/* QUANTIDADE NO RESUMO  */
 /* ===================== */
 .item-quantity {
     background: var(--brand-end);
@@ -191,7 +164,7 @@
 /* ===================== */
 /* MOBILE PADDING FIX    */
 /* ===================== */
-@media (max-width:992px) {
+@media (max-width: 992px) {
     .container-xxl {
         padding-bottom: calc(var(--mbn-height) + 24px + env(safe-area-inset-bottom,0px));
     }
@@ -222,8 +195,9 @@
     }
 }
 
+/* Fallback quando o navegador não suportar env() */
 @supports not (padding: max(0px)) {
-    @media (max-width:992px) {
+    @media (max-width: 992px) {
         .container-xxl {
             padding-bottom: calc(var(--mbn-height) + 24px);
         }
@@ -231,5 +205,23 @@
         #formFinalizar .d-grid.mt-4 {
             bottom: calc(var(--mbn-height) + 8px);
         }
+    }
+}
+
+.payments-grid {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: .75rem;
+}
+
+@media (max-width: 600px) {
+    .payments-grid {
+        grid-template-columns: repeat(2,1fr);
+    }
+}
+
+@media (max-width: 420px) {
+    .payments-grid {
+        grid-template-columns: 1fr;
     }
 }

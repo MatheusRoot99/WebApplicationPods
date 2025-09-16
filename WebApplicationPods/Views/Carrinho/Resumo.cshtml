@@ -9,37 +9,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
     <style>
-        .confirm-modal .modal-header {
-            background: linear-gradient(90deg,#8b5cf6,#2563eb);
-            color: #fff;
-        }
-
-        .confirm-line {
-            display: flex;
-            align-items: flex-start;
-            gap: .75rem;
-        }
-
-        .confirm-ico {
-            width: 44px;
-            height: 44px;
-            border-radius: 999px;
-            background: #eef2ff;
-            display: grid;
-            place-items: center;
-        }
-
-        .btn-confirm {
-            background: #ffbf00;
-            border-color: #ffbf00;
-            color: #000;
-            font-weight: 600;
-        }
-
-            .btn-confirm:hover {
-                filter: brightness(.95);
-                color: #000;
-            }
+       
     </style>
 }
 
@@ -223,6 +193,7 @@
                     </div>
 
                     <!-- Pagamento -->
+                    <!-- Pagamento -->
                     <div class="card shadow-sm border-0 mt-4">
                         <div class="card-header bg-gradient-orange text-white d-flex align-items-center">
                             <div class="icon-circle bg-white bg-opacity-10 me-3">
@@ -238,10 +209,8 @@
                             <div class="payments-grid">
                                 <!-- Dinheiro -->
                                 <div>
-                                    <input type="radio" class="btn-check" id="pay-money"
-                                           name="MetodoPagamento" value="Dinheiro"
-                                           @(Model.MetodoPagamento == "Dinheiro" ? "checked" : "")>
-                                    <label class="btn btn-payment" for="pay-money">
+                                    <input type="radio" class="btn-check" id="pay-money" asp-for="MetodoPagamento" value="Dinheiro" />
+                                    <label class="btn btn-payment w-100" for="pay-money">
                                         <i class="bi bi-cash-coin payment-icon"></i>
                                         <span>Dinheiro</span>
                                     </label>
@@ -249,30 +218,36 @@
 
                                 <!-- Pix -->
                                 <div>
-                                    <input type="radio" class="btn-check" id="pay-pix"
-                                           name="MetodoPagamento" value="Pix"
-                                           @(Model.MetodoPagamento == "Pix" ? "checked" : "")>
-                                    <label class="btn btn-payment" for="pay-pix">
+                                    <input type="radio" class="btn-check" id="pay-pix" asp-for="MetodoPagamento" value="Pix" />
+                                    <label class="btn btn-payment w-100" for="pay-pix">
                                         <i class="bi bi-qr-code payment-icon"></i>
                                         <span>Pix</span>
                                     </label>
                                 </div>
 
-                                <!-- Cartão (Crédito/Débito) -->
+                                <!-- Cartão de Crédito -->
                                 <div>
-                                    <!-- ⚠️ valor “Cartão de Débito” mantém compatibilidade com MapearMetodoPagamento (paga na entrega).
-                                         O rótulo mostra as duas bandeiras. Se preferir online (crédito), troque o value para "Cartão de Crédito". -->
-                                    <input type="radio" class="btn-check" id="pay-card"
-                                           name="MetodoPagamento" value="Cartão de Débito"
-                                           @(Model.MetodoPagamento == "Cartão de Débito" ? "checked" : "")>
-                                    <label class="btn btn-payment" for="pay-card">
+                                    <input type="radio" class="btn-check" id="pay-card-credit" asp-for="MetodoPagamento" value="Cartão de Crédito" />
+                                    <label class="btn btn-payment w-100" for="pay-card-credit">
                                         <i class="bi bi-credit-card payment-icon"></i>
-                                        <span>Cartão (Crédito/Débito)</span>
+                                        <span>Cartão</span>
                                     </label>
                                 </div>
+
+                                <!-- (opcional) Cartão de Débito -->
+                                @* 
+      <div>
+        <input type="radio" class="btn-check" id="pay-card-debit" asp-for="MetodoPagamento" value="Cartão de Débito" />
+        <label class="btn btn-payment w-100" for="pay-card-debit">
+          <i class="bi bi-credit-card-2-back payment-icon"></i>
+          <span>Débito</span>
+        </label>
+      </div>
+      *@
                             </div>
                         </div>
                     </div>
+
 
                     <div class="d-grid mt-4">
                         <button type="submit" class="btn btn-orange btn-lg py-3 fw-bold">
