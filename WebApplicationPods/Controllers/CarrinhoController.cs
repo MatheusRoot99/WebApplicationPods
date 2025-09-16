@@ -7,6 +7,7 @@ using System.Linq;
 using WebApplicationPods.Enum;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
+using WebApplicationPods.Services;
 
 namespace WebApplicationPods.Controllers
 {
@@ -16,17 +17,20 @@ namespace WebApplicationPods.Controllers
         private readonly IProdutoRepository _produtoRepository;
         private readonly IClienteRepository _clienteRepository;
         private readonly IPedidoRepository _pedidoRepository;
+        private readonly IClienteRememberService _remember;
 
         public CarrinhoController(
             ICarrinhoRepository carrinhoRepository,
             IProdutoRepository produtoRepository,
             IClienteRepository clienteRepository,
-            IPedidoRepository pedidoRepository)
+            IPedidoRepository pedidoRepository,
+            IClienteRememberService remember)
         {
             _carrinhoRepository = carrinhoRepository;
             _produtoRepository = produtoRepository;
             _clienteRepository = clienteRepository;
             _pedidoRepository = pedidoRepository;
+            _remember = remember;
         }
 
         // =================== Helpers ===================
@@ -150,9 +154,9 @@ namespace WebApplicationPods.Controllers
             }
 
             var telefone = HttpContext.Session.GetString("ClienteTelefone");
-            if (string.IsNullOrEmpty(telefone))
+            if (string.IsNullOrWhiteSpace(telefone))
             {
-                TempData["ReturnUrl"] = Url.Action("Resumo", "Carrinho");
+                TempData["ReturnUrl"] = Url.Action(nameof(Resumo), "Carrinho");
                 return RedirectToAction("Login", "Auth");
             }
 
@@ -160,19 +164,23 @@ namespace WebApplicationPods.Controllers
             if (cliente == null)
             {
                 TempData["Erro"] = "Cliente não encontrado";
+                TempData["ReturnUrl"] = Url.Action(nameof(Resumo), "Carrinho");
                 return RedirectToAction("Login", "Auth");
             }
 
-            var enderecos = _clienteRepository.ObterEnderecos(cliente.Id)?.ToList() ?? new List<EnderecoModel>();
+            var enderecos = _clienteRepository.ObterEnderecos(cliente.Id)?.ToList()
+                           ?? new List<EnderecoModel>();
 
             int? novoId = null;
-            if (TempData.ContainsKey("EnderecoNovoId") && int.TryParse(Convert.ToString(TempData["EnderecoNovoId"]), out var parsed))
+            if (TempData.ContainsKey("EnderecoNovoId") &&
+                int.TryParse(Convert.ToString(TempData["EnderecoNovoId"]), out var parsed))
                 novoId = parsed;
 
-            var enderecoSelecionado = (novoId.HasValue ? enderecos.FirstOrDefault(e => e.Id == novoId.Value) : null)
-                                      ?? enderecos.FirstOrDefault(e => e.Principal);
+            var enderecoSelecionado =
+                (novoId.HasValue ? enderecos.FirstOrDefault(e => e.Id == novoId.Value) : null)
+                ?? enderecos.FirstOrDefault(e => e.Principal);
 
-            var viewModel = new ResumoPedidoViewModel
+            var vm = new ResumoPedidoViewModel
             {
                 Carrinho = carrinho,
                 Cliente = cliente,
@@ -180,11 +188,35 @@ namespace WebApplicationPods.Controllers
                 EnderecoSelecionadoId = enderecoSelecionado?.Id ?? 0,
                 EnderecoEntrega = enderecoSelecionado,
                 Observacoes = "",
-                RetiradaNoLocal = false
+                RetiradaNoLocal = false,
+
+                // MOSTRAR MODAL na primeira visita desta sessão
+                PrecisaConfirmar = HttpContext.Session.GetString("ClienteConfirmado") != "1",
+                ReturnUrl = Url.Action(nameof(Resumo), "Carrinho")
             };
 
-            return View(viewModel);
+            return View(vm);
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult ConfirmarDados()
+        {
+            HttpContext.Session.SetString("ClienteConfirmado", "1");
+
+            // Se for AJAX (usamos X-Requested-With), retorna 200 OK para o JS
+            if (string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest",
+                StringComparison.OrdinalIgnoreCase))
+            {
+                return Ok();
+            }
+
+            // Fallback (sem JS)
+            return RedirectToAction(nameof(Resumo));
+        }
+
+
+
 
         public IActionResult Confirmacao(int id)
         {
@@ -203,12 +235,12 @@ namespace WebApplicationPods.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken] // opcional, mas recomendado
         public IActionResult AdicionarItem(
-    int produtoId,
-    int quantidade,
-    string? sabor = null,
-    string? observacoes = null,
-    bool buyNow = false)
-        {
+                int produtoId,
+                int quantidade,
+                string? sabor = null,
+                string? observacoes = null,
+                bool buyNow = false)
+                    {
             bool isAjax = string.Equals(
                 Request.Headers["X-Requested-With"],
                 "XMLHttpRequest",
@@ -496,29 +528,29 @@ namespace WebApplicationPods.Controllers
             if (pagaNaEntrega)
             {
                 pedido.Status = "Aguardando Pagamento (Entrega)";
-
-                // O repositório deve GERAR pedido.RastreioToken antes de salvar
                 _pedidoRepository.Adicionar(pedido);
 
-                // Grava o cookie com o token de rastreio
+                // grava token p/ rastreio
                 SetLastOrderCookie(pedido.RastreioToken);
 
                 _carrinhoRepository.LimparCarrinho();
+
+                // 🔽🔽🔽 RESET da confirmação para o PRÓXIMO pedido
+                HttpContext.Session.Remove("ClienteConfirmado");
+
                 TempData["Sucesso"] = "Pedido realizado com sucesso! Pagamento na entrega.";
-
-                // Você pode redirecionar direto ao acompanhamento também:
-                // return RedirectToAction("Acompanhar", "Pedido", new { id = pedido.Id, t = pedido.RastreioToken });
-
                 return RedirectToAction("Confirmacao", new { id = pedido.Id });
             }
             else
             {
                 pedido.Status = "Pendente";
-
                 _pedidoRepository.Adicionar(pedido);
 
-                // Grava o cookie com o token de rastreio
+                // grava token p/ rastreio
                 SetLastOrderCookie(pedido.RastreioToken);
+
+                // 🔽🔽🔽 RESET da confirmação para o PRÓXIMO pedido
+                HttpContext.Session.Remove("ClienteConfirmado");
 
                 return RedirectToAction("Checkout", "Pagamento", new { pedidoId = pedido.Id });
             }

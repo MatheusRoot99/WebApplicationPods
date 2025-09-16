@@ -18,6 +18,7 @@ using WebApplicationPods.Repository.Repository;
 using WebApplicationPods.Services;
 using WebApplicationPods.Services.Interface;   // IEmailSenderService, ICarrinhoService
 using WebApplicationPods.Services.service;
+using WebApplicationPods.Middlewares;          // <<< Auto-login middleware
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,7 +58,7 @@ builder.Services
         o.JsonSerializerOptions.WriteIndented = true;
     });
 
-//Continuar usando política "Admin"
+// Política "Admin"
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
@@ -86,7 +87,11 @@ builder.Services
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // produção
+    // Em produção force HTTPS; em dev deixa conforme a requisição para não quebrar em http://localhost
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
+
     options.LoginPath = "/Conta/Login";
     options.AccessDeniedPath = "/Conta/AcessoNegado";
     options.ExpireTimeSpan = TimeSpan.FromHours(2);
@@ -113,13 +118,13 @@ builder.Services.AddHttpClient<ICepService, CepService>(client =>
 // ==================== Pagamentos (Options + Gateways + Service) ====================
 builder.Services.Configure<PaymentsOptions>(builder.Configuration.GetSection("Payments"));
 
-// Mercado Pago: base address apenas (NÃO fixe Authorization global aqui)
+// Mercado Pago
 builder.Services.AddHttpClient<MercadoPagoGateway>(http =>
 {
     http.BaseAddress = new Uri("https://api.mercadopago.com/");
 });
 
-// Stripe (deixa registrado, mas não será usado enquanto o provider não for "Stripe")
+// Stripe
 builder.Services.AddScoped<StripeGateway>();
 
 // Factory para escolher o gateway em runtime
@@ -146,6 +151,9 @@ builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
 builder.Services.AddScoped<IPedidoRepository, PedidoRepository>();
 builder.Services.AddScoped<IEmailSenderService, GmailEmailSenderService>();
 builder.Services.AddScoped<ILojaConfigService, LojaConfigService>();
+
+builder.Services.AddDataProtection();
+builder.Services.AddSingleton<IClienteRememberService, ClienteRememberService>();
 
 // Seed (roles/usuário admin)
 builder.Services.AddHostedService<IdentitySeedHostedService>();
@@ -181,14 +189,21 @@ else
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
+
 app.MapHub<WebApplicationPods.Hubs.PedidosHub>("/hubs/pedidos");
+
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
 
+// ===== Sessão precisa vir antes do middleware e dos controllers
 app.UseSession();
 
+// ===== AUTO-LOGIN POR COOKIE (hidrata a sessão ClienteTelefone)
+app.UseMiddleware<ClienteAutoLoginMiddleware>();
+
+// Auth/Authorization padrões do Identity (para Admin/Lojista etc.)
 app.UseAuthentication();
 app.UseAuthorization();
 
