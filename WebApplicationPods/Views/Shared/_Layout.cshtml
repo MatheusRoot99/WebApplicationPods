@@ -75,7 +75,8 @@
                             {
                                 <a class="icon-btn position-relative" asp-controller="Carrinho" asp-action="Index" aria-label="Carrinho">
                                     <i class="fas fa-shopping-cart"></i>
-                                    <span id="cart-badge-mobile" class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle visually-hidden">
+                                    <span id="cart-badge-mobile-top"
+                                          class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle visually-hidden js-cart-badge">
                                         @await Component.InvokeAsync("CarrinhoResumo")
                                         <span class="visually-hidden">itens no carrinho</span>
                                     </span>
@@ -149,7 +150,9 @@
                                 <a class="nav-link cart-link text-white" asp-controller="Carrinho" asp-action="Index">
                                     <span class="position-relative d-inline-flex align-items-center">
                                         <i class="fas fa-shopping-cart fs-5"></i>
-                                        <span id="cart-badge" class="badge rounded-pill bg-danger position-absolute translate-middle visually-hidden" style="top:-10%; left:90%;">
+                                        <span id="cart-badge"
+                                              class="badge rounded-pill bg-danger position-absolute translate-middle visually-hidden js-cart-badge"
+                                              style="top:-10%; left:90%;">
                                             @await Component.InvokeAsync("CarrinhoResumo")
                                         </span>
                                     </span>
@@ -226,66 +229,70 @@
     <script src="~/js/sabores.js" asp-append-version="true"></script>
 
     <script>
-        (function () {
-          const KEY_COUNT  = 'cart_count';
-          const KEY_UNSEEN = 'cart_unseen';
+        // =============== CART BADGE / DOT - SCRIPT GLOBAL (Layout) ===============
+              (function () {
+        const KEY_COUNT  = 'cart_count';
+        const KEY_UNSEEN = 'cart_unseen';
 
-          function setBadgeCount(n) {
-            const num = Math.max(0, parseInt(n || 0, 10) || 0);
-            ['cart-badge','cart-badge-mobile'].forEach(id => {
-              const el = document.getElementById(id);
-              if (!el) return;
-              if (num > 0) {
-                el.textContent = String(num);
-                el.classList.remove('visually-hidden');
-                el.classList.add('mbn-badge-bump');
-                setTimeout(() => el.classList.remove('mbn-badge-bump'), 400);
-              } else {
-                el.textContent = '0';
-                el.classList.add('visually-hidden');
-              }
-            });
-          }
-          function setDot(on) {
-            document.querySelectorAll('.mbn-item .fa-cart-shopping, .nav-link.cart-link i')
-              .forEach(el => el.classList.toggle('has-unseen', !!on));
-            const dotDesktop = document.getElementById('cart-dot-desktop');
-            const dotMobile  = document.getElementById('cart-new-dot');
-            if (dotDesktop) dotDesktop.classList.toggle('visually-hidden', !on);
-            if (dotMobile)  dotMobile.classList.toggle('visually-hidden', !on);
-          }
+        function setBadgeCount(n) {
+          const num = Math.max(0, parseInt(n || 0, 10) || 0);
+          // 👉 agora pega TODOS os badges do carrinho
+          document.querySelectorAll('.js-cart-badge').forEach(el => {
+            if (num > 0) {
+              el.textContent = String(num);
+              el.classList.remove('visually-hidden');
+              el.classList.remove('mbn-badge-bump'); void el.offsetWidth;
+              el.classList.add('mbn-badge-bump');
+              setTimeout(() => el.classList.remove('mbn-badge-bump'), 400);
+            } else {
+              el.textContent = '0';
+              el.classList.add('visually-hidden');
+            }
+          });
+        }
 
-          (function normalizeBadgesAtStart () {
-            ['cart-badge','cart-badge-mobile','notif-badge'].forEach(id => {
-              const el = document.getElementById(id);
-              if (!el) return;
-              const m = (el.textContent || '').match(/\d+/);
-              const n = m ? (parseInt(m[0],10)||0) : 0;
-              if (n <= 0) { el.textContent = '0'; el.classList.add('visually-hidden'); }
-              else        { el.textContent = String(n); el.classList.remove('visually-hidden'); }
-            });
-          })();
+        function setDot(on) {
+          // cobre os dois ícones que você usa (cart-shopping e shopping-cart)
+              document.querySelectorAll(
+                '.mbn-item .fa-cart-shopping, .nav-link.cart-link i.fa-shopping-cart, .icon-btn i.fa-shopping-cart'
+              ).forEach(el => el.classList.toggle('has-unseen', !!on));
 
-          const sucesso = @Html.Raw(JsonSerializer.Serialize(TempData["Sucesso"] ?? ""));
-          const erro    = @Html.Raw(JsonSerializer.Serialize(TempData["Erro"] ?? ""));
+              const dotDesktop = document.getElementById('cart-dot-desktop');
+              const dotMobile  = document.getElementById('cart-new-dot');
+              if (dotDesktop) dotDesktop.classList.toggle('visually-hidden', !on);
+              if (dotMobile)  dotMobile.classList.toggle('visually-hidden', !on);
+        }
+
+        (function normalizeBadgesAtStart () {
+          // normaliza TODOS os badges do carrinho e o de notificação
+              document.querySelectorAll('.js-cart-badge, #notif-badge').forEach(el => {
+                const m = (el.textContent || '').match(/\d+/);
+                const n = m ? (parseInt(m[0],10)||0) : 0;
+                if (n <= 0) { el.textContent = '0'; el.classList.add('visually-hidden'); }
+                else        { el.textContent = String(n); el.classList.remove('visually-hidden'); }
+              });
+        })();
+
+          // ----------- Toast a partir do TempData -----------
+          const sucesso = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["Sucesso"] ?? ""));
+          const erro    = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["Erro"] ?? ""));
           if (sucesso || erro) {
-            const toastEl = document.getElementById('appToast');
-            const bodyEl  = document.getElementById('appToastBody');
-            if (toastEl && bodyEl) {
-              const ok = !!sucesso;
-              bodyEl.textContent = ok ? sucesso : erro;
-              toastEl.classList.toggle('bg-success', ok);
-              toastEl.classList.toggle('bg-danger', !ok);
-              new bootstrap.Toast(toastEl, { delay: 2400 }).show();
-              const msg = (sucesso || erro || '').toString();
-              if (/(carrinho|adicionado|atualizada|removido)/i.test(msg)) {
-                const b = document.getElementById('cart-badge-mobile');
-                if (b) { b.classList.remove('mbn-badge-bump'); void b.offsetWidth; b.classList.add('mbn-badge-bump'); }
-              }
+            const ok = !!sucesso;
+            window.showToast && window.showToast(ok ? sucesso : erro, ok);
+
+            // Se a mensagem sugere alteração no carrinho, dá o "bump" e marca como não visto
+            const msg = (sucesso || erro || '').toString();
+            if (/(carrinho|adicionado|atualizada|removido)/i.test(msg)) {
+              const b = document.getElementById('cart-badge-mobile');
+              if (b) { b.classList.remove('mbn-badge-bump'); void b.offsetWidth; b.classList.add('mbn-badge-bump'); }
+              if (window.cartMarkUnseen) window.cartMarkUnseen();
+              // Se você incluir o total na mensagem (ex.: "Total: 3"), descomente abaixo
+              // const m = msg.match(/(\d+)\s*$/);
+              // if (m && window.updateCartBadges) window.updateCartBadges(parseInt(m[1],10)||0);
             }
           }
 
-          // fecha o offcanvas quando clicar em um link do menu
+          // ----------- Fecha offcanvas ao clicar em um link -----------
           document.querySelectorAll('#mobileMenu .list-group-item').forEach(item => {
             item.addEventListener('click', function () {
               const off = bootstrap.Offcanvas.getInstance(document.getElementById('mobileMenu'));
@@ -293,27 +300,25 @@
             });
           });
 
+          // ----------- Restaura estado a partir do localStorage -----------
           function restoreFromStorage() {
             let n = 0, unseen = false;
             try {
               n = parseInt(localStorage.getItem(KEY_COUNT) || '0', 10) || 0;
               unseen = localStorage.getItem(KEY_UNSEEN) === '1';
             } catch {}
-            if (!n) {
-              const m = (document.getElementById('cart-badge')?.textContent || '').match(/\d+/);
-              n = m ? (parseInt(m[0],10)||0) : 0;
-              try { localStorage.setItem(KEY_COUNT, String(n)); } catch {}
-            }
             setBadgeCount(n);
             setDot(unseen && n > 0);
           }
           restoreFromStorage();
 
+          // ----------- Escuta mudanças entre abas -----------
           window.addEventListener('storage', (e) => {
             if (e.key === KEY_COUNT)  setBadgeCount(parseInt(e.newValue || '0', 10) || 0);
             if (e.key === KEY_UNSEEN) setDot(e.newValue === '1');
           });
 
+          // ----------- API Global (para qualquer página usar) -----------
           window.updateCartBadges = function(count){
             const n = Math.max(0, parseInt(count || 0, 10) || 0);
             try { localStorage.setItem(KEY_COUNT, String(n)); } catch {}
@@ -323,15 +328,74 @@
               setDot(false);
             }
           };
-          window.cartMarkUnseen  = function(){ try { localStorage.setItem(KEY_UNSEEN, '1'); } catch{} setDot((parseInt(localStorage.getItem(KEY_COUNT)||'0',10)||0) > 0); };
-          window.cartClearUnseen = function(){ try { localStorage.removeItem(KEY_UNSEEN); } catch{} setDot(false); };
+
+          window.cartMarkUnseen  = function(){
+            try { localStorage.setItem(KEY_UNSEEN, '1'); } catch{}
+            const n = parseInt(localStorage.getItem(KEY_COUNT)||'0',10)||0;
+            setDot(n > 0);
+          };
+
+          window.cartClearUnseen = function(){
+            try { localStorage.removeItem(KEY_UNSEEN); } catch{}
+            setDot(false);
+          };
+
+          // ----------- Helper global de toast -----------
+          window.showToast = function(message, ok = true) {
+            const toastEl = document.getElementById('appToast');
+            const bodyEl  = document.getElementById('appToastBody');
+            if (!toastEl || !bodyEl) return;
+            bodyEl.textContent = message;
+            toastEl.classList.remove('bg-success','bg-danger');
+            toastEl.classList.add(ok ? 'bg-success' : 'bg-danger');
+            new bootstrap.Toast(toastEl, { delay: 2400 }).show();
+          };
+
+          // ----------- Helper global de CSRF (fallback) -----------
+          window.getAntiForgeryToken = function () {
+            // tenta pegar de um form (recomendado) e cai para o hidden do layout
+            return document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                   || document.getElementById('__RequestVerificationToken')?.value
+                   || '';
+          };
+
+          // ----------- (Opcional, mas recomendado) Sync inicial com servidor -----------
+          (async function syncCountOnLoad(){
+            try {
+              const r = await fetch('/Carrinho/Count', { cache: 'no-store', credentials: 'same-origin' });
+              if (!r.ok) return;
+              const data = await r.json();
+              if (typeof data.count !== 'undefined') window.updateCartBadges(data.count);
+            } catch {}
+          })();
 
         })();
+    </script>
+    <script>
+        // retorna a contagem atual (pref. do localStorage; cai para o DOM se precisar)
+        window.getCartCount = function () {
+          const ls = parseInt(localStorage.getItem('cart_count') || '0', 10);
+          if (!isNaN(ls) && ls >= 0) return ls;
 
-        window.getAntiForgeryToken = function () {
-          return document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+          // fallback DOM (tenta ler do badge)
+          const txt =
+            document.getElementById('cart-badge')?.textContent ||
+            document.getElementById('cart-badge-mobile')?.textContent || '0';
+          const m = (txt || '').match(/\d+/);
+          return m ? (parseInt(m[0], 10) || 0) : 0;
+        };
+
+        // incrementa/ajusta localmente e atualiza badges/dot
+        window.bumpCartCount = function (deltaOrAbsolute, isDelta = true) {
+          let current = window.getCartCount();
+          let next = isDelta ? (current + (parseInt(deltaOrAbsolute,10)||0)) : (parseInt(deltaOrAbsolute,10)||0);
+          if (next < 0) next = 0;
+          window.updateCartBadges && window.updateCartBadges(next);
+          if (next > 0 && window.cartMarkUnseen) window.cartMarkUnseen();
+          return next;
         };
     </script>
+
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

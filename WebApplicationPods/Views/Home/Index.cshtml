@@ -198,74 +198,109 @@
 
 @section Scripts {
     <script>
-                document.addEventListener('DOMContentLoaded', function () {
-            // Configuração do select de ordenação na topbar
-            const topbarSelect = document.getElementById('Filtros_OrdenarPor');
-            const form = document.getElementById('filtersForm');
+        document.addEventListener('DOMContentLoaded', function () {
+          // ---- Ordenação & filtros (mantidos) ----
+          const topbarSelect = document.getElementById('Filtros_OrdenarPor');
+          const form = document.getElementById('filtersForm');
 
-            if (topbarSelect && form) {
-                topbarSelect.addEventListener('change', function () {
-                    // Atualiza o select dentro do form (se existir)
-                    const formSelect = form.querySelector('[name="Filtros.OrdenarPor"]');
-                    if (formSelect) {
-                        formSelect.value = this.value;
-                    }
-                    form.submit();
-                });
-            }
-
-            // Configuração para submit automático dos filtros quando alterados
+          if (topbarSelect && form) {
+            topbarSelect.addEventListener('change', function () {
+              const formSelect = form.querySelector('[name="Filtros.OrdenarPor"]');
+              if (formSelect) formSelect.value = this.value;
+              form.submit();
+            });
+          }
+          if (form) {
             const filterElements = form.querySelectorAll('select, input[type="number"], input[type="checkbox"]');
-            filterElements.forEach(element => {
-                // Não aplica auto-submit no select de ordenação da topbar
-                if (element.id !== 'Filtros_OrdenarPor') {
-                    element.addEventListener('change', function () {
-                        form.submit();
-                    });
-                }
+            filterElements.forEach(el => {
+              if (el.id !== 'Filtros_OrdenarPor') {
+                el.addEventListener('change', () => form.submit());
+              }
             });
+          }
+          const filtersCollapse = document.getElementById('filtersCollapse');
+          if (filtersCollapse) {
+            const syncCollapse = () => {
+              if (window.innerWidth >= 992) filtersCollapse.classList.add('show');
+              else filtersCollapse.classList.remove('show');
+            };
+            syncCollapse();
+            window.addEventListener('resize', syncCollapse);
+          }
 
-            // Inicializa o collapse com Bootstrap
-            const filtersCollapse = document.getElementById('filtersCollapse');
-            if (filtersCollapse) {
-                // Mantém aberto em desktop, fecha em mobile
-                if (window.innerWidth >= 992) {
-                    filtersCollapse.classList.add('show');
-                }
+          // ---- QUICK ADD via AJAX ----
+          function getAntiForgeryTokenFromForm(f) {
+            return f.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+          }
 
-                // Atualiza ao redimensionar
-                window.addEventListener('resize', function() {
-                    if (window.innerWidth >= 992) {
-                        filtersCollapse.classList.add('show');
+          async function postQuickAdd(formEl) {
+            const url = formEl.getAttribute('action') || '/Carrinho/AdicionarItem';
+            const token = getAntiForgeryTokenFromForm(formEl);
+
+            // monta body a partir dos inputs existentes do seu form
+            const body = new URLSearchParams(new FormData(formEl));
+            // reforça que é uma chamada ajax
+            const resp = await fetch(url, {
+              method: 'POST',
+              headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'RequestVerificationToken': token
+              },
+              body,
+              credentials: 'same-origin'
+            });
+            if (!resp.ok) throw new Error('Falha na requisição');
+            return await resp.json(); // { ok, count, nome } | { ok:false, error }
+          }
+
+          document.querySelectorAll('.quick-add-form').forEach(formEl => {
+            formEl.addEventListener('submit', async function (e) {
+              e.preventDefault();
+              const btn = formEl.querySelector('.quick-add');
+              if (!btn || btn.classList.contains('disabled')) return;
+
+              // feedback rápido
+              const originalHtml = btn.innerHTML;
+              btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+              btn.style.opacity = '0.7';
+              btn.disabled = true;
+
+              try {
+                 const result = await postQuickAdd(formEl);
+                    if (result.ok) {
+                      // 1) se o servidor mandou count, usa-o
+                      if (typeof result.count !== 'undefined' && window.updateCartBadges) {
+                        window.updateCartBadges(result.count);
+                      } else {
+                        // 2) FALLBACK: incrementa localmente pela quantidade do form (default 1)
+                        const qtd = parseInt(formEl.querySelector('input[name="quantidade"]')?.value || '1', 10) || 1;
+                        window.bumpCartCount && window.bumpCartCount(qtd, /*isDelta*/ true);
+                      }
+                      window.cartMarkUnseen && window.cartMarkUnseen();
+                      window.showToast && window.showToast(`${result.nome || 'Item'} adicionado ao carrinho!`, true);
                     } else {
-                        filtersCollapse.classList.remove('show');
+                      window.showToast && window.showToast(result.error || 'Não foi possível adicionar ao carrinho.', false);
                     }
-                });
-            }
-
-            // Adiciona interação aos botões de adicionar ao carrinho
-            document.querySelectorAll('.quick-add-form').forEach(form => {
-                form.addEventListener('submit', function(e) {
-                    const button = this.querySelector('.quick-add');
-                    if (button.classList.contains('disabled')) {
-                        e.preventDefault();
-                        return false;
-                    }
-
-                    // Feedback visual
-                    const originalHtml = button.innerHTML;
-                    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                    button.style.opacity = '0.7';
-
-                    // Restaura após 2 segundos se algo der errado
-                    setTimeout(() => {
-                        button.innerHTML = originalHtml;
-                        button.style.opacity = '1';
-                    }, 2000);
-
-                    return true;
-                });
+              } catch (err) {
+                if (window.showToast) window.showToast('Erro de rede ao adicionar ao carrinho.', false);
+              } finally {
+                // restaura botão
+                btn.innerHTML = originalHtml;
+                btn.style.opacity = '1';
+                btn.disabled = false;
+              }
             });
+          });
+
+          // ---- (opcional) sincroniza contador ao abrir a Home ----
+          (async function syncCountOnLoad(){
+            try {
+              const r = await fetch('/Carrinho/Count', { cache: 'no-store', credentials: 'same-origin' });
+              if (!r.ok) return;
+              const data = await r.json();
+              if (typeof data.count !== 'undefined' && window.updateCartBadges) window.updateCartBadges(data.count);
+            } catch {}
+          })();
         });
     </script>
 }

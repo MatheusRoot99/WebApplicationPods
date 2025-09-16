@@ -11,15 +11,12 @@
 
 <link rel="stylesheet" href="~/css/produto-detalhes.css" asp-append-version="true" />
 
-<!-- Adicionado elemento para passar dados para o JavaScript -->
 <div id="product-data"
      data-stock="@Model.Produto.Estoque"
      data-is-out-of-stock="@(Model.Produto.Estoque <= 0 ? "true" : "false")"
      hidden></div>
 
-<!-- Estrutura semântica + microdados para SEO -->
 <div class="produto-detalhes-container" itemscope itemtype="https://schema.org/Product">
-    <!-- Cabeçalho e Navegação -->
     <div class="navigation-header">
         <a href="javascript:history.back()" class="btn-voltar" aria-label="Voltar para a página anterior">
             <i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar
@@ -53,9 +50,7 @@
         </div>
     </header>
 
-    <!-- Conteúdo Principal -->
     <div class="produto-main-content">
-        <!-- Coluna da Imagem -->
         <div class="produto-image-column">
             <div class="product-image-container">
                 @if (!string.IsNullOrEmpty(Model!.Produto!.ImagemUrl))
@@ -75,14 +70,12 @@
                 }
 
                 <ul class="product-badges" aria-label="Diferenciais do produto">
-                    @* <li class="badge-item"><i class="fas fa-shield-alt" aria-hidden="true"></i><span>Garantia 6 meses</span></li> *@
                     <li class="badge-item"><i class="fas fa-truck" aria-hidden="true"></i><span>Entrega Rápida</span></li>
                     <li class="badge-item"><i class="fas fa-credit-card" aria-hidden="true"></i><span>Pagamento Seguro</span></li>
                 </ul>
             </div>
         </div>
 
-        <!-- Coluna de Informações -->
         <div class="produto-info-column">
             @if (Model.Produto.Estoque <= 0)
             {
@@ -93,7 +86,6 @@
                 <span class="stock-badge promotion" aria-live="polite">PROMOÇÃO</span>
             }
 
-            <!-- Preço -->
             <section class="price-section" aria-label="Informações de preço" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
                 <meta itemprop="priceCurrency" content="BRL" />
                 <meta itemprop="price" content="@precoBase.ToString(CultureInfo.InvariantCulture)" />
@@ -123,7 +115,6 @@
                 </div>
             </section>
 
-            <!-- Seção de Sabores -->
             <section class="flavors-section" aria-labelledby="titulo-sabores">
                 <h3 id="titulo-sabores" class="section-title">Escolha o sabor <small class="muted">(@totalSaboresComEstoque de @totalSabores disponíveis)</small>:</h3>
 
@@ -135,7 +126,7 @@
                         }
                         @foreach (var sabor in Model.SaboresDisponiveis)
                         {
-                            var saborId = $"flavor-{index++}"; // Evita GetHashCode (não estável)
+                            var saborId = $"flavor-{index++}";
                             var parts = (sabor.Sabor ?? string.Empty).Split(new[] { " - " }, StringSplitOptions.None);
                             <div class="flavor-card">
                                 <input type="radio" name="flavor" id="@saborId" value="@sabor.Sabor" class="flavor-radio"
@@ -172,7 +163,6 @@
             </section>
 
             <div class="action-buttons">
-                <!-- Seletor de quantidade -->
                 <div class="quantity-selector mb-3">
                     <label for="quantity">Quantidade:</label>
                     <div class="quantity-control">
@@ -182,7 +172,6 @@
                     </div>
                 </div>
 
-                <!-- Form Adicionar ao carrinho -->
                 <form asp-controller="Carrinho" asp-action="AdicionarItem" method="post" class="w-100" id="addToCartForm">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="produtoId" value="@Model.Produto.Id">
@@ -197,7 +186,6 @@
                     </button>
                 </form>
 
-                <!-- Botão de compra rápida -->
                 <button type="button" class="btn-buy-now mt-2 @(Model.Produto.Estoque <= 0 ? "disabled" : "")"
                         @(Model.Produto.Estoque <= 0 ? "disabled" : null) aria-disabled="@(Model.Produto.Estoque <= 0)">
                     <i class="fas fa-bolt" aria-hidden="true"></i> COMPRAR AGORA
@@ -206,7 +194,6 @@
         </div>
     </div>
 
-    <!-- Descrição e Especificações -->
     <section class="product-details-tabs" aria-label="Detalhes do produto">
         <div class="tabs-header" role="tablist">
             <button class="tab-button active" role="tab" aria-selected="true" aria-controls="tab-description" id="tabbtn-description" data-tab="description">Descrição</button>
@@ -215,7 +202,6 @@
         </div>
 
         <div class="tabs-content">
-            <!-- Descrição -->
             <div class="tab-pane active" id="tab-description" role="tabpanel" aria-labelledby="tabbtn-description">
                 <h3>Descrição do Produto</h3>
                 <p itemprop="description">@Model.Produto.Descricao</p>
@@ -230,7 +216,6 @@
                 </ul>
             </div>
 
-            <!-- Especificações -->
             <div class="tab-pane" id="tab-specifications" role="tabpanel" aria-labelledby="tabbtn-specifications">
                 <h3>Especificações Técnicas</h3>
                 <div class="specs-table">
@@ -243,7 +228,6 @@
                 </div>
             </div>
 
-            <!-- Avaliações -->
             <div class="tab-pane" id="tab-reviews" role="tabpanel" aria-labelledby="tabbtn-reviews">
                 <h3 id="reviews">Avaliações dos Clientes</h3>
                 <div class="reviews-summary">
@@ -282,7 +266,6 @@
         </div>
     </section>
 
-    <!-- Produtos Relacionados -->
     @if (Model.ProdutosRelacionados != null && Model.ProdutosRelacionados.Any())
     {
         <section class="related-products-section" aria-label="Produtos relacionados">
@@ -308,10 +291,8 @@
                                 <span itemprop="price">@produto.Preco.ToString("C")</span>
                             </div>
                             <div class="product-actions">
-                                <a asp-controller="Carrinho" asp-action="Adicionar" asp-route-produtoId="@produto.Id" class="btn-add-to-cart-sm">
-                                    <i class="fas fa-shopping-cart" aria-hidden="true"></i> Adicionar
-                                </a>
-                                <a asp-action="Detalhes" asp-route-id="@produto.Id" class="btn-view-details" aria-label="Ver detalhes de @produto.Nome">Ver detalhes</a>
+                                <!-- Se quiser transformar em AJAX também, troque para um botão e capture via JS (similar) -->
+                                <a asp-controller="Produto" asp-action="Detalhes" asp-route-id="@produto.Id" class="btn-view-details" aria-label="Ver detalhes de @produto.Nome">Ver detalhes</a>
                             </div>
                         </div>
                     </article>
@@ -320,7 +301,6 @@
         </section>
     }
 
-    <!-- FAQ -->
     <section class="faq-section" aria-label="Perguntas Frequentes">
         <h2 class="section-title">Perguntas Frequentes</h2>
         <div class="faq-accordion">
@@ -347,7 +327,9 @@
 </div>
 
 @section Scripts {
-    <!-- Inclui o arquivo JS separado -->
     <script src="~/js/Detalhe-form.js" asp-append-version="true"></script>
+
+    <!-- Se quiser limpar o "não visto" quando ENTRAR na página do carrinho, use isto no Carrinho/Index, não aqui:
     <script>window.cartClearUnseen && window.cartClearUnseen();</script>
+    -->
 }
