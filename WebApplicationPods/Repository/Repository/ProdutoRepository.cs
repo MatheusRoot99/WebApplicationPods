@@ -178,25 +178,5 @@ namespace WebApplicationPods.Repository.Repository
                 .AsNoTracking();           // leitura
         }
 
-        // Repository/ProdutoRepository.cs  (exemplo)
-        public IEnumerable<ProdutoModel> ObterMaisPopulares(int take = 8)
-        {
-            return _context.Produtos
-                .Where(p => p.Ativo && p.Estoque > 0)
-                .Select(p => new
-                {
-                    Produto = p,
-                    // score de popularidade (ajuste os pesos)
-                    Score = p.PedidoItens.Count() * 5
-                          + (p.MaisVendido ? 10 : 0)
-                          + (p.EmPromocao ? 3 : 0)
-                          + (int)p.Avaliacao // arredonda pra inteiro
-                })
-                .OrderByDescending(x => x.Score)
-                .ThenByDescending(x => x.Produto.DataCadastro)
-                .Take(take)
-                .Select(x => x.Produto)
-                .ToList();
-        }
     }
 }

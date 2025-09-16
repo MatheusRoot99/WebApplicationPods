@@ -93,6 +93,7 @@
     };
 
     const toggleEmptyStateIfNeeded = (isEmptyHint = null) => {
+        // prioridade para flag do servidor; senão, conta linhas atuais
         const noItems =
             typeof isEmptyHint === "boolean"
                 ? isEmptyHint
@@ -100,16 +101,13 @@
 
         const resumo = qs("#resumo-card");
         const empty = qs("#empty-state");
-        const pop = qs("#populares-wrapper");
 
         if (noItems) {
             resumo?.classList.add("d-none");
             empty?.classList.remove("d-none");
-            pop?.classList.remove("d-none");
         } else {
             resumo?.classList.remove("d-none");
             empty?.classList.add("d-none");
-            pop?.classList.add("d-none");
         }
     };
 
