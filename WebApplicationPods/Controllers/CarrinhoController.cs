@@ -297,7 +297,8 @@ namespace WebApplicationPods.Controllers
                 }
 
                 TempData["Sucesso"] = $"{produto.Nome} adicionado ao carrinho!";
-                return buyNow ? RedirectToAction("Resumo", "Pedido") : RedirectToAction("Index", "Home");
+                return buyNow ? RedirectToAction("Resumo", "Carrinho")
+              : RedirectToAction("Index", "Home");
             }
             catch
             {

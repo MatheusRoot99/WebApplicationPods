@@ -4,8 +4,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const productData = document.getElementById('product-data');
     let estoqueMaximo = parseInt(productData?.dataset.stock || "0");
     const initialDisabledState = productData?.dataset.isOutOfStock === 'true';
+    const resumoUrl = productData?.dataset.resumoUrl || '/Carrinho/Resumo'; // 👈 usado no redirect
 
-    /* ------------------------- Tabs com teclado ------------------------- */
+    /* ------------------------- Tabs ------------------------- */
     const tabButtons = Array.from(document.querySelectorAll(".tab-button"));
     const panes = {
         description: document.getElementById("tab-description"),
@@ -117,9 +118,8 @@ document.addEventListener("DOMContentLoaded", () => {
     radios.forEach(r => r.addEventListener("change", atualizarEstoquePorSelecao));
     atualizarEstoquePorSelecao();
 
-    /* ------------------------- Helpers de toast/CSRF (locais) ------------------------- */
+    /* ------------------------- Helpers toast/CSRF ------------------------- */
     function showToastLocal(message, ok = true) {
-        // usa o mesmo toast do layout (#appToast / #appToastBody)
         const toastEl = document.getElementById('appToast');
         const bodyEl = document.getElementById('appToastBody');
         if (!toastEl || !bodyEl) return;
@@ -197,8 +197,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 showToastLocal(`${nome} adicionado ao carrinho!`, true);
 
                 if (result.buyNow) {
-                    // ajuste a rota se necessário
-                    window.location.href = '/Pedido/Resumo';
+                    window.location.href = resumoUrl; // 👈 agora funciona
                 }
             } else {
                 showToastLocal(result.error || 'Não foi possível adicionar ao carrinho.', false);

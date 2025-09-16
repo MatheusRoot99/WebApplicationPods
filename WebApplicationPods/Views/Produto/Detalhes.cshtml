@@ -11,9 +11,11 @@
 
 <link rel="stylesheet" href="~/css/produto-detalhes.css" asp-append-version="true" />
 
+<!-- 👇 Passa a rota para o JS via data-attribute -->
 <div id="product-data"
      data-stock="@Model.Produto.Estoque"
      data-is-out-of-stock="@(Model.Produto.Estoque <= 0 ? "true" : "false")"
+     data-resumo-url="@Url.Action("Resumo", "Carrinho")"
      hidden></div>
 
 <div class="produto-detalhes-container" itemscope itemtype="https://schema.org/Product">
@@ -186,8 +188,11 @@
                     </button>
                 </form>
 
-                <button type="button" class="btn-buy-now mt-2 @(Model.Produto.Estoque <= 0 ? "disabled" : "")"
-                        @(Model.Produto.Estoque <= 0 ? "disabled" : null) aria-disabled="@(Model.Produto.Estoque <= 0)">
+                <!-- Comprar agora via AJAX (o JS redireciona para Carrinho/Resumo depois de adicionar) -->
+                <button type="button"
+                        class="btn-buy-now mt-2 @(Model.Produto.Estoque <= 0 ? "disabled" : "")"
+                        @(Model.Produto.Estoque <= 0 ? "disabled" : null)
+                        aria-disabled="@(Model.Produto.Estoque <= 0)">
                     <i class="fas fa-bolt" aria-hidden="true"></i> COMPRAR AGORA
                 </button>
             </div>
@@ -291,7 +296,6 @@
                                 <span itemprop="price">@produto.Preco.ToString("C")</span>
                             </div>
                             <div class="product-actions">
-                                <!-- Se quiser transformar em AJAX também, troque para um botão e capture via JS (similar) -->
                                 <a asp-controller="Produto" asp-action="Detalhes" asp-route-id="@produto.Id" class="btn-view-details" aria-label="Ver detalhes de @produto.Nome">Ver detalhes</a>
                             </div>
                         </div>
@@ -328,8 +332,4 @@
 
 @section Scripts {
     <script src="~/js/Detalhe-form.js" asp-append-version="true"></script>
-
-    <!-- Se quiser limpar o "não visto" quando ENTRAR na página do carrinho, use isto no Carrinho/Index, não aqui:
-    <script>window.cartClearUnseen && window.cartClearUnseen();</script>
-    -->
 }

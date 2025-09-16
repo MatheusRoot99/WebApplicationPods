@@ -233,34 +233,41 @@
                                 <small class="opacity-75">Escolha como deseja pagar</small>
                             </div>
                         </div>
+
                         <div class="card-body">
-                            <div class="row g-2">
-                                <div class="col-6 col-md-3">
-                                    <input type="radio" class="btn-check" id="pay1" name="MetodoPagamento" value="Dinheiro" @(Model.MetodoPagamento == "Dinheiro" ? "checked" : "")>
-                                    <label class="btn btn-payment w-100" for="pay1">
+                            <div class="payments-grid">
+                                <!-- Dinheiro -->
+                                <div>
+                                    <input type="radio" class="btn-check" id="pay-money"
+                                           name="MetodoPagamento" value="Dinheiro"
+                                           @(Model.MetodoPagamento == "Dinheiro" ? "checked" : "")>
+                                    <label class="btn btn-payment" for="pay-money">
                                         <i class="bi bi-cash-coin payment-icon"></i>
                                         <span>Dinheiro</span>
                                     </label>
                                 </div>
-                                <div class="col-6 col-md-3">
-                                    <input type="radio" class="btn-check" id="pay2" name="MetodoPagamento" value="Pix" @(Model.MetodoPagamento == "Pix" ? "checked" : "")>
-                                    <label class="btn btn-payment w-100" for="pay2">
+
+                                <!-- Pix -->
+                                <div>
+                                    <input type="radio" class="btn-check" id="pay-pix"
+                                           name="MetodoPagamento" value="Pix"
+                                           @(Model.MetodoPagamento == "Pix" ? "checked" : "")>
+                                    <label class="btn btn-payment" for="pay-pix">
                                         <i class="bi bi-qr-code payment-icon"></i>
                                         <span>Pix</span>
                                     </label>
                                 </div>
-                                <div class="col-6 col-md-3">
-                                    <input type="radio" class="btn-check" id="pay3" name="MetodoPagamento" value="Cartão de Crédito" @(Model.MetodoPagamento == "Cartão de Crédito" ? "checked" : "")>
-                                    <label class="btn btn-payment w-100" for="pay3">
+
+                                <!-- Cartão (Crédito/Débito) -->
+                                <div>
+                                    <!-- ⚠️ valor “Cartão de Débito” mantém compatibilidade com MapearMetodoPagamento (paga na entrega).
+                                         O rótulo mostra as duas bandeiras. Se preferir online (crédito), troque o value para "Cartão de Crédito". -->
+                                    <input type="radio" class="btn-check" id="pay-card"
+                                           name="MetodoPagamento" value="Cartão de Débito"
+                                           @(Model.MetodoPagamento == "Cartão de Débito" ? "checked" : "")>
+                                    <label class="btn btn-payment" for="pay-card">
                                         <i class="bi bi-credit-card payment-icon"></i>
-                                        <span>Crédito</span>
-                                    </label>
-                                </div>
-                                <div class="col-6 col-md-3">
-                                    <input type="radio" class="btn-check" id="pay4" name="MetodoPagamento" value="Cartão de Débito" @(Model.MetodoPagamento == "Cartão de Débito" ? "checked" : "")>
-                                    <label class="btn btn-payment w-100" for="pay4">
-                                        <i class="bi bi-credit-card-2-back payment-icon"></i>
-                                        <span>Débito</span>
+                                        <span>Cartão (Crédito/Débito)</span>
                                     </label>
                                 </div>
                             </div>

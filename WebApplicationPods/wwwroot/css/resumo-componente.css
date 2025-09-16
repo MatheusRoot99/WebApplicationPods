@@ -2,11 +2,10 @@
 /* PALETA (roxo → azul)  */
 /* ===================== */
 :root {
-    /* marca */
     --brand-start: #6a11cb; /* roxo */
     --brand-end: #2575fc; /* azul */
-    --brand-soft: #F2E9FF; /* roxo bem claro p/ fundos */
-    /* mapeia a paleta antiga p/ a nova (sem mexer no HTML/CSS restante) */
+    --brand-soft: #F2E9FF;
+    /* mapeamento legado */
     --orange: var(--brand-start);
     --orange-dark: var(--brand-end);
     --orange-light: #7c6cf8;
@@ -22,11 +21,10 @@
     --shadow-lg: 0 10px 25px rgba(0,0,0,.10);
     --border-radius: 12px;
     --border-radius-sm: 8px;
-    /* altura do bottom-nav mobile (ajuste se o seu for diferente) */
     --mbn-height: 68px;
 }
 
-/* gradientes/botões com a nova marca */
+/* gradiente/CTA */
 .bg-gradient-orange {
     background: linear-gradient(135deg,var(--brand-start),var(--brand-end));
 }
@@ -42,7 +40,7 @@
         box-shadow: 0 8px 20px rgba(37,117,252,.25);
     }
 
-/* acentos laranja → brand */
+/* acentos */
 .badge.bg-orange-soft {
     background: var(--orange-soft);
     color: var(--brand-end);
@@ -56,92 +54,108 @@
     background: var(--orange-soft);
 }
 
-/* inputs focados com a cor da marca */
+/* inputs */
 .form-control:focus, .form-select:focus {
     border-color: var(--brand-end);
     box-shadow: 0 0 0 .2rem rgba(37,117,252,.15);
 }
 
-/* cartão do método de pagamento no hover/selecionado */
-.btn-payment:hover {
-    border-color: var(--brand-end);
-    background: var(--orange-soft);
-}
-
-.btn-check:checked + .btn-payment {
-    background: var(--orange-soft);
-    border-color: var(--brand-end);
-    color: var(--brand-end);
-}
-
-.btn-payment .payment-icon {
-    color: var(--brand-end);
-}
-
-/* bolinha de quantidade no resumo do lado direito */
-.item-quantity {
-    background: var(--brand-end);
-    color: #fff;
-}
-
-/* header/resumos escuros permanecem escuros */
+/* header escuro */
 .card-header.bg-dark {
     background: #222;
     color: #fff;
 }
 
+/* ===================== */
+/* PAGAMENTO (3 OPÇÕES)  */
+/* ===================== */
 
-/* ===== Nada fica atrás do bottom-nav ===== */
+/* grid responsivo para 3 botões */
+.payments-grid {
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: .75rem;
+}
+
 @media (max-width: 992px) {
-    /* dá respiro no fim da página p/ o menu fixo */
-    .container-xxl {
-        padding-bottom: calc(var(--mbn-height) + 24px + env(safe-area-inset-bottom,0px));
-    }
-
-    /* deixa o botão Finalizar “grudar” sobre o conteúdo */
-    #formFinalizar .d-grid.mt-4 {
-        position: sticky;
-        bottom: calc(var(--mbn-height) + 8px + env(safe-area-inset-bottom,0px));
-        z-index: 3;
-    }
-
-    /* botão maior e com sombra suave no mobile */
-    #formFinalizar .btn-orange {
-        padding-block: 0.95rem;
-        border-radius: 12px;
-        box-shadow: 0 8px 24px rgba(37,117,252,.25);
-        touch-action: manipulation;
-    }
-
-    /* cards um pouco mais compactos */
-    .card-body {
-        padding: 1.1rem;
-    }
-
-    .card-header {
-        padding: .9rem 1.1rem;
-    }
-
-    /* botões de pagamento: área de toque maior */
-    .btn-payment {
-        padding: .9rem;
+    .payments-grid {
+        grid-template-columns: repeat(3,1fr);
     }
 }
 
-/* Fallback se o navegador não suportar env() */
-@supports not (padding: max(0px)) {
-    @media (max-width: 992px) {
-        .container-xxl {
-            padding-bottom: calc(var(--mbn-height) + 24px);
-        }
-
-        #formFinalizar .d-grid.mt-4 {
-            bottom: calc(var(--mbn-height) + 8px);
-        }
+@media (max-width: 600px) {
+    .payments-grid {
+        grid-template-columns: repeat(2,1fr);
     }
 }
 
+@media (max-width: 420px) {
+    .payments-grid {
+        grid-template-columns: 1fr;
+    }
+}
 
+/* botão-cartão “selectable” */
+.btn-payment {
+    --ring: rgba(37,117,252,.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .6rem;
+    width: 100%;
+    padding: 1rem .9rem;
+    border: 1.5px solid #e6e6e6;
+    background: #fff;
+    color: #111;
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    transition: border-color .15s ease, box-shadow .15s ease, transform .05s ease;
+    min-height: 54px;
+    text-align: center;
+}
+
+    .btn-payment .payment-icon {
+        font-size: 1.15rem;
+        color: var(--brand-end);
+        line-height: 0;
+    }
+
+    .btn-payment:hover {
+        border-color: var(--brand-end);
+        background: var(--orange-soft);
+    }
+
+    .btn-payment:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 .25rem var(--ring);
+    }
+
+/* estado selecionado (usa .btn-check do Bootstrap) */
+.btn-check:checked + .btn-payment {
+    border-color: var(--brand-end);
+    background: var(--orange-soft);
+    color: var(--brand-end);
+    box-shadow: 0 8px 20px rgba(37,117,252,.20);
+    transform: translateY(-1px);
+}
+
+/* deixa todos com a mesma altura */
+.btn-payment span {
+    display: inline-block;
+    line-height: 1.2;
+}
+
+/* ===================== */
+/* BOLINHA QUANTIDADE    */
+/* ===================== */
+.item-quantity {
+    background: var(--brand-end);
+    color: #fff;
+}
+
+/* ===================== */
+/* MODAL CONFIRME DADOS  */
+/* ===================== */
 .confirm-modal .modal-header {
     background: linear-gradient(90deg,#8b5cf6,#2563eb);
     color: #fff;
@@ -173,3 +187,49 @@
         filter: brightness(.95);
         color: #000;
     }
+
+/* ===================== */
+/* MOBILE PADDING FIX    */
+/* ===================== */
+@media (max-width:992px) {
+    .container-xxl {
+        padding-bottom: calc(var(--mbn-height) + 24px + env(safe-area-inset-bottom,0px));
+    }
+
+    #formFinalizar .d-grid.mt-4 {
+        position: sticky;
+        bottom: calc(var(--mbn-height) + 8px + env(safe-area-inset-bottom,0px));
+        z-index: 3;
+    }
+
+    #formFinalizar .btn-orange {
+        padding-block: .95rem;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(37,117,252,.25);
+        touch-action: manipulation;
+    }
+
+    .card-body {
+        padding: 1.1rem;
+    }
+
+    .card-header {
+        padding: .9rem 1.1rem;
+    }
+
+    .btn-payment {
+        padding: .95rem;
+    }
+}
+
+@supports not (padding: max(0px)) {
+    @media (max-width:992px) {
+        .container-xxl {
+            padding-bottom: calc(var(--mbn-height) + 24px);
+        }
+
+        #formFinalizar .d-grid.mt-4 {
+            bottom: calc(var(--mbn-height) + 8px);
+        }
+    }
+}
