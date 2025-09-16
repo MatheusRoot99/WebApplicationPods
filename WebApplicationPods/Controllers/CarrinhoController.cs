@@ -134,7 +134,28 @@ namespace WebApplicationPods.Controllers
         public IActionResult Index()
         {
             var carrinho = _carrinhoRepository.ObterCarrinho();
-            return View(carrinho);
+
+            var populares = _produtoRepository
+                .ObterMaisPopulares(8)
+                .Select(p => new ProdutoResumoVM
+                {
+                    Id = p.Id,
+                    Nome = p.Nome,
+                    ImagemUrl = string.IsNullOrWhiteSpace(p.ImagemUrl)
+                        ? "https://via.placeholder.com/600x600?text=%20"
+                        : p.ImagemUrl,
+                    Preco = p.Preco,
+                    PrecoPromocional = p.PrecoPromocional
+                })
+                .ToList();
+
+            var vm = new CarrinhoPageViewModel
+            {
+                Carrinho = carrinho,
+                Populares = populares
+            };
+
+            return View(vm);
         }
 
         [HttpGet]

@@ -1,4 +1,4 @@
-﻿@model WebApplicationPods.Models.CarrinhoModel
+﻿@model WebApplicationPods.Models.CarrinhoPageViewModel
 @using System.Globalization
 @using System.Linq
 
@@ -31,7 +31,7 @@
 
     <h2 class="carrinho-title">@ViewData["Title"]</h2>
 
-    @if (Model?.Itens?.Any() == true)
+    @if (Model?.Carrinho?.Itens?.Any() == true)
     {
         <div class="cart-grid">
             <!-- LISTA DE ITENS -->
@@ -48,13 +48,11 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var item in Model.Itens)
+                            @foreach (var item in Model.Carrinho.Itens)
                             {
                                 item.Produto?.DeserializarSaboresQuantidades();
-
                                 var chaveSabor = item.Sabor ?? string.Empty;
 
-                                // calcula o maxPermitido respeitando estoque por sabor (quando houver)
                                 int maxPermitido;
                                 if (!string.IsNullOrWhiteSpace(chaveSabor) &&
                                 item.Produto?.SaboresQuantidadesList?.Any() == true)
@@ -112,7 +110,6 @@
                                             <input type="hidden" name="sabor" value="@item.Sabor" />
 
                                             <div class="input-group">
-                                                <!-- -1 -->
                                                 <button type="submit" name="op" value="dec"
                                                         class="btn btn-outline btn-outline-secondary"
                                                         aria-label="Diminuir">
@@ -127,14 +124,12 @@
                                                        class="form-control text-center quantidade-input"
                                                        inputmode="numeric" />
 
-                                                <!-- +1 -->
                                                 <button type="submit" name="op" value="inc"
                                                         class="btn btn-outline btn-outline-secondary"
                                                         aria-label="Aumentar">
                                                     <i class="fas fa-plus"></i>
                                                 </button>
 
-                                                <!-- Atualizar -->
                                                 <button type="submit" class="btn btn-primary">
                                                     Atualizar
                                                 </button>
@@ -166,12 +161,12 @@
                 </div>
             </div>
 
-            <!-- RESUMO (sticky no desktop) -->
+            <!-- RESUMO -->
             <aside>
                 <div id="resumo-card" class="total-card">
                     <div class="total-label">Total:</div>
                     <div class="total-valor">
-                        @Model.Total.ToString("C", ptBR)
+                        @Model.Carrinho.Total.ToString("C", ptBR)
                     </div>
 
                     <div class="carrinho-actions">
@@ -189,7 +184,7 @@
     }
     else
     {
-        <!-- ESTADO VAZIO -->
+        <!-- ESTADO VAZIO + POPULARES -->
         <div id="empty-state" class="carrinho-vazio">
             <h4>Seu carrinho está vazio</h4>
             <p>Adicione produtos ao seu carrinho para continuar.</p>
@@ -197,13 +192,57 @@
                 <i class="fas fa-store me-1"></i> Ver produtos
             </a>
         </div>
+
+        <section id="populares-wrapper" class="populares">
+            <h5 class="pop-title">Mais populares</h5>
+
+            <div class="pop-grid">
+                @foreach (var p in Model.Populares)
+                {
+                    <article class="pop-card">
+                        <a class="pop-img" asp-controller="Produto" asp-action="Detalhes" asp-route-id="@p.Id" aria-label="@p.Nome">
+                            <img src="@p.ImagemUrl" alt="@p.Nome" loading="lazy" />
+                        </a>
+                        <div class="pop-body">
+                            <div class="pop-name">@p.Nome</div>
+
+                            <div class="pop-price">
+                                @if (p.EmPromocao)
+                                {
+                                    <span class="old">@p.Preco.ToString("C", ptBR)</span>
+                                    <span class="now">@p.PrecoPromocional.Value.ToString("C", ptBR)</span>
+                                }
+                                else
+                                {
+                                    <span class="now">@p.Preco.ToString("C", ptBR)</span>
+                                }
+                            </div>
+
+                            <form asp-action="AdicionarItem" method="post" class="pop-add-form">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="produtoId" value="@p.Id" />
+                                <input type="hidden" name="quantidade" value="1" />
+                                <button type="submit" class="btn btn-primary btn-sm w-100">
+                                    Adicionar
+                                </button>
+                            </form>
+                        </div>
+                    </article>
+                }
+            </div>
+
+            <div class="text-center mt-3">
+                <a asp-controller="Home" asp-action="Index" class="btn btn-outline">
+                    Ver cardápio
+                </a>
+            </div>
+        </section>
     }
 </div>
 
 @section Scripts {
     <script src="~/js/Carrinho-form.js" asp-append-version="true"></script>
     <script>
-        // Fade-out dos alerts
         setTimeout(() => {
             document.querySelectorAll('#carrinho-alerts .alert').forEach(a => {
                 a.style.transition = 'opacity .5s';
