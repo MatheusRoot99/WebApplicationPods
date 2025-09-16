@@ -366,3 +366,85 @@
     margin-right: auto;
     margin-left: auto;
 }
+
+
+/* ---------- Quick Add: estados visuais ---------- */
+.quick-add {
+    position: absolute;
+    right: .5rem;
+    bottom: .5rem;
+    width: 36px; /* fixo p/ não “pular” */
+    height: 36px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    color: var(--brand-end, #2575fc);
+    box-shadow: 0 6px 18px rgba(0,0,0,.12);
+    border: 1px solid rgba(0,0,0,.06);
+    transition: transform .15s ease, opacity .15s ease, background .15s ease;
+    z-index: 3;
+}
+
+    .quick-add .qa-icon,
+    .quick-add .qa-spin,
+    .quick-add .qa-done {
+        font-size: 1rem;
+        line-height: 1;
+    }
+
+    .quick-add .qa-spin,
+    .quick-add .qa-done {
+        display: none;
+    }
+
+    /* loading: mostra spinner */
+    .quick-add.is-loading .qa-icon {
+        display: none;
+    }
+
+    .quick-add.is-loading .qa-spin {
+        display: inline-block;
+    }
+
+    /* sucesso: mostra check por um tempinho */
+    .quick-add.is-done .qa-icon {
+        display: none;
+    }
+
+    .quick-add.is-done .qa-done {
+        display: inline-block;
+        color: #10b981;
+    }
+
+    /* desabilitado */
+    .quick-add.disabled,
+    .quick-add[disabled] {
+        pointer-events: none;
+        opacity: .45;
+    }
+
+/* micro-toast (balãozinho) */
+.quick-toast {
+    position: absolute;
+    right: .5rem;
+    bottom: 46px; /* logo acima do botão */
+    background: #111;
+    color: #fff;
+    font-size: .75rem;
+    font-weight: 700;
+    padding: .25rem .5rem;
+    border-radius: 999px;
+    box-shadow: 0 8px 20px rgba(0,0,0,.18);
+    opacity: 0;
+    transform: translateY(6px);
+    pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease;
+    z-index: 4;
+}
+
+    .quick-toast.show {
+        opacity: 1;
+        transform: translateY(0);
+    }

@@ -178,8 +178,16 @@
                                     class="quick-add @(produto.Estoque <= 0 ? "disabled" : "")"
                                     @(produto.Estoque <= 0 ? "disabled" : null)
                                     aria-disabled="@(produto.Estoque <= 0)"
-                                    title="Adicionar ao carrinho" aria-label="Adicionar @produto.Nome ao carrinho">
-                                <i class="fa-solid fa-cart-plus"></i>
+                                    title="Adicionar ao carrinho"
+                                    aria-label="Adicionar @produto.Nome ao carrinho">
+
+                                <!-- ícone normal -->
+                                <i class="fa-solid fa-cart-plus qa-icon" aria-hidden="true"></i>
+                                <!-- spinner (fica escondido até loading) -->
+                                <i class="fa-solid fa-spinner fa-spin qa-spin" aria-hidden="true"></i>
+                                <!-- check (fica escondido até sucesso) -->
+                                <i class="fa-solid fa-check qa-done" aria-hidden="true"></i>
+
                             </button>
                         </form>
                     </article>
@@ -237,9 +245,7 @@
             const url = formEl.getAttribute('action') || '/Carrinho/AdicionarItem';
             const token = getAntiForgeryTokenFromForm(formEl);
 
-            // monta body a partir dos inputs existentes do seu form
             const body = new URLSearchParams(new FormData(formEl));
-            // reforça que é uma chamada ajax
             const resp = await fetch(url, {
               method: 'POST',
               headers: {
@@ -253,46 +259,69 @@
             return await resp.json(); // { ok, count, nome } | { ok:false, error }
           }
 
+          // SUBMIT dos botões de adicionar rápido
           document.querySelectorAll('.quick-add-form').forEach(formEl => {
             formEl.addEventListener('submit', async function (e) {
               e.preventDefault();
               const btn = formEl.querySelector('.quick-add');
               if (!btn || btn.classList.contains('disabled')) return;
 
-              // feedback rápido
-              const originalHtml = btn.innerHTML;
-              btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-              btn.style.opacity = '0.7';
+              // estado: loading
+              btn.classList.add('is-loading');
+              btn.setAttribute('aria-busy', 'true');
               btn.disabled = true;
 
+              // micro-toast preso ao card
+              let tip = formEl.parentElement.querySelector('.quick-toast');
+              if (!tip) {
+                tip = document.createElement('div');
+                tip.className = 'quick-toast';
+                formEl.parentElement.appendChild(tip);
+              }
+
               try {
-                 const result = await postQuickAdd(formEl);
-                    if (result.ok) {
-                      // 1) se o servidor mandou count, usa-o
-                      if (typeof result.count !== 'undefined' && window.updateCartBadges) {
-                        window.updateCartBadges(result.count);
-                      } else {
-                        // 2) FALLBACK: incrementa localmente pela quantidade do form (default 1)
-                        const qtd = parseInt(formEl.querySelector('input[name="quantidade"]')?.value || '1', 10) || 1;
-                        window.bumpCartCount && window.bumpCartCount(qtd, /*isDelta*/ true);
-                      }
-                      window.cartMarkUnseen && window.cartMarkUnseen();
-                      window.showToast && window.showToast(`${result.nome || 'Item'} adicionado ao carrinho!`, true);
-                    } else {
-                      window.showToast && window.showToast(result.error || 'Não foi possível adicionar ao carrinho.', false);
-                    }
-              } catch (err) {
-                if (window.showToast) window.showToast('Erro de rede ao adicionar ao carrinho.', false);
+                const result = await postQuickAdd(formEl);
+                if (result.ok) {
+                  if (typeof result.count !== 'undefined' && window.updateCartBadges) {
+                    window.updateCartBadges(result.count);
+                  } else {
+                    const qtd = parseInt(formEl.querySelector('input[name="quantidade"]')?.value || '1', 10) || 1;
+                    window.bumpCartCount && window.bumpCartCount(qtd, true);
+                  }
+                  window.cartMarkUnseen && window.cartMarkUnseen();
+
+                  tip.textContent = 'Adicionado';
+                  tip.classList.add('show');
+
+                  btn.classList.remove('is-loading');
+                  btn.classList.add('is-done');
+
+                  window.showToast && window.showToast(`${result.nome || 'Item'} adicionado ao carrinho!`, true);
+
+                  setTimeout(() => {
+                    tip.classList.remove('show');
+                    btn.classList.remove('is-done');
+                  }, 900);
+                } else {
+                  tip.textContent = 'Erro';
+                  tip.classList.add('show');
+                  setTimeout(() => tip.classList.remove('show'), 900);
+                  window.showToast && window.showToast(result.error || 'Não foi possível adicionar ao carrinho.', false);
+                }
+              } catch {
+                tip.textContent = 'Falha de rede';
+                tip.classList.add('show');
+                setTimeout(() => tip.classList.remove('show'), 1100);
+                window.showToast && window.showToast('Erro de rede ao adicionar ao carrinho.', false);
               } finally {
-                // restaura botão
-                btn.innerHTML = originalHtml;
-                btn.style.opacity = '1';
+                btn.classList.remove('is-loading');
+                btn.removeAttribute('aria-busy');
                 btn.disabled = false;
               }
             });
           });
 
-          // ---- (opcional) sincroniza contador ao abrir a Home ----
+          // ---- sincroniza contador ao abrir a Home ----
           (async function syncCountOnLoad(){
             try {
               const r = await fetch('/Carrinho/Count', { cache: 'no-store', credentials: 'same-origin' });
@@ -304,3 +333,4 @@
         });
     </script>
 }
+
