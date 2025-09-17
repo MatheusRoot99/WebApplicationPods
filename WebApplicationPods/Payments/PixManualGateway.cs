@@ -1,7 +1,6 @@
 ﻿using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
 using WebApplicationPods.Enum;
 using WebApplicationPods.Models;
 using WebApplicationPods.Payments.Options;
@@ -26,9 +25,9 @@ namespace WebApplicationPods.Payments.Gateways
         }
 
         public Task<string> CreateCheckoutAsync(ClaimsPrincipal user, CheckoutRequest req)
-    => Task.FromResult<string>(string.Empty);
+            => Task.FromResult(string.Empty);
 
-        public Task<CardInitResult> CreateCardPaymentAsync(PedidoModel pedido, PaymentMethod method)
+        public Task<CardInitResult> CreateCardPaymentAsync(PedidoModel pedido, PaymentMethod method, decimal amount)
             => Task.FromResult(new CardInitResult());
 
         public Task<ConfirmCardResult> ConfirmCardPaymentAsync(string providerPaymentId, string clientPayloadJson)
@@ -42,41 +41,39 @@ namespace WebApplicationPods.Payments.Gateways
             => Task.FromResult<(string, PaymentStatus, decimal?, string)>(("", PaymentStatus.Pending, null, "no_webhook"));
 
         // === PIX ===
-        public async Task<PixInitResult> CreatePixAsync(PedidoModel pedido)
+        public async Task<PixInitResult> CreatePixAsync(PedidoModel pedido, decimal amount)
         {
             var user = _httpCtx.HttpContext?.User;
             var opts = await _resolver.GetAsync<PixManualOptions>(user!, Provider);
             if (opts == null || string.IsNullOrWhiteSpace(opts.PixKey))
                 throw new InvalidOperationException("PixManual não configurado (PixKey ausente).");
 
-            var amount = pedido.ValorTotal;
             var txid = (opts.TxIdPrefix ?? "PED").Trim();
-            txid = (txid + pedido.Id).PadRight(1).Substring(0, Math.Min(25, (txid + pedido.Id).Length)); // máx 25
+            txid = (txid + pedido.Id);
+            if (txid.Length > 25) txid = txid.Substring(0, 25);
 
             var payload = BuildPixEmv(
                 pixKey: opts.PixKey.Trim(),
-                amount: amount,
+                amount: amount, // <<< usa o total calculado
                 merchantName: Truncate(opts.MerchantName ?? opts.BeneficiaryName, 25),
                 merchantCity: Truncate(string.IsNullOrWhiteSpace(opts.BeneficiaryCity) ? "BRASILIA" : opts.BeneficiaryCity, 15),
                 txid: txid,
                 description: $"Pedido {pedido.Id}"
-
             );
 
             return new PixInitResult
             {
                 ProviderPaymentId = $"pixmanual-{pedido.Id}",
                 QrData = payload,
-                QrBase64Png = null // deixe a View gerar o QR (já fizemos fallback com qrcode.js)
+                QrBase64Png = null // View gera o QR (qrcode.js)
             };
         }
 
         // ===== Geração de BR Code Pix (EMVco) =====
         private static string BuildPixEmv(string pixKey, decimal amount, string merchantName, string merchantCity, string txid, string? description)
         {
-            // Campos EMV
             string PayloadFormatIndicator() => Emv("00", "01");
-            string PointOfInitiationMethod() => Emv("01", "12"); // 12 = dinâmico / 11 = estático
+            string PointOfInitiationMethod() => Emv("01", "12"); // 12 = dinâmico
             string MerchantAccountInfo()
             {
                 var gui = Emv("00", "br.gov.bcb.pix");
@@ -102,7 +99,7 @@ namespace WebApplicationPods.Payments.Gateways
                            + MerchantName()
                            + MerchantCity()
                            + AdditionalDataField()
-                           + "6304"; // ID 63 (CRC) + length "04"
+                           + "6304";
 
             var crc = Crc16(withoutCrc);
             return withoutCrc + crc;
@@ -119,7 +116,6 @@ namespace WebApplicationPods.Payments.Gateways
 
         private static string Crc16(string input)
         {
-            // CRC-16/CCITT-FALSE
             ushort polynomial = 0x1021;
             ushort crc = 0xFFFF;
             var bytes = Encoding.ASCII.GetBytes(input);
@@ -128,9 +124,7 @@ namespace WebApplicationPods.Payments.Gateways
             {
                 crc ^= (ushort)(b << 8);
                 for (int i = 0; i < 8; i++)
-                {
-                    crc = (ushort)((crc & 0x8000) != 0 ? (crc << 1) ^ polynomial : crc << 1);
-                }
+                    crc = (ushort)(((crc & 0x8000) != 0) ? (crc << 1) ^ polynomial : crc << 1);
             }
             return crc.ToString("X4");
         }

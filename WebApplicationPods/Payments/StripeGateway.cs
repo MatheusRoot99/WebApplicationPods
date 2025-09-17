@@ -24,7 +24,8 @@ public class StripeGateway : IPaymentGateway
     // Carrega credenciais do lojista (ou defaults do appsettings) e seta ApiKey
     private async Task<StripeOptions> GetCfgAsync(ClaimsPrincipal? user = null)
     {
-        var cfg = await _resolver.GetAsync<StripeOptions>(user ?? new ClaimsPrincipal(), Provider);
+        var cfg = await _resolver.GetAsync<StripeOptions>(user ?? new ClaimsPrincipal(), Provider)
+                  ?? new StripeOptions();
         StripeConfiguration.ApiKey = cfg.SecretKey;
         return cfg;
     }
@@ -44,13 +45,14 @@ public class StripeGateway : IPaymentGateway
         };
 
     // ---------------- PIX ----------------
-    public async Task<PixInitResult> CreatePixAsync(PedidoModel pedido)
+    // (assinatura nova com 'amount')
+    public async Task<PixInitResult> CreatePixAsync(PedidoModel pedido, decimal amount)
     {
         await GetCfgAsync();
         var service = new PaymentIntentService();
         var intent = await service.CreateAsync(new PaymentIntentCreateOptions
         {
-            Amount = ToCents(pedido.ValorTotal),
+            Amount = ToCents(amount),            // usa o total calculado (itens+frete−descontos)
             Currency = "brl",
             PaymentMethodTypes = new List<string> { "pix" },
             Description = $"Pedido #{pedido.Id}"
@@ -59,20 +61,21 @@ public class StripeGateway : IPaymentGateway
         return new PixInitResult
         {
             ProviderPaymentId = intent.Id,
-            // Use o client_secret no front (Stripe.js) para exibir o QR
+            // No Stripe, o client_secret é usado no front para renderizar o QR
             QrData = intent.ClientSecret ?? string.Empty,
             QrBase64Png = null
         };
     }
 
     // --------------- Cartão ---------------
-    public async Task<CardInitResult> CreateCardPaymentAsync(PedidoModel pedido, PaymentMethod method)
+    // (assinatura nova com 'amount')
+    public async Task<CardInitResult> CreateCardPaymentAsync(PedidoModel pedido, PaymentMethod method, decimal amount)
     {
         await GetCfgAsync();
         var service = new PaymentIntentService();
         var intent = await service.CreateAsync(new PaymentIntentCreateOptions
         {
-            Amount = ToCents(pedido.ValorTotal),
+            Amount = ToCents(amount),            // usa o total calculado
             Currency = "brl",
             Description = $"Pedido #{pedido.Id}",
             AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions { Enabled = true }
@@ -100,10 +103,9 @@ public class StripeGateway : IPaymentGateway
                 if (doc.RootElement.TryGetProperty("paymentMethodId", out var pm))
                     paymentMethodId = pm.GetString();
             }
-            catch { /* ignora parse inválido */ }
+            catch { /* ignore */ }
         }
 
-        // Confirma o PaymentIntent
         PaymentIntent intent;
         if (!string.IsNullOrWhiteSpace(paymentMethodId))
         {
@@ -135,10 +137,7 @@ public class StripeGateway : IPaymentGateway
                 last4 = charge.PaymentMethodDetails?.Card?.Last4;
             }
         }
-        catch
-        {
-            // se falhar a leitura dos charges, seguimos sem brand/last4
-        }
+        catch { }
 
         return new ConfirmCardResult
         {
@@ -149,7 +148,6 @@ public class StripeGateway : IPaymentGateway
         };
     }
 
-
     public async Task<PaymentStatus> GetStatusAsync(string providerPaymentId)
     {
         await GetCfgAsync();
@@ -159,9 +157,9 @@ public class StripeGateway : IPaymentGateway
     }
 
     public async Task<(string providerPaymentId, PaymentStatus newStatus, decimal? paidAmount, string extra)>
-    HandleWebhookAsync(HttpRequest request)
+        HandleWebhookAsync(HttpRequest request)
     {
-        var cfg = await GetCfgAsync(); // usa secret global (ou ajuste p/ multi-loja, ver item 5)
+        var cfg = await GetCfgAsync();
 
         request.EnableBuffering();
         using var reader = new StreamReader(request.Body, Encoding.UTF8, leaveOpen: true);
@@ -181,29 +179,18 @@ public class StripeGateway : IPaymentGateway
 
         if (stripeEvent.Data.Object is PaymentIntent pi)
         {
-            // amount_received e amount são 'long' (centavos)
             var cents = pi.AmountReceived > 0 ? pi.AmountReceived : pi.Amount;
             decimal? paidAmount = cents > 0 ? cents / 100m : (decimal?)null;
-
-            // opcional: pegar brand/last4 via ChargeService (se você quiser logar/usar)
-            // var (brand, last4) = await GetCardBrandAndLast4Async(pi.Id);
-
-            return (
-                pi.Id,
-                MapStatus(pi.Status),
-                paidAmount,
-                stripeEvent.Type ?? ""
-            );
+            return (pi.Id, MapStatus(pi.Status), paidAmount, stripeEvent.Type ?? "");
         }
 
-        // outros tipos de evento que você queira tratar (ex.: charge.refunded)
         return ("", PaymentStatus.Pending, null, stripeEvent.Type ?? "");
     }
 
     // Checkout hospedado (Stripe Checkout)
     public async Task<string> CreateCheckoutAsync(ClaimsPrincipal user, CheckoutRequest req)
     {
-        var creds = await _resolver.GetAsync<StripeOptions>(user, Provider);
+        var creds = await _resolver.GetAsync<StripeOptions>(user, Provider) ?? new StripeOptions();
         StripeConfiguration.ApiKey = creds.SecretKey;
 
         var service = new SessionService();
@@ -219,7 +206,7 @@ public class StripeGateway : IPaymentGateway
                     PriceData = new SessionLineItemPriceDataOptions
                     {
                         Currency = (req.Currency ?? "BRL").ToLower(),
-                        UnitAmountDecimal = ToCents(req.Amount),
+                        UnitAmount = ToCents(req.Amount), // usa centavos (long)
                         ProductData = new SessionLineItemPriceDataProductDataOptions
                         {
                             Name = string.IsNullOrWhiteSpace(req.Description) ? "Pedido" : req.Description
@@ -232,27 +219,4 @@ public class StripeGateway : IPaymentGateway
 
         return session.Url!;
     }
-
-    private static async Task<(string? brand, string? last4)> GetCardBrandAndLast4Async(string paymentIntentId)
-    {
-        try
-        {
-            var chargeService = new ChargeService();
-            var charges = await chargeService.ListAsync(new ChargeListOptions
-            {
-                PaymentIntent = paymentIntentId,
-                Limit = 1
-            });
-
-            if (charges.Data.Count > 0)
-            {
-                var c = charges.Data[0];
-                return (c.PaymentMethodDetails?.Card?.Brand, c.PaymentMethodDetails?.Card?.Last4);
-            }
-        }
-        catch { /* ignore e siga sem brand/last4 */ }
-
-        return (null, null);
-    }
-
 }

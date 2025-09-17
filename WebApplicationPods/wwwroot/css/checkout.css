@@ -1,0 +1,182 @@
+﻿:root {
+    --bg-soft: #f8fafc;
+    --card-bg: #ffffff;
+    --border: #e6e9ef;
+    --text: #0f172a;
+    --muted: #6b7280;
+    --brand: #4f46e5; /* indigo */
+    --ok: #16a34a; /* green */
+    --warn: #f59e0b; /* amber */
+    --err: #dc2626; /* red */
+    --info: #0ea5e9; /* sky */
+}
+
+body {
+    background: var(--bg-soft);
+}
+
+.page-header {
+    background: linear-gradient(120deg, rgba(79,70,229,0.08), rgba(14,165,233,0.08));
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px 20px;
+}
+
+.page-title {
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+    letter-spacing: .2px;
+}
+
+.page-sub {
+    margin: 4px 0 0 0;
+    color: var(--muted);
+    font-size: .95rem;
+}
+
+.card {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 6px 24px rgba(15, 23, 42, 0.06);
+    overflow: hidden;
+}
+
+.card-header {
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    padding: 14px 18px;
+}
+
+    .card-header h5 {
+        margin: 0;
+        font-weight: 700;
+    }
+
+.card-body {
+    overflow: visible;
+}
+
+/* Status bar */
+.status-wrap {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.status-bar {
+    position: relative;
+    height: 8px;
+    background: #eef2ff;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+    .status-bar > .fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, var(--brand), #22c55e);
+        transition: width .4s ease;
+    }
+
+.status-badge {
+    padding: .35rem .6rem;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: .85rem;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text);
+}
+
+.status-paid {
+    border-color: #bbf7d0;
+    color: var(--ok);
+    background: #f0fdf4;
+}
+
+.status-pending {
+    border-color: #fde68a;
+    color: var(--warn);
+    background: #fffbeb;
+}
+
+.status-failed {
+    border-color: #fecaca;
+    color: var(--err);
+    background: #fef2f2;
+}
+
+.status-action {
+    border-color: #c7d2fe;
+    color: var(--brand);
+    background: #eef2ff;
+}
+
+/* QR */
+.qr-box {
+    width: 240px;
+    height: 240px;
+    border-radius: 14px;
+    border: 1px dashed var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+}
+
+.copy-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: .85rem;
+    color: var(--ok);
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: .5rem;
+    padding: .15rem .5rem;
+    transition: opacity .2s ease, transform .2s ease;
+    opacity: 0;
+    transform: translateY(-2px);
+}
+
+    .copy-badge.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+.d-none {
+    display: none !important;
+}
+
+/* Buttons */
+.btn-brand {
+    background: var(--brand);
+    color: #fff;
+    border: none;
+}
+
+    .btn-brand:hover {
+        filter: brightness(0.98);
+    }
+
+.btn-soft {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+}
+
+/* Mobile tweaks */
+@@media (max-width: 576px) {
+    .btn {
+        width: 100%;
+    }
+
+    .input-group .btn {
+        width: auto;
+    }
+    /* mantém o 'Copiar' encaixado */
+}

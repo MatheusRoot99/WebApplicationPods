@@ -1,6 +1,10 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Globalization;
+using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using WebApplicationPods.Data;
 using WebApplicationPods.Enum;
@@ -35,17 +39,13 @@ namespace WebApplicationPods.Payments
             _creds = creds;
         }
 
-        // Decide qual provedor usar para PIX com base na config do lojista
+        // ===== Helpers de provedor =====
         private async Task<string> ResolvePixProviderAsync()
         {
             var user = _httpContextAccessor.HttpContext?.User;
-
-            // Se o lojista configurou PixManual (chave pix), prioriza
             var pixManual = await _creds.GetAsync<WebApplicationPods.Payments.Options.PixManualOptions>(user!, "PixManual");
             if (pixManual != null && !string.IsNullOrWhiteSpace(pixManual.PixKey))
                 return "PixManual";
-
-            // Senão, usa MercadoPago por padrão
             return "MercadoPago";
         }
 
@@ -53,22 +53,46 @@ namespace WebApplicationPods.Payments
         {
             var user = _httpContextAccessor.HttpContext?.User;
 
-            // Tem MP configurado? (p/ cartão via API/Brick do MP)
             var mp = await _creds.GetAsync<WebApplicationPods.Payments.Options.MercadoPagoOptions>(user!, "MercadoPago");
             var mpOk = mp != null && !string.IsNullOrWhiteSpace(mp.PublicKey) && !string.IsNullOrWhiteSpace(mp.AccessToken);
 
-            // Tem Stripe configurado?
             var st = await _creds.GetAsync<WebApplicationPods.Payments.Options.StripeOptions>(user!, "Stripe");
             var stOk = st != null && !string.IsNullOrWhiteSpace(st.PublishableKey) && !string.IsNullOrWhiteSpace(st.SecretKey);
 
-            // Defina a sua prioridade (aqui: dá preferência ao Stripe; troque se quiser MP primeiro)
             if (stOk) return "Stripe";
             if (mpOk) return "MercadoPago";
-
-            // fallback (evita quebrar)
             return "Stripe";
         }
 
+        // ===== Cálculo do total (itens + frete − descontos) =====
+        private static decimal TotalParaCobranca(PedidoModel p)
+        {
+            var subtotal = p.ValorTotal;
+
+            // Tentativa automática de localizar campos comuns de frete/desconto.
+            // Isso evita quebrar compilação se o nome do campo variar no seu projeto.
+            decimal frete = TryGetDecimalProp(p, "TaxaEntrega")
+                          + TryGetDecimalProp(p, "ValorEntrega")
+                          + TryGetDecimalProp(p, "Frete");
+
+            decimal desconto = TryGetDecimalProp(p, "Desconto")
+                             + TryGetDecimalProp(p, "ValorDesconto");
+
+            var total = subtotal + frete - desconto;
+            return total < 0 ? 0 : total;
+        }
+
+        private static decimal TryGetDecimalProp(object obj, string propName)
+        {
+            var pi = obj.GetType().GetProperty(propName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+            if (pi == null) return 0m;
+            var raw = pi.GetValue(obj);
+            if (raw == null) return 0m;
+            try { return Convert.ToDecimal(raw, CultureInfo.InvariantCulture); }
+            catch { return 0m; }
+        }
+
+        // ===== Fluxo principal =====
         public async Task<PaymentModel> StartPaymentAsync(PedidoModel pedido, PaymentMethod metodo)
         {
             var provider =
@@ -79,11 +103,14 @@ namespace WebApplicationPods.Payments
 
             var gateway = provider == "None" ? null : _gatewayFactory(provider);
 
+            // === valor final que será cobrado (inclui frete/descontos)
+            var amount = TotalParaCobranca(pedido);
+
             var payment = new PaymentModel
             {
                 PedidoId = pedido.Id,
                 Metodo = metodo,
-                Amount = pedido.ValorTotal,
+                Amount = amount,
                 Provider = provider ?? string.Empty,
                 Status = metodo == PaymentMethod.Cash ? PaymentStatus.Pending : PaymentStatus.Created,
                 CardBrand = string.Empty,
@@ -97,7 +124,7 @@ namespace WebApplicationPods.Payments
 
             if (metodo == PaymentMethod.Pix && gateway is not null)
             {
-                var r = await gateway.CreatePixAsync(pedido);
+                var r = await gateway.CreatePixAsync(pedido, amount);
                 payment.ProviderPaymentId = r.ProviderPaymentId ?? string.Empty;
                 payment.PixQrData = r.QrData ?? string.Empty;
                 payment.PixQrBase64Png = r.QrBase64Png;
@@ -105,7 +132,7 @@ namespace WebApplicationPods.Payments
             }
             else if ((metodo == PaymentMethod.CardCredit || metodo == PaymentMethod.CardDebit) && gateway is not null)
             {
-                var r = await gateway.CreateCardPaymentAsync(pedido, metodo);
+                var r = await gateway.CreateCardPaymentAsync(pedido, metodo, amount);
                 payment.ProviderPaymentId = r.ProviderPaymentId ?? string.Empty;
                 payment.ClientSecretOrToken = r.ClientSecretOrToken ?? string.Empty;
                 payment.Status = PaymentStatus.RequiresAction;
@@ -155,7 +182,6 @@ namespace WebApplicationPods.Payments
 
         public async Task ApplyWebhookAsync(HttpRequest request)
         {
-            // Webhook hoje é só MP
             var mp = _gatewayFactory("MercadoPago");
             var parsed = await mp.HandleWebhookAsync(request);
             await ApplyWebhookParsedAsync(parsed);
@@ -169,7 +195,6 @@ namespace WebApplicationPods.Payments
                 .FirstOrDefaultAsync(p => p.ProviderPaymentId == parsed.providerPaymentId);
             if (payment == null) return;
 
-            // Idempotência básica
             if (payment.Status == PaymentStatus.Paid && parsed.newStatus != PaymentStatus.Paid)
                 return;
 

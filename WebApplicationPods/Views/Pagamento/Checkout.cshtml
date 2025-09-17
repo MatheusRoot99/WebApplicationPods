@@ -3,76 +3,38 @@
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
     ViewData["Title"] = "Pagamento";
+
     // Gera token anti-CSRF e grava cookie; usamos o valor no header do fetch.
     var afToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+
+    // URL de acompanhamento: tenta Pedidos/Acompanhar; fallback p/ Carrinho/Confirmacao
+    var trackUrl = Url.Action("Acompanhar", "Pedidos", new { id = Model.PedidoId })
+                  ?? Url.Action("Confirmacao", "Carrinho", new { id = Model.PedidoId });
 }
 
 @section Styles {
-    <style>
-        /* Botões ocupam largura total no mobile */
-        @@media (max-width: 576px) {
-            .btn {
-                width: 100%;
-            }
-
-            .input-group .btn {
-                width: auto;
-            }
-            /* mantém o 'Copiar' encaixado */
-        }
-
-        /* Evita clipes dentro do card */
-        .card-body {
-            overflow: visible;
-        }
-
-        .qr-box {
-            width: 220px;
-            height: 220px;
-            border-radius: 10px;
-            border: 1px solid #eee;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #fff;
-        }
-
-        .text-muted small.code {
-            word-break: break-all;
-            white-space: pre-wrap;
-        }
-
-        .copy-badge {
-            display: inline-flex;
-            align-items: center;
-            font-size: .875rem;
-            color: #198754; /* text-success */
-            background: #e9f7ef; /* verdinho claro */
-            border: 1px solid #cfe9da; /* contorno suave */
-            border-radius: .35rem;
-            padding: .15rem .45rem;
-            transition: opacity .2s ease, transform .2s ease;
-            opacity: 0;
-            transform: translateY(-2px);
-        }
-
-            .copy-badge.show {
-                opacity: 1;
-                transform: translateY(0);
-            }
-
-        .d-none {
-            display: none !important;
-        }
-    </style>
+    <!-- Arquivo CSS externo da página de checkout -->
+    <link rel="stylesheet" href="~/css/checkout.css" asp-append-version="true" />
 }
 
-<div class="container-xxl py-4">
-    <div class="row g-4">
+<div id="checkout-page" class="container-xxl py-4">
+    <div id="checkout-header" class="mb-3">
+        <h3 class="page-title">Pagamento do pedido #@Model.PedidoId</h3>
+        <p class="page-sub">Total a pagar: <strong>@Model.Amount.ToString("C")</strong></p>
+    </div>
+
+    <div id="checkout-status" class="status-wrap">
+        <div class="status-bar">
+            <div id="statusFill" class="fill"></div>
+        </div>
+        <span id="statusBadge" class="status-badge">Status: @Model.Status</span>
+    </div>
+
+    <div id="checkout-main-row" class="row g-4">
 
         <!-- COL ESQUERDA -->
         <div class="col-lg-7">
-            <div class="card">
+            <div id="checkout-main-card" class="card">
                 <div class="card-header">
                     <h5 class="mb-0">Finalize seu pagamento</h5>
                 </div>
@@ -81,72 +43,86 @@
                     @* ===================== PIX ===================== *@
                     @if (Model.Metodo == PaymentMethod.Pix)
                     {
-                        <h6 class="mb-2">Pix</h6>
-                        <p class="text-muted">Escaneie o QR Code ou use “copia e cola”. Confirmaremos automaticamente após o pagamento.</p>
+                        <section id="pix-section">
+                            <h6 class="mb-2">Pix (chave/QR)</h6>
+                            <p class="text-muted">Escaneie o QR Code ou use “copia e cola”. Confirmaremos automaticamente após o pagamento.</p>
 
-                        <div class="d-flex gap-3 flex-wrap align-items-start">
-                            <div>
-                                @if (!string.IsNullOrEmpty(Model.PixQrBase64Png))
-                                {
-                                    <img src="data:image/png;base64,@Model.PixQrBase64Png" alt="QR Code Pix"
-                                         class="qr-box" style="object-fit: contain;" />
-                                }
-                                else
-                                {
-                                    <div id="pix-qr" class="qr-box text-secondary">
-                                        QR Code
+                            <div class="d-flex gap-4 flex-wrap align-items-start">
+                                <div id="pix-qr-container">
+                                    @if (!string.IsNullOrEmpty(Model.PixQrBase64Png))
+                                    {
+                                        <img id="pix-qr-img"
+                                             src="data:image/png;base64,@Model.PixQrBase64Png"
+                                             alt="QR Code Pix" class="qr-box" style="object-fit: contain;" />
+                                    }
+                                    else
+                                    {
+                                        <div id="pix-qr" class="qr-box text-secondary">QR Code</div>
+                                    }
+                                </div>
+
+                                <div class="flex-grow-1" style="min-width:260px">
+                                    <label class="form-label">Copia e cola</label>
+                                    <div class="input-group">
+                                        <input class="form-control" value="@Model.PixQrData" id="pixCopyPaste" readonly />
+                                        <button class="btn btn-soft" type="button" onclick="copyPix()" id="btnCopyPix">Copiar</button>
+                                        <span id="copyBadge" class="copy-badge d-none ms-2">Copiado!</span>
                                     </div>
-                                }
-                            </div>
 
-                            <div class="flex-grow-1">
-                                <label class="form-label">Copia e cola</label>
-                                <div class="input-group">
-                                    <input class="form-control" value="@Model.PixQrData" id="pixCopyPaste" readonly />
-                                    <button class="btn btn-secondary" type="button" onclick="copyPix()" id="btnCopyPix">Copiar</button>
-                                    <span id="copyBadge" class="copy-badge d-none ms-2">Copiado!</span>
+                                    <div class="d-flex align-items-center gap-2 mt-3 flex-wrap">
+                                        <button class="btn btn-soft btn-sm" type="button" id="btnForcarConsulta">Atualizar status</button>
+                                        <button class="btn btn-soft btn-sm" type="button" id="pix-cancel-btn">Cancelar</button>
+                                    </div>
+
+                                    <div class="text-muted mt-2">Valor: <strong>@Model.Amount.ToString("C")</strong></div>
                                 </div>
-
-                                <div class="d-flex align-items-center gap-2 mt-3 flex-wrap">
-                                    <span id="pixStatus" class="badge bg-light text-dark">Status: @Model.Status</span>
-                                    <button class="btn btn-outline-secondary btn-sm" type="button" id="btnForcarConsulta">Atualizar status</button>
-                                    <button class="btn btn-outline-secondary btn-sm" type="button" id="pix-cancel-btn">Cancelar</button>
-                                </div>
-
-                                <div class="text-muted mt-2">Valor: <strong>@Model.Amount.ToString("C")</strong></div>
-                                <div class="text-muted mt-2 small">Pedido: #@Model.PedidoId</div>
                             </div>
-                        </div>
+                        </section>
                     }
 
                     @* ===================== CARTÃO ===================== *@
                     @if (Model.Metodo == PaymentMethod.CardCredit || Model.Metodo == PaymentMethod.CardDebit)
                     {
-                        <div id="cardPaymentBrick_container"></div>
+                        <section id="card-section">
+                            <h6 class="mb-2">Pagamento com cartão</h6>
+                            <div id="cardPaymentBrick_container"></div>
 
-                        @* Mantemos somente o CANCELAR da página (o Brick já tem o botão Pagar) *@
-                        <div class="mt-3 d-flex gap-2 flex-wrap">
-                            <button id="mp-cancel-btn" type="button" class="btn btn-outline-secondary flex-grow-1 flex-sm-grow-0">
-                                Cancelar
-                            </button>
-                        </div>
+                            <div class="mt-3 d-flex gap-2 flex-wrap">
+                                <button id="mp-cancel-btn" type="button" class="btn btn-soft flex-grow-1 flex-sm-grow-0">
+                                    Cancelar
+                                </button>
+                            </div>
 
-                        <div class="text-muted mt-2">Se necessário, faremos a autenticação 3-D Secure.</div>
-                        <span id="payStatus" class="badge bg-light text-dark mt-3 d-inline-block">Status: @Model.Status</span>
+                            <div class="text-muted mt-2">Se necessário, faremos a autenticação 3-D Secure.</div>
+                        </section>
                     }
 
                     @* ================= DINHEIRO/MAQUININHA ================ *@
                     @if (Model.Metodo == PaymentMethod.Cash)
                     {
-                        <p class="mb-0">Pagamento na entrega. Status: <strong>@Model.Status</strong></p>
+                        <section id="cash-section">
+                            <h6 class="mb-2">Pagamento na entrega</h6>
+                            <p class="mb-0 text-muted">Seu pedido será cobrado na retirada/entrega.</p>
+                        </section>
                     }
+
+                    <hr class="my-4" />
+
+                    <div class="d-flex flex-wrap gap-2">
+                        <!-- Botão de acompanhar pedido (aparece quando pago) -->
+                        <a id="goTrackBtn" href="@trackUrl" class="btn btn-brand d-none">
+                            Acompanhar pedido
+                        </a>
+                        <!-- Voltar / mudar pagamento -->
+                        <a class="btn btn-soft" href="@Url.Action("Index", "Carrinho")">Voltar</a>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- COL DIREITA -->
         <div class="col-lg-5">
-            <div class="card sticky-lg-top" style="top:-27px;">
+            <div id="checkout-summary-card" class="card sticky-lg-top" style="top:-27px;">
                 <div class="card-header">
                     <h5 class="mb-0">Resumo</h5>
                 </div>
@@ -155,6 +131,10 @@
                         <span>Total</span><strong>@Model.Amount.ToString("C")</strong>
                     </div>
                     <div class="mt-3 small text-muted">Pedido: #@Model.PedidoId</div>
+                    @if (!string.IsNullOrEmpty(Model.CardBrand) || !string.IsNullOrEmpty(Model.CardLast4))
+                    {
+                        <div class="mt-2 small text-muted">Cartão: @(Model.CardBrand ?? "—") **** @(Model.CardLast4 ?? "—")</div>
+                    }
                 </div>
             </div>
         </div>
@@ -168,6 +148,29 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" referrerpolicy="no-referrer"></script>
 
     <script>
+        // UILOGIC: atualiza barra/badge conforme status
+        function setUiStatus(status) {
+            const badge = document.getElementById('statusBadge');
+            const fill  = document.getElementById('statusFill');
+            const track = document.getElementById('goTrackBtn');
+
+            const s = (status || '').toLowerCase();
+            let pct = 10, cls = 'status-badge', txt = 'Status: ' + status;
+
+            if (s === 'created') { pct = 20; cls += ' status-action'; }
+            else if (s === 'requiresaction') { pct = 35; cls += ' status-action'; txt = 'Status: Aguardando ação'; }
+            else if (s === 'pending' || s === 'in_process') { pct = 60; cls += ' status-pending'; txt = 'Status: Pendente'; }
+            else if (s === 'paid' || s === 'approved') { pct = 100; cls += ' status-paid'; txt = 'Status: Pago'; }
+            else if (s === 'failed' || s === 'rejected') { pct = 100; cls += ' status-failed'; txt = 'Status: Falhou'; }
+            else if (s === 'canceled' || s === 'cancelled') { pct = 100; cls += ' status-failed'; txt = 'Status: Cancelado'; }
+
+            if (badge) { badge.className = cls; badge.textContent = txt; }
+            if (fill)  { fill.style.width = pct + '%'; }
+            if (track) {
+                if (s === 'paid' || s === 'approved') track.classList.remove('d-none');
+            }
+        }
+
         // Copiar PIX + mostrar badge "Copiado!"
         async function copyPix() {
           const input = document.getElementById('pixCopyPaste');
@@ -175,35 +178,19 @@
           const badge = document.getElementById('copyBadge');
           if (!input) return;
 
-          // tenta Clipboard API
           let ok = false;
-          try {
-            await navigator.clipboard.writeText(input.value);
-            ok = true;
-          } catch {
-            try {
-              input.select(); input.setSelectionRange(0, 99999);
-              document.execCommand('copy'); // fallback
-              ok = true;
-            } catch {}
+          try { await navigator.clipboard.writeText(input.value); ok = true; }
+          catch {
+            try { input.select(); input.setSelectionRange(0, 99999); document.execCommand('copy'); ok = true; } catch {}
           }
 
           if (ok && badge) {
-            // mostra badge por 2s
-            badge.classList.remove('d-none');
-            void badge.offsetWidth; // força reflow p/ animar
-            badge.classList.add('show');
-
+            badge.classList.remove('d-none'); void badge.offsetWidth; badge.classList.add('show');
             const old = btn ? btn.textContent : '';
             if (btn) btn.textContent = 'Copiado!';
-
-            setTimeout(() => {
-              badge.classList.remove('show');
-              setTimeout(() => {
-                badge.classList.add('d-none');
-                if (btn) btn.textContent = old || 'Copiar';
-              }, 200);
-            }, 2000);
+            setTimeout(() => { badge.classList.remove('show'); setTimeout(() => {
+              badge.classList.add('d-none'); if (btn) btn.textContent = old || 'Copiar';
+            }, 200); }, 2000);
           }
         }
     </script>
@@ -220,11 +207,7 @@
               if (!r.ok) return;
               const data = await r.json();
 
-              const pixBadge = document.getElementById('pixStatus');
-              if (pixBadge && data.status) pixBadge.textContent = 'Status: ' + data.status;
-
-              const payBadge = document.getElementById('payStatus');
-              if (payBadge && data.status) payBadge.textContent = 'Status: ' + data.status;
+              if (data && data.status) setUiStatus(data.status);
 
               if (data.paid === true && data.redirect) {
                 window.location.href = data.redirect;
@@ -238,6 +221,7 @@
             btn.addEventListener('click', checkPaid);
           }
 
+          setUiStatus('@Model.Status');
           checkPaid();
           setInterval(checkPaid, 3000);
           window.__checkPaid = checkPaid;
@@ -247,7 +231,6 @@
     <script>
         // ------- Monta QR no frontend (somente se não veio Base64) -------
         (function mountQrIfNeeded(){
-          // Só tenta montar se existe container e temos BR Code no input
           const el = document.getElementById('pix-qr');
           const copyInput = document.getElementById('pixCopyPaste');
           if (!el || !copyInput) return;
@@ -257,11 +240,7 @@
 
           try {
             el.textContent = '';
-            new QRCode(el, {
-              text: brcode,
-              width: 220,
-              height: 220
-            });
+            new QRCode(el, { text: brcode, width: 240, height: 240 });
           } catch (e) { console.warn('QR fallback falhou', e); }
         })();
     </script>
@@ -271,10 +250,9 @@
         (function initMPBrick(){
           const publicKey = '@(ViewBag.MP_PublicKey ?? "")'.trim();
           if (!publicKey || (publicKey.indexOf('TEST-') !== 0 && publicKey.indexOf('APP_USR-') !== 0)) {
-            console.error('Mercado Pago PublicKey inválida/ausente:', publicKey);
+            console.warn('Mercado Pago PublicKey inválida/ausente:', publicKey);
             return;
           }
-
           if (window.__mpBrickMounted) return;
           window.__mpBrickMounted = true;
 
@@ -293,7 +271,7 @@
               visual: { style: { theme: 'default' } }
             },
             callbacks: {
-              onReady: () => { /* o Brick já exibe o botão Pagar */ },
+              onReady: () => {},
               onSubmit: async (cardFormData) => {
                 try {
                   const res = await fetch('@Url.Action("ConfirmCard", "Pagamento", new { id = Model.Id })', {
@@ -306,17 +284,16 @@
                   });
 
                   const json = await res.json();
-                  const statusEl = document.getElementById('payStatus');
-
                   if (json && json.success) {
-                    if (statusEl) statusEl.textContent = 'Status: Pago';
+                    setUiStatus('paid');
                     if (json.redirect) window.location.href = json.redirect;
                     else if (window.__checkPaid) window.__checkPaid();
                   } else {
-                    if (statusEl) statusEl.textContent = 'Status: Pagamento falhou';
+                    setUiStatus('failed');
                     alert('Não foi possível processar o pagamento.');
                   }
                 } catch (e) {
+                  setUiStatus('failed');
                   console.error('ConfirmCard error', e);
                   alert('Erro ao confirmar o pagamento.');
                 }

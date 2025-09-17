@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using WebApplicationPods.Enum;
 using WebApplicationPods.Models;
-using WebApplicationPods.Payments;
 using WebApplicationPods.Payments.Options;
 
 namespace WebApplicationPods.Payments.Gateways
@@ -40,42 +39,35 @@ namespace WebApplicationPods.Payments.Gateways
         {
             var user = _httpCtx.HttpContext?.User;
 
-            // 1) tenta credenciais do lojista (DB)
             var creds = await _resolver.GetAsync<MercadoPagoOptions>(user!, "MercadoPago");
             var token = creds?.AccessToken;
 
-            // 2) fallback para appsettings
             token ??= _cfg["Payments:MercadoPago:AccessToken"];
 
             if (string.IsNullOrWhiteSpace(token))
                 throw new InvalidOperationException("Mercado Pago AccessToken não configurado (vazio).");
 
-            // Só para te proteger contra usar a PublicKey por engano:
             if (token.StartsWith("TEST-", StringComparison.OrdinalIgnoreCase) ||
                 token.StartsWith("APP_USR-", StringComparison.OrdinalIgnoreCase))
             {
                 return token;
             }
 
-            // Se cair aqui, provavelmente é a PublicKey (que começa com TEST- PUBLIC KEY), ou algo errado.
             throw new InvalidOperationException(
                 "AccessToken do Mercado Pago parece inválido. " +
-                "Ele deve começar com 'TEST-' (sandbox) ou 'APP_USR-' (produção). " +
-                "Verifique se não está usando a PublicKey por engano.");
+                "Ele deve começar com 'TEST-' (sandbox) ou 'APP_USR-' (produção).");
         }
 
-
         // =================== PIX ===================
-        public async Task<PixInitResult> CreatePixAsync(PedidoModel pedido)
+        public async Task<PixInitResult> CreatePixAsync(PedidoModel pedido, decimal amount)
         {
             var token = await ResolveAccessTokenAsync();
 
             var body = new
             {
-                transaction_amount = pedido.ValorTotal,
+                transaction_amount = amount,                // <<< usa o total calculado
                 description = $"Pedido #{pedido.Id}",
                 payment_method_id = "pix"
-                // payer opcional; em teste, melhor omitir
             };
 
             using var req = new HttpRequestMessage(HttpMethod.Post, "v1/payments");
@@ -88,10 +80,8 @@ namespace WebApplicationPods.Payments.Gateways
 
             if (!resp.IsSuccessStatusCode)
             {
-                // Logue txt para ver o erro completo do MP
                 throw new InvalidOperationException(
-                    $"Mercado Pago /v1/payments falhou: {(int)resp.StatusCode} {resp.ReasonPhrase}. " +
-                    $"Body: {txt}");
+                    $"Mercado Pago /v1/payments falhou: {(int)resp.StatusCode} {resp.ReasonPhrase}. Body: {txt}");
             }
 
             using var doc = JsonDocument.Parse(txt);
@@ -127,8 +117,8 @@ namespace WebApplicationPods.Payments.Gateways
             };
         }
 
-        // =================== CARTÃO (mantém como stub se usar Stripe) ===================
-        public Task<CardInitResult> CreateCardPaymentAsync(PedidoModel pedido, PaymentMethod method)
+        // =================== CARTÃO (stub, se usar Stripe p/ cartão) ===================
+        public Task<CardInitResult> CreateCardPaymentAsync(PedidoModel pedido, PaymentMethod method, decimal amount)
             => Task.FromResult(new CardInitResult
             {
                 ProviderPaymentId = "mp_card_id_demo",
@@ -162,8 +152,6 @@ namespace WebApplicationPods.Payments.Gateways
         public async Task<(string providerPaymentId, PaymentStatus newStatus, decimal? paidAmount, string extra)>
             HandleWebhookAsync(HttpRequest request)
         {
-            // MP manda JSON com { "type": "payment", "data": { "id": "123" } } OU querystring com ?type=payment&id=123
-            // 1) tenta corpo JSON
             string? id = null;
             string? type = null;
             try
@@ -185,7 +173,6 @@ namespace WebApplicationPods.Payments.Gateways
                         id = idEl.ValueKind == JsonValueKind.Number ? idEl.GetInt64().ToString() : idEl.GetString();
                     }
 
-                    // alguns envios antigos usam "action": "payment.updated" e "resource": "/v1/payments/{id}"
                     if (string.IsNullOrWhiteSpace(id) && root.TryGetProperty("resource", out var resEl) &&
                         resEl.ValueKind == JsonValueKind.String)
                     {
@@ -197,12 +184,8 @@ namespace WebApplicationPods.Payments.Gateways
                     }
                 }
             }
-            catch
-            {
-                // ignora parse de body se deu erro; tentaremos querystring
-            }
+            catch { }
 
-            // 2) fallback querystring
             if (string.IsNullOrWhiteSpace(id))
                 id = request.Query["id"].FirstOrDefault();
             if (string.IsNullOrWhiteSpace(type))
@@ -211,12 +194,10 @@ namespace WebApplicationPods.Payments.Gateways
             if (!string.Equals(type, "payment", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(id))
                 return ("", PaymentStatus.Pending, null, "evento_ignorado");
 
-            // consulta pagamento para saber status
             var status = await GetStatusAsync(id);
             return (id, status, null, "");
         }
 
-        // =================== Helpers ===================
         private static PaymentStatus MapMpStatus(string s) => s?.ToLowerInvariant() switch
         {
             "approved" => PaymentStatus.Paid,
@@ -242,7 +223,13 @@ namespace WebApplicationPods.Payments.Gateways
             {
                 Items = new[]
                 {
-                    new PreferenceItem { Title = string.IsNullOrWhiteSpace(req.Description) ? "Pedido" : req.Description, Quantity = 1, UnitPrice = req.Amount, CurrencyId = (req.Currency ?? "BRL").ToUpper() }
+                    new PreferenceItem
+                    {
+                        Title = string.IsNullOrWhiteSpace(req.Description) ? "Pedido" : req.Description,
+                        Quantity = 1,
+                        UnitPrice = req.Amount,
+                        CurrencyId = (req.Currency ?? "BRL").ToUpper()
+                    }
                 },
                 BackUrls = new PreferenceBackUrls
                 {
@@ -274,7 +261,6 @@ namespace WebApplicationPods.Payments.Gateways
             throw new InvalidOperationException("Não foi possível obter a URL de checkout do Mercado Pago.");
         }
 
-        // DTOs para a Preference
         private sealed class PreferenceCreateRequest
         {
             [JsonPropertyName("items")] public PreferenceItem[] Items { get; set; } = Array.Empty<PreferenceItem>();
