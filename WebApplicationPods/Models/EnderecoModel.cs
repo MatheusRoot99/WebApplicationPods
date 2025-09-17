@@ -20,7 +20,7 @@ namespace WebApplicationPods.Models
         public string Numero { get; set; }
 
         [StringLength(50, ErrorMessage = "O complemento deve ter no máximo 50 caracteres")]
-        public string Complemento { get; set; }
+        public string? Complemento { get; set; }
 
         [Required(ErrorMessage = "O bairro é obrigatório")]
         [StringLength(50, ErrorMessage = "O bairro deve ter no máximo 50 caracteres")]
@@ -44,6 +44,6 @@ namespace WebApplicationPods.Models
         // Relacionamento
         [ForeignKey("ClienteId")]
         [ValidateNever] // <- evita validar Cliente.Nome/Email/etc ao validar Endereco
-        public ClienteModel Cliente { get; set; }
+        public ClienteModel? Cliente { get; set; }
     }
 }

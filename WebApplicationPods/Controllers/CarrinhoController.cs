@@ -2,11 +2,13 @@
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Linq;
 using WebApplicationPods.Enum;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
+using WebApplicationPods.Repository.Repository;
 using WebApplicationPods.Services;
 
 namespace WebApplicationPods.Controllers
@@ -18,24 +20,26 @@ namespace WebApplicationPods.Controllers
         private readonly IClienteRepository _clienteRepository;
         private readonly IPedidoRepository _pedidoRepository;
         private readonly IClienteRememberService _remember;
+        private readonly ILojaConfigRepository _lojaRepo; // loja
 
         public CarrinhoController(
             ICarrinhoRepository carrinhoRepository,
             IProdutoRepository produtoRepository,
             IClienteRepository clienteRepository,
             IPedidoRepository pedidoRepository,
-            IClienteRememberService remember)
+            IClienteRememberService remember,
+            ILojaConfigRepository lojaRepo)
         {
             _carrinhoRepository = carrinhoRepository;
             _produtoRepository = produtoRepository;
             _clienteRepository = clienteRepository;
             _pedidoRepository = pedidoRepository;
             _remember = remember;
+            _lojaRepo = lojaRepo;
         }
 
         // =================== Helpers ===================
 
-        // Grava o token de rastreio do último pedido em cookie (30 dias)
         private void SetLastOrderCookie(string? token)
         {
             if (string.IsNullOrWhiteSpace(token)) return;
@@ -43,8 +47,8 @@ namespace WebApplicationPods.Controllers
             var opts = new CookieOptions
             {
                 Expires = DateTimeOffset.UtcNow.AddDays(30),
-                HttpOnly = false,                 // true se não precisar ler via JS
-                Secure = Request.IsHttps,       // em produção com HTTPS = true
+                HttpOnly = false,
+                Secure = Request.IsHttps,
                 SameSite = SameSiteMode.Lax,
                 IsEssential = true
             };
@@ -62,11 +66,9 @@ namespace WebApplicationPods.Controllers
             return produto.Estoque;
         }
 
-        // Atualização: quantidade ABSOLUTA não pode exceder o disponível
         private bool ValidarEstoqueAtualizacao(ProdutoModel produto, int quantidade, string sabor, out string mensagemErro)
         {
             mensagemErro = string.Empty;
-
             var disponivel = ObterEstoqueDisponivel(produto, sabor);
 
             if (quantidade > disponivel)
@@ -76,17 +78,14 @@ namespace WebApplicationPods.Controllers
                     : $"Estoque insuficiente para o sabor {sabor}. Disponível: {disponivel}";
                 return false;
             }
-
             return true;
         }
 
-        // Adição: quantidade no carrinho + novaQtd não pode exceder o disponível
         private bool ValidarEstoqueAoAdicionar(ProdutoModel produto, int novaQtd, string sabor, out string mensagemErro)
         {
             mensagemErro = string.Empty;
 
             var disponivel = ObterEstoqueDisponivel(produto, sabor);
-
             var carrinho = _carrinhoRepository.ObterCarrinho();
             var chaveSabor = sabor ?? string.Empty;
 
@@ -102,32 +101,25 @@ namespace WebApplicationPods.Controllers
                     : $"Você já tem {existente} do sabor {sabor}. Só é possível adicionar mais {resto} (estoque total {disponivel}).";
                 return false;
             }
-
             return true;
         }
 
         private PaymentMethod? MapearMetodoPagamento(string metodo)
         {
             if (string.IsNullOrWhiteSpace(metodo)) return null;
-
             metodo = metodo.Trim().ToLowerInvariant();
 
             return metodo switch
             {
                 "dinheiro" => PaymentMethod.Cash,
                 "pix" => PaymentMethod.Pix,
-                "cartão de crédito" => PaymentMethod.CardCredit,
-                "cartao de credito" => PaymentMethod.CardCredit,
-                "cartão de débito" => PaymentMethod.CardDebit,
-                "cartao de debito" => PaymentMethod.CardDebit,
+                "cartão de crédito" or "cartao de credito" => PaymentMethod.CardCredit,
+                "cartão de débito" or "cartao de debito" => PaymentMethod.CardDebit,
                 _ => (PaymentMethod?)null
             };
         }
 
-        private decimal CalcularTaxaEntrega(EnderecoModel endereco)
-        {
-            return 5m; // ajuste sua regra aqui
-        }
+        private decimal CalcularTaxaEntrega(EnderecoModel endereco) => 5m;
 
         // =================== Actions ===================
 
@@ -180,6 +172,9 @@ namespace WebApplicationPods.Controllers
                 (novoId.HasValue ? enderecos.FirstOrDefault(e => e.Id == novoId.Value) : null)
                 ?? enderecos.FirstOrDefault(e => e.Principal);
 
+            // 🔹 Envia a loja para a View (box de retirada)
+            ViewBag.Loja = _lojaRepo.ObterDoLojistaAtual();
+
             var vm = new ResumoPedidoViewModel
             {
                 Carrinho = carrinho,
@@ -189,9 +184,7 @@ namespace WebApplicationPods.Controllers
                 EnderecoEntrega = enderecoSelecionado,
                 Observacoes = "",
                 RetiradaNoLocal = false,
-
-                // MOSTRAR MODAL na primeira visita desta sessão
-                PrecisaConfirmar = HttpContext.Session.GetString("ClienteConfirmado") != "1",
+                PrecisaConfirmar = true,
                 ReturnUrl = Url.Action(nameof(Resumo), "Carrinho")
             };
 
@@ -204,19 +197,12 @@ namespace WebApplicationPods.Controllers
         {
             HttpContext.Session.SetString("ClienteConfirmado", "1");
 
-            // Se for AJAX (usamos X-Requested-With), retorna 200 OK para o JS
             if (string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest",
                 StringComparison.OrdinalIgnoreCase))
-            {
                 return Ok();
-            }
 
-            // Fallback (sem JS)
             return RedirectToAction(nameof(Resumo));
         }
-
-
-
 
         public IActionResult Confirmacao(int id)
         {
@@ -227,24 +213,17 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction("Index");
             }
 
-            ViewBag.PedidoId = pedido.Id; // ex.: usar no layout/botões
+            ViewBag.PedidoId = pedido.Id;
             return View(pedido);
         }
 
-
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult AdicionarItem(
-        int produtoId,
-        int quantidade,
-        string? sabor = null,
-        string? observacoes = null,
-        bool buyNow = false)
+        public IActionResult AdicionarItem(int produtoId, int quantidade, string? sabor = null,
+                                           string? observacoes = null, bool buyNow = false)
         {
-            bool isAjax = string.Equals(
-                Request.Headers["X-Requested-With"],
-                "XMLHttpRequest",
-                StringComparison.OrdinalIgnoreCase);
+            bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest",
+                             StringComparison.OrdinalIgnoreCase);
 
             try
             {
@@ -270,14 +249,11 @@ namespace WebApplicationPods.Controllers
                 var carrinho = _carrinhoRepository.ObterCarrinho();
                 var count = carrinho?.Itens?.Sum(i => i.Quantidade) ?? 0;
 
-                if (isAjax)
-                {
-                    return Json(new { ok = true, count, nome = produto.Nome, buyNow });
-                }
+                if (isAjax) return Json(new { ok = true, count, nome = produto.Nome, buyNow });
 
                 TempData["Sucesso"] = $"{produto.Nome} adicionado ao carrinho!";
                 return buyNow ? RedirectToAction("Resumo", "Carrinho")
-              : RedirectToAction("Index", "Home");
+                              : RedirectToAction("Index", "Home");
             }
             catch
             {
@@ -296,16 +272,12 @@ namespace WebApplicationPods.Controllers
             return Json(new { count });
         }
 
-        // --- helper de estoque (exemplo) ---
-
-
-
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult AtualizarItem(int produtoId, int? quantidade, string? sabor, string? op)
         {
-            bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+            bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest",
+                             StringComparison.OrdinalIgnoreCase);
 
             try
             {
@@ -323,16 +295,11 @@ namespace WebApplicationPods.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
-                // Determina a nova quantidade
                 var novaQtd = item.Quantidade;
-                if (string.Equals(op, "inc", StringComparison.OrdinalIgnoreCase))
-                    novaQtd = item.Quantidade + 1;
-                else if (string.Equals(op, "dec", StringComparison.OrdinalIgnoreCase))
-                    novaQtd = item.Quantidade - 1;
-                else if (quantidade.HasValue)
-                    novaQtd = quantidade.Value;
+                if (string.Equals(op, "inc", StringComparison.OrdinalIgnoreCase)) novaQtd = item.Quantidade + 1;
+                else if (string.Equals(op, "dec", StringComparison.OrdinalIgnoreCase)) novaQtd = item.Quantidade - 1;
+                else if (quantidade.HasValue) novaQtd = quantidade.Value;
 
-                // Carrega produto e calcula estoque máximo (por sabor ou geral)
                 var produto = _produtoRepository.ObterPorId(produtoId);
                 if (produto == null)
                 {
@@ -353,9 +320,7 @@ namespace WebApplicationPods.Controllers
                 }
                 if (maxPermitido < 1) maxPermitido = 1;
 
-                // Clamp no servidor
                 if (novaQtd < 1) novaQtd = 1;
-
                 if (novaQtd > maxPermitido)
                 {
                     novaQtd = maxPermitido;
@@ -366,21 +331,10 @@ namespace WebApplicationPods.Controllers
                 item.Quantidade = novaQtd;
                 _carrinhoRepository.SalvarCarrinho(carrinho);
 
-                // Total de itens no carrinho (para o badge)
                 var count = carrinho.Itens.Sum(i => i.Quantidade);
-                // Total monetário do carrinho (para o card de resumo)
                 var total = carrinho.Total.ToString("C", CultureInfo.GetCultureInfo("pt-BR"));
 
-                if (isAjax)
-                {
-                    return Json(new
-                    {
-                        ok = true,
-                        count,
-                        total,
-                        message = "Quantidade atualizada."
-                    });
-                }
+                if (isAjax) return Json(new { ok = true, count, total, message = "Quantidade atualizada." });
 
                 TempData["Sucesso"] ??= "Quantidade atualizada.";
                 return RedirectToAction(nameof(Index));
@@ -397,7 +351,8 @@ namespace WebApplicationPods.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult RemoverItem(int produtoId, string? sabor)
         {
-            bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+            bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest",
+                             StringComparison.OrdinalIgnoreCase);
 
             try
             {
@@ -423,17 +378,7 @@ namespace WebApplicationPods.Controllers
                 var nomeProduto = item.Produto.Nome;
                 var isEmpty = !carrinho.Itens.Any();
 
-                if (isAjax)
-                {
-                    return Json(new
-                    {
-                        ok = true,
-                        count,
-                        total,
-                        isEmpty,
-                        message = $"{nomeProduto} removido do carrinho."
-                    });
-                }
+                if (isAjax) return Json(new { ok = true, count, total, isEmpty, message = $"{nomeProduto} removido do carrinho." });
 
                 TempData["Sucesso"] = $"{nomeProduto} removido do carrinho.";
                 return RedirectToAction(nameof(Index));
@@ -487,7 +432,7 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction("Resumo");
             }
 
-            EnderecoModel enderecoSelecionado = null;
+            EnderecoModel? enderecoSelecionado = null;
             if (!model.RetiradaNoLocal)
             {
                 enderecoSelecionado = _clienteRepository.ObterEnderecos(cliente.Id)
@@ -500,26 +445,37 @@ namespace WebApplicationPods.Controllers
                 }
             }
 
-            var taxaEntrega = model.RetiradaNoLocal ? 0m : CalcularTaxaEntrega(enderecoSelecionado);
-
             var pedido = new PedidoModel
             {
                 ClienteId = cliente.Id,
-                EnderecoId = model.RetiradaNoLocal ? 0 : (enderecoSelecionado?.Id ?? 0),
+                EnderecoId = model.RetiradaNoLocal ? (int?)null : enderecoSelecionado!.Id,
                 DataPedido = DateTime.Now,
                 Status = "Pendente",
                 ValorTotal = carrinho.Total,
-                TaxaEntrega = taxaEntrega,
-                MetodoPagamento = model.MetodoPagamento,
+                TaxaEntrega = model.RetiradaNoLocal ? 0m : CalcularTaxaEntrega(enderecoSelecionado!),
+                MetodoPagamento = model.MetodoPagamento!,
+                Observacoes = model.Observacoes,
+                RetiradaNoLocal = model.RetiradaNoLocal,
                 CodigoTransacao = Guid.NewGuid().ToString(),
                 PedidoItens = carrinho.Itens.Select(i => new PedidoItemModel
                 {
                     ProdutoId = i.Produto.Id,
                     Quantidade = i.Quantidade,
                     PrecoUnitario = i.Produto.Preco,
-                    Observacoes = model.Observacoes
+                    Observacoes = i.Observacoes
                 }).ToList()
             };
+
+            if (model.RetiradaNoLocal)
+            {
+                var loja = _lojaRepo.ObterDoLojistaAtual();
+                if (loja != null)
+                {
+                    pedido.LojaNome = loja.Nome;
+                    pedido.LojaEnderecoTexto = loja.EnderecoTexto;
+                    pedido.LojaMapsUrl = loja.MapsUrl;
+                }
+            }
 
             bool pagaNaEntrega = (metodo == PaymentMethod.Cash) || (metodo == PaymentMethod.CardDebit);
 
@@ -528,12 +484,8 @@ namespace WebApplicationPods.Controllers
                 pedido.Status = "Aguardando Pagamento (Entrega)";
                 _pedidoRepository.Adicionar(pedido);
 
-                // grava token p/ rastreio
                 SetLastOrderCookie(pedido.RastreioToken);
-
                 _carrinhoRepository.LimparCarrinho();
-
-                // 🔽🔽🔽 RESET da confirmação para o PRÓXIMO pedido
                 HttpContext.Session.Remove("ClienteConfirmado");
 
                 TempData["Sucesso"] = "Pedido realizado com sucesso! Pagamento na entrega.";
@@ -544,10 +496,7 @@ namespace WebApplicationPods.Controllers
                 pedido.Status = "Pendente";
                 _pedidoRepository.Adicionar(pedido);
 
-                // grava token p/ rastreio
                 SetLastOrderCookie(pedido.RastreioToken);
-
-                // 🔽🔽🔽 RESET da confirmação para o PRÓXIMO pedido
                 HttpContext.Session.Remove("ClienteConfirmado");
 
                 return RedirectToAction("Checkout", "Pagamento", new { pedidoId = pedido.Id });
@@ -558,82 +507,44 @@ namespace WebApplicationPods.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult AtualizarEndereco(int ClienteId, EnderecoModel endereco)
-        {
-            endereco.ClienteId = ClienteId;
-            endereco.Estado = (endereco.Estado ?? "").Trim().ToUpper();
-            var apenasNum = new string((endereco.CEP ?? "").Where(char.IsDigit).ToArray());
-            if (apenasNum.Length == 8)
-                endereco.CEP = $"{apenasNum[..5]}-{apenasNum[5..]}";
-
-            ModelState.Remove(nameof(endereco.Cliente));
-            ModelState.Remove(nameof(endereco.ClienteId));
-            ModelState.Clear();
-
-            if (!TryValidateModel(endereco, prefix: ""))
-            {
-                TempData["Erro"] = "Verifique os campos do endereço.";
-                return RedirectToAction(nameof(Resumo));
-            }
-
-            var cliente = _clienteRepository.ObterPorId(ClienteId);
-            if (cliente == null)
-            {
-                TempData["Erro"] = "Cliente não encontrado.";
-                return RedirectToAction(nameof(Resumo));
-            }
-
-            try
-            {
-                var atualizado = _clienteRepository.AtualizarEndereco(endereco);
-
-                if (endereco.Principal)
-                    _clienteRepository.DefinirEnderecoPrincipal(ClienteId, endereco.Id);
-
-                TempData["EnderecoNovoId"] = endereco.Id;
-                TempData["Sucesso"] = "Endereço atualizado com sucesso!";
-                return RedirectToAction(nameof(Resumo));
-            }
-            catch (Exception ex)
-            {
-                TempData["Erro"] = $"Não foi possível atualizar o endereço: {ex.Message}";
-                return RedirectToAction(nameof(Resumo));
-            }
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
         public IActionResult AdicionarEndereco(int ClienteId, [Bind(Prefix = "EnderecoNovo")] EnderecoModel endereco)
         {
-            endereco.ClienteId = ClienteId;
-            endereco.Estado = (endereco.Estado ?? "").Trim().ToUpper();
-            var dig = new string((endereco.CEP ?? "").Where(char.IsDigit).ToArray());
-            if (dig.Length == 8) endereco.CEP = $"{dig[..5]}-{dig[5..]}";
-
-            ModelState.Remove(nameof(endereco.Cliente));
-            ModelState.Remove(nameof(endereco.ClienteId));
-            ModelState.Clear();
-
-            if (!TryValidateModel(endereco, prefix: ""))
-            {
-                TempData["Erro"] = "Verifique os campos do novo endereço.";
-                return RedirectToAction(nameof(Resumo));
-            }
-
-            var cliente = _clienteRepository.ObterPorId(ClienteId);
-            if (cliente == null)
-            {
-                TempData["Erro"] = "Cliente não encontrado.";
-                return RedirectToAction(nameof(Resumo));
-            }
-
             try
             {
-                var jaExiste = _clienteRepository.ObterEnderecos(ClienteId)?.Any(e =>
+                endereco.ClienteId = ClienteId;
+                endereco.Estado = (endereco.Estado ?? "").Trim().ToUpper();
+
+                // Formatar CEP para o padrão 00000-000
+                var dig = new string((endereco.CEP ?? "").Where(char.IsDigit).ToArray());
+                if (dig.Length == 8)
+                    endereco.CEP = $"{dig[..5]}-{dig[5..]}";
+
+                // Validar usando DataAnnotations do modelo
+                var validationContext = new ValidationContext(endereco, null, null);
+                var validationResults = new List<ValidationResult>();
+                bool isValid = Validator.TryValidateObject(endereco, validationContext, validationResults, true);
+
+                if (!isValid)
+                {
+                    TempData["Erro"] = "Verifique os campos do novo endereço: " +
+                                      string.Join(", ", validationResults.Select(v => v.ErrorMessage));
+                    return RedirectToAction(nameof(Resumo));
+                }
+
+                var cliente = _clienteRepository.ObterPorId(ClienteId);
+                if (cliente == null)
+                {
+                    TempData["Erro"] = "Cliente não encontrado.";
+                    return RedirectToAction(nameof(Resumo));
+                }
+
+                // Verificar se endereço já existe
+                var enderecosExistentes = _clienteRepository.ObterEnderecos(ClienteId) ?? new List<EnderecoModel>();
+                var jaExiste = enderecosExistentes.Any(e =>
                     string.Equals((e.CEP ?? ""), endereco.CEP ?? "", StringComparison.OrdinalIgnoreCase) &&
                     string.Equals((e.Logradouro ?? "").Trim(), (endereco.Logradouro ?? "").Trim(), StringComparison.OrdinalIgnoreCase) &&
                     string.Equals((e.Numero ?? "").Trim(), (endereco.Numero ?? "").Trim(), StringComparison.OrdinalIgnoreCase)
-                ) == true;
+                );
 
                 if (jaExiste)
                 {
@@ -641,8 +552,8 @@ namespace WebApplicationPods.Controllers
                     return RedirectToAction(nameof(Resumo));
                 }
 
-                var possuiEnderecos = _clienteRepository.ObterEnderecos(ClienteId)?.Any() == true;
-                endereco.Principal = !possuiEnderecos;
+                // Definir como principal se for o primeiro endereço
+                endereco.Principal = !enderecosExistentes.Any();
 
                 var salvo = _clienteRepository.AdicionarEndereco(ClienteId, endereco);
 
@@ -656,6 +567,55 @@ namespace WebApplicationPods.Controllers
             catch (Exception ex)
             {
                 TempData["Erro"] = $"Não foi possível salvar o endereço: {ex.Message}";
+                return RedirectToAction(nameof(Resumo));
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult AtualizarEndereco(int ClienteId, EnderecoModel endereco)
+        {
+            try
+            {
+                endereco.ClienteId = ClienteId;
+                endereco.Estado = (endereco.Estado ?? "").Trim().ToUpper();
+
+                // Formatar CEP para o padrão 00000-000
+                var dig = new string((endereco.CEP ?? "").Where(char.IsDigit).ToArray());
+                if (dig.Length == 8)
+                    endereco.CEP = $"{dig[..5]}-{dig[5..]}";
+
+                // Validar usando DataAnnotations do modelo
+                var validationContext = new ValidationContext(endereco, null, null);
+                var validationResults = new List<ValidationResult>();
+                bool isValid = Validator.TryValidateObject(endereco, validationContext, validationResults, true);
+
+                if (!isValid)
+                {
+                    TempData["Erro"] = "Verifique os campos do endereço: " +
+                                      string.Join(", ", validationResults.Select(v => v.ErrorMessage));
+                    return RedirectToAction(nameof(Resumo));
+                }
+
+                var cliente = _clienteRepository.ObterPorId(ClienteId);
+                if (cliente == null)
+                {
+                    TempData["Erro"] = "Cliente não encontrado.";
+                    return RedirectToAction(nameof(Resumo));
+                }
+
+                var atualizado = _clienteRepository.AtualizarEndereco(endereco);
+
+                if (endereco.Principal)
+                    _clienteRepository.DefinirEnderecoPrincipal(ClienteId, endereco.Id);
+
+                TempData["EnderecoNovoId"] = endereco.Id;
+                TempData["Sucesso"] = "Endereço atualizado com sucesso!";
+                return RedirectToAction(nameof(Resumo));
+            }
+            catch (Exception ex)
+            {
+                TempData["Erro"] = $"Não foi possível atualizar o endereço: {ex.Message}";
                 return RedirectToAction(nameof(Resumo));
             }
         }

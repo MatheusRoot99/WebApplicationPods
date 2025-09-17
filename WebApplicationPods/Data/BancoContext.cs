@@ -115,6 +115,19 @@ namespace WebApplicationPods.Data
                 .HasForeignKey(i => i.PedidoId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<PedidoModel>()
+                .HasOne(p => p.Endereco)
+                .WithMany() // ou .WithMany(e => e.Pedidos) se existir
+                .HasForeignKey(p => p.EnderecoId)
+                .OnDelete(DeleteBehavior.Restrict); // evita cascata acidental
+
+            modelBuilder.Entity<EnderecoModel>(b =>
+            {
+                b.Property(e => e.Principal)
+                 .HasDefaultValue(false)
+                 .IsRequired();
+                // (opcional) reforçar tamanhos/requireds conforme DataAnnotations
+            });
 
             // TODO: adicione aqui outras configurações de domínio (tamanhos, required, etc.)
         }

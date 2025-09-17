@@ -5,20 +5,36 @@
 
 @{
     ViewData["Title"] = "Configurações da Loja";
-    // Checa a política "Admin" que você registrou no Program.cs
     var authResult = await Authz.AuthorizeAsync(User, policyName: "Admin");
     var isAdmin = authResult.Succeeded || (User?.Identity?.IsAuthenticated == true && User.IsInRole("Admin"));
 }
+
 <link rel="stylesheet" href="~/css/loja-settings.css" asp-append-version="true" />
 
 <div class="container py-4 loja-settings" id="loja-settings">
     <h3 class="mb-3"><i class="fas fa-store me-2"></i>Configurações da Loja</h3>
 
-    <!-- FORM PRINCIPAL (Editar) -->
+    @if (TempData["Sucesso"] is string okMsg)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check2-circle me-2"></i>@okMsg
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger">
+            <strong>Corrija os campos abaixo.</strong>
+        </div>
+    }
+
+    <!-- FORM PRINCIPAL -->
     <form asp-action="Editar" method="post" enctype="multipart/form-data" class="card p-3 shadow-sm">
+        @Html.AntiForgeryToken()
         <input asp-for="Id" type="hidden" />
 
         <div class="row g-3">
+            <!-- Identidade -->
             <div class="col-md-6">
                 <label asp-for="Nome" class="form-label">Nome do Estabelecimento</label>
                 <input asp-for="Nome" class="form-control" />
@@ -38,6 +54,7 @@
                 <span asp-validation-for="LogoPath" class="text-danger"></span>
             </div>
 
+            <!-- Funcionamento -->
             <div class="col-sm-6 col-md-3">
                 <label class="form-label">Abre às</label>
                 <input asp-for="HorarioAbertura" type="time" class="form-control" />
@@ -53,17 +70,18 @@
 
             <div class="col-md-6">
                 <label class="form-label d-block">Dias abertos</label>
+                @* IMPORTANTE: usar array DiasAbertosSelecionados para combinar no POST *@
                 @foreach (DiasSemanaFlags d in Enum.GetValues(typeof(DiasSemanaFlags)))
                 {
                     if (d == DiasSemanaFlags.Nenhum || d == DiasSemanaFlags.Todos) { continue; }
                     <div class="form-check form-check-inline">
                         <input class="form-check-input" type="checkbox"
-                               name="DiasAbertos" value="@((int)d)"
+                               name="DiasAbertosSelecionados"
+                               value="@((int)d)"
                                @(Model.DiasAbertos.HasFlag(d) ? "checked" : "") />
                         <label class="form-check-label">@d</label>
                     </div>
                 }
-                <input type="hidden" name="DiasAbertos" value="0" />
             </div>
 
             <div class="col-md-3">
@@ -85,6 +103,89 @@
                 <input asp-for="MensagemStatus" class="form-control" placeholder="Ex.: Voltamos às 19h" />
                 <span asp-validation-for="MensagemStatus" class="text-danger"></span>
             </div>
+
+            <hr class="my-3" />
+
+            <!-- ENDEREÇO DA LOJA -->
+            <div class="col-12">
+                <h5 class="mb-2"><i class="bi bi-geo-alt-fill me-2"></i>Endereço da Loja (para “Retirar no local”)</h5>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="Logradouro" class="form-label">Logradouro</label>
+                <input asp-for="Logradouro" class="form-control" />
+                <span asp-validation-for="Logradouro" class="text-danger"></span>
+            </div>
+            <div class="col-md-2">
+                <label asp-for="Numero" class="form-label">Número</label>
+                <input asp-for="Numero" class="form-control" />
+                <span asp-validation-for="Numero" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Complemento" class="form-label">Complemento</label>
+                <input asp-for="Complemento" class="form-control" />
+                <span asp-validation-for="Complemento" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="Bairro" class="form-label">Bairro</label>
+                <input asp-for="Bairro" class="form-control" />
+                <span asp-validation-for="Bairro" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Cidade" class="form-label">Cidade</label>
+                <input asp-for="Cidade" class="form-control" />
+                <span asp-validation-for="Cidade" class="text-danger"></span>
+            </div>
+            <div class="col-md-2">
+                <label asp-for="Estado" class="form-label">UF</label>
+                <input asp-for="Estado" class="form-control text-uppercase" maxlength="2" />
+                <span asp-validation-for="Estado" class="text-danger"></span>
+            </div>
+            <div class="col-md-2">
+                <label asp-for="Cep" class="form-label">CEP</label>
+                <input asp-for="Cep" class="form-control" placeholder="00000-000" />
+                <span asp-validation-for="Cep" class="text-danger"></span>
+            </div>
+
+            <!-- MAPS / GEO -->
+            <div class="col-12">
+                <h6 class="mt-2">Localização para o Google Maps</h6>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label asp-for="Latitude" class="form-label">Latitude</label>
+                        <input asp-for="Latitude" class="form-control" step="any" />
+                        <span asp-validation-for="Latitude" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="Longitude" class="form-label">Longitude</label>
+                        <input asp-for="Longitude" class="form-control" step="any" />
+                        <span asp-validation-for="Longitude" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="MapsPlaceUrl" class="form-label">URL do Google Maps (opcional)</label>
+                        <input asp-for="MapsPlaceUrl" class="form-control" placeholder="Cole a URL do place se já tiver" />
+                        <span class="form-text">Se preencher, tem prioridade sobre endereço. Se também informar lat/lng, lat/lng têm prioridade máxima.</span>
+                        <span asp-validation-for="MapsPlaceUrl" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="mt-3 p-3 border rounded bg-light">
+                    <div class="small text-muted">Endereço completo (visual):</div>
+                    <div id="enderecoPreview" class="fw-semibold">@Model.EnderecoTexto</div>
+
+                    <div class="small text-muted mt-2">URL de rotas (preview):</div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <input id="mapsUrlPreview" class="form-control" readonly value="@Model.MapsUrl" />
+                        <a id="btnAbrirMaps" class="btn btn-primary" target="_blank" rel="noopener">
+                            <i class="bi bi-geo-alt"></i> Abrir no Maps
+                        </a>
+                        <button type="button" id="btnCopyMaps" class="btn btn-outline-secondary">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="mt-3 d-flex gap-2">
@@ -93,7 +194,7 @@
         </div>
     </form>
 
-    @* FORM SEPARADO (apenas Admin): Limpar duplicatas *@
+    @* Admin: utilitário para limpar duplicatas *@
     @if (isAdmin)
     {
         <form asp-action="LimparDuplicatas" method="post" class="mt-3">
@@ -107,4 +208,77 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        // helpers simples
+        const $ = (q) => document.querySelector(q);
+
+        function montaEndereco() {
+            const log = $('#Logradouro')?.value?.trim() || '';
+            const num = $('#Numero')?.value?.trim() || '';
+            const comp = $('#Complemento')?.value?.trim() || '';
+            const bai = $('#Bairro')?.value?.trim() || '';
+            const cid = $('#Cidade')?.value?.trim() || '';
+            const uf = ($('#Estado')?.value || '').trim().toUpperCase();
+            const cep = $('#Cep')?.value?.trim() || '';
+
+            let p1 = log && num ? `${log}, ${num}` : (log || num);
+            let p2 = comp;
+            let cidadeUf = cid && uf ? `${cid}/${uf}` : (cid || uf);
+            let p3 = bai && cidadeUf ? `${bai} - ${cidadeUf}` : (bai || cidadeUf);
+            let partes = [p1, p2, p3, cep].filter(x => x && x.length > 0);
+            return partes.join(', ');
+        }
+
+        function montaMapsUrl() {
+            const lat = parseFloat($('#Latitude')?.value);
+            const lng = parseFloat($('#Longitude')?.value);
+            const placeUrl = $('#MapsPlaceUrl')?.value?.trim();
+
+            if (!isNaN(lat) && !isNaN(lng)) {
+                return `https://www.google.com/maps/dir/?api=1&destination=${lat.toString()}%2C${lng.toString()}`;
+            }
+            if (placeUrl) return placeUrl;
+
+            const end = montaEndereco();
+            const q = encodeURIComponent(end);
+            return `https://www.google.com/maps/dir/?api=1&destination=${q}`;
+        }
+
+        function atualizarPreviews() {
+            $('#enderecoPreview').textContent = montaEndereco();
+            const url = montaMapsUrl();
+            $('#mapsUrlPreview').value = url;
+            $('#btnAbrirMaps').setAttribute('href', url);
+        }
+
+        // Eventos
+        ['#Logradouro','#Numero','#Complemento','#Bairro','#Cidade','#Estado','#Cep','#Latitude','#Longitude','#MapsPlaceUrl']
+            .forEach(id => { $(id)?.addEventListener('input', atualizarPreviews); });
+
+        // CEP máscara simples
+        $('#Cep')?.addEventListener('input', (e) => {
+            let v = e.target.value.replace(/\D/g,'').slice(0,8);
+            if (v.length > 5) v = v.slice(0,5) + '-' + v.slice(5);
+            e.target.value = v;
+        });
+        // UF em maiúsculas, max 2
+        $('#Estado')?.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^A-Za-z]/g,'').slice(0,2).toUpperCase();
+        });
+
+        // copiar URL
+        $('#btnCopyMaps')?.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText($('#mapsUrlPreview').value);
+                const btn = $('#btnCopyMaps');
+                const old = btn.innerHTML;
+                btn.innerHTML = '<i class="bi bi-clipboard-check"></i>';
+                setTimeout(() => btn.innerHTML = old, 1000);
+            } catch {}
+        });
+
+        // inicial
+        atualizarPreviews();
+    </script>
 }

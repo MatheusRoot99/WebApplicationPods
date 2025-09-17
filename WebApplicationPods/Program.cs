@@ -58,6 +58,21 @@ builder.Services
         o.JsonSerializerOptions.WriteIndented = true;
     });
 
+
+// depois de AddControllersWithViews()
+builder.Services.AddAntiforgery(o =>
+{
+    o.Cookie.Name = "Pods.AntiForgery";
+    o.Cookie.HttpOnly = true;
+    o.Cookie.SameSite = SameSiteMode.Lax;
+    // Em DEV, não force Secure, senão o cookie não vai em http://localhost
+    o.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
+
+    o.HeaderName = "RequestVerificationToken";
+});
+
 // Política "Admin"
 builder.Services.AddAuthorization(options =>
 {
@@ -149,6 +164,7 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 // ==================== Infra / Repositórios / Serviços ====================
 builder.Services.AddScoped<IProdutoRepository, ProdutoRepository>();
+builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<ICategoriaRepository, CategoriaRepository>();
 builder.Services.AddScoped<ICarrinhoRepository, CarrinhoRepository>();
 builder.Services.AddScoped<ICarrinhoService, CarrinhoService>();
@@ -156,7 +172,7 @@ builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
 builder.Services.AddScoped<IPedidoRepository, PedidoRepository>();
 builder.Services.AddScoped<IEmailSenderService, GmailEmailSenderService>();
 builder.Services.AddScoped<ILojaConfigService, LojaConfigService>();
-
+builder.Services.AddScoped<ILojaConfigRepository, LojaConfigRepository>();
 builder.Services.AddDataProtection();
 builder.Services.AddSingleton<IClienteRememberService, ClienteRememberService>();
 

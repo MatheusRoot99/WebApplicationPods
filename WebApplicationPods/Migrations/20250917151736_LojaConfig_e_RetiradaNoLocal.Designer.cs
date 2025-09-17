@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WebApplicationPods.Data;
 
@@ -11,9 +12,11 @@ using WebApplicationPods.Data;
 namespace WebApplicationPods.Migrations
 {
     [DbContext(typeof(BancoContext))]
-    partial class BancoContextModelSnapshot : ModelSnapshot
+    [Migration("20250917151736_LojaConfig_e_RetiradaNoLocal")]
+    partial class LojaConfig_e_RetiradaNoLocal
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -397,6 +400,7 @@ namespace WebApplicationPods.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Complemento")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
@@ -416,9 +420,7 @@ namespace WebApplicationPods.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<bool>("Principal")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
+                        .HasColumnType("bit");
 
                     b.HasKey("Id");
 

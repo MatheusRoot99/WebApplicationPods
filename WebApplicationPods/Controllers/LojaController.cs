@@ -1,5 +1,4 @@
-﻿
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApplicationPods.Data;
@@ -13,29 +12,45 @@ namespace WebApplicationPods.Controllers
     {
         private readonly ILojaConfigService _svc;
         private readonly IWebHostEnvironment _env;
-        private readonly BancoContext _db; // <-- AQUI
+        private readonly BancoContext _db;
 
         public LojaController(ILojaConfigService svc, IWebHostEnvironment env, BancoContext db)
         {
-            _svc = svc; _env = env; _db = db; // <-- AQUI
+            _svc = svc; _env = env; _db = db;
         }
 
         [HttpGet]
         public async Task<IActionResult> Editar()
         {
-            var cfg = await _svc.GetAsync();
+            var cfg = await _svc.GetAsync() ?? new LojaConfig();
             return View(cfg);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Editar(LojaConfig model, IFormFile? logoFile)
+        public async Task<IActionResult> Editar(
+            LojaConfig model,
+            IFormFile? logoFile,
+            [FromForm] int[]? DiasAbertosSelecionados)
         {
-            // Pega a config atual para, se trocar a logo, remover a antiga
-            var cfgAtual = await _svc.GetAsync();
-            var oldLogoPath = cfgAtual.LogoPath; // pode ser null
+            // 1) Dias Abertos (Flags)
+            model.DiasAbertos = DiasSemanaFlags.Nenhum;
+            if (DiasAbertosSelecionados is { Length: > 0 })
+            {
+                foreach (var v in DiasAbertosSelecionados)
+                    model.DiasAbertos |= (DiasSemanaFlags)v;
+            }
 
-            // Se veio arquivo, valida e salva usando tmp + move (atômico)
+            // 2) Normalizações de endereço
+            model.Estado = (model.Estado ?? "").Trim().ToUpper();
+            var dig = new string((model.Cep ?? "").Where(char.IsDigit).ToArray());
+            if (dig.Length == 8) model.Cep = $"{dig[..5]}-{dig[5..]}";
+
+            // 3) Carrega config atual pra reaproveitar/remover logo antiga
+            var cfgAtual = await _svc.GetAsync() ?? new LojaConfig();
+            var oldLogoPath = cfgAtual.LogoPath;
+
+            // 4) Upload de logo (com temp + move atômico)
             if (logoFile is { Length: > 0 })
             {
                 var ext = Path.GetExtension(logoFile.FileName).ToLowerInvariant();
@@ -51,20 +66,13 @@ namespace WebApplicationPods.Controllers
                     var fileName = $"logo_{DateTime.UtcNow.Ticks}{ext}";
                     var finalPath = Path.Combine(dir, fileName);
 
-                    // 1) grava primeiro em um arquivo temporário
                     var tempPath = Path.Combine(dir, $"{Guid.NewGuid():N}.tmp");
                     await using (var fs = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.Read))
-                    {
                         await logoFile.CopyToAsync(fs);
-                    }
 
-                    // 2) move atômico para o destino final
                     System.IO.File.Move(tempPath, finalPath, overwrite: true);
-
-                    // 3) atualiza o caminho público no model
                     model.LogoPath = $"/img/loja/{fileName}";
 
-                    // 4) remove a imagem antiga com try/catch silencioso
                     if (!string.IsNullOrWhiteSpace(oldLogoPath) &&
                         !string.Equals(oldLogoPath, model.LogoPath, StringComparison.OrdinalIgnoreCase))
                     {
@@ -83,32 +91,31 @@ namespace WebApplicationPods.Controllers
             }
             else
             {
-                // Se não enviou nova logo, mantém a existente
+                // sem nova logo -> mantém a existente
                 model.LogoPath = oldLogoPath;
             }
 
             if (!ModelState.IsValid)
                 return View(model);
 
+            // 5) Persiste (o service garante LojistaUserId do usuário atual)
             await _svc.UpsertAsync(model);
             TempData["Sucesso"] = "Configurações da loja atualizadas!";
             return RedirectToAction(nameof(Editar));
         }
-
 
         [Authorize(Roles = "Admin")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> LimparDuplicatas()
         {
-            // Se for multi-loja, filtre por LojistaUserId aqui.
             var all = await _db.LojaConfigs
                 .OrderByDescending(x => x.UpdatedAt)
                 .ToListAsync();
 
             if (all.Count > 1)
             {
-                var keep = all.First();        // mais recente
+                var keep = all.First();
                 var remove = all.Skip(1).ToList();
                 _db.LojaConfigs.RemoveRange(remove);
                 await _db.SaveChangesAsync();
