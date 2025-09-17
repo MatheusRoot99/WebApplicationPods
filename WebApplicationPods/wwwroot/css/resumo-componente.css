@@ -5,15 +5,18 @@
     --brand-start: #6a11cb; /* roxo */
     --brand-end: #2575fc; /* azul */
     --brand-soft: #F2E9FF; /* roxo bem claro */
-    /* mapeamento legado */
+    /* legado mapeado p/ nova paleta */
     --orange: var(--brand-start);
     --orange-dark: var(--brand-end);
     --orange-light: #7c6cf8;
     --orange-soft: var(--brand-soft);
     --black: #000;
     --black-soft: #222;
+    --gray-900: #1b1b1b;
     --gray-dark: #424242;
     --gray-medium: #757575;
+    --gray-200: #ececec;
+    --gray-100: #f6f7fb;
     --gray-light: #F5F5F5;
     --white: #fff;
     --shadow-sm: 0 1px 3px rgba(0,0,0,.12);
@@ -21,56 +24,259 @@
     --shadow-lg: 0 10px 25px rgba(0,0,0,.10);
     --border-radius: 12px;
     --border-radius-sm: 8px;
-    --mbn-height: 68px; /* altura do bottom-nav mobile (se houver) */
+    --mbn-height: 68px;
 }
 
-/* gradiente/CTA */
+/* ===================== */
+/* GERAIS / CARDS        */
+/* ===================== */
+.container-xxl {
+    scroll-margin-top: 24px
+}
+
+.card {
+    border: 0;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+}
+
+.card-header {
+    border: 0
+}
+
+.card .icon-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    background: rgba(255,255,255,.12)
+}
+
 .bg-gradient-orange {
     background: linear-gradient(135deg,var(--brand-start),var(--brand-end));
+}
+
+.text-orange {
+    color: var(--brand-end)
+}
+
+.bg-orange-soft {
+    background: var(--orange-soft)
+}
+
+.badge.bg-orange-soft {
+    background: var(--orange-soft);
+    color: var(--brand-end)
 }
 
 .btn-orange {
     background: linear-gradient(135deg,var(--brand-start),var(--brand-end));
     border-color: transparent;
-    color: #fff;
+    color: #fff
 }
 
     .btn-orange:hover {
         filter: brightness(1.05);
-        box-shadow: 0 8px 20px rgba(37,117,252,.25);
+        box-shadow: 0 8px 20px rgba(37,117,252,.25)
     }
 
-/* acentos */
-.badge.bg-orange-soft {
-    background: var(--orange-soft);
-    color: var(--brand-end);
-}
-
-.text-orange {
-    color: var(--brand-end);
-}
-
-.bg-orange-soft {
-    background: var(--orange-soft);
+.card-header.bg-dark {
+    background: #222;
+    color: #fff
 }
 
 /* inputs foco */
 .form-control:focus, .form-select:focus {
     border-color: var(--brand-end);
-    box-shadow: 0 0 0 .2rem rgba(37,117,252,.15);
+    box-shadow: 0 0 0 .2rem rgba(37,117,252,.15)
 }
 
-/* header escuro */
-.card-header.bg-dark {
-    background: #222;
+/* ===================== */
+/* SWITCH grande         */
+/* ===================== */
+.switch-lg .form-check-input {
+    width: 3rem;
+    height: 1.5rem
+}
+
+    .switch-lg .form-check-input:checked {
+        background-color: var(--brand-end);
+        border-color: var(--brand-end)
+    }
+
+/* ===================== */
+/* INFO-BOX (dados cli)  */
+/* ===================== */
+.info-box {
+    padding: .5rem .75rem;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius-sm);
+    background: #fff
+}
+
+/* ===================== */
+/* PICKUP-BOX            */
+/* ===================== */
+.pickup-box {
+    border: 1px dashed #28a745;
+    border-radius: 12px;
+    padding: 12px;
+    background: #f6fff8
+}
+
+    .pickup-box .title {
+        font-weight: 700
+    }
+
+/* ===================== */
+/* ENDEREÇO (card)       */
+/* ===================== */
+.address-card {
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    padding: 12px;
+    background: #fff
+}
+
+    .address-card.empty {
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+        color: var(--gray-medium);
+        font-size: .95rem;
+        min-height: 64px;
+        justify-content: flex-start
+    }
+
+    .address-card .empty-state i {
+        font-size: 1.25rem;
+        color: var(--gray-medium)
+    }
+
+.address-details {
+    line-height: 1.35
+}
+
+    .address-details div + div {
+        margin-top: .15rem
+    }
+
+/* ===================== */
+/* LISTA DE ITENS (lado) */
+/* ===================== */
+.order-items {
+    display: flex;
+    flex-direction: column;
+    gap: .75rem
+}
+
+.order-item {
+    display: flex;
+    align-items: center;
+    gap: .75rem
+}
+
+    .order-item + .order-item {
+        border-top: 1px dashed var(--gray-200);
+        padding-top: .75rem;
+        margin-top: .25rem
+    }
+
+.item-image {
+    position: relative;
+    width: 62px;
+    height: 62px;
+    flex: 0 0 62px
+}
+
+    .item-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 10px;
+        box-shadow: var(--shadow-sm)
+    }
+
+.item-quantity {
+    position: absolute;
+    right: -8px;
+    bottom: -8px;
+    background: var(--brand-end);
     color: #fff;
+    border-radius: 999px;
+    font-size: .75rem;
+    line-height: 1;
+    padding: .25rem .45rem;
+    border: 2px solid #fff
+}
+
+.item-details {
+    flex: 1 1 auto
+}
+
+.item-name {
+    margin: 0 0 .1rem 0
+}
+
+.item-flavor {
+    color: var(--gray-medium)
+}
+
+.item-price {
+    text-align: right;
+    min-width: 90px
+}
+
+/* ===================== */
+/* RESUMO (totais)       */
+/* ===================== */
+.order-summary {
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    padding: 12px;
+    background: #fff;
+    margin-top: .75rem
+}
+
+.summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .35rem .25rem
+}
+
+    .summary-row.total {
+        font-size: 1.05rem;
+        font-weight: 700
+    }
+
+/* ===================== */
+/* VAZIO                  */
+/* ===================== */
+.empty-cart {
+    text-align: center;
+    background: #fff;
+    border-radius: 16px;
+    padding: 2rem;
+    border: 1px dashed var(--gray-200)
+}
+
+.empty-icon {
+    width: 70px;
+    height: 70px;
+    display: grid;
+    place-items: center;
+    margin: 0 auto .6rem auto;
+    border-radius: 999px;
+    background: var(--orange-soft);
+    color: var(--brand-end);
+    font-size: 1.5rem
 }
 
 /* ===================== */
 /* PAGAMENTO (3 OPÇÕES)  */
 /* ===================== */
-
-/* Botão "selecionável" para os métodos de pagamento */
 .btn-payment {
     --ring: rgba(37,117,252,.18);
     display: flex;
@@ -84,114 +290,148 @@
     color: #111;
     border-radius: 12px;
     box-shadow: var(--shadow-sm);
-    transition: border-color .15s ease, box-shadow .15s ease, transform .05s ease, background-color .15s ease;
+    transition: border-color .15s ease,box-shadow .15s ease,transform .05s ease,background-color .15s ease;
     min-height: 54px;
-    text-align: center;
+    text-align: center
 }
 
     .btn-payment .payment-icon {
         font-size: 1.15rem;
         color: var(--brand-end);
-        line-height: 0;
+        line-height: 0
     }
 
     .btn-payment:hover {
         border-color: var(--brand-end);
-        background: var(--orange-soft);
+        background: var(--orange-soft)
     }
 
     .btn-payment:focus-visible {
         outline: none;
-        box-shadow: 0 0 0 .25rem var(--ring);
+        box-shadow: 0 0 0 .25rem var(--ring)
     }
-/* estado selecionado (com .btn-check do Bootstrap) */
+
 .btn-check:checked + .btn-payment {
     border-color: var(--brand-end);
     background: var(--orange-soft);
     color: var(--brand-end);
     box-shadow: 0 8px 20px rgba(37,117,252,.20);
-    transform: translateY(-1px);
+    transform: translateY(-1px)
 }
-/* mesma altura de label */
+
 .btn-payment span {
     display: inline-block;
-    line-height: 1.2;
+    line-height: 1.2
+}
+
+.payments-grid {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: .75rem
+}
+
+@media (max-width:600px) {
+    .payments-grid {
+        grid-template-columns: repeat(2,1fr)
+    }
+}
+
+@media (max-width:420px) {
+    .payments-grid {
+        grid-template-columns: 1fr
+    }
 }
 
 /* ===================== */
-/* QUANTIDADE NO RESUMO  */
+/* MODAIS                 */
 /* ===================== */
-.item-quantity {
-    background: var(--brand-end);
-    color: #fff;
+.modal-content {
+    border-radius: 16px;
+    box-shadow: var(--shadow-lg)
 }
 
-/* ===================== */
-/* MODAL CONFIRME DADOS  */
-/* ===================== */
 .confirm-modal .modal-header {
     background: linear-gradient(90deg,#8b5cf6,#2563eb);
-    color: #fff;
-}
-
-.confirm-line {
-    display: flex;
-    align-items: flex-start;
-    gap: .75rem;
-}
-
-.confirm-ico {
-    width: 44px;
-    height: 44px;
-    border-radius: 999px;
-    background: #eef2ff;
-    display: grid;
-    place-items: center;
+    color: #fff
 }
 
 .btn-confirm {
-    background: #ffbf00;
+    
     border-color: #ffbf00;
     color: #000;
     font-weight: 600;
+    width: 100%;
 }
 
+.btn-outline-warning {
+   /* color: #ffc107;*/
+    border-color: #ffc107;
+}
     .btn-confirm:hover {
         filter: brightness(.95);
-        color: #000;
+        color: #000
     }
 
+/* Modal Excluir */
+#excluirEnderecoModal .modal-header {
+    background: linear-gradient(135deg,#ef4444,#b91c1c);
+    color: #fff
+}
+
+#excluirEnderecoModal .form-text {
+    color: #7f1d1d
+}
+
 /* ===================== */
-/* MOBILE PADDING FIX    */
+/* ALERTAS               */
+/* ===================== */
+.alert {
+    border: 0;
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm)
+}
+
+.alert-success {
+    background: #ecfdf5;
+    color: #065f46
+}
+
+.alert-danger {
+    background: #fef2f2;
+    color: #991b1b
+}
+
+/* ===================== */
+/* MOBILE / STICKY       */
 /* ===================== */
 @media (max-width: 992px) {
     .container-xxl {
-        padding-bottom: calc(var(--mbn-height) + 24px + env(safe-area-inset-bottom,0px));
+        padding-bottom: calc(var(--mbn-height) + 24px + env(safe-area-inset-bottom,0px))
     }
 
     #formFinalizar .d-grid.mt-4 {
         position: sticky;
         bottom: calc(var(--mbn-height) + 8px + env(safe-area-inset-bottom,0px));
-        z-index: 3;
+        z-index: 3
     }
 
     #formFinalizar .btn-orange {
         padding-block: .95rem;
         border-radius: 12px;
         box-shadow: 0 8px 24px rgba(37,117,252,.25);
-        touch-action: manipulation;
+        touch-action: manipulation
     }
 
     .card-body {
-        padding: 1.1rem;
+        padding: 1.1rem
     }
 
     .card-header {
-        padding: .9rem 1.1rem;
+        padding: .9rem 1.1rem
     }
 
     .btn-payment {
-        padding: .95rem;
+        padding: .95rem
     }
 }
 
@@ -199,29 +439,36 @@
 @supports not (padding: max(0px)) {
     @media (max-width: 992px) {
         .container-xxl {
-            padding-bottom: calc(var(--mbn-height) + 24px);
+            padding-bottom: calc(var(--mbn-height) + 24px)
         }
 
         #formFinalizar .d-grid.mt-4 {
-            bottom: calc(var(--mbn-height) + 8px);
+            bottom: calc(var(--mbn-height) + 8px)
         }
     }
 }
 
-.payments-grid {
-    display: grid;
-    grid-template-columns: repeat(3,1fr);
-    gap: .75rem;
+/* Modal acima de qualquer bottom-nav fixa */
+.modal {
+    z-index: 1100;
 }
 
-@media (max-width: 600px) {
-    .payments-grid {
-        grid-template-columns: repeat(2,1fr);
-    }
+.modal-backdrop {
+    z-index: 1090;
 }
 
-@media (max-width: 420px) {
-    .payments-grid {
-        grid-template-columns: 1fr;
+/* Ao abrir modal, esconda/abaixe a bottom-nav (ajuste o seletor p/ o seu) */
+.modal-open .bottom-nav,
+.modal-open .mobile-bottom-nav {
+    z-index: 100 !important;
+    /* opcional: esconder totalmente
+  visibility: hidden;
+  */
+}
+
+/* Espaço extra no rodapé do modal p/ áreas seguras do iOS */
+@supports (padding: max(0px)) {
+    .modal .modal-footer {
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
     }
 }

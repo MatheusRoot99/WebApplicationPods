@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WebApplicationPods.Data;
 
@@ -11,9 +12,11 @@ using WebApplicationPods.Data;
 namespace WebApplicationPods.Migrations
 {
     [DbContext(typeof(BancoContext))]
-    partial class BancoContextModelSnapshot : ModelSnapshot
+    [Migration("20250917200121_AddUniquePrincipalIndexOnEnderecos")]
+    partial class AddUniquePrincipalIndexOnEnderecos
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -379,11 +382,6 @@ namespace WebApplicationPods.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<bool>("Ativo")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
                     b.Property<string>("Bairro")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -430,7 +428,7 @@ namespace WebApplicationPods.Migrations
                     b.HasIndex("ClienteId")
                         .IsUnique()
                         .HasDatabaseName("UX_Enderecos_PrincipalPorCliente")
-                        .HasFilter("[Principal] = 1 AND [Ativo] = 1");
+                        .HasFilter("[Principal] = 1");
 
                     b.ToTable("Enderecos");
                 });

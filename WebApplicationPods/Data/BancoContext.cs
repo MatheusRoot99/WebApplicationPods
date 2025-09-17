@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using WebApplicationPods.Models;
 
 namespace WebApplicationPods.Data
@@ -10,43 +11,38 @@ namespace WebApplicationPods.Data
     {
         public BancoContext(DbContextOptions<BancoContext> options) : base(options)
         {
-              //Cria o banco se não existir (útil para desenvolvimento)
-
+            // Em DEV: crie se não existir (opcional)
+            // Database.EnsureCreated();
         }
 
+        // ====== Suas entidades ======
         public DbSet<MerchantPaymentConfig> MerchantPaymentConfigs => Set<MerchantPaymentConfig>();
-
-        // ====== Suas entidades de domínio ======
         public DbSet<CategoriaModel> Categorias { get; set; }
         public DbSet<ProdutoModel> Produtos { get; set; }
         public DbSet<ClienteModel> Clientes { get; set; }
         public DbSet<EnderecoModel> Enderecos { get; set; }
         public DbSet<PedidoModel> Pedidos { get; set; }
         public DbSet<PedidoItemModel> PedidoItens { get; set; }
-        public DbSet<UsuarioModel> Usuarios { get; set; } // se você usa este modelo “cliente sem identity”
+        public DbSet<UsuarioModel> Usuarios { get; set; }
         public DbSet<CarrinhoModel> Carrinhos { get; set; }
         public DbSet<PaymentModel> Pagamentos { get; set; }
         public DbSet<LojaConfig> LojaConfigs { get; set; }
-
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // 1) Deixe o Identity se configurar
             base.OnModelCreating(modelBuilder);
 
-            // 2) Constraints e índices de ApplicationUser
-            // ATENÇÃO: se CPF/PhoneNumber forem opcionais, um índice UNIQUE pode bloquear múltiplos NULLs no SQL Server.
-            // Se forem opcionais, troque por índice filtrado (HasFilter("[CPF] IS NOT NULL"))
+            // 2) Índices de ApplicationUser (filtrados para permitir múltiplos NULL)
             modelBuilder.Entity<ApplicationUser>()
-                 .HasIndex(u => u.CPF)
-                 .IsUnique()
-                 .HasFilter("[CPF] IS NOT NULL");
+                .HasIndex(u => u.CPF)
+                .IsUnique()
+                .HasFilter("[CPF] IS NOT NULL");
 
             modelBuilder.Entity<ApplicationUser>()
                 .HasIndex(u => u.PhoneNumber)
                 .IsUnique()
                 .HasFilter("[PhoneNumber] IS NOT NULL");
-
 
             // Campos opcionais do ApplicationUser
             modelBuilder.Entity<ApplicationUser>(b =>
@@ -58,7 +54,8 @@ namespace WebApplicationPods.Data
                 b.Property(u => u.CEP).IsRequired(false);
             });
 
-            // Pedido -> Endereco (sem cascade delete)
+            // ====== Pedido / Payment ======
+            // Pedido -> Endereco (sem cascade delete). EnderecoId é opcional (retirada no local).
             modelBuilder.Entity<PedidoModel>()
                 .HasOne(p => p.Endereco)
                 .WithMany()
@@ -82,7 +79,7 @@ namespace WebApplicationPods.Data
                 e.Property(p => p.FailureReason).IsRequired(false);
             });
 
-            // MerchantPaymentConfig -> ApplicationUser (FK forte, int)
+            // MerchantPaymentConfig -> ApplicationUser
             modelBuilder.Entity<MerchantPaymentConfig>(e =>
             {
                 e.Property(p => p.Provider).HasMaxLength(100).IsRequired();
@@ -90,46 +87,42 @@ namespace WebApplicationPods.Data
 
                 e.HasIndex(p => new { p.UserId, p.Provider }).IsUnique();
 
-                e.HasOne<ApplicationUser>()     // FK para o seu user (Identity<int>)
+                e.HasOne<ApplicationUser>()
                  .WithMany()
                  .HasForeignKey(p => p.UserId)
                  .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // dentro do OnModelCreating, após o base.OnModelCreating(modelBuilder);
+            // Categoria (exemplo)
             modelBuilder.Entity<CategoriaModel>(b =>
             {
-                b.ToTable("Categorias");                 // usa a tabela que já existe
+                b.ToTable("Categorias");
                 b.Property(x => x.Nome).HasMaxLength(50).IsRequired();
                 b.Property(x => x.Descricao).HasMaxLength(200);
             });
 
-            // Oculta pedidos soft-deletados em TODAS as queries
-            modelBuilder.Entity<PedidoModel>()
-                .HasQueryFilter(p => !p.IsDeleted);
+            // ====== Endereco: índices e defaults ======
+            // Índice normal do FK (não único)
+            modelBuilder.Entity<EnderecoModel>()
+                .HasIndex(e => e.ClienteId)
+                .HasDatabaseName("IX_Enderecos_ClienteId");
 
-            // Garanta cascade para hard delete (caso algum dia precise)
-            modelBuilder.Entity<PedidoItemModel>()
-                .HasOne(i => i.Pedido)
-                .WithMany(p => p.PedidoItens)
-                .HasForeignKey(i => i.PedidoId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<PedidoModel>()
-                .HasOne(p => p.Endereco)
-                .WithMany() // ou .WithMany(e => e.Pedidos) se existir
-                .HasForeignKey(p => p.EnderecoId)
-                .OnDelete(DeleteBehavior.Restrict); // evita cascata acidental
+            // Índice ÚNICO FILTRADO: no máximo 1 principal ATIVO por cliente
+            modelBuilder.Entity<EnderecoModel>()
+                .HasIndex(e => e.ClienteId)
+                .HasFilter("[Principal] = 1 AND [Ativo] = 1")
+                .IsUnique()
+                .HasDatabaseName("UX_Enderecos_PrincipalPorCliente");
 
             modelBuilder.Entity<EnderecoModel>(b =>
             {
-                b.Property(e => e.Principal)
-                 .HasDefaultValue(false)
-                 .IsRequired();
-                // (opcional) reforçar tamanhos/requireds conforme DataAnnotations
+                b.Property(e => e.Principal).HasDefaultValue(false).IsRequired();
+                b.Property(e => e.Ativo).HasDefaultValue(true).IsRequired();
             });
 
-            // TODO: adicione aqui outras configurações de domínio (tamanhos, required, etc.)
+            // ====== Query Filters (soft delete) ======
+            modelBuilder.Entity<PedidoModel>().HasQueryFilter(p => !p.IsDeleted);
+            modelBuilder.Entity<EnderecoModel>().HasQueryFilter(e => e.Ativo);
         }
     }
 }

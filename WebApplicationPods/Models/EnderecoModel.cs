@@ -40,7 +40,7 @@ namespace WebApplicationPods.Models
         public string CEP { get; set; }
 
         public bool Principal { get; set; } = false;
-
+        public bool Ativo { get; set; } = true;
         // Relacionamento
         [ForeignKey("ClienteId")]
         [ValidateNever] // <- evita validar Cliente.Nome/Email/etc ao validar Endereco

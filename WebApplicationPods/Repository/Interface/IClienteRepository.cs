@@ -19,8 +19,8 @@ namespace WebApplicationPods.Repository.Interface
         EnderecoModel AdicionarEndereco(int clienteId, EnderecoModel endereco);
         EnderecoModel AtualizarEndereco(EnderecoModel endereco);
         void DefinirEnderecoPrincipal(int clienteId, int enderecoId);
-
-
+        EnderecoModel AtualizarEnderecoComPrincipal(EnderecoModel endereco);
+        int? RemoverEndereco(int clienteId, int enderecoId);
     }
 
 

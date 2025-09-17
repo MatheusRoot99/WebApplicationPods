@@ -33,14 +33,14 @@
     @if (TempData["Sucesso"] != null)
     {
         <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i> @TempData["Sucesso"]
+            <i class="bi bi-check-circle-fill me-2"></i> @* @TempData["Sucesso"] *@
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
         </div>
     }
     @if (TempData["Erro"] != null)
     {
         <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Erro"]
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @* @TempData["Erro"] *@
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
         </div>
     }
@@ -131,6 +131,16 @@
                                                 data-bs-target="#editarEnderecoModal"
                                                 disabled>
                                             <i class="bi bi-pencil-square"></i>
+                                        </button>
+
+                                        <!-- NOVO: excluir -->
+                                        <button type="button"
+                                                class="btn btn-outline-danger flex-shrink-0"
+                                                id="btnExcluirEndereco"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#excluirEnderecoModal"
+                                                disabled>
+                                            <i class="bi bi-trash"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -232,14 +242,7 @@
                                         {
                                             <small class="item-flavor">Sabor: @item.Sabor</small>
                                         }
-                                    </div>
-                                    <div class="item-price">
-                                        <div>@((item.Produto.Preco * item.Quantidade).ToString("C"))</div>
-                                        @if (item.Produto.EstaEmPromocao())
-                                        {
-                                            <small class="text-muted text-decoration-line-through">@(item.Produto.Preco.ToString("C"))</small>
-                                        }
-                                    </div>
+                                    </div>                                
                                 </div>
                             }
                         </div>
@@ -252,7 +255,6 @@
                                 <span>Total</span>
                                 <strong id="totalGeralLabel">@((Model.Carrinho.Total + (Model.RetiradaNoLocal ? 0 : 5)).ToString("C"))</strong>
                             </div>
-                            <small class="text-muted d-block mt-2">* Taxa pode variar por região</small>
                         </div>
                     </div>
                 </div>
@@ -273,7 +275,7 @@
 @* ===== MODAL: NOVO ENDEREÇO ===== *@
 <div class="modal fade" id="enderecoModal" tabindex="-1" aria-hidden="true" aria-labelledby="enderecoTitle" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content confirm-modal">
             <div class="modal-header">
                 <h5 id="enderecoTitle" class="modal-title"><i class="bi bi-geo-alt me-2"></i>Novo Endereço</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
@@ -339,7 +341,7 @@
 @* ===== MODAL: EDITAR ENDEREÇO ===== *@
 <div class="modal fade" id="editarEnderecoModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content confirm-modal">
             <div class="modal-header">
                 <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Editar Endereço</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
@@ -409,7 +411,7 @@
 {
     <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true" aria-labelledby="confirmTitle" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
+            <div class="modal-content confirm-modal">
                 <div class="modal-header">
                     <h5 id="confirmTitle" class="modal-title"><i class="bi bi-shield-check me-2"></i>Confirme seus dados</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
@@ -421,16 +423,21 @@
                     </div>
                     <div class="confirm-line">
                         <div class="confirm-ico"><i class="bi bi-phone"></i></div>
-                        <div><small class="text-muted d-block">Meu telefone é</small><div class="fw-semibold">@Model?.Cliente?.Telefone</div></div>
+                        <div>
+                            <small class="text-muted d-block">Meu telefone é</small>
+                            <div id="telefoneResumo" class="fw-semibold">@Model?.Cliente?.Telefone</div>
+                        </div>
                     </div>
 
-                    <div class="mt-3 d-grid gap-2">
-                        <a class="btn btn-outline-warning w-100 mb-2" href="@Url.Action("Editar", "Auth", new { returnUrl = Url.Action("Resumo", "Carrinho") })">Editar informações</a>
 
+                    <div class="mt-3 d-grid gap-2">
                         <form class="m-0">
                             @Html.AntiForgeryToken()
-                            <button type="button" id="btnConfirmaModal" class="btn btn-confirm">Confirmar</button>
+                            <button type="button" id="btnConfirmaModal" class="btn btn-outline-warning btn-confirm">Confirmar</button>
                         </form>
+
+
+                        <a class="btn btn-outline-warning btn-confirm" href="@Url.Action("Editar", "Auth", new { returnUrl = Url.Action("Resumo", "Carrinho") })">Editar informações</a>
 
                         <form asp-controller="Auth" asp-action="TrocarUsuario" method="post" class="text-center">
                             @Html.AntiForgeryToken()
@@ -443,7 +450,65 @@
     </div>
 }
 
+@*MODAL DE EXCLUSÃO*@
+
+<div class="modal fade" id="excluirEnderecoModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-trash me-2"></i>Excluir endereço</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+
+            <form asp-action="ExcluirEndereco" method="post" id="formExcluirEndereco" class="m-0">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="ClienteId" value="@Model.Cliente.Id" />
+                <input type="hidden" id="del_Id" name="id" />
+
+                <div class="modal-body">
+                    <p class="mb-2">Tem certeza que deseja excluir este endereço?</p>
+                    <div class="p-2 rounded bg-light small" id="del_preview">
+                        <!-- preenchido via JS com os dados do endereço -->
+                    </div>
+                    <div class="form-text mt-2">
+                        Se este for o endereço principal, o sistema definirá outro como principal automaticamente (se existir).
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Excluir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
+    <script>
+        (function () {
+          const el = document.getElementById('telefoneResumo');
+          if (!el) return;
+
+          let d = (el.textContent || '').replace(/\D+/g, '');
+
+          // remove +55 / 55 se vier
+          if ((d.length === 12 || d.length === 13) && d.startsWith('55')) d = d.slice(2);
+
+          let fmt = el.textContent || '';
+
+          if (d.length === 11) {             // celular: DDD + 9 dígitos
+            fmt = `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;
+          } else if (d.length === 10) {      // fixo: DDD + 8 dígitos
+            fmt = `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`;
+          } else if (d.length === 8) {       // sem DDD
+            fmt = `${d.slice(0,4)}-${d.slice(4)}`;
+          }
+
+          el.textContent = fmt;
+        })();
+    </script>
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             // ===== helpers CEP (com máscara e validação) =====
@@ -555,12 +620,14 @@
             }
 
             // ===== elementos =====
-            const modalNovo = document.getElementById('enderecoModal');
-            const formNovo = document.getElementById('formEnderecoModal');
-            const modalEdit = document.getElementById('editarEnderecoModal');
-            const formEdit = document.getElementById('formEditarEndereco');
-            const selectEnd = document.getElementById('enderecoSelect');
-            const btnEdit = document.getElementById('btnEditarEndereco');
+            const modalNovo  = document.getElementById('enderecoModal');
+            const formNovo   = document.getElementById('formEnderecoModal');
+            const modalEdit  = document.getElementById('editarEnderecoModal');
+            const formEdit   = document.getElementById('formEditarEndereco');
+            const selectEnd  = document.getElementById('enderecoSelect');
+            const btnEdit    = document.getElementById('btnEditarEndereco');
+            // NOVO (exclusão):
+            const btnExcluir = document.getElementById('btnExcluirEndereco');
 
             // lookup CEP (com máscara)
             if (formNovo) bindCepLookup(formNovo, 'buscarCepBtn');
@@ -568,7 +635,7 @@
 
             // Novo endereço: abrir/fechar zerando
             if (modalNovo) {
-                modalNovo.addEventListener('show.bs.modal', () => hardResetForm(formNovo));
+                modalNovo.addEventListener('show.bs.modal',  () => hardResetForm(formNovo));
                 modalNovo.addEventListener('hidden.bs.modal', () => hardResetForm(formNovo));
             }
 
@@ -579,14 +646,14 @@
                     const opt = selectEnd.selectedOptions?.[0];
                     if (!opt) return;
 
-                    document.getElementById('edit_Id').value = opt.value;
-                    document.getElementById('edit_Logradouro').value = opt.getAttribute('data-logradouro') || '';
-                    document.getElementById('edit_Numero').value = opt.getAttribute('data-numero') || '';
+                    document.getElementById('edit_Id').value          = opt.value;
+                    document.getElementById('edit_Logradouro').value  = opt.getAttribute('data-logradouro') || '';
+                    document.getElementById('edit_Numero').value      = opt.getAttribute('data-numero') || '';
                     document.getElementById('edit_Complemento').value = opt.getAttribute('data-complemento') || '';
-                    document.getElementById('edit_Bairro').value = opt.getAttribute('data-bairro') || '';
-                    document.getElementById('edit_Cidade').value = opt.getAttribute('data-cidade') || '';
-                    document.getElementById('edit_Estado').value = (opt.getAttribute('data-estado') || '').toUpperCase();
-                    document.getElementById('edit_CEP').value = opt.getAttribute('data-cep') || '';
+                    document.getElementById('edit_Bairro').value      = opt.getAttribute('data-bairro') || '';
+                    document.getElementById('edit_Cidade').value      = opt.getAttribute('data-cidade') || '';
+                    document.getElementById('edit_Estado').value      = (opt.getAttribute('data-estado') || '').toUpperCase();
+                    document.getElementById('edit_CEP').value         = opt.getAttribute('data-cep') || '';
                     document.getElementById('edit_Principal').checked = (opt.getAttribute('data-principal') === 'true');
 
                     clearValidation(formEdit);
@@ -600,6 +667,57 @@
             }
             selectEnd?.addEventListener('change', toggleEditBtn);
             toggleEditBtn();
+
+            // ===== EXCLUSÃO: habilitar botão e preencher modal =====
+            function toggleDeleteBtn() {
+                if (btnExcluir) btnExcluir.disabled = !(selectEnd && selectEnd.value);
+            }
+            // Sempre que trocar a seleção, sincroniza ambos
+            selectEnd?.addEventListener('change', () => {
+                toggleEditBtn();
+                toggleDeleteBtn();
+            });
+            toggleDeleteBtn();
+
+            // Preenche o modal de exclusão com os dados do option selecionado
+            const excluirModalEl = document.getElementById('excluirEnderecoModal');
+            if (excluirModalEl) {
+                excluirModalEl.addEventListener('show.bs.modal', () => {
+                    const opt = selectEnd?.selectedOptions?.[0];
+                    if (!opt) return;
+
+                    const id  = opt.value;
+                    const log = opt.getAttribute('data-logradouro')  || '';
+                    const num = opt.getAttribute('data-numero')      || '';
+                    const comp= opt.getAttribute('data-complemento') || '';
+                    const bai = opt.getAttribute('data-bairro')      || '';
+                    const cid = opt.getAttribute('data-cidade')      || '';
+                    const uf  = (opt.getAttribute('data-estado')     || '').toUpperCase();
+                    const cep = opt.getAttribute('data-cep')         || '';
+                    const principal = opt.getAttribute('data-principal') === 'true';
+
+                    const delId = document.getElementById('del_Id');
+                    if (delId) delId.value = id;
+
+                    const prev = document.getElementById('del_preview');
+                    if (prev) {
+                        prev.innerHTML = `
+                            <div class="fw-semibold">${log}${log && num ? ', ' + num : ''}</div>
+                            ${comp ? `<div>${comp}</div>` : ''}
+                            <div>${bai} - ${cid}/${uf}</div>
+                            <div>CEP: ${cep}</div>
+                            ${principal ? `<span class="badge bg-danger-subtle text-danger">Principal</span>` : ''}
+                        `;
+                    }
+                });
+
+                // (Opcional) UX: desabilita o botão "Excluir" após submit para evitar duplo clique
+                const formExcluir = document.getElementById('formExcluirEndereco');
+                formExcluir?.addEventListener('submit', function () {
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = 'Excluindo...'; }
+                });
+            }
 
             // Validação dos formulários de endereço
             const validarFormEndereco = (form) => {
@@ -652,6 +770,10 @@
                     if (!validarFormEndereco(form)) {
                         e.preventDefault();
                         alert('Por favor, preencha todos os campos obrigatórios corretamente.');
+                    } else {
+                        // UX: evita duplo clique
+                        const btn = this.querySelector('button[type="submit"]');
+                        if (btn) { btn.disabled = true; btn.innerText = 'Salvando...'; }
                     }
                 });
 
@@ -720,6 +842,7 @@
                     </div>`;
                 detalhes.classList.remove('empty');
                 toggleEditBtn();
+                toggleDeleteBtn();
             });
 
             // Modal de confirmação do cliente

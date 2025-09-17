@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -174,7 +176,7 @@ namespace WebApplicationPods.Controllers
 
             // 🔹 Envia a loja para a View (box de retirada)
             ViewBag.Loja = _lojaRepo.ObterDoLojistaAtual();
-
+            var skipConfirm = string.Equals(Convert.ToString(TempData["SkipConfirm"]), "1", StringComparison.Ordinal);
             var vm = new ResumoPedidoViewModel
             {
                 Carrinho = carrinho,
@@ -184,7 +186,7 @@ namespace WebApplicationPods.Controllers
                 EnderecoEntrega = enderecoSelecionado,
                 Observacoes = "",
                 RetiradaNoLocal = false,
-                PrecisaConfirmar = true,
+                PrecisaConfirmar = !skipConfirm, // só confirma se NÃO vier de add/edit
                 ReturnUrl = Url.Action(nameof(Resumo), "Carrinho")
             };
 
@@ -552,15 +554,24 @@ namespace WebApplicationPods.Controllers
                     return RedirectToAction(nameof(Resumo));
                 }
 
-                // Definir como principal se for o primeiro endereço
-                endereco.Principal = !enderecosExistentes.Any();
+                // Definir como principal se for o primeiro endereço OU se foi marcado como principal
+                endereco.Principal = !enderecosExistentes.Any() || endereco.Principal;
+
+                // CRÍTICO: Se estiver marcando como principal, garantir que apenas UM seja principal
+                if (endereco.Principal && enderecosExistentes.Any(e => e.Principal))
+                {
+                    // Remover o status de principal de todos os outros endereços do cliente
+                    foreach (var outroEndereco in enderecosExistentes.Where(e => e.Principal))
+                    {
+                        outroEndereco.Principal = false;
+                        _clienteRepository.AtualizarEndereco(outroEndereco);
+                    }
+                }
 
                 var salvo = _clienteRepository.AdicionarEndereco(ClienteId, endereco);
 
-                if (salvo != null && salvo.Principal)
-                    _clienteRepository.DefinirEnderecoPrincipal(ClienteId, salvo.Id);
-
                 TempData["EnderecoNovoId"] = salvo?.Id;
+                TempData["SkipConfirm"] = "1";
                 TempData["Sucesso"] = "Endereço adicionado com sucesso!";
                 return RedirectToAction(nameof(Resumo));
             }
@@ -604,12 +615,25 @@ namespace WebApplicationPods.Controllers
                     return RedirectToAction(nameof(Resumo));
                 }
 
+                // CRÍTICO: Se estiver marcando como principal, garantir que apenas UM seja principal
+                if (endereco.Principal)
+                {
+                    // Remover o status de principal de todos os outros endereços do cliente
+                    var outrosEnderecos = _clienteRepository.ObterEnderecos(ClienteId)
+                        .Where(e => e.Id != endereco.Id && e.Principal)
+                        .ToList();
+
+                    foreach (var outroEndereco in outrosEnderecos)
+                    {
+                        outroEndereco.Principal = false;
+                        _clienteRepository.AtualizarEndereco(outroEndereco);
+                    }
+                }
+
                 var atualizado = _clienteRepository.AtualizarEndereco(endereco);
 
-                if (endereco.Principal)
-                    _clienteRepository.DefinirEnderecoPrincipal(ClienteId, endereco.Id);
-
                 TempData["EnderecoNovoId"] = endereco.Id;
+                TempData["SkipConfirm"] = "1";
                 TempData["Sucesso"] = "Endereço atualizado com sucesso!";
                 return RedirectToAction(nameof(Resumo));
             }
@@ -619,5 +643,38 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction(nameof(Resumo));
             }
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult ExcluirEndereco(int ClienteId, int id)
+        {
+            try
+            {
+                var novoId = _clienteRepository.RemoverEndereco(ClienteId, id);
+
+                if (novoId.HasValue)
+                    TempData["EnderecoNovoId"] = novoId.Value; // pré-selecionar no GET
+
+                TempData["SkipConfirm"] = "1";
+                TempData["Sucesso"] = "Endereço excluído com sucesso!";
+            }
+            catch (InvalidOperationException ex)
+            {
+                // mensagem amigável quando há pedidos vinculando o endereço
+                TempData["Erro"] = ex.Message;
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is SqlException sql && sql.Number == 547)
+            {
+                // fallback: se cair direto na violação de FK
+                TempData["Erro"] = "Este endereço está vinculado a pedidos e não pode ser excluído.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Erro"] = $"Não foi possível excluir o endereço: {ex.Message}";
+            }
+
+            return RedirectToAction(nameof(Resumo));
+        }
+
     }
 }
