@@ -69,8 +69,7 @@ namespace WebApplicationPods.Payments
         {
             var subtotal = p.ValorTotal;
 
-            // Tentativa automática de localizar campos comuns de frete/desconto.
-            // Isso evita quebrar compilação se o nome do campo variar no seu projeto.
+            // tenta encontrar campos comuns de frete/desconto por nome
             decimal frete = TryGetDecimalProp(p, "TaxaEntrega")
                           + TryGetDecimalProp(p, "ValorEntrega")
                           + TryGetDecimalProp(p, "Frete");
@@ -103,7 +102,7 @@ namespace WebApplicationPods.Payments
 
             var gateway = provider == "None" ? null : _gatewayFactory(provider);
 
-            // === valor final que será cobrado (inclui frete/descontos)
+            // valor final que será cobrado (inclui frete/descontos)
             var amount = TotalParaCobranca(pedido);
 
             var payment = new PaymentModel

@@ -1,182 +1,396 @@
-﻿:root {
-    --bg-soft: #f8fafc;
-    --card-bg: #ffffff;
-    --border: #e6e9ef;
-    --text: #0f172a;
-    --muted: #6b7280;
-    --brand: #4f46e5; /* indigo */
-    --ok: #16a34a; /* green */
-    --warn: #f59e0b; /* amber */
-    --err: #dc2626; /* red */
-    --info: #0ea5e9; /* sky */
+﻿/* =========================================================
+   Checkout – CSS escopado (não toca no Bootstrap global)
+   ========================================================= */
+
+/* Derivados da sua paleta global (já definida em :root do site) */
+:root {
+    --chk-border: #e9ecf3;
+    --chk-shadow-1: 0 4px 6px rgba(0,0,0,.08);
+    --chk-shadow-2: 0 10px 25px rgba(0,0,0,.10);
+    --chk-radius-lg: 12px;
+    --chk-radius-sm: 8px;
+    --chk-ok: #16a34a;
+    --chk-warn: #f59e0b;
+    --chk-err: #ef4444;
+    /* gradiente com suas cores */
+    --chk-grad: linear-gradient(90deg, var(--brand-start), var(--brand-end));
 }
 
-body {
-    background: var(--bg-soft);
-}
-
-.page-header {
-    background: linear-gradient(120deg, rgba(79,70,229,0.08), rgba(14,165,233,0.08));
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 18px 20px;
-}
-
-.page-title {
-    font-weight: 700;
-    color: var(--text);
-    margin: 0;
-    letter-spacing: .2px;
-}
-
-.page-sub {
-    margin: 4px 0 0 0;
-    color: var(--muted);
-    font-size: .95rem;
-}
-
-.card {
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    box-shadow: 0 6px 24px rgba(15, 23, 42, 0.06);
-    overflow: hidden;
-}
-
-.card-header {
+/* HEADER */
+#checkout-page #checkout-header {
     background: #fff;
-    border-bottom: 1px solid var(--border);
-    padding: 14px 18px;
+    border: 1px solid var(--chk-border);
+    border-radius: calc(var(--chk-radius-lg) + 4px);
+    padding: 18px 20px;
+    box-shadow: var(--chk-shadow-1);
 }
 
-    .card-header h5 {
+    #checkout-page #checkout-header .page-title {
         margin: 0;
-        font-weight: 700;
+        font-weight: 800;
+        letter-spacing: .2px;
+        color: var(--black);
     }
 
-.card-body {
-    overflow: visible;
-}
+    #checkout-page #checkout-header .page-sub {
+        margin: .35rem 0 0;
+        color: var(--gray-medium);
+        font-size: .95rem;
+    }
 
-/* Status bar */
-.status-wrap {
+/* STATUS */
+#checkout-page .status-wrap {
     display: grid;
     grid-template-columns: 1fr auto;
-    gap: 10px;
+    gap: 12px;
     align-items: center;
     margin-bottom: 14px;
 }
 
-.status-bar {
+#checkout-page .status-bar {
     position: relative;
-    height: 8px;
-    background: #eef2ff;
+    height: 9px;
     border-radius: 999px;
     overflow: hidden;
+    background: linear-gradient(90deg, #eef2ff, #f1f5f9);
+    border: 1px solid var(--chk-border);
 }
 
-    .status-bar > .fill {
+    #checkout-page .status-bar .fill {
         position: absolute;
-        left: 0;
-        top: 0;
-        height: 100%;
+        inset: 0 auto 0 0;
         width: 0%;
-        background: linear-gradient(90deg, var(--brand), #22c55e);
-        transition: width .4s ease;
+        background: var(--chk-grad);
+        transition: width .45s ease;
     }
 
-.status-badge {
-    padding: .35rem .6rem;
+#checkout-page .status-badge {
+    padding: .38rem .7rem;
     border-radius: 999px;
-    font-weight: 600;
-    font-size: .85rem;
-    border: 1px solid var(--border);
+    font-weight: 700;
+    font-size: .82rem;
+    border: 1px solid var(--chk-border);
     background: #fff;
-    color: var(--text);
+    color: var(--gray-dark);
 }
 
-.status-paid {
-    border-color: #bbf7d0;
-    color: var(--ok);
-    background: #f0fdf4;
+#checkout-page .status-paid {
+    border-color: color-mix(in srgb, var(--chk-ok) 35%, #fff);
+    background: color-mix(in srgb, var(--chk-ok) 12%, #fff);
+    color: var(--chk-ok);
 }
 
-.status-pending {
-    border-color: #fde68a;
-    color: var(--warn);
-    background: #fffbeb;
+#checkout-page .status-pending {
+    border-color: color-mix(in srgb, var(--chk-warn) 35%, #fff);
+    background: color-mix(in srgb, var(--chk-warn) 12%, #fff);
+    color: var(--chk-warn);
 }
 
-.status-failed {
-    border-color: #fecaca;
-    color: var(--err);
-    background: #fef2f2;
+#checkout-page .status-failed {
+    border-color: color-mix(in srgb, var(--chk-err) 35%, #fff);
+    background: color-mix(in srgb, var(--chk-err) 12%, #fff);
+    color: var(--chk-err);
 }
 
-.status-action {
-    border-color: #c7d2fe;
-    color: var(--brand);
-    background: #eef2ff;
+#checkout-page .status-action {
+    border-color: color-mix(in srgb, var(--brand-end) 35%, #fff);
+    background: color-mix(in srgb, var(--brand-soft) 40%, #fff);
+    color: var(--brand-end);
 }
 
-/* QR */
-.qr-box {
+/* CARDS */
+#checkout-page .card {
+    background: #fff;
+    border: 1px solid var(--chk-border);
+    border-radius: var(--chk-radius-lg);
+    box-shadow: var(--chk-shadow-1);
+    overflow: hidden;
+    transition: box-shadow .2s ease;
+}
+
+    #checkout-page .card:hover {
+        box-shadow: var(--chk-shadow-2);
+    }
+
+#checkout-page .card-header {
+    background: #fff;
+    border-bottom: 1px solid var(--chk-border);
+    padding: 14px 18px;
+}
+
+    #checkout-page .card-header h5 {
+        margin: 0;
+        font-weight: 700;
+    }
+
+/* PIX */
+#checkout-page .qr-box {
     width: 240px;
     height: 240px;
-    border-radius: 14px;
-    border: 1px dashed var(--border);
+    border-radius: 16px;
+    border: 1px dashed color-mix(in srgb, var(--brand-start) 25%, var(--chk-border));
+    background: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #fff;
 }
 
-.copy-badge {
+#checkout-page #pix-qr-img {
+    display: block;
+    border-radius: 12px;
+    max-width: 100%;
+    height: auto;
+}
+
+#checkout-page .copy-badge {
     display: inline-flex;
     align-items: center;
-    font-size: .85rem;
-    color: var(--ok);
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    border-radius: .5rem;
-    padding: .15rem .5rem;
-    transition: opacity .2s ease, transform .2s ease;
+    font-size: .82rem;
+    font-weight: 700;
+    color: var(--brand-end);
+    background: color-mix(in srgb, var(--brand-end) 12%, #fff);
+    border: 1px solid color-mix(in srgb, var(--brand-end) 35%, #fff);
+    border-radius: 10px;
+    padding: .2rem .55rem;
     opacity: 0;
-    transform: translateY(-2px);
+    transform: translateY(-4px);
+    transition: opacity .2s ease, transform .2s ease;
+    margin-left: .5rem;
 }
 
-    .copy-badge.show {
+    #checkout-page .copy-badge.show {
         opacity: 1;
         transform: translateY(0);
     }
 
-.d-none {
-    display: none !important;
+/* Timer PIX */
+#checkout-page #pix-timer {
+    display: inline-flex;
+    gap: .4rem;
+    align-items: center;
+    font-weight: 700;
+    border: 1px dashed color-mix(in srgb, var(--chk-warn) 40%, #fff);
+    background: color-mix(in srgb, var(--chk-warn) 15%, #fff);
+    color: color-mix(in srgb, var(--chk-warn) 75%, #000);
+    padding: .3rem .55rem;
+    border-radius: 10px;
 }
 
-/* Buttons */
-.btn-brand {
-    background: var(--brand);
-    color: #fff;
+#checkout-page #pixCountdown {
+    font-size: .9rem;
+    color: var(--gray-medium);
+}
+
+/* Lista de itens (lado direito) */
+#checkout-page #checkout-resumo-itens {
+    list-style: none;
+    margin: 0 0 1rem 0;
+    padding: 0;
+}
+
+    #checkout-page #checkout-resumo-itens li {
+        background: linear-gradient(180deg, #fff, #fcfdff);
+        border: 1px solid var(--chk-border);
+        border-radius: 12px;
+        padding: 10px 12px;
+        margin-bottom: .6rem;
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        transition: transform .12s ease, box-shadow .12s ease;
+    }
+
+        #checkout-page #checkout-resumo-itens li:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 14px rgba(0,0,0,.06);
+        }
+
+    #checkout-page #checkout-resumo-itens img {
+        width: 48px;
+        height: 48px;
+        object-fit: cover;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0,0,0,.08);
+    }
+
+/* Botões específicos do checkout (NÃO sobrescreve .btn do Bootstrap) */
+#checkout-page .btn-brand {
+    background: var(--chk-grad);
+    color: #fff !important;
     border: none;
+    border-radius: 12px;
+    padding: .6rem 1rem;
+    font-weight: 800;
+    box-shadow: 0 10px 18px color-mix(in srgb, var(--brand-end) 28%, transparent);
+    transition: transform .08s ease, box-shadow .18s ease, filter .18s ease;
 }
 
-    .btn-brand:hover {
-        filter: brightness(0.98);
+    #checkout-page .btn-brand:hover {
+        filter: brightness(.98);
+        box-shadow: 0 14px 24px color-mix(in srgb, var(--brand-end) 36%, transparent);
+        transform: translateY(-1px);
     }
 
-.btn-soft {
-    background: #f8fafc;
-    border: 1px solid var(--border);
+#checkout-page .btn-soft {
+    background: #fff;
+    border: 1px solid var(--chk-border);
+    color: var(--black-soft);
+    border-radius: 12px;
+    padding: .52rem .9rem;
+    font-weight: 600;
 }
 
-/* Mobile tweaks */
-@@media (max-width: 576px) {
-    .btn {
-        width: 100%;
+    #checkout-page .btn-soft:hover {
+        background: color-mix(in srgb, var(--brand-soft) 30%, #fff);
     }
 
-    .input-group .btn {
-        width: auto;
+/* Ajuste do sticky card (respeita sticky-lg-top do Bootstrap) */
+@media (min-width: 992px) {
+    #checkout-summary-card.sticky-lg-top {
+        top: 20px;
+        z-index: 10;
     }
-    /* mantém o 'Copiar' encaixado */
 }
+
+/* Responsivo pequeno */
+@media (max-width:576px) {
+    #checkout-page .qr-box {
+        width: 210px;
+        height: 210px;
+    }
+
+    #checkout-page #checkout-resumo-itens img {
+        width: 42px;
+        height: 42px;
+    }
+}
+
+/* ======================
+   PIX – layout refinado
+   ====================== */
+#checkout-page .pix-lead {
+    color: var(--gray-medium);
+    margin-bottom: .85rem;
+    line-height: 1.5;
+}
+
+#checkout-page .pix-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+}
+
+@media (min-width: 768px) {
+    #checkout-page .pix-grid {
+        grid-template-columns: 300px 1fr;
+        align-items: start;
+    }
+}
+
+/* Coluna do QR */
+#checkout-page .pix-qr {
+    text-align: center;
+}
+
+    #checkout-page .pix-qr .qr-box {
+        margin: 0 auto; /* centraliza */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 260px;
+        height: 260px;
+    }
+
+@media (max-width: 576px) {
+    #checkout-page .pix-qr .qr-box {
+        width: 220px;
+        height: 220px;
+    }
+}
+
+#checkout-page .pix-qr #pix-qr-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Valor + expiração em “cartelinhas” */
+#checkout-page .pix-meta {
+    display: grid;
+    gap: .5rem;
+    justify-items: center;
+    margin-top: .6rem;
+}
+
+#checkout-page .pix-amount {
+    display: inline-flex;
+    gap: .5rem;
+    align-items: center;
+    padding: .35rem .6rem;
+    border-radius: 999px;
+    /*border: 1px solid var(--chk-border);
+    background: #fff;*/
+    box-shadow: var(--chk-shadow-1);
+    /*font-weight: 700;*/
+    margin-top: 10px;
+}
+
+    #checkout-page .pix-amount span {
+        color: var(--gray-medium);
+        font-weight: 600;
+    }
+
+#checkout-page .pix-expire {
+    display: inline-flex;
+    gap: .35rem;
+    align-items: center;
+    padding: .28rem .55rem;
+    border-radius: 10px;
+    border: 1px dashed color-mix(in srgb, var(--chk-warn) 40%, #fff);
+    background: color-mix(in srgb, var(--chk-warn) 12%, #fff);
+    color: color-mix(in srgb, var(--chk-warn) 80%, #000);
+    font-weight: 700;
+}
+
+    #checkout-page .pix-expire .material-symbols-outlined {
+        font-size: 18px;
+        line-height: 1;
+        opacity: .8;
+    }
+
+/* Coluna das ações */
+#checkout-page .pix-actions .input-group {
+    box-shadow: var(--chk-shadow-1);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+#checkout-page .pix-actions .form-control {
+    border: 1px solid var(--chk-border);
+    border-right: 0;
+}
+
+#checkout-page .pix-actions .btn {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+#checkout-page .pix-actions-row {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    margin-top: .85rem;
+}
+
+/* Badge de “Copiado!” */
+#checkout-page .copy-badge {
+    position: relative;
+    top: .25rem;
+}
+
+/* Microajustes de tipografia */
+#checkout-page #pix-section h6 {
+    font-weight: 800;
+    letter-spacing: .2px;
+}
+

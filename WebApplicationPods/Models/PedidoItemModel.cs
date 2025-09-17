@@ -25,6 +25,9 @@ namespace WebApplicationPods.Models
         [StringLength(500, ErrorMessage = "As observações devem ter no máximo 500 caracteres")]
         public string? Observacoes { get; set; }
 
+        /// <summary>Preço cheio (sem promoção) no momento da compra.</summary>
+        public decimal? PrecoOriginal { get; set; }   // <-- NOVO
+
         // Relacionamentos
         [ForeignKey("PedidoId")]
         public PedidoModel Pedido { get; set; }

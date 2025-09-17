@@ -65,7 +65,7 @@ namespace WebApplicationPods.Payments.Gateways
 
             var body = new
             {
-                transaction_amount = amount,                // <<< usa o total calculado
+                transaction_amount = amount,                // usa o total calculado
                 description = $"Pedido #{pedido.Id}",
                 payment_method_id = "pix"
             };

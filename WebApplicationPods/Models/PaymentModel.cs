@@ -28,7 +28,8 @@ namespace WebApplicationPods.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? PaidAt { get; set; }
         public DateTime? CanceledAt { get; set; }
-
+        // ⏳ expiração do PIX
+        public DateTime? ExpiresAt { get; set; }
         public PedidoModel Pedido { get; set; }
     }
 }

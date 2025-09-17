@@ -3,7 +3,7 @@
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
     ViewData["Title"] = "Pagamento";
-
+    var isPaid = Model.Status == PaymentStatus.Paid;
     // Gera token anti-CSRF e grava cookie; usamos o valor no header do fetch.
     var afToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
 
@@ -43,38 +43,66 @@
                     @* ===================== PIX ===================== *@
                     @if (Model.Metodo == PaymentMethod.Pix)
                     {
-                        <section id="pix-section">
+                        <section id="pix-section" class="pix">
                             <h6 class="mb-2">Pix (chave/QR)</h6>
-                            <p class="text-muted">Escaneie o QR Code ou use “copia e cola”. Confirmaremos automaticamente após o pagamento.</p>
 
-                            <div class="d-flex gap-4 flex-wrap align-items-start">
-                                <div id="pix-qr-container">
-                                    @if (!string.IsNullOrEmpty(Model.PixQrBase64Png))
-                                    {
-                                        <img id="pix-qr-img"
-                                             src="data:image/png;base64,@Model.PixQrBase64Png"
-                                             alt="QR Code Pix" class="qr-box" style="object-fit: contain;" />
-                                    }
-                                    else
-                                    {
-                                        <div id="pix-qr" class="qr-box text-secondary">QR Code</div>
-                                    }
+                            <p class="pix-lead">
+                                Escaneie o QR Code com o app do seu banco <span class="d-none d-md-inline">ou</span>
+                                <span class="d-md-none"><br /></span> use <strong>copia e cola</strong>.
+                                Assim que o pagamento for identificado, a confirmação acontece automaticamente.
+                            </p>
+
+                            <div class="pix-grid">
+                                <!-- Coluna do QR -->
+                                <div class="pix-qr">
+                                    <div id="pix-qr-container">
+                                        @if (!string.IsNullOrEmpty(Model.PixQrBase64Png))
+                                        {
+                                            <img id="pix-qr-img"
+                                                 src="data:image/png;base64,@Model.PixQrBase64Png"
+                                                 alt="QR Code Pix" class="qr-box" />
+                                        }
+                                        else
+                                        {
+                                            <div id="pix-qr" class="qr-box text-secondary" aria-label="QR Code do Pix">QR Code</div>
+                                        }
+                                    </div>
+
+                                    <div class="pix-meta">
+                                        <div class="pix-amount">
+                                            <span>Valor</span>
+                                            <strong>@Model.Amount.ToString("C")</strong>
+                                        </div>
+
+                                        @if (Model.ExpiresAt.HasValue)
+                                        {
+                                            <div class="pix-expire">
+                                                <span class="material-symbols-outlined" aria-hidden="true">schedule</span>
+                                                <span id="pix-timer"
+                                                      data-exp="@Model.ExpiresAt.Value.ToUniversalTime().ToString("o")">
+                                                    Expira em — <span id="pixCountdownTimer">--:--</span>
+                                                </span>
+                                            </div>
+                                        }
+                                    </div>
                                 </div>
 
-                                <div class="flex-grow-1" style="min-width:260px">
-                                    <label class="form-label">Copia e cola</label>
+                                <!-- Coluna de ações/“copia e cola” -->
+                                <div class="pix-actions">
+                                    <label class="form-label" for="pixCopyPaste">Copia e cola</label>
                                     <div class="input-group">
                                         <input class="form-control" value="@Model.PixQrData" id="pixCopyPaste" readonly />
                                         <button class="btn btn-soft" type="button" onclick="copyPix()" id="btnCopyPix">Copiar</button>
-                                        <span id="copyBadge" class="copy-badge d-none ms-2">Copiado!</span>
                                     </div>
+                                    <small class="text-muted d-block mt-1">
+                                        Cole o código no seu app bancário caso não possa ler o QR.
+                                    </small>
+                                    <span id="copyBadge" class="copy-badge d-none ms-2">Copiado!</span>
 
-                                    <div class="d-flex align-items-center gap-2 mt-3 flex-wrap">
+                                    <div class="pix-actions-row">
                                         <button class="btn btn-soft btn-sm" type="button" id="btnForcarConsulta">Atualizar status</button>
                                         <button class="btn btn-soft btn-sm" type="button" id="pix-cancel-btn">Cancelar</button>
                                     </div>
-
-                                    <div class="text-muted mt-2">Valor: <strong>@Model.Amount.ToString("C")</strong></div>
                                 </div>
                             </div>
                         </section>
@@ -114,7 +142,7 @@
                             Acompanhar pedido
                         </a>
                         <!-- Voltar / mudar pagamento -->
-                        <a class="btn btn-soft" href="@Url.Action("Index", "Carrinho")">Voltar</a>
+                        @* <a class="btn btn-soft" href="@Url.Action("Index", "Carrinho")">Voltar</a> *@
                     </div>
                 </div>
             </div>
@@ -127,15 +155,75 @@
                     <h5 class="mb-0">Resumo</h5>
                 </div>
                 <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <span>Total</span><strong>@Model.Amount.ToString("C")</strong>
+
+                    <!-- Cabeçalho -->
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted">Pedido: #@Model.PedidoId</span>
+                        <span id="pay-badge" class="badge bg-light text-dark">
+                            Status: @Model.Status
+                        </span>
                     </div>
-                    <div class="mt-3 small text-muted">Pedido: #@Model.PedidoId</div>
-                    @if (!string.IsNullOrEmpty(Model.CardBrand) || !string.IsNullOrEmpty(Model.CardLast4))
-                    {
-                        <div class="mt-2 small text-muted">Cartão: @(Model.CardBrand ?? "—") **** @(Model.CardLast4 ?? "—")</div>
+
+                    <!-- Lista de itens -->
+                    @{
+                        var items = ViewBag.Itens as IEnumerable<dynamic>;
                     }
+                    @if (items != null && items.Any())
+                    {
+                        <ul class="list-unstyled mb-3" id="checkout-resumo-itens">
+                            @foreach (var it in items)
+                            {
+                                <li class="d-flex align-items-start gap-2 py-2 border-bottom">
+                                    @if (it.Img != null)
+                                    {
+                                        <img src="@it.Img" alt="@it.Nome" style="width:48px;height:48px;object-fit:cover;border-radius:8px;" />
+                                    }
+                                    <div class="flex-grow-1">
+                                        <div class="fw-600">@it.Nome</div>
+                                        <div class="text-muted small">@it.Qtd × @(((decimal)it.Preco).ToString("C"))</div>
+                                    </div>
+                                    <div class="fw-600">@(((decimal)it.Subtotal).ToString("C"))</div>
+                                </li>
+                            }
+                        </ul>
+                    }
+
+                    <!-- Totais -->
+                    @{
+                        var resumo = ViewBag.PedidoResumo;
+                        decimal subtotal = resumo?.Subtotal ?? Model.Amount; // já com preço promocional
+                        decimal frete = resumo?.Frete ?? 0m;
+                        decimal desconto = resumo?.Desconto ?? 0m;           // só informativo
+                        decimal total = subtotal + frete;                 // ✅ total correto
+                    }
+
+                    <div class="d-flex justify-content-between text-muted">
+                        <span>Valor com desconto</span><span>@subtotal.ToString("C")</span>
+                    </div>
+                    <div class="d-flex justify-content-between text-muted">
+                        <span>Valor entrega</span><span>@frete.ToString("C")</span>
+                    </div>
+                    @if (desconto > 0)
+                    {
+                        <div class="d-flex justify-content-between text-muted">
+                            <span>Desconto</span><span>-@desconto.ToString("C")</span>
+                        </div>
+                    }
+                    <hr class="my-2" />
+                    <div class="d-flex justify-content-between fs-5 fw-600">
+                        <span>Total</span><span>@total.ToString("C")</span>
+                    </div>
+
+                    <!-- CTA: Acompanhar pedido -->
+                    <div class="mt-3">
+                        <a id="btn-acompanhar-pedido"
+                           class="btn btn-outline-primary w-100 @(isPaid ? "" : "d-none")"
+                           href="@Url.Action("Acompanhar", "Pedidos", new { id = Model.PedidoId })">
+                            Acompanhar pedido
+                        </a>
+                    </div>
                 </div>
+
             </div>
         </div>
 
@@ -144,194 +232,26 @@
 
 @section Scripts {
     <script src="https://sdk.mercadopago.com/js/v2"></script>
-    <!-- QRCode.js (frontend, sem servidor) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+            referrerpolicy="no-referrer"></script>
 
     <script>
-        // UILOGIC: atualiza barra/badge conforme status
-        function setUiStatus(status) {
-            const badge = document.getElementById('statusBadge');
-            const fill  = document.getElementById('statusFill');
-            const track = document.getElementById('goTrackBtn');
-
-            const s = (status || '').toLowerCase();
-            let pct = 10, cls = 'status-badge', txt = 'Status: ' + status;
-
-            if (s === 'created') { pct = 20; cls += ' status-action'; }
-            else if (s === 'requiresaction') { pct = 35; cls += ' status-action'; txt = 'Status: Aguardando ação'; }
-            else if (s === 'pending' || s === 'in_process') { pct = 60; cls += ' status-pending'; txt = 'Status: Pendente'; }
-            else if (s === 'paid' || s === 'approved') { pct = 100; cls += ' status-paid'; txt = 'Status: Pago'; }
-            else if (s === 'failed' || s === 'rejected') { pct = 100; cls += ' status-failed'; txt = 'Status: Falhou'; }
-            else if (s === 'canceled' || s === 'cancelled') { pct = 100; cls += ' status-failed'; txt = 'Status: Cancelado'; }
-
-            if (badge) { badge.className = cls; badge.textContent = txt; }
-            if (fill)  { fill.style.width = pct + '%'; }
-            if (track) {
-                if (s === 'paid' || s === 'approved') track.classList.remove('d-none');
-            }
-        }
-
-        // Copiar PIX + mostrar badge "Copiado!"
-        async function copyPix() {
-          const input = document.getElementById('pixCopyPaste');
-          const btn   = document.getElementById('btnCopyPix');
-          const badge = document.getElementById('copyBadge');
-          if (!input) return;
-
-          let ok = false;
-          try { await navigator.clipboard.writeText(input.value); ok = true; }
-          catch {
-            try { input.select(); input.setSelectionRange(0, 99999); document.execCommand('copy'); ok = true; } catch {}
-          }
-
-          if (ok && badge) {
-            badge.classList.remove('d-none'); void badge.offsetWidth; badge.classList.add('show');
-            const old = btn ? btn.textContent : '';
-            if (btn) btn.textContent = 'Copiado!';
-            setTimeout(() => { badge.classList.remove('show'); setTimeout(() => {
-              badge.classList.add('d-none'); if (btn) btn.textContent = old || 'Copiar';
-            }, 200); }, 2000);
-          }
-        }
+        // Config repassada para o JS externo
+        window.CHECKOUT_CONFIG = {
+          paymentId: @Model.Id,
+          statusUrl: '@Url.Action("Status", "Pagamento")?id=@Model.Id',
+          initialStatus: '@Model.Status',
+          mpPublicKey: '@(ViewBag.MP_PublicKey ?? "")',
+          antiForgery: '@afToken',
+          // URLs auxiliares
+          confirmCardUrl: '@Url.Action("ConfirmCard", "Pagamento", new { id = Model.Id })',
+          cancelUrl: '@Url.Action("Cancelar", "Pagamento", new { id = Model.Id })',
+          cartUrl: '@Url.Action("Index", "Carrinho")',
+          // opcional: string do amount (para o Brick)
+          amountStr: '@Model.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture)'
+        };
     </script>
 
-    <script>
-        // ------- Polling de Status -------
-        (function polling(){
-          const paymentId = '@Model.Id';
-          const statusUrl = '@Url.Action("Status", "Pagamento")' + '?id=' + encodeURIComponent(paymentId);
-
-          async function checkPaid(){
-            try{
-              const r = await fetch(statusUrl, { cache: 'no-store' });
-              if (!r.ok) return;
-              const data = await r.json();
-
-              if (data && data.status) setUiStatus(data.status);
-
-              if (data.paid === true && data.redirect) {
-                window.location.href = data.redirect;
-              }
-            } catch(e) { /* silencia erros de polling */ }
-          }
-
-          const btn = document.getElementById('btnForcarConsulta');
-          if (btn && !btn.dataset.bound){
-            btn.dataset.bound = '1';
-            btn.addEventListener('click', checkPaid);
-          }
-
-          setUiStatus('@Model.Status');
-          checkPaid();
-          setInterval(checkPaid, 3000);
-          window.__checkPaid = checkPaid;
-        })();
-    </script>
-
-    <script>
-        // ------- Monta QR no frontend (somente se não veio Base64) -------
-        (function mountQrIfNeeded(){
-          const el = document.getElementById('pix-qr');
-          const copyInput = document.getElementById('pixCopyPaste');
-          if (!el || !copyInput) return;
-
-          const brcode = copyInput.value || '';
-          if (!brcode) return;
-
-          try {
-            el.textContent = '';
-            new QRCode(el, { text: brcode, width: 240, height: 240 });
-          } catch (e) { console.warn('QR fallback falhou', e); }
-        })();
-    </script>
-
-    <script>
-        // ------- Brick de Cartão (Mercado Pago) -------
-        (function initMPBrick(){
-          const publicKey = '@(ViewBag.MP_PublicKey ?? "")'.trim();
-          if (!publicKey || (publicKey.indexOf('TEST-') !== 0 && publicKey.indexOf('APP_USR-') !== 0)) {
-            console.warn('Mercado Pago PublicKey inválida/ausente:', publicKey);
-            return;
-          }
-          if (window.__mpBrickMounted) return;
-          window.__mpBrickMounted = true;
-
-          const mp = new MercadoPago(publicKey, { locale: 'pt-BR' });
-          const bricks = mp.bricks();
-
-          const hasCardContainer = document.getElementById('cardPaymentBrick_container');
-          if (!hasCardContainer) return;
-
-          const amount = Number('@Model.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture)');
-
-          bricks.create('cardPayment', 'cardPaymentBrick_container', {
-            initialization: { amount },
-            customization: {
-              paymentMethods: { creditCard: 'all', debitCard: 'all' },
-              visual: { style: { theme: 'default' } }
-            },
-            callbacks: {
-              onReady: () => {},
-              onSubmit: async (cardFormData) => {
-                try {
-                  const res = await fetch('@Url.Action("ConfirmCard", "Pagamento", new { id = Model.Id })', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'RequestVerificationToken': '@afToken'
-                    },
-                    body: JSON.stringify(cardFormData)
-                  });
-
-                  const json = await res.json();
-                  if (json && json.success) {
-                    setUiStatus('paid');
-                    if (json.redirect) window.location.href = json.redirect;
-                    else if (window.__checkPaid) window.__checkPaid();
-                  } else {
-                    setUiStatus('failed');
-                    alert('Não foi possível processar o pagamento.');
-                  }
-                } catch (e) {
-                  setUiStatus('failed');
-                  console.error('ConfirmCard error', e);
-                  alert('Erro ao confirmar o pagamento.');
-                }
-              },
-              onError: (error) => {
-                console.error('Brick error:', error);
-                alert('Erro ao carregar/validar os campos do cartão.');
-              }
-            }
-          });
-        })();
-    </script>
-
-    <script>
-        // ------ Cancelar (comum ao cartão e ao pix) ------
-        (function bindCancel(){
-          const cancelBtns = [
-            document.getElementById('mp-cancel-btn'),
-            document.getElementById('pix-cancel-btn')
-          ].filter(Boolean);
-
-          cancelBtns.forEach(btn => {
-            if (btn.dataset.bound) return;
-            btn.dataset.bound = '1';
-            btn.addEventListener('click', async () => {
-              try {
-                const r = await fetch('@Url.Action("Cancelar", "Pagamento", new { id = Model.Id })', {
-                  method: 'POST',
-                  headers: { 'RequestVerificationToken': '@afToken' }
-                });
-                const data = await r.json().catch(() => ({}));
-                if (data && data.redirect) window.location.href = data.redirect;
-                else window.location.href = '@Url.Action("Index", "Carrinho")';
-              } catch {
-                window.location.href = '@Url.Action("Index", "Carrinho")';
-              }
-            });
-          });
-        })();
-    </script>
+    <script src="~/js/checkout.js" asp-append-version="true"></script>
 }
+
