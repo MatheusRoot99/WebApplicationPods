@@ -177,6 +177,23 @@ namespace WebApplicationPods.Repository.Repository
                 .Where(p => p.Ativo)      // só ativos (ajuste se quiser)
                 .AsNoTracking();           // leitura
         }
+        public IEnumerable<ProdutoModel> ObterMaisPopulares(int take = 8)
+        {
+            return _context.Produtos
+                .Where(p => p.Ativo && p.Estoque > 0)
+                // 1) mais vendidos (conta de itens de pedidos)
+                .OrderByDescending(p => p.PedidoItens.Count())
+                // 2) marcados como MaisVendido
+                .ThenByDescending(p => p.MaisVendido)
+                // 3) melhor avaliação
+                .ThenByDescending(p => p.Avaliacao)
+                // 4) em promoção primeiro
+                .ThenByDescending(p => p.EmPromocao)
+                // 5) mais recentes por último critério
+                .ThenByDescending(p => p.DataCadastro)
+                .Take(take)
+                .ToList();
+        }
 
     }
 }

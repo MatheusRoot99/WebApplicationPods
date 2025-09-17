@@ -14,6 +14,7 @@ namespace WebApplicationPods.Repository.Interface
         IEnumerable<ProdutoModel> ObterPorCategoria(int categoriaId);
         IEnumerable<ProdutoModel> ObterMaisVendidos(int quantidade);
         IQueryable<ProdutoModel> Query();
+        IEnumerable<ProdutoModel> ObterMaisPopulares(int take = 8);
 
         List<ProdutoModel> FiltrarProdutos(FiltrosModel filtros);
         List<string> ObterCategoriasDistintas();

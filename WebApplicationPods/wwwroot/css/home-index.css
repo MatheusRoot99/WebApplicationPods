@@ -263,13 +263,13 @@
     position: absolute;
     right: .5rem;
     bottom: .5rem;
-    width: 34px;
-    height: 34px;
+    width: 58px;
+    height: 28px;
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #fff;
+    /*background: #fff;*/
     color: var(--brand-end, #2575fc);
     text-decoration: none;
     box-shadow: 0 6px 18px rgba(0,0,0,.12);
@@ -373,13 +373,13 @@
     position: absolute;
     right: .5rem;
     bottom: .5rem;
-    width: 36px; /* fixo p/ não “pular” */
-    height: 36px;
+    width: 58px; /* fixo p/ não “pular” */
+    height: 28px;
     border-radius: 10px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #fff;
+    /*background: #fff;*/
     color: var(--brand-end, #2575fc);
     box-shadow: 0 6px 18px rgba(0,0,0,.12);
     border: 1px solid rgba(0,0,0,.06);

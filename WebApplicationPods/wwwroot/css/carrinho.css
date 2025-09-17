@@ -371,4 +371,128 @@
     }
 }
 
+/* ===== Populares (cards com altura igual e botão alinhado) ===== */
+.populares {
+    margin-top: 18px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 14px;
+}
+
+.pop-title {
+    font-weight: 800;
+    color: var(--dark);
+    font-size: 1.1rem;
+    margin: 0 0 10px;
+}
+
+.pop-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    align-items: stretch; /* estica os itens */
+}
+
+@media (min-width: 576px) {
+    .pop-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 992px) {
+    .pop-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.pop-grid > * {
+    height: 100%;
+}
+/* garante altura igual por coluna */
+
+.pop-card {
+    background: #f8fafc;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #eef2f7;
+    display: flex;
+    flex-direction: column; /* img em cima, conteúdo embaixo */
+    height: 100%;
+}
+
+.pop-img {
+    display: block;
+    aspect-ratio: 1 / 1; /* quadrado, independente da foto */
+    background: #eef2f7;
+}
+
+    .pop-img img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+.pop-body {
+    padding: 10px;
+    display: grid; /* divide o corpo em 3 linhas */
+    grid-template-rows: auto 1fr auto; /* nome | ocupa | botão */
+    gap: 8px;
+    height: 100%;
+}
+
+/* Nome com 2 linhas máximas (clamp) e altura fixa */
+.pop-name {
+    font-weight: 700;
+    color: var(--dark);
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: calc(1.2em * 2); /* reserva espaço p/ 2 linhas */
+}
+
+/* Bloco de preço com altura mínima p/ não “pular” */
+.pop-price {
+    min-height: 1.9em; /* 1 linha de preço */
+    display: flex;
+    align-items: end;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+    .pop-price .old {
+        color: #9ca3af;
+        text-decoration: line-through;
+        font-weight: 600;
+    }
+
+    .pop-price .now {
+        color: #111827;
+        font-weight: 900;
+    }
+
+/* Botão sempre na base por causa do grid (linha 3 = auto) */
+.pop-add-form .btn {
+    width: 100%;
+    border-radius: 10px;
+    padding: .55rem .9rem;
+    font-weight: 800;
+}
+
+/* Botão outline usado abaixo do grid */
+.btn.btn-outline {
+    background: #fff;
+    border: 2px solid var(--primary);
+    color: var(--primary);
+    border-radius: 12px;
+}
+
+    .btn.btn-outline:hover {
+        background: var(--grad);
+        color: #fff;
+    }
+
+
 

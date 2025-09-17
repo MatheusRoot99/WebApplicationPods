@@ -126,10 +126,31 @@ namespace WebApplicationPods.Controllers
         // =================== Actions ===================
 
         public IActionResult Index()
+{
+    var carrinho = _carrinhoRepository.ObterCarrinho();
+
+    var populares = _produtoRepository
+        .ObterMaisPopulares(8)
+        .Select(p => new ProdutoResumoVM
         {
-            var carrinho = _carrinhoRepository.ObterCarrinho();
-            return View(carrinho);
-        }
+            Id = p.Id,
+            Nome = p.Nome,
+            ImagemUrl = string.IsNullOrWhiteSpace(p.ImagemUrl)
+                ? "https://via.placeholder.com/600x600?text=%20"
+                : p.ImagemUrl,
+            Preco = p.Preco,
+            PrecoPromocional = p.PrecoPromocional
+        })
+        .ToList();
+
+    var vm = new CarrinhoPageViewModel
+    {
+        Carrinho = carrinho,
+        Populares = populares
+    };
+
+    return View(vm);
+}
 
         [HttpGet]
         public IActionResult GetCarrinhoPartial()
@@ -253,7 +274,7 @@ namespace WebApplicationPods.Controllers
 
                 if (isAjax) return Json(new { ok = true, count, nome = produto.Nome, buyNow });
 
-                TempData["Sucesso"] = $"{produto.Nome} adicionado ao carrinho!";
+                TempData["Sucesso"] = $"adicionado ao carrinho!";
                 return buyNow ? RedirectToAction("Resumo", "Carrinho")
                               : RedirectToAction("Index", "Home");
             }
@@ -382,7 +403,7 @@ namespace WebApplicationPods.Controllers
 
                 if (isAjax) return Json(new { ok = true, count, total, isEmpty, message = $"{nomeProduto} removido do carrinho." });
 
-                TempData["Sucesso"] = $"{nomeProduto} removido do carrinho.";
+                TempData["Sucesso"] = $"removido do carrinho";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
