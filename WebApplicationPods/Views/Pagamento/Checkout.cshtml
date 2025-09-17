@@ -7,17 +7,63 @@
     var afToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
 }
 
-@section Styles{
+@section Styles {
     <style>
         /* Botões ocupam largura total no mobile */
-    @@media (max-width: 576px) {
-      .btn { width: 100%; }
-      .input-group .btn { width: auto; } /* mantém o 'Copiar' encaixado */
-    }
+        @@media (max-width: 576px) {
+            .btn {
+                width: 100%;
+            }
 
-    /* Evita clipes dentro do card */
-    .card-body { overflow: visible; }
+            .input-group .btn {
+                width: auto;
+            }
+            /* mantém o 'Copiar' encaixado */
+        }
 
+        /* Evita clipes dentro do card */
+        .card-body {
+            overflow: visible;
+        }
+
+        .qr-box {
+            width: 220px;
+            height: 220px;
+            border-radius: 10px;
+            border: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+        }
+
+        .text-muted small.code {
+            word-break: break-all;
+            white-space: pre-wrap;
+        }
+
+        .copy-badge {
+            display: inline-flex;
+            align-items: center;
+            font-size: .875rem;
+            color: #198754; /* text-success */
+            background: #e9f7ef; /* verdinho claro */
+            border: 1px solid #cfe9da; /* contorno suave */
+            border-radius: .35rem;
+            padding: .15rem .45rem;
+            transition: opacity .2s ease, transform .2s ease;
+            opacity: 0;
+            transform: translateY(-2px);
+        }
+
+            .copy-badge.show {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+        .d-none {
+            display: none !important;
+        }
     </style>
 }
 
@@ -43,12 +89,11 @@
                                 @if (!string.IsNullOrEmpty(Model.PixQrBase64Png))
                                 {
                                     <img src="data:image/png;base64,@Model.PixQrBase64Png" alt="QR Code Pix"
-                                         style="width:220px;height:220px;border-radius:10px;border:1px solid #eee;" />
+                                         class="qr-box" style="object-fit: contain;" />
                                 }
                                 else
                                 {
-                                    <div class="border rounded d-flex align-items-center justify-content-center"
-                                         style="width:220px;height:220px;color:#999;">
+                                    <div id="pix-qr" class="qr-box text-secondary">
                                         QR Code
                                     </div>
                                 }
@@ -58,7 +103,8 @@
                                 <label class="form-label">Copia e cola</label>
                                 <div class="input-group">
                                     <input class="form-control" value="@Model.PixQrData" id="pixCopyPaste" readonly />
-                                    <button class="btn btn-secondary" type="button" onclick="copyPix()">Copiar</button>
+                                    <button class="btn btn-secondary" type="button" onclick="copyPix()" id="btnCopyPix">Copiar</button>
+                                    <span id="copyBadge" class="copy-badge d-none ms-2">Copiado!</span>
                                 </div>
 
                                 <div class="d-flex align-items-center gap-2 mt-3 flex-wrap">
@@ -68,16 +114,14 @@
                                 </div>
 
                                 <div class="text-muted mt-2">Valor: <strong>@Model.Amount.ToString("C")</strong></div>
+                                <div class="text-muted mt-2 small">Pedido: #@Model.PedidoId</div>
                             </div>
                         </div>
                     }
 
-
                     @* ===================== CARTÃO ===================== *@
                     @if (Model.Metodo == PaymentMethod.CardCredit || Model.Metodo == PaymentMethod.CardDebit)
                     {
-                        <h6 class="mb-3">Cartão @(Model.Metodo == PaymentMethod.CardCredit ? "de Crédito" : "de Débito")</h6>
-
                         <div id="cardPaymentBrick_container"></div>
 
                         @* Mantemos somente o CANCELAR da página (o Brick já tem o botão Pagar) *@
@@ -120,13 +164,47 @@
 
 @section Scripts {
     <script src="https://sdk.mercadopago.com/js/v2"></script>
+    <!-- QRCode.js (frontend, sem servidor) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" referrerpolicy="no-referrer"></script>
 
     <script>
-        function copyPix() {
-            const input = document.getElementById('pixCopyPaste');
-            if (!input) return;
-            input.select(); input.setSelectionRange(0, 99999);
-            document.execCommand('copy');
+        // Copiar PIX + mostrar badge "Copiado!"
+        async function copyPix() {
+          const input = document.getElementById('pixCopyPaste');
+          const btn   = document.getElementById('btnCopyPix');
+          const badge = document.getElementById('copyBadge');
+          if (!input) return;
+
+          // tenta Clipboard API
+          let ok = false;
+          try {
+            await navigator.clipboard.writeText(input.value);
+            ok = true;
+          } catch {
+            try {
+              input.select(); input.setSelectionRange(0, 99999);
+              document.execCommand('copy'); // fallback
+              ok = true;
+            } catch {}
+          }
+
+          if (ok && badge) {
+            // mostra badge por 2s
+            badge.classList.remove('d-none');
+            void badge.offsetWidth; // força reflow p/ animar
+            badge.classList.add('show');
+
+            const old = btn ? btn.textContent : '';
+            if (btn) btn.textContent = 'Copiado!';
+
+            setTimeout(() => {
+              badge.classList.remove('show');
+              setTimeout(() => {
+                badge.classList.add('d-none');
+                if (btn) btn.textContent = old || 'Copiar';
+              }, 200);
+            }, 2000);
+          }
         }
     </script>
 
@@ -151,7 +229,7 @@
               if (data.paid === true && data.redirect) {
                 window.location.href = data.redirect;
               }
-            } catch(e) {}
+            } catch(e) { /* silencia erros de polling */ }
           }
 
           const btn = document.getElementById('btnForcarConsulta');
@@ -167,7 +245,29 @@
     </script>
 
     <script>
-        // ------- Brick de Cartão -------
+        // ------- Monta QR no frontend (somente se não veio Base64) -------
+        (function mountQrIfNeeded(){
+          // Só tenta montar se existe container e temos BR Code no input
+          const el = document.getElementById('pix-qr');
+          const copyInput = document.getElementById('pixCopyPaste');
+          if (!el || !copyInput) return;
+
+          const brcode = copyInput.value || '';
+          if (!brcode) return;
+
+          try {
+            el.textContent = '';
+            new QRCode(el, {
+              text: brcode,
+              width: 220,
+              height: 220
+            });
+          } catch (e) { console.warn('QR fallback falhou', e); }
+        })();
+    </script>
+
+    <script>
+        // ------- Brick de Cartão (Mercado Pago) -------
         (function initMPBrick(){
           const publicKey = '@(ViewBag.MP_PublicKey ?? "")'.trim();
           if (!publicKey || (publicKey.indexOf('TEST-') !== 0 && publicKey.indexOf('APP_USR-') !== 0)) {
@@ -190,10 +290,10 @@
             initialization: { amount },
             customization: {
               paymentMethods: { creditCard: 'all', debitCard: 'all' },
-              visual: { style: { theme: 'default' } } // usa tema padrão
+              visual: { style: { theme: 'default' } }
             },
-          callbacks: {
-            onReady: () => { /* nada aqui, o Brick já habilita o próprio botão */ },
+            callbacks: {
+              onReady: () => { /* o Brick já exibe o botão Pagar */ },
               onSubmit: async (cardFormData) => {
                 try {
                   const res = await fetch('@Url.Action("ConfirmCard", "Pagamento", new { id = Model.Id })', {
@@ -229,8 +329,9 @@
           });
         })();
     </script>
+
     <script>
-                // ------ Cancelar (comum ao cartão e ao pix) ------
+        // ------ Cancelar (comum ao cartão e ao pix) ------
         (function bindCancel(){
           const cancelBtns = [
             document.getElementById('mp-cancel-btn'),

@@ -137,5 +137,42 @@ namespace WebApplicationPods.Controllers
                 _ => PaymentMethod.Cash
             };
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Cancelar(int id)
+        {
+            // Busca o pagamento e o pedido vinculado
+            var p = await _db.Pagamentos
+                .Include(x => x.Pedido)
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (p == null)
+                return Json(new { ok = false, message = "Pagamento não encontrado." });
+
+            // Se já foi pago, não cancela
+            if (p.Status == PaymentStatus.Paid)
+                return Json(new { ok = false, message = "Pagamento já aprovado; não é possível cancelar." });
+
+            // Marca como cancelado
+            p.Status = PaymentStatus.Canceled;
+            p.CanceledAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+
+            // Atualiza o status do pedido (ajuste o texto se preferir)
+            _pedidos.AtualizarStatus(p.PedidoId, "Cancelado");
+
+            // Opcional: notificar lojistas via SignalR, se você já usa (como no PaymentService)
+            // await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged", new { id = p.PedidoId, status = "Cancelado" });
+
+            // Redireciona de volta pro carrinho
+            return Json(new
+            {
+                ok = true,
+                redirect = Url.Action("Index", "Carrinho")
+            });
+        }
+
     }
 }

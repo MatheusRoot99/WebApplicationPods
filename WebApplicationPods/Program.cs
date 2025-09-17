@@ -126,7 +126,10 @@ builder.Services.AddHttpClient<MercadoPagoGateway>(http =>
 
 // Stripe
 builder.Services.AddScoped<StripeGateway>();
+// Pix Manual  <<<<<<<<<<  ADICIONE ESTA LINHA
+builder.Services.AddScoped<PixManualGateway>();
 
+// Factory para escolher o gateway em runtime
 // Factory para escolher o gateway em runtime
 builder.Services.AddScoped<Func<string, IPaymentGateway>>(sp => provider =>
 {
@@ -134,6 +137,8 @@ builder.Services.AddScoped<Func<string, IPaymentGateway>>(sp => provider =>
         return sp.GetRequiredService<MercadoPagoGateway>();
     if (provider.Equals("Stripe", StringComparison.OrdinalIgnoreCase))
         return sp.GetRequiredService<StripeGateway>();
+    if (provider.Equals("PixManual", StringComparison.OrdinalIgnoreCase))
+        return sp.GetRequiredService<PixManualGateway>();
     throw new InvalidOperationException($"Provedor de pagamento não suportado: {provider}");
 });
 

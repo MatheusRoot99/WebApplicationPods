@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using WebApplicationPods.Data;
 using WebApplicationPods.Models;
 using WebApplicationPods.Payments.Options;
@@ -20,35 +21,46 @@ public class PaymentConfigController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Edit()
+    public async Task<IActionResult> Edit(string provider = "Stripe")
     {
         var user = await _userManager.GetUserAsync(User);
-        var cfg = _db.MerchantPaymentConfigs.FirstOrDefault(x => x.UserId == user.Id);
 
-        var vm = new PaymentConfigEditViewModel();
+        // carrega SOMENTE a config do provider selecionado
+        var entity = await _db.MerchantPaymentConfigs
+            .AsNoTracking()
+            .SingleOrDefaultAsync(x => x.UserId == user.Id && x.Provider == provider);
 
-        if (cfg != null)
+        var vm = new PaymentConfigEditViewModel { Provider = provider };
+
+        if (entity != null)
         {
-            vm.Provider = cfg.Provider;
-
-            // desserializa o JSON salvo
-            var doc = JsonDocument.Parse(cfg.ConfigJson);
-            var root = doc.RootElement;
-
-            if (cfg.Provider.Equals("Stripe", StringComparison.OrdinalIgnoreCase))
+            try
             {
-                vm.StripePublishableKey = root.GetPropertyOrDefault("PublishableKey");
-                // por segurança não mostramos SecretKey, deixamos vazio
+                if (provider.Equals("Stripe", StringComparison.OrdinalIgnoreCase))
+                {
+                    var o = JsonSerializer.Deserialize<StripeOptions>(entity.ConfigJson) ?? new();
+                    vm.StripePublishableKey = o.PublishableKey;
+                    vm.StripeWebhookSecret = o.WebhookSecret;
+                    vm.StripeSecretKey = ""; // nunca reexiba
+                }
+                else if (provider.Equals("MercadoPago", StringComparison.OrdinalIgnoreCase))
+                {
+                    var o = JsonSerializer.Deserialize<MercadoPagoOptions>(entity.ConfigJson) ?? new();
+                    vm.MpPublicKey = o.PublicKey;
+                    vm.MpWebhookSecret = o.WebhookSecret;
+                    vm.MpAccessToken = ""; // nunca reexiba
+                }
+                else if (provider.Equals("PixManual", StringComparison.OrdinalIgnoreCase))
+                {
+                    var o = JsonSerializer.Deserialize<PixManualOptions>(entity.ConfigJson) ?? new();
+                    vm.PixManualKey = o.PixKey;
+                    vm.PixManualBeneficiaryName = o.BeneficiaryName;
+                    vm.PixManualCity = o.BeneficiaryCity;
+                    vm.PixManualTxIdPrefix = o.TxIdPrefix;
+                    vm.PixManualMerchantName = o.MerchantName;
+                }
             }
-            else if (cfg.Provider.Equals("MercadoPago", StringComparison.OrdinalIgnoreCase))
-            {
-                vm.MpPublicKey = root.GetPropertyOrDefault("PublicKey");
-                // por segurança não mostramos AccessToken, deixamos vazio
-            }
-        }
-        else
-        {
-            vm.Provider = "Stripe"; // default de exibição
+            catch { /* tolera formatos antigos */ }
         }
 
         return View(ViewPath, vm);
@@ -58,94 +70,81 @@ public class PaymentConfigController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(PaymentConfigEditViewModel model)
     {
-        if (!ModelState.IsValid)
-            return View(ViewPath, model);
+        if (!ModelState.IsValid) return View(ViewPath, model);
 
         var user = await _userManager.GetUserAsync(User);
-        var cfg = _db.MerchantPaymentConfigs.FirstOrDefault(x => x.UserId == user.Id);
 
-        // carrega o JSON atual (se houver) para preservar segredos quando campo vier vazio
-        string publishableKey = null, secretKey = null, webhookSecret = null;
-        string publicKey = null, accessToken = null, mpWebhookSecret = null;
+        // upsert por (UserId, Provider)
+        var entity = await _db.MerchantPaymentConfigs
+            .SingleOrDefaultAsync(x => x.UserId == user.Id && x.Provider == model.Provider);
 
-        if (cfg != null)
-        {
-            using var doc = JsonDocument.Parse(cfg.ConfigJson);
-            var root = doc.RootElement;
+        string json;
 
-            publishableKey = root.GetPropertyOrDefault("PublishableKey");
-            secretKey = root.GetPropertyOrDefault("SecretKey");
-            webhookSecret = root.GetPropertyOrDefault("WebhookSecret");
-
-            publicKey = root.GetPropertyOrDefault("PublicKey");
-            accessToken = root.GetPropertyOrDefault("AccessToken");
-            mpWebhookSecret = root.GetPropertyOrDefault("WebhookSecret");
-        }
-
-        // atualiza conforme o provider selecionado no form
         if (model.Provider.Equals("Stripe", StringComparison.OrdinalIgnoreCase))
         {
-            publishableKey = model.StripePublishableKey ?? publishableKey;
-            // só troca o secret se o usuário digitou algo
+            var current = entity == null || string.IsNullOrWhiteSpace(entity.ConfigJson)
+                ? new StripeOptions()
+                : JsonSerializer.Deserialize<StripeOptions>(entity.ConfigJson) ?? new StripeOptions();
+
+            current.PublishableKey = model.StripePublishableKey?.Trim() ?? current.PublishableKey ?? "";
             if (!string.IsNullOrWhiteSpace(model.StripeSecretKey))
-                secretKey = model.StripeSecretKey;
-            webhookSecret = model.StripeWebhookSecret ?? webhookSecret;
+                current.SecretKey = model.StripeSecretKey!.Trim();
+            current.WebhookSecret = model.StripeWebhookSecret?.Trim() ?? current.WebhookSecret ?? "";
 
-            var json = JsonSerializer.Serialize(new
-            {
-                Provider = "Stripe",
-                PublishableKey = publishableKey,
-                SecretKey = secretKey,
-                WebhookSecret = webhookSecret
-            });
-
-            if (cfg == null)
-                _db.MerchantPaymentConfigs.Add(new MerchantPaymentConfig { UserId = user.Id, Provider = "Stripe", ConfigJson = json });
-            else
-            {
-                cfg.Provider = "Stripe";
-                cfg.ConfigJson = json;
-                _db.MerchantPaymentConfigs.Update(cfg);
-            }
+            json = JsonSerializer.Serialize(current);
         }
         else if (model.Provider.Equals("MercadoPago", StringComparison.OrdinalIgnoreCase))
         {
-            publicKey = model.MpPublicKey ?? publicKey;
+            var current = entity == null || string.IsNullOrWhiteSpace(entity.ConfigJson)
+                ? new MercadoPagoOptions()
+                : JsonSerializer.Deserialize<MercadoPagoOptions>(entity.ConfigJson) ?? new MercadoPagoOptions();
+
+            current.PublicKey = model.MpPublicKey?.Trim() ?? current.PublicKey ?? "";
             if (!string.IsNullOrWhiteSpace(model.MpAccessToken))
-                accessToken = model.MpAccessToken;
-            mpWebhookSecret = model.MpWebhookSecret ?? mpWebhookSecret;
+                current.AccessToken = model.MpAccessToken!.Trim();
+            current.WebhookSecret = model.MpWebhookSecret?.Trim() ?? current.WebhookSecret ?? "";
 
-            var json = JsonSerializer.Serialize(new
-            {
-                Provider = "MercadoPago",
-                PublicKey = publicKey,
-                AccessToken = accessToken,
-                WebhookSecret = mpWebhookSecret
-            });
+            json = JsonSerializer.Serialize(current);
+        }
+        else if (model.Provider.Equals("PixManual", StringComparison.OrdinalIgnoreCase))
+        {
+            var current = entity == null || string.IsNullOrWhiteSpace(entity.ConfigJson)
+                ? new PixManualOptions()
+                : JsonSerializer.Deserialize<PixManualOptions>(entity.ConfigJson) ?? new PixManualOptions();
 
-            if (cfg == null)
-                _db.MerchantPaymentConfigs.Add(new MerchantPaymentConfig { UserId = user.Id, Provider = "MercadoPago", ConfigJson = json });
-            else
-            {
-                cfg.Provider = "MercadoPago";
-                cfg.ConfigJson = json;
-                _db.MerchantPaymentConfigs.Update(cfg);
-            }
+            current.PixKey = model.PixManualKey?.Trim() ?? "";
+            current.BeneficiaryName = model.PixManualBeneficiaryName?.Trim() ?? "";
+            current.BeneficiaryCity = model.PixManualCity?.Trim() ?? "BRASILIA";
+            current.TxIdPrefix = string.IsNullOrWhiteSpace(model.PixManualTxIdPrefix) ? null : model.PixManualTxIdPrefix.Trim();
+            current.MerchantName = string.IsNullOrWhiteSpace(model.PixManualMerchantName) ? null : model.PixManualMerchantName.Trim();
+
+            json = JsonSerializer.Serialize(current);
         }
         else
         {
             ModelState.AddModelError(nameof(model.Provider), "Provedor inválido.");
-            return View(model);
+            return View(ViewPath, model);
+        }
+
+        if (entity == null)
+        {
+            _db.MerchantPaymentConfigs.Add(new MerchantPaymentConfig
+            {
+                UserId = user.Id,
+                Provider = model.Provider,
+                ConfigJson = json,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+        else
+        {
+            entity.ConfigJson = json;
+            entity.UpdatedAt = DateTime.UtcNow;
+            _db.MerchantPaymentConfigs.Update(entity);
         }
 
         await _db.SaveChangesAsync();
         TempData["Ok"] = "Configurações salvas com sucesso.";
-        return RedirectToAction(nameof(Edit));
+        return RedirectToAction(nameof(Edit), new { provider = model.Provider });
     }
-}
-
-static class JsonExt
-{
-    public static string? GetPropertyOrDefault(this JsonElement root, string name)
-        => root.TryGetProperty(name, out var p) && p.ValueKind == JsonValueKind.String ? p.GetString() : null;
 }

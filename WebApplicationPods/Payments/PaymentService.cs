@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
-using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
 using WebApplicationPods.Data;
 using WebApplicationPods.Enum;
 using WebApplicationPods.Hubs;
@@ -15,23 +16,67 @@ namespace WebApplicationPods.Payments
         private readonly IPedidoRepository _pedidos;
         private readonly BancoContext _db;
         private readonly IHubContext<PedidosHub> _hub;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IPaymentCredentialsResolver _creds;
 
         public PaymentService(
             Func<string, IPaymentGateway> gatewayFactory,
             IPedidoRepository pedidos,
             BancoContext db,
-            IHubContext<PedidosHub> hub)
+            IHubContext<PedidosHub> hub,
+            IHttpContextAccessor httpContextAccessor,
+            IPaymentCredentialsResolver creds)
         {
             _gatewayFactory = gatewayFactory;
             _pedidos = pedidos;
             _db = db;
             _hub = hub;
+            _httpContextAccessor = httpContextAccessor;
+            _creds = creds;
         }
 
-        // === seu StartPaymentAsync original + marcação de dinheiro já está OK ===
+        // Decide qual provedor usar para PIX com base na config do lojista
+        private async Task<string> ResolvePixProviderAsync()
+        {
+            var user = _httpContextAccessor.HttpContext?.User;
+
+            // Se o lojista configurou PixManual (chave pix), prioriza
+            var pixManual = await _creds.GetAsync<WebApplicationPods.Payments.Options.PixManualOptions>(user!, "PixManual");
+            if (pixManual != null && !string.IsNullOrWhiteSpace(pixManual.PixKey))
+                return "PixManual";
+
+            // Senão, usa MercadoPago por padrão
+            return "MercadoPago";
+        }
+
+        private async Task<string> ResolveCardProviderAsync()
+        {
+            var user = _httpContextAccessor.HttpContext?.User;
+
+            // Tem MP configurado? (p/ cartão via API/Brick do MP)
+            var mp = await _creds.GetAsync<WebApplicationPods.Payments.Options.MercadoPagoOptions>(user!, "MercadoPago");
+            var mpOk = mp != null && !string.IsNullOrWhiteSpace(mp.PublicKey) && !string.IsNullOrWhiteSpace(mp.AccessToken);
+
+            // Tem Stripe configurado?
+            var st = await _creds.GetAsync<WebApplicationPods.Payments.Options.StripeOptions>(user!, "Stripe");
+            var stOk = st != null && !string.IsNullOrWhiteSpace(st.PublishableKey) && !string.IsNullOrWhiteSpace(st.SecretKey);
+
+            // Defina a sua prioridade (aqui: dá preferência ao Stripe; troque se quiser MP primeiro)
+            if (stOk) return "Stripe";
+            if (mpOk) return "MercadoPago";
+
+            // fallback (evita quebrar)
+            return "Stripe";
+        }
+
         public async Task<PaymentModel> StartPaymentAsync(PedidoModel pedido, PaymentMethod metodo)
         {
-            var provider = metodo == PaymentMethod.Cash ? "None" : "MercadoPago"; // ou sua lógica
+            var provider =
+                 metodo == PaymentMethod.Cash ? "None" :
+                 metodo == PaymentMethod.Pix ? await ResolvePixProviderAsync() :
+                 (metodo == PaymentMethod.CardCredit || metodo == PaymentMethod.CardDebit) ? await ResolveCardProviderAsync() :
+                 "None";
+
             var gateway = provider == "None" ? null : _gatewayFactory(provider);
 
             var payment = new PaymentModel
@@ -70,8 +115,8 @@ namespace WebApplicationPods.Payments
                 _pedidos.AtualizarStatus(pedido.Id, "Aguardando Confirmação (Dinheiro)");
                 payment.Status = PaymentStatus.Pending;
 
-                // dispara refresh para lojistas
-                await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged", new { id = pedido.Id, status = "Aguardando Confirmação (Dinheiro)" });
+                await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged",
+                    new { id = pedido.Id, status = "Aguardando Confirmação (Dinheiro)" });
             }
 
             await _db.SaveChangesAsync();
@@ -101,18 +146,16 @@ namespace WebApplicationPods.Payments
             {
                 _pedidos.AtualizarStatus(pedido.Id, result.Success ? "Pago" : "Pagamento Falhou");
 
-                // dispara refresh para lojistas
-                await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged", new { id = pedido.Id, status = result.Success ? "Pago" : "Pagamento Falhou" });
+                await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged",
+                    new { id = pedido.Id, status = result.Success ? "Pago" : "Pagamento Falhou" });
             }
 
             return result.Success;
         }
 
-       
-
         public async Task ApplyWebhookAsync(HttpRequest request)
         {
-            // Somente Mercado Pago (evita acionar Stripe à toa)
+            // Webhook hoje é só MP
             var mp = _gatewayFactory("MercadoPago");
             var parsed = await mp.HandleWebhookAsync(request);
             await ApplyWebhookParsedAsync(parsed);
@@ -122,7 +165,8 @@ namespace WebApplicationPods.Payments
         {
             if (string.IsNullOrWhiteSpace(parsed.providerPaymentId)) return;
 
-            var payment = _db.Set<PaymentModel>().FirstOrDefault(p => p.ProviderPaymentId == parsed.providerPaymentId);
+            var payment = await _db.Set<PaymentModel>()
+                .FirstOrDefaultAsync(p => p.ProviderPaymentId == parsed.providerPaymentId);
             if (payment == null) return;
 
             // Idempotência básica
@@ -143,8 +187,8 @@ namespace WebApplicationPods.Payments
 
             _pedidos.AtualizarStatus(payment.PedidoId, statusTexto);
 
-            // dispara refresh para lojistas
-            await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged", new { id = payment.PedidoId, status = statusTexto });
+            await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged",
+                new { id = payment.PedidoId, status = statusTexto });
         }
     }
 }

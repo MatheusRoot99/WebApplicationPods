@@ -15,5 +15,13 @@ namespace WebApplicationPods.Models
         public string? MpPublicKey { get; set; }
         public string? MpAccessToken { get; set; }
         public string? MpWebhookSecret { get; set; }
+
+        // PIX Manual (chave)
+        public string? PixManualKey { get; set; }
+        public string? PixManualBeneficiaryName { get; set; }
+        public string? PixManualCity { get; set; }
+        public string? PixManualTxIdPrefix { get; set; }
+        public string? PixManualMerchantName { get; set; }
+
     }
 }

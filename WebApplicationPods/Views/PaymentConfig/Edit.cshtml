@@ -37,6 +37,14 @@
                 Mercado Pago
             </button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(provider == "PixManual" ? "active" : "")"
+                    id="tab-pixmanual" type="button" role="tab"
+                    data-target="#pane-pixmanual" aria-controls="pane-pixmanual"
+                    aria-selected="@(provider == "PixManual" ? "true" : "false")">
+                Pix (Chave manual)
+            </button>
+        </li>
     </ul>
 
     <div class="tab-content border border-top-0 p-3">
@@ -79,6 +87,34 @@
                 <span asp-validation-for="MpWebhookSecret" class="text-danger"></span>
             </div>
         </div>
+
+        <!-- PIX MANUAL -->
+        <div id="pane-pixmanual" class="tab-pane fade @(provider == "PixManual" ? "show active" : "")" role="tabpanel" aria-labelledby="tab-pixmanual">
+            <div class="mb-3">
+                <label asp-for="PixManualKey" class="form-label">Chave Pix</label>
+                <input asp-for="PixManualKey" class="form-control" placeholder="CPF/CNPJ/E-mail/Celular/Chave aleatória" />
+                <span asp-validation-for="PixManualKey" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="PixManualBeneficiaryName" class="form-label">Nome do recebedor</label>
+                <input asp-for="PixManualBeneficiaryName" class="form-control" />
+                <small class="text-muted">Máx. 25 caracteres.</small>
+            </div>
+            <div class="mb-3">
+                <label asp-for="PixManualCity" class="form-label">Cidade</label>
+                <input asp-for="PixManualCity" class="form-control" />
+                <small class="text-muted">Máx. 15 caracteres (ex.: BRASILIA).</small>
+            </div>
+            <div class="mb-3">
+                <label asp-for="PixManualMerchantName" class="form-label">Nome fantasia (opcional)</label>
+                <input asp-for="PixManualMerchantName" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label asp-for="PixManualTxIdPrefix" class="form-label">Prefixo do TXID (opcional)</label>
+                <input asp-for="PixManualTxIdPrefix" class="form-control" placeholder="Ex.: PED" />
+                <small class="text-muted">O sistema completa com o nº do pedido (limite 25 no total).</small>
+            </div>
+        </div>
     </div>
 
     <div class="mt-3">
@@ -92,28 +128,33 @@
     <partial name="_ValidationScriptsPartial" />
     <script>
         (function () {
-            const providerHidden = document.getElementById('Provider'); // <-- aqui
+            const providerHidden = document.getElementById('Provider');
             const tabStripe = document.getElementById('tab-stripe');
             const tabMp = document.getElementById('tab-mp');
+            const tabPix = document.getElementById('tab-pixmanual');
+
             const paneStripe = document.getElementById('pane-stripe');
             const paneMp = document.getElementById('pane-mp');
+            const panePix = document.getElementById('pane-pixmanual');
 
             function activate(tabBtn, pane, providerName) {
-                [tabStripe, tabMp].forEach(b => b.classList.remove('active'));
+                [tabStripe, tabMp, tabPix].forEach(b => b.classList.remove('active'));
                 tabBtn.classList.add('active');
 
-                [paneStripe, paneMp].forEach(p => p.classList.remove('show','active'));
+                [paneStripe, paneMp, panePix].forEach(p => p.classList.remove('show','active'));
                 pane.classList.add('show','active');
 
-                providerHidden.value = providerName; // mantém Provider preenchido
+                providerHidden.value = providerName;
             }
 
             tabStripe.addEventListener('click', () => activate(tabStripe, paneStripe, 'Stripe'));
             tabMp.addEventListener('click',    () => activate(tabMp, paneMp, 'MercadoPago'));
+            tabPix.addEventListener('click',   () => activate(tabPix, panePix, 'PixManual'));
 
             const current = providerHidden.value || 'Stripe';
-            if (current === 'MercadoPago') activate(tabMp, paneMp, 'MercadoPago');
-            else activate(tabStripe, paneStripe, 'Stripe');
+            if (current === 'MercadoPago')      activate(tabMp, paneMp, 'MercadoPago');
+            else if (current === 'PixManual')   activate(tabPix, panePix, 'PixManual');
+            else                                 activate(tabStripe, paneStripe, 'Stripe');
         })();
     </script>
 }

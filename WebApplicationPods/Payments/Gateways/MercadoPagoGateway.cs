@@ -1,6 +1,5 @@
 ﻿using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -8,7 +7,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using WebApplicationPods.Enum;
 using WebApplicationPods.Models;
-using WebApplicationPods.Payments.Options; // <-- credenciais tipadas (MercadoPagoCredentials)
+using WebApplicationPods.Payments;
+using WebApplicationPods.Payments.Options;
 
 namespace WebApplicationPods.Payments.Gateways
 {
@@ -36,93 +36,203 @@ namespace WebApplicationPods.Payments.Gateways
                 _http.BaseAddress = new Uri("https://api.mercadopago.com/");
         }
 
-        // >>> Agora assíncrono e usando GetAsync<T>(user,"MercadoPago")
         private async Task<string> ResolveAccessTokenAsync()
         {
             var user = _httpCtx.HttpContext?.User;
+
+            // 1) tenta credenciais do lojista (DB)
             var creds = await _resolver.GetAsync<MercadoPagoOptions>(user!, "MercadoPago");
-            return creds?.AccessToken
-                   ?? _cfg["Payments:MercadoPago:AccessToken"]
-                   ?? string.Empty;
+            var token = creds?.AccessToken;
+
+            // 2) fallback para appsettings
+            token ??= _cfg["Payments:MercadoPago:AccessToken"];
+
+            if (string.IsNullOrWhiteSpace(token))
+                throw new InvalidOperationException("Mercado Pago AccessToken não configurado (vazio).");
+
+            // Só para te proteger contra usar a PublicKey por engano:
+            if (token.StartsWith("TEST-", StringComparison.OrdinalIgnoreCase) ||
+                token.StartsWith("APP_USR-", StringComparison.OrdinalIgnoreCase))
+            {
+                return token;
+            }
+
+            // Se cair aqui, provavelmente é a PublicKey (que começa com TEST- PUBLIC KEY), ou algo errado.
+            throw new InvalidOperationException(
+                "AccessToken do Mercado Pago parece inválido. " +
+                "Ele deve começar com 'TEST-' (sandbox) ou 'APP_USR-' (produção). " +
+                "Verifique se não está usando a PublicKey por engano.");
         }
 
-        // --------- PIX ----------
+
+        // =================== PIX ===================
         public async Task<PixInitResult> CreatePixAsync(PedidoModel pedido)
         {
             var token = await ResolveAccessTokenAsync();
-            if (string.IsNullOrWhiteSpace(token))
-                throw new InvalidOperationException("Mercado Pago AccessToken não configurado.");
-
-            using var req = new HttpRequestMessage(HttpMethod.Post, "v1/payments");
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             var body = new
             {
                 transaction_amount = pedido.ValorTotal,
                 description = $"Pedido #{pedido.Id}",
-                payment_method_id = "pix",
-                payer = new { email = "comprador@teste.com" } // ajuste conforme seu fluxo
+                payment_method_id = "pix"
+                // payer opcional; em teste, melhor omitir
             };
+
+            using var req = new HttpRequestMessage(HttpMethod.Post, "v1/payments");
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            req.Headers.TryAddWithoutValidation("X-Idempotency-Key", Guid.NewGuid().ToString("N"));
             req.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
 
             var resp = await _http.SendAsync(req);
             var txt = await resp.Content.ReadAsStringAsync();
-            resp.EnsureSuccessStatusCode();
 
-            // TODO: parse real do retorno do MP (qr_code, qr_code_base64, id etc.)
+            if (!resp.IsSuccessStatusCode)
+            {
+                // Logue txt para ver o erro completo do MP
+                throw new InvalidOperationException(
+                    $"Mercado Pago /v1/payments falhou: {(int)resp.StatusCode} {resp.ReasonPhrase}. " +
+                    $"Body: {txt}");
+            }
+
+            using var doc = JsonDocument.Parse(txt);
+            var root = doc.RootElement;
+
+            var id = root.TryGetProperty("id", out var idEl)
+                ? (idEl.ValueKind == JsonValueKind.Number ? idEl.GetInt64().ToString() : idEl.GetString() ?? "")
+                : "";
+
+            string qr = "";
+            string? qrBase64 = null;
+
+            if (root.TryGetProperty("point_of_interaction", out var poi) &&
+                poi.ValueKind == JsonValueKind.Object &&
+                poi.TryGetProperty("transaction_data", out var td) &&
+                td.ValueKind == JsonValueKind.Object)
+            {
+                if (td.TryGetProperty("qr_code", out var qrEl) && qrEl.ValueKind == JsonValueKind.String)
+                    qr = qrEl.GetString() ?? "";
+
+                if (td.TryGetProperty("qr_code_base64", out var b64El) && b64El.ValueKind == JsonValueKind.String)
+                    qrBase64 = b64El.GetString();
+            }
+
+            if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(qr))
+                throw new InvalidOperationException("Não foi possível obter os dados do QR do PIX.");
+
             return new PixInitResult
             {
-                ProviderPaymentId = "mp_pix_id_demo",
-                QrData = "000201...EMV...",
-                QrBase64Png = null
+                ProviderPaymentId = id,
+                QrData = qr,
+                QrBase64Png = qrBase64
             };
         }
 
-        // --------- Cartão ----------
-        public async Task<CardInitResult> CreateCardPaymentAsync(PedidoModel pedido, PaymentMethod method)
-        {
-            var token = await ResolveAccessTokenAsync();
-            if (string.IsNullOrWhiteSpace(token))
-                throw new InvalidOperationException("Mercado Pago AccessToken não configurado.");
-
-            // Com Bricks, normalmente você usa os dados do front para confirmar no backend.
-            return await Task.FromResult(new CardInitResult
+        // =================== CARTÃO (mantém como stub se usar Stripe) ===================
+        public Task<CardInitResult> CreateCardPaymentAsync(PedidoModel pedido, PaymentMethod method)
+            => Task.FromResult(new CardInitResult
             {
                 ProviderPaymentId = "mp_card_id_demo",
                 ClientSecretOrToken = "client_secret_demo"
             });
-        }
 
-        public async Task<ConfirmCardResult> ConfirmCardPaymentAsync(string providerPaymentId, string clientPayloadJson)
-        {
-            var token = await ResolveAccessTokenAsync();
-            if (string.IsNullOrWhiteSpace(token))
-                throw new InvalidOperationException("Mercado Pago AccessToken não configurado.");
-
-            // TODO: confirmar no MP com os dados do clientPayloadJson
-            return await Task.FromResult(new ConfirmCardResult
+        public Task<ConfirmCardResult> ConfirmCardPaymentAsync(string providerPaymentId, string clientPayloadJson)
+            => Task.FromResult(new ConfirmCardResult
             {
                 Success = true,
                 Brand = "Visa",
                 Last4 = "4242"
             });
+
+        // =================== STATUS ===================
+        public async Task<PaymentStatus> GetStatusAsync(string providerPaymentId)
+        {
+            var token = await ResolveAccessTokenAsync();
+            using var req = new HttpRequestMessage(HttpMethod.Get, $"v1/payments/{providerPaymentId}");
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            var resp = await _http.SendAsync(req);
+            var txt = await resp.Content.ReadAsStringAsync();
+            resp.EnsureSuccessStatusCode();
+
+            using var doc = JsonDocument.Parse(txt);
+            var status = doc.RootElement.GetProperty("status").GetString() ?? "";
+            return MapMpStatus(status);
         }
 
-        public Task<PaymentStatus> GetStatusAsync(string providerPaymentId)
-            => Task.FromResult(PaymentStatus.Paid);
-
-        public Task<(string providerPaymentId, PaymentStatus newStatus, decimal? paidAmount, string extra)>
+        // =================== WEBHOOK ===================
+        public async Task<(string providerPaymentId, PaymentStatus newStatus, decimal? paidAmount, string extra)>
             HandleWebhookAsync(HttpRequest request)
         {
-            // TODO: validar assinatura e parse real do webhook do MP
-            var tuple = ("mp_pix_id_demo", PaymentStatus.Paid, (decimal?)null, "");
-            return Task.FromResult(tuple);
+            // MP manda JSON com { "type": "payment", "data": { "id": "123" } } OU querystring com ?type=payment&id=123
+            // 1) tenta corpo JSON
+            string? id = null;
+            string? type = null;
+            try
+            {
+                using var sr = new StreamReader(request.Body, Encoding.UTF8);
+                var body = await sr.ReadToEndAsync();
+                if (!string.IsNullOrWhiteSpace(body))
+                {
+                    using var doc = JsonDocument.Parse(body);
+                    var root = doc.RootElement;
+
+                    if (root.TryGetProperty("type", out var tEl) && tEl.ValueKind == JsonValueKind.String)
+                        type = tEl.GetString();
+
+                    if (root.TryGetProperty("data", out var dEl) &&
+                        dEl.ValueKind == JsonValueKind.Object &&
+                        dEl.TryGetProperty("id", out var idEl))
+                    {
+                        id = idEl.ValueKind == JsonValueKind.Number ? idEl.GetInt64().ToString() : idEl.GetString();
+                    }
+
+                    // alguns envios antigos usam "action": "payment.updated" e "resource": "/v1/payments/{id}"
+                    if (string.IsNullOrWhiteSpace(id) && root.TryGetProperty("resource", out var resEl) &&
+                        resEl.ValueKind == JsonValueKind.String)
+                    {
+                        var res = resEl.GetString() ?? "";
+                        var lastSlash = res.LastIndexOf('/');
+                        if (lastSlash >= 0 && lastSlash + 1 < res.Length)
+                            id = res.Substring(lastSlash + 1);
+                        type ??= "payment";
+                    }
+                }
+            }
+            catch
+            {
+                // ignora parse de body se deu erro; tentaremos querystring
+            }
+
+            // 2) fallback querystring
+            if (string.IsNullOrWhiteSpace(id))
+                id = request.Query["id"].FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(type))
+                type = request.Query["type"].FirstOrDefault();
+
+            if (!string.Equals(type, "payment", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(id))
+                return ("", PaymentStatus.Pending, null, "evento_ignorado");
+
+            // consulta pagamento para saber status
+            var status = await GetStatusAsync(id);
+            return (id, status, null, "");
         }
 
-        // --------- Checkout Pro ----------
-        public async Task<string> CreateCheckoutAsync(ClaimsPrincipal user, CheckoutRequest req)
+        // =================== Helpers ===================
+        private static PaymentStatus MapMpStatus(string s) => s?.ToLowerInvariant() switch
         {
-            // Aqui podemos usar diretamente o user que chegou por parâmetro:
+            "approved" => PaymentStatus.Paid,
+            "authorized" => PaymentStatus.Pending,
+            "in_process" => PaymentStatus.Pending,
+            "in_mediation" => PaymentStatus.Pending,
+            "rejected" => PaymentStatus.Failed,
+            "cancelled" or "canceled" => PaymentStatus.Canceled,
+            "refunded" => PaymentStatus.Canceled,
+            "charged_back" => PaymentStatus.Canceled,
+            _ => PaymentStatus.Pending
+        };
+
+        // ===== Checkout Pro (mantido) =====
+        public async Task<string> CreateCheckoutAsync(System.Security.Claims.ClaimsPrincipal user, CheckoutRequest req)
+        {
             var creds = await _resolver.GetAsync<MercadoPagoOptions>(user, "MercadoPago");
             var token = creds?.AccessToken ?? _cfg["Payments:MercadoPago:AccessToken"];
             if (string.IsNullOrWhiteSpace(token))
@@ -132,13 +242,7 @@ namespace WebApplicationPods.Payments.Gateways
             {
                 Items = new[]
                 {
-                    new PreferenceItem
-                    {
-                        Title = string.IsNullOrWhiteSpace(req.Description) ? "Pedido" : req.Description,
-                        Quantity = 1,
-                        UnitPrice = req.Amount,
-                        CurrencyId = (req.Currency ?? "BRL").ToUpper()
-                    }
+                    new PreferenceItem { Title = string.IsNullOrWhiteSpace(req.Description) ? "Pedido" : req.Description, Quantity = 1, UnitPrice = req.Amount, CurrencyId = (req.Currency ?? "BRL").ToUpper() }
                 },
                 BackUrls = new PreferenceBackUrls
                 {
@@ -149,10 +253,7 @@ namespace WebApplicationPods.Payments.Gateways
                 AutoReturn = "approved"
             };
 
-            var json = JsonSerializer.Serialize(body, new JsonSerializerOptions
-            {
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-            });
+            var json = JsonSerializer.Serialize(body, new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
 
             using var reqMsg = new HttpRequestMessage(HttpMethod.Post, "checkout/preferences");
             reqMsg.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -164,18 +265,16 @@ namespace WebApplicationPods.Payments.Gateways
             using var stream = await resp.Content.ReadAsStreamAsync();
             using var doc = await JsonDocument.ParseAsync(stream);
 
-            if (doc.RootElement.TryGetProperty("init_point", out var initPointEl) &&
-                initPointEl.ValueKind == JsonValueKind.String)
+            if (doc.RootElement.TryGetProperty("init_point", out var initPointEl) && initPointEl.ValueKind == JsonValueKind.String)
                 return initPointEl.GetString()!;
 
-            if (doc.RootElement.TryGetProperty("sandbox_init_point", out var sandboxInitEl) &&
-                sandboxInitEl.ValueKind == JsonValueKind.String)
+            if (doc.RootElement.TryGetProperty("sandbox_init_point", out var sandboxInitEl) && sandboxInitEl.ValueKind == JsonValueKind.String)
                 return sandboxInitEl.GetString()!;
 
             throw new InvalidOperationException("Não foi possível obter a URL de checkout do Mercado Pago.");
         }
 
-        // ------------ DTOs para a Preference ------------
+        // DTOs para a Preference
         private sealed class PreferenceCreateRequest
         {
             [JsonPropertyName("items")] public PreferenceItem[] Items { get; set; } = Array.Empty<PreferenceItem>();
