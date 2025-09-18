@@ -31,15 +31,79 @@ namespace WebApplicationPods.Controllers
             _context = context;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index(
+    string? q,                // busca por nome/descrição
+    int? categoriaId,         // filtro por categoria
+    bool? emPromocao,         // filtrar se está em promoção
+    string? sort = "nome",    // nome|preco|preco_desc|promo|novidades
+    int page = 1,             // página atual
+    int pageSize = 12)        // itens por página
         {
-            var produtos = _produtoRepository.ObterTodos().ToList();
+            // Sanitize
+            page = page < 1 ? 1 : page;
+            pageSize = pageSize is < 1 or > 60 ? 12 : pageSize;
 
-            // Garante a lista de sabores desserializada para a view
-            foreach (var p in produtos)
+            var query = _context.Produtos.AsNoTracking().Where(p => p.Ativo);
+
+            // Busca (q) — nome/descrição
+            if (!string.IsNullOrWhiteSpace(q))
+            {
+                var termo = q.Trim();
+                query = query.Where(p =>
+                    p.Nome.Contains(termo) ||
+                    (p.Descricao != null && p.Descricao.Contains(termo)));
+            }
+
+            // Filtro por categoria
+            if (categoriaId.HasValue)
+                query = query.Where(p => p.CategoriaId == categoriaId.Value);
+
+            // Em promoção
+            if (emPromocao.HasValue)
+            {
+                if (emPromocao.Value)
+                    query = query.Where(p => p.PrecoPromocional.HasValue && p.PrecoPromocional < p.Preco);
+                else
+                    query = query.Where(p => !p.PrecoPromocional.HasValue || p.PrecoPromocional >= p.Preco);
+            }
+
+            // Ordenação
+            query = sort switch
+            {
+                "preco" => query.OrderBy(p => p.Preco),
+                "preco_desc" => query.OrderByDescending(p => p.Preco),
+                "promo" => query
+                                   .OrderByDescending(p => p.PrecoPromocional.HasValue && p.PrecoPromocional < p.Preco)
+                                   .ThenBy(p => p.Nome),
+                "novidades" => query.OrderByDescending(p => p.Id), // ou DataCriacao, se existir
+                _ => query.OrderBy(p => p.Nome),
+            };
+
+            // Total p/ paginação
+            var total = await query.CountAsync();
+
+            // Página atual
+            var itens = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            // Desserializa sabores apenas do que foi trazido
+            foreach (var p in itens)
                 p.DeserializarSaboresQuantidades();
 
-            return View(produtos);
+            // ViewBag para UI (pode trocar por um ViewModel de paginação)
+            ViewBag.Busca = q;
+            ViewBag.CategoriaId = categoriaId;
+            ViewBag.EmPromocao = emPromocao;
+            ViewBag.Sort = sort;
+
+            ViewBag.Page = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.Total = total;
+            ViewBag.TotalPages = (int)Math.Ceiling(total / (double)pageSize);
+
+            return View(itens);
         }
 
         public IActionResult Detalhes(int id)
@@ -465,33 +529,49 @@ namespace WebApplicationPods.Controllers
 
         public IActionResult DetalhesProdutos(int id)
         {
-            var produto = _produtoRepository.ObterPorId(id);
-            if (produto == null)
-            {
-                return NotFound();
-            }
+            var produto = _context.Produtos
+                .AsNoTracking()
+                .FirstOrDefault(p => p.Id == id);
 
-            var saboresDisponiveis = produto.SaboresQuantidadesList?
-                    .Where(sq => sq.Quantidade > 0)
-                    .Select(sq => new ProdutoModel.SaborQuantidade
-                    {
-                        Sabor = sq.Sabor,
-                        Quantidade = sq.Quantidade
-                    })
-                    .ToList();
+            if (produto == null)
+                return NotFound();
+
+            // 👇 PRECISA desserializar os sabores do JSON do banco:
+            produto.DeserializarSaboresQuantidades();
+
+            // Se quiser garantir que a lista não fique null:
+            produto.SaboresQuantidadesList ??= new List<ProdutoModel.SaborQuantidade>();
+
+            // Monta a lista para a view (ordena: com estoque primeiro, depois nome)
+            var saboresDisponiveis = produto.SaboresQuantidadesList
+                .Select(sq => new ProdutoModel.SaborQuantidade
+                {
+                    Sabor = sq.Sabor,
+                    Quantidade = sq.Quantidade
+                })
+                .OrderByDescending(sq => sq.Quantidade > 0)
+                .ThenBy(sq => sq.Sabor)
+                .ToList();
+
+            var relacionados = _context.Produtos
+                .AsNoTracking()
+                .Where(p => p.CategoriaId == produto.CategoriaId && p.Id != produto.Id)
+                .OrderByDescending(p => p.PrecoPromocional.HasValue && p.PrecoPromocional < p.Preco)
+                .ThenByDescending(p => p.Estoque > 0)
+                .ThenByDescending(p => p.Id)
+                .Take(4)
+                .ToList();
 
             var viewModel = new ProdutoDetalhesViewModel
             {
                 Produto = produto,
                 SaboresDisponiveis = saboresDisponiveis,
-                ProdutosRelacionados = _context.Produtos
-                    .Where(p => p.CategoriaId == produto.CategoriaId && p.Id != produto.Id)
-                    .Take(4)
-                    .ToList()
+                ProdutosRelacionados = relacionados
             };
 
             return View("Detalhes", viewModel);
         }
+
 
         //[HttpGet]
         //public IActionResult ProdutoCard(int id)

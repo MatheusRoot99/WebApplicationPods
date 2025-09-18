@@ -67,9 +67,11 @@
                                 }
                                 if (maxPermitido < 1) maxPermitido = 1;
 
+                                // ===== PREÇOS (definidos UMA ÚNICA VEZ por item) =====
                                 var temPromo = item.Produto?.EstaEmPromocao() == true;
                                 var precoNormal = item.Produto?.Preco ?? 0m;
                                 decimal? precoPromo = temPromo ? item.Produto!.PrecoPromocional : null;
+
                                 <tr class="linha-item">
                                     <!-- PRODUTO -->
                                     <td data-label="Produto">
@@ -139,8 +141,10 @@
 
                                     <!-- PREÇOS -->
                                     <td data-label="Preço Normal">@precoNormal.ToString("C", ptBR)</td>
-                                    <td data-label="Preço com Desconto">
-                                        @(precoPromo.HasValue? precoPromo.Value.ToString("C", ptBR) : "—")
+
+                                    <td data-label="Preço com Desconto"
+                                        data-has-discount="@(precoPromo.HasValue ? "true" : "false")">
+                                        @(precoPromo.HasValue? precoPromo.Value.ToString("C", ptBR) : "")
                                     </td>
 
                                     <!-- AÇÕES -->
@@ -200,9 +204,11 @@
                 @foreach (var p in Model.Populares)
                 {
                     <article class="pop-card">
-                        <a class="pop-img" asp-controller="Produto" asp-action="Detalhes" asp-route-id="@p.Id" aria-label="@p.Nome">
+                        <!-- Imagem sem <a>; o overlay abaixo cobre o card todo -->
+                        <div class="pop-img">
                             <img src="@p.ImagemUrl" alt="@p.Nome" loading="lazy" />
-                        </a>
+                        </div>
+
                         <div class="pop-body">
                             <div class="pop-name">@p.Nome</div>
 
@@ -227,6 +233,13 @@
                                 </button>
                             </form>
                         </div>
+
+                        <!-- Link esticado: torna o card inteiro clicável (detalhes) -->
+                        <a class="stretched-link"
+                           asp-controller="Produto"
+                           asp-action="DetalhesProdutos"
+                           asp-route-id="@p.Id"
+                           aria-label="Ver detalhes de @p.Nome"></a>
                     </article>
                 }
             </div>

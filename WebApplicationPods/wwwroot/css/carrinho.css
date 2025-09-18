@@ -495,4 +495,86 @@
     }
 
 
+/* ===== Mostrar rótulos "Preço Normal" e "Preço com Desconto" no MOBILE ===== */
+@media (max-width: 768px) {
+    /* coloca o rótulo acima do conteúdo da célula, usando o próprio data-label */
+    .carrinho-table tbody td[data-label] {
+        position: relative;
+        padding-top: 2px;
+    }
+
+        .carrinho-table tbody td[data-label]::before {
+            content: attr(data-label);
+            display: block;
+            font-size: .85rem;
+            font-weight: 800;
+            color: black; /* cinza legível */
+            margin-bottom: 4px;
+            line-height: 1.1;
+        }
+
+    /* destaque visual dos preços no mobile */
+    .carrinho-table tbody td[data-label="Preço Normal"] {
+        color: #9ca3af; /* mais suave */
+        font-weight: 600;
+    }
+
+    .carrinho-table tbody td[data-label="Preço com Desconto"] {
+        color: #111827; /* forte */
+        font-weight: 900;
+    }
+
+        /* opcional: se não houver desconto (mostra “—”), suaviza */
+        .carrinho-table tbody td[data-label="Preço com Desconto"]:has(> :not(:empty)):not(:has(> .vazio)) {
+        }
+}
+
+@media (max-width: 768px) {
+    .carrinho-table tbody td[data-label="Preço com Desconto"][data-has-discount="false"] {
+        display: none;
+    }
+
+    .carrinho-table tbody td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        font-size: .85rem;
+        font-weight: 800;
+        color: black;
+        margin-bottom: 4px;
+    }
+}
+
+/* Card inteiro clicável, sem interferir no botão */
+.pop-card {
+    position: relative;
+}
+
+    .pop-card .stretched-link {
+        position: absolute;
+        inset: 0; /* top/right/bottom/left: 0 */
+        z-index: 1;
+        border-radius: 12px; /* igual ao do card */
+    }
+
+    /* Mantém o botão por cima do overlay */
+    .pop-card .pop-add-form {
+        position: relative;
+        z-index: 2;
+    }
+
+    /* Feedback visual no hover */
+    .pop-card:hover {
+        box-shadow: 0 10px 30px rgba(0,0,0,.10);
+        transform: translateY(-2px);
+        transition: transform .2s ease, box-shadow .2s ease;
+        cursor: pointer;
+    }
+
+    /* Acessibilidade: focus visível no overlay (teclado) */
+    .pop-card .stretched-link:focus-visible {
+        outline: 3px solid rgba(37,117,252,.6);
+        outline-offset: 4px;
+        border-radius: 12px;
+    }
+
 

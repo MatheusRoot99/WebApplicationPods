@@ -12,171 +12,191 @@
 <link rel="stylesheet" href="~/css/loja-settings.css" asp-append-version="true" />
 
 <div class="container py-4 loja-settings" id="loja-settings">
-    <h3 class="mb-3"><i class="fas fa-store me-2"></i>Configurações da Loja</h3>
+    <header class="page-head">
+        <div class="icon-wrap">
+            <i class="fas fa-store"></i>
+        </div>
+        <div>
+            <h1 class="title"><span class="brand-gradient">Configurações da Loja</span></h1>
+            <p class="subtitle">Edite identidade, funcionamento e endereço para retirada no local.</p>
+        </div>
+    </header>
 
     @if (TempData["Sucesso"] is string okMsg)
     {
-        <div class="alert alert-success alert-dismissible fade show">
+        <div class="alert alert-success alert-dismissible fade show mt-3">
             <i class="bi bi-check2-circle me-2"></i>@okMsg
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
         </div>
     }
     @if (!ViewData.ModelState.IsValid)
     {
-        <div class="alert alert-danger">
+        <div class="alert alert-danger mt-3">
             <strong>Corrija os campos abaixo.</strong>
         </div>
     }
 
     <!-- FORM PRINCIPAL -->
-    <form asp-action="Editar" method="post" enctype="multipart/form-data" class="card p-3 shadow-sm">
+    <form asp-action="Editar" method="post" enctype="multipart/form-data" class="card main-card p-3 p-md-4 shadow-sm">
         @Html.AntiForgeryToken()
         <input asp-for="Id" type="hidden" />
 
-        <div class="row g-3">
-            <!-- Identidade -->
-            <div class="col-md-6">
-                <label asp-for="Nome" class="form-label">Nome do Estabelecimento</label>
-                <input asp-for="Nome" class="form-control" />
-                <span asp-validation-for="Nome" class="text-danger"></span>
-            </div>
+        <!-- Identidade -->
+        <section class="section">
+            <h2 class="section-title"><i class="bi bi-person-badge me-2"></i>Identidade</h2>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="Nome" class="form-label">Nome do Estabelecimento</label>
+                    <input asp-for="Nome" class="form-control" />
+                    <span asp-validation-for="Nome" class="text-danger"></span>
+                </div>
 
-            <div class="col-md-6">
-                <label class="form-label">Logo (PNG/JPG/WEBP)</label>
-                <input type="file" name="logoFile" class="form-control" accept=".png,.jpg,.jpeg,.webp" />
-                @if (!string.IsNullOrWhiteSpace(Model.LogoPath))
-                {
-                    <div class="mt-2 d-flex align-items-center gap-2">
-                        <img src="@Model.LogoPath" alt="Logo atual" style="width:48px;height:48px;object-fit:cover;border-radius:999px;" />
-                        <span class="text-muted small">@Model.LogoPath</span>
-                    </div>
-                }
-                <span asp-validation-for="LogoPath" class="text-danger"></span>
-            </div>
-
-            <!-- Funcionamento -->
-            <div class="col-sm-6 col-md-3">
-                <label class="form-label">Abre às</label>
-                <input asp-for="HorarioAbertura" type="time" class="form-control" />
-                <span asp-validation-for="HorarioAbertura" class="text-danger"></span>
-            </div>
-
-            <div class="col-sm-6 col-md-3">
-                <label class="form-label">Fecha às</label>
-                <input asp-for="HorarioFechamento" type="time" class="form-control" />
-                <span asp-validation-for="HorarioFechamento" class="text-danger"></span>
-                <div class="form-text">suporta virar o dia (ex: 18:00 → 02:00)</div>
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label d-block">Dias abertos</label>
-                @* IMPORTANTE: usar array DiasAbertosSelecionados para combinar no POST *@
-                @foreach (DiasSemanaFlags d in Enum.GetValues(typeof(DiasSemanaFlags)))
-                {
-                    if (d == DiasSemanaFlags.Nenhum || d == DiasSemanaFlags.Todos) { continue; }
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox"
-                               name="DiasAbertosSelecionados"
-                               value="@((int)d)"
-                               @(Model.DiasAbertos.HasFlag(d) ? "checked" : "") />
-                        <label class="form-check-label">@d</label>
-                    </div>
-                }
-            </div>
-
-            <div class="col-md-3">
-                <div class="form-check mt-4">
-                    <input class="form-check-input" asp-for="Ativo" />
-                    <label class="form-check-label" asp-for="Ativo">Loja ativa</label>
+                <div class="col-md-6">
+                    <label class="form-label">Logo (PNG/JPG/WEBP)</label>
+                    <input type="file" name="logoFile" class="form-control" accept=".png,.jpg,.jpeg,.webp" />
+                    @if (!string.IsNullOrWhiteSpace(Model.LogoPath))
+                    {
+                        <div class="mt-2 d-flex align-items-center gap-2">
+                            <img src="@Model.LogoPath" alt="Logo atual" class="logo-thumb" />
+                            <span class="text-muted small text-truncate">@Model.LogoPath</span>
+                        </div>
+                    }
+                    <span asp-validation-for="LogoPath" class="text-danger"></span>
                 </div>
             </div>
+        </section>
 
-            <div class="col-md-3">
-                <div class="form-check mt-4">
-                    <input class="form-check-input" asp-for="ForcarFechado" />
-                    <label class="form-check-label" asp-for="ForcarFechado">Forçar fechado</label>
+        <hr class="my-3 my-md-4" />
+
+        <!-- Funcionamento -->
+        <section class="section">
+            <h2 class="section-title"><i class="bi bi-clock-history me-2"></i>Funcionamento</h2>
+            <div class="row g-3">
+                <div class="col-sm-6 col-md-3">
+                    <label class="form-label">Abre às</label>
+                    <input asp-for="HorarioAbertura" type="time" class="form-control" />
+                    <span asp-validation-for="HorarioAbertura" class="text-danger"></span>
                 </div>
-            </div>
 
-            <div class="col-12">
-                <label asp-for="MensagemStatus" class="form-label">Mensagem (opcional)</label>
-                <input asp-for="MensagemStatus" class="form-control" placeholder="Ex.: Voltamos às 19h" />
-                <span asp-validation-for="MensagemStatus" class="text-danger"></span>
-            </div>
+                <div class="col-sm-6 col-md-3">
+                    <label class="form-label">Fecha às</label>
+                    <input asp-for="HorarioFechamento" type="time" class="form-control" />
+                    <span asp-validation-for="HorarioFechamento" class="text-danger"></span>
+                    <div class="form-text">Suporta virar o dia (ex.: 18:00 → 02:00)</div>
+                </div>
 
-            <hr class="my-3" />
+                <div class="col-md-6">
+                    <label class="form-label d-block">Dias abertos</label>
+                    @foreach (DiasSemanaFlags d in Enum.GetValues(typeof(DiasSemanaFlags)))
+                    {
+                        if (d == DiasSemanaFlags.Nenhum || d == DiasSemanaFlags.Todos) { continue; }
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox"
+                                   name="DiasAbertosSelecionados"
+                                   value="@((int)d)"
+                                   @(Model.DiasAbertos.HasFlag(d) ? "checked" : "") />
+                            <label class="form-check-label">@d</label>
+                        </div>
+                    }
+                </div>
 
-            <!-- ENDEREÇO DA LOJA -->
-            <div class="col-12">
-                <h5 class="mb-2"><i class="bi bi-geo-alt-fill me-2"></i>Endereço da Loja (para “Retirar no local”)</h5>
-            </div>
-
-            <div class="col-md-6">
-                <label asp-for="Logradouro" class="form-label">Logradouro</label>
-                <input asp-for="Logradouro" class="form-control" />
-                <span asp-validation-for="Logradouro" class="text-danger"></span>
-            </div>
-            <div class="col-md-2">
-                <label asp-for="Numero" class="form-label">Número</label>
-                <input asp-for="Numero" class="form-control" />
-                <span asp-validation-for="Numero" class="text-danger"></span>
-            </div>
-            <div class="col-md-4">
-                <label asp-for="Complemento" class="form-label">Complemento</label>
-                <input asp-for="Complemento" class="form-control" />
-                <span asp-validation-for="Complemento" class="text-danger"></span>
-            </div>
-
-            <div class="col-md-4">
-                <label asp-for="Bairro" class="form-label">Bairro</label>
-                <input asp-for="Bairro" class="form-control" />
-                <span asp-validation-for="Bairro" class="text-danger"></span>
-            </div>
-            <div class="col-md-4">
-                <label asp-for="Cidade" class="form-label">Cidade</label>
-                <input asp-for="Cidade" class="form-control" />
-                <span asp-validation-for="Cidade" class="text-danger"></span>
-            </div>
-            <div class="col-md-2">
-                <label asp-for="Estado" class="form-label">UF</label>
-                <input asp-for="Estado" class="form-control text-uppercase" maxlength="2" />
-                <span asp-validation-for="Estado" class="text-danger"></span>
-            </div>
-            <div class="col-md-2">
-                <label asp-for="Cep" class="form-label">CEP</label>
-                <input asp-for="Cep" class="form-control" placeholder="00000-000" />
-                <span asp-validation-for="Cep" class="text-danger"></span>
-            </div>
-
-            <!-- MAPS / GEO -->
-            <div class="col-12">
-                <h6 class="mt-2">Localização para o Google Maps</h6>
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label asp-for="Latitude" class="form-label">Latitude</label>
-                        <input asp-for="Latitude" class="form-control" step="any" />
-                        <span asp-validation-for="Latitude" class="text-danger"></span>
-                    </div>
-                    <div class="col-md-3">
-                        <label asp-for="Longitude" class="form-label">Longitude</label>
-                        <input asp-for="Longitude" class="form-control" step="any" />
-                        <span asp-validation-for="Longitude" class="text-danger"></span>
-                    </div>
-                    <div class="col-md-6">
-                        <label asp-for="MapsPlaceUrl" class="form-label">URL do Google Maps (opcional)</label>
-                        <input asp-for="MapsPlaceUrl" class="form-control" placeholder="Cole a URL do place se já tiver" />
-                        <span class="form-text">Se preencher, tem prioridade sobre endereço. Se também informar lat/lng, lat/lng têm prioridade máxima.</span>
-                        <span asp-validation-for="MapsPlaceUrl" class="text-danger"></span>
+                <div class="col-md-3">
+                    <div class="form-check mt-4">
+                        <input class="form-check-input" asp-for="Ativo" />
+                        <label class="form-check-label" asp-for="Ativo">Loja ativa</label>
                     </div>
                 </div>
 
-                <div class="mt-3 p-3 border rounded bg-light">
-                    <div class="small text-muted">Endereço completo (visual):</div>
-                    <div id="enderecoPreview" class="fw-semibold">@Model.EnderecoTexto</div>
+                <div class="col-md-3">
+                    <div class="form-check mt-4">
+                        <input class="form-check-input" asp-for="ForcarFechado" />
+                        <label class="form-check-label" asp-for="ForcarFechado">Forçar fechado</label>
+                    </div>
+                </div>
 
-                    <div class="small text-muted mt-2">URL de rotas (preview):</div>
-                    <div class="d-flex gap-2 align-items-center">
-                        <input id="mapsUrlPreview" class="form-control" readonly value="@Model.MapsUrl" />
+                <div class="col-12">
+                    <label asp-for="MensagemStatus" class="form-label">Mensagem (opcional)</label>
+                    <input asp-for="MensagemStatus" class="form-control" placeholder="Ex.: Voltamos às 19h" />
+                    <span asp-validation-for="MensagemStatus" class="text-danger"></span>
+                </div>
+            </div>
+        </section>
+
+        <hr class="my-3 my-md-4" />
+
+        <!-- Endereço -->
+        <section class="section">
+            <h2 class="section-title"><i class="bi bi-geo-alt-fill me-2"></i>Endereço da Loja (Retirada no local)</h2>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="Logradouro" class="form-label">Logradouro</label>
+                    <input asp-for="Logradouro" class="form-control" />
+                    <span asp-validation-for="Logradouro" class="text-danger"></span>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="Numero" class="form-label">Número</label>
+                    <input asp-for="Numero" class="form-control" />
+                    <span asp-validation-for="Numero" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Complemento" class="form-label">Complemento</label>
+                    <input asp-for="Complemento" class="form-control" />
+                    <span asp-validation-for="Complemento" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="Bairro" class="form-label">Bairro</label>
+                    <input asp-for="Bairro" class="form-control" />
+                    <span asp-validation-for="Bairro" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Cidade" class="form-label">Cidade</label>
+                    <input asp-for="Cidade" class="form-control" />
+                    <span asp-validation-for="Cidade" class="text-danger"></span>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="Estado" class="form-label">UF</label>
+                    <input asp-for="Estado" class="form-control text-uppercase" maxlength="2" />
+                    <span asp-validation-for="Estado" class="text-danger"></span>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="Cep" class="form-label">CEP</label>
+                    <input asp-for="Cep" class="form-control" placeholder="00000-000" />
+                    <span asp-validation-for="Cep" class="text-danger"></span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Maps / Geo -->
+        <section class="section mt-3">
+            <h2 class="section-title"><i class="bi bi-map me-2"></i>Localização para o Google Maps</h2>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label asp-for="Latitude" class="form-label">Latitude</label>
+                    <input asp-for="Latitude" class="form-control" step="any" />
+                    <span asp-validation-for="Latitude" class="text-danger"></span>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="Longitude" class="form-label">Longitude</label>
+                    <input asp-for="Longitude" class="form-control" step="any" />
+                    <span asp-validation-for="Longitude" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="MapsPlaceUrl" class="form-label">URL do Google Maps (opcional)</label>
+                    <input asp-for="MapsPlaceUrl" class="form-control" placeholder="Cole a URL do place se já tiver" />
+                    <span class="form-text">Se preencher, tem prioridade sobre endereço. Se também informar lat/lng, lat/lng têm prioridade máxima.</span>
+                    <span asp-validation-for="MapsPlaceUrl" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="mt-3 p-3 border rounded bg-light">
+                <div class="small text-muted">Endereço completo (visual):</div>
+                <div id="enderecoPreview" class="fw-semibold">@Model.EnderecoTexto</div>
+
+                <div class="small text-muted mt-2">URL de rotas (preview):</div>
+                <div class="d-flex flex-column flex-md-row gap-2 align-items-stretch align-items-md-center">
+                    <input id="mapsUrlPreview" class="form-control" readonly value="@Model.MapsUrl" />
+                    <div class="d-flex gap-2">
                         <a id="btnAbrirMaps" class="btn btn-primary" target="_blank" rel="noopener">
                             <i class="bi bi-geo-alt"></i> Abrir no Maps
                         </a>
@@ -186,9 +206,9 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <div class="mt-3 d-flex gap-2">
+        <div class="form-actions mt-3 d-flex flex-column flex-md-row gap-2">
             <button class="btn btn-success"><i class="fas fa-save me-2"></i>Salvar</button>
             <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">Voltar</a>
         </div>

@@ -19,17 +19,10 @@
      hidden></div>
 
 <div class="produto-detalhes-container" itemscope itemtype="https://schema.org/Product">
-    <div class="navigation-header">
-        <a href="javascript:history.back()" class="btn-voltar" aria-label="Voltar para a página anterior">
-            <i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar
+    <div class="navigation-header d-flex align-items-center gap-2 flex-wrap">
+        <a href="javascript:history.back()" class="btn-voltar btn btn-light d-inline-flex align-items-center">
+            <i class="fas fa-arrow-left me-2" aria-hidden="true"></i><span>Voltar</span>
         </a>
-        <nav aria-label="Breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
-                <li class="breadcrumb-item"><a asp-controller="Produtos" asp-action="Index">Produtos</a></li>
-                <li class="breadcrumb-item active" aria-current="page" itemprop="name">@Model.Produto.Nome</li>
-            </ol>
-        </nav>
     </div>
 
     <header class="product-header">
@@ -272,38 +265,66 @@
     </section>
 
     @if (Model.ProdutosRelacionados != null && Model.ProdutosRelacionados.Any())
-    {
-        <section class="related-products-section" aria-label="Produtos relacionados">
-            <h2 class="section-title">Você também pode gostar:</h2>
-            <div class="related-products-grid">
-                @foreach (var produto in Model.ProdutosRelacionados)
-                {
-                    <article class="related-product-card" itemscope itemtype="https://schema.org/Product">
+{
+    <section class="related-products-section" aria-label="Produtos relacionados">
+        <h2 class="section-title">Você também pode gostar:</h2>
+
+        <div class="related-products-grid">
+            @foreach (var pr in Model.ProdutosRelacionados)
+            {
+                var temPromo = pr.PrecoPromocional.HasValue && pr.PrecoPromocional.Value < pr.Preco;
+                var precoAtual = temPromo ? pr.PrecoPromocional!.Value : pr.Preco;
+
+                <article class="related-product-card" itemscope itemtype="https://schema.org/Product">
+                    <a asp-controller="Produto" asp-action="DetalhesProdutos" asp-route-id="@pr.Id"class="card-link"
+                       aria-label="Ver @pr.Nome"
+                       itemprop="url">
                         <div class="product-image">
-                            @if (!string.IsNullOrEmpty(produto.ImagemUrl))
+                            @if (!string.IsNullOrEmpty(pr.ImagemUrl))
                             {
-                                <img src="@produto.ImagemUrl" alt="@produto.Nome" loading="lazy" decoding="async" width="480" height="480" itemprop="image">
+                                <img src="@pr.ImagemUrl" alt="@pr.Nome" loading="lazy" decoding="async" width="480" height="480" itemprop="image" />
                             }
                             else
                             {
                                 <div class="image-placeholder"><i class="fas fa-image" aria-hidden="true"></i></div>
                             }
+                            @if (temPromo)
+                            {
+                                <span class="ribbon">Promo</span>
+                            }
                         </div>
+
                         <div class="product-info">
-                            <h3 class="product-name" itemprop="name">@produto.Nome</h3>
+                            <h3 class="product-name" itemprop="name">@pr.Nome</h3>
+
                             <div class="product-price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
                                 <meta itemprop="priceCurrency" content="BRL" />
-                                <span itemprop="price">@produto.Preco.ToString("C")</span>
+                                @if (temPromo)
+                                {
+                                    <span class="old-price">@pr.Preco.ToString("C")</span>
+                                }
+                                <span class="price" itemprop="price">@precoAtual.ToString("C")</span>
                             </div>
-                            <div class="product-actions">
-                                <a asp-controller="Produto" asp-action="Detalhes" asp-route-id="@produto.Id" class="btn-view-details" aria-label="Ver detalhes de @produto.Nome">Ver detalhes</a>
+
+                            <div class="mini-flags">
+                                @if (pr.Estoque <= 0)
+                                {
+                                    <span class="tag out">Esgotado</span>
+                                }
+                                else
+                                {
+                                    <span class="tag in">Em estoque</span>
+                                }
                             </div>
                         </div>
-                    </article>
-                }
-            </div>
-        </section>
-    }
+                        <span class="stretched"></span>
+                    </a>
+                </article>
+            }
+        </div>
+    </section>
+}
+
 
     <section class="faq-section" aria-label="Perguntas Frequentes">
         <h2 class="section-title">Perguntas Frequentes</h2>
