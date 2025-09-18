@@ -484,8 +484,16 @@ namespace WebApplicationPods.Controllers
                 {
                     ProdutoId = i.Produto.Id,
                     Quantidade = i.Quantidade,
-                    PrecoUnitario = i.Produto.Preco,
-                    Observacoes = i.Observacoes
+                    // preço cheio do momento
+                    PrecoOriginal = i.Produto.Preco,
+                    // preço efetivo (promocional se houver)
+                    PrecoUnitario = i.Produto.EstaEmPromocao() && i.Produto.PrecoPromocional.HasValue
+                    ? i.Produto.PrecoPromocional.Value
+                    : i.Produto.Preco,
+                    Observacoes = i.Observacoes,
+                    Sabor = i.Sabor,              // <- importante para baixa por sabor
+                    EstoqueBaixado = false,
+                    EstoqueBaixadoEm = null
                 }).ToList()
             };
 

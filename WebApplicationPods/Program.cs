@@ -172,6 +172,7 @@ builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
 builder.Services.AddScoped<IPedidoRepository, PedidoRepository>();
 builder.Services.AddScoped<IEmailSenderService, GmailEmailSenderService>();
 builder.Services.AddScoped<ILojaConfigService, LojaConfigService>();
+builder.Services.AddScoped<IEstoqueService, EstoqueService>();
 builder.Services.AddScoped<ILojaConfigRepository, LojaConfigRepository>();
 builder.Services.AddDataProtection();
 builder.Services.AddSingleton<IClienteRememberService, ClienteRememberService>();
