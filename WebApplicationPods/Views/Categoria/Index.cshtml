@@ -38,19 +38,18 @@
 
         <div class="card-body">
 
-            @if (TempData["MensagemSucesso"] is string ok && !string.IsNullOrWhiteSpace(ok))
+            @if (TempData["Sucesso"] != null)
             {
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    @ok
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i> @* @TempData["Sucesso"] *@
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
                 </div>
             }
-
-            @if (TempData["MensagemErro"] is string err && !string.IsNullOrWhiteSpace(err))
+            @if (TempData["Erro"] != null)
             {
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    @err
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i> @* @TempData["Erro"] *@
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
                 </div>
             }
 
