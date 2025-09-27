@@ -227,6 +227,8 @@ namespace WebApplicationPods.Controllers
             return RedirectToAction(nameof(Resumo));
         }
 
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Confirmacao(int id)
         {
             var pedido = _pedidoRepository.ObterPorId(id);
@@ -236,9 +238,22 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction("Index");
             }
 
+            // ✅ Se o pedido já está "Pago", zera o carrinho desta sessão uma única vez
+            if (string.Equals(pedido.Status, "Pago", StringComparison.OrdinalIgnoreCase))
+            {
+                var flagKey = $"CartClearedForOrder_{id}";
+                var already = HttpContext.Session.GetString(flagKey);
+                if (!string.Equals(already, "1", StringComparison.Ordinal))
+                {
+                    _carrinhoRepository.LimparCarrinho();
+                    HttpContext.Session.SetString(flagKey, "1");
+                }
+            }
+
             ViewBag.PedidoId = pedido.Id;
             return View(pedido);
         }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]

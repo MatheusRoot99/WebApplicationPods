@@ -6,6 +6,24 @@ function $(id) { return document.getElementById(id); }
 /* ===== Estado global (preenchido pela view via window.CHECKOUT_CONFIG) ===== */
 const CFG = window.CHECKOUT_CONFIG || {};
 let COUNTDOWN_INTERVAL = null;
+let POLL_INTERVAL_ID = null;
+let REDIRECTED = false;
+
+/* ===== Atualiza badge do carrinho ===== */
+async function refreshCartBadge() {
+    try {
+        const r = await fetch('/Carrinho/Count', { cache: 'no-store' });
+        if (!r.ok) return;
+        const { count } = await r.json();
+        const badge = document.querySelector('[data-cart-badge]');
+        if (!badge) return;
+        badge.textContent = count > 0 ? count : '';
+        badge.classList.toggle('show', count > 0);
+        // Se seu tema usa "hidden" no lugar da classe:
+        // badge.hidden = !(count > 0);
+    } catch { /* silencia */ }
+}
+window.refreshCartBadge = refreshCartBadge;
 
 /* ===== UI: status bar/badge + botões ===== */
 function setUiStatus(status) {
@@ -31,6 +49,12 @@ function setUiStatus(status) {
     const paid = (s === 'paid' || s === 'approved');
     if (track) track.classList.toggle('d-none', !paid);
     if (trackSide) trackSide.classList.toggle('d-none', !paid);
+
+    // Se pago, pare contadores/polling
+    if (paid) {
+        if (COUNTDOWN_INTERVAL) { clearInterval(COUNTDOWN_INTERVAL); COUNTDOWN_INTERVAL = null; }
+        if (POLL_INTERVAL_ID) { clearInterval(POLL_INTERVAL_ID); POLL_INTERVAL_ID = null; }
+    }
 }
 
 /* ===== Copiar PIX ===== */
@@ -66,12 +90,10 @@ function startCountdown(seconds) {
     const wrap = $('pixCountdown');
     const label = $('pixCountdownTimer');
 
-    // se não há container, não faz nada (script é tolerante)
     if (!wrap || !label) return;
 
     if (COUNTDOWN_INTERVAL) { clearInterval(COUNTDOWN_INTERVAL); COUNTDOWN_INTERVAL = null; }
 
-    // Sem segundos ou zero: esconde
     if (!seconds || seconds <= 0) {
         wrap.classList.add('d-none');
         label.textContent = '';
@@ -105,6 +127,7 @@ function initPolling() {
     if (!statusUrl) return;
 
     async function checkPaid() {
+        if (REDIRECTED) return;
         try {
             const r = await fetch(statusUrl, { cache: 'no-store' });
             if (!r.ok) return;
@@ -117,8 +140,15 @@ function initPolling() {
                 startCountdown(data.remainingSeconds);
             }
 
-            if (data.paid === true && data.redirect) {
-                window.location.href = data.redirect;
+            if (data.paid === true) {
+                // carrinho já foi limpo no back; atualize o badge imediatamente
+                await refreshCartBadge();
+
+                if (data.redirect && !REDIRECTED) {
+                    REDIRECTED = true;
+                    window.location.href = data.redirect;
+                    return;
+                }
             }
         } catch { /* silencia erros */ }
     }
@@ -131,7 +161,7 @@ function initPolling() {
 
     setUiStatus(CFG.initialStatus || 'Created');
     checkPaid();
-    setInterval(checkPaid, 3000);
+    POLL_INTERVAL_ID = setInterval(checkPaid, 3000);
     window.__checkPaid = checkPaid;
 }
 
@@ -192,8 +222,16 @@ function initMPBrick() {
                     const json = await res.json();
                     if (json && json.success) {
                         setUiStatus('paid');
-                        if (json.redirect) window.location.href = json.redirect;
-                        else if (window.__checkPaid) window.__checkPaid();
+
+                        // badge do carrinho reflete limpeza no servidor
+                        await refreshCartBadge();
+
+                        if (json.redirect && !REDIRECTED) {
+                            REDIRECTED = true;
+                            window.location.href = json.redirect;
+                        } else if (window.__checkPaid) {
+                            window.__checkPaid();
+                        }
                     } else {
                         setUiStatus('failed');
                         alert('Não foi possível processar o pagamento.');
