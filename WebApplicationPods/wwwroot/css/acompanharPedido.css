@@ -1,6 +1,4 @@
-﻿/* ===========================
-   Tema / Tokens
-=========================== */
+﻿/* ============ Tema / Tokens ============ */
 :root {
     --brand-start: #6a11cb;
     --brand-end: #2575fc;
@@ -12,40 +10,30 @@
     --radius: 14px;
     --shadow: 0 8px 24px rgba(0,0,0,.08);
     --mbn-height: 68px;
+    --v-col: 56px; /* largura da coluna do eixo da timeline */
+    --vtrack-fill: 0px; /* altura preenchida (controlada via JS) */
 }
 
-/* ===========================
-   Base
-=========================== */
+/* ============ Base ============ */
 body {
     background: var(--bg)
 }
 
 .wrap {
     max-width: 1100px;
-    margin: 1rem auto;
-    /*padding: 0 1rem*/
+    margin: 1rem auto
 }
 
-/* Utilidades rápidas */
 .subtle {
     color: var(--muted);
     font-size: .95rem
-}
-
-.kv {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem
 }
 
 .hide {
     display: none
 }
 
-/* ===========================
-   Cabeçalho da página
-=========================== */
+/* ============ Cabeçalho ============ */
 .page-head {
     display: flex;
     justify-content: space-between;
@@ -59,9 +47,7 @@ body {
         color: var(--dark)
     }
 
-/* ===========================
-   Abas (pílulas)
-=========================== */
+/* ============ Abas ============ */
 .seg-tabs {
     display: flex;
     gap: .5rem;
@@ -90,9 +76,7 @@ body {
             background: linear-gradient(135deg,var(--brand-start),var(--brand-end))
         }
 
-/* ===========================
-   Cartões
-=========================== */
+/* ============ Cards ============ */
 .cardx {
     background: var(--light);
     border: 1px solid #eee;
@@ -112,14 +96,7 @@ body {
     padding: 1rem
 }
 
-/* Versões compactas (onde precisar) */
-.cardx--compact .cardx-b {
-    padding: .75rem
-}
-
-/* ===========================
-   Badges
-=========================== */
+/* ============ Badges ============ */
 .status-badge {
     display: inline-flex;
     align-items: center;
@@ -131,94 +108,124 @@ body {
     font-weight: 800
 }
 
-.badge-soft {
+.eta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
     border-radius: 999px;
-    padding: .2rem .55rem;
-    font-weight: 700;
-    background: #eef2ff;
-    color: #3b82f6
+    padding: .28rem .6rem;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    font-weight: 800;
+    color: #111
 }
 
-    .badge-soft.ok {
-        background: #dcfce7;
-        color: #16a34a
-    }
-
-    .badge-soft.warn {
-        background: #fef9c3;
-        color: #ca8a04
-    }
-
-    .badge-soft.err {
-        background: #fee2e2;
-        color: #dc2626
-    }
-
-/* ===========================
-   Stepper (scroll no mobile)
-=========================== */
-.steps-wrap {
-    overflow: auto;
-    padding: .25rem .25rem .35rem
-}
-
-.steps {
-    display: grid;
-    grid-template-columns: repeat(6,minmax(108px,1fr));
-    gap: .75rem;
-    min-width: 648px;
+/* ============ Timeline vertical (grid) ============ */
+.vtrack {
+    position: relative;
     margin: .6rem 0 1rem
 }
 
-.step {
-    background: #fff;
-    border: 1px solid #eee;
-    border-radius: 12px;
-    padding: .55rem .5rem;
-    text-align: center;
-    min-height: 82px
+    .vtrack::after {
+        content: "";
+        position: absolute;
+        left: calc(var(--v-col)/2 - 1px);
+        top: 0;
+        width: 2px;
+        height: var(--vtrack-fill);
+        background: linear-gradient(180deg,var(--brand-start),var(--brand-end));
+        border-radius: 2px;
+        transition: height .6s ease;
+        z-index: 0;
+    }
+
+.vstep {
+    display: grid;
+    grid-template-columns: var(--v-col) 1fr;
+    align-items: start;
+    gap: .55rem;
+    padding: .6rem 0 .9rem;
+    position: relative;
+    z-index: 1;
 }
 
-    .step .ico {
-        width: 34px;
-        height: 34px;
-        border-radius: 50%;
-        display: grid;
-        place-items: center;
-        margin: 0 auto .3rem;
-        background: #f3f4f6;
-        color: #555
+    .vstep:last-child {
+        padding-bottom: .2rem
     }
 
-    .step small {
-        display: block;
-        color: #6b7280;
-        font-size: .78rem;
-        margin-top: .1rem
+    .vstep::before {
+        content: "";
+        grid-column: 1;
+        grid-row: 1 / span 3;
+        justify-self: center;
+        width: 2px;
+        min-height: 100%;
+        background: linear-gradient(180deg,var(--brand-start),var(--brand-end));
+        opacity: .22;
+        border-radius: 2px;
     }
 
-    .step.active {
-        border-color: var(--brand-end)
-    }
+.vbullet {
+    grid-column: 1;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    background: #f3f4f6;
+    color: #555;
+    border: 1px solid #eee;
+    justify-self: center;
+    z-index: 2;
+}
 
-        .step.active .ico {
-            background: var(--brand-soft);
-            color: var(--brand-end)
-        }
+.vbody {
+    grid-column: 2
+}
 
-    .step.done {
-        border-color: #e5e7eb;
-        background: #fafafa
-    }
+.vtitle {
+    font-weight: 800;
+    color: var(--dark);
+    line-height: 1.15
+}
 
-        .step.done .ico {
-            background: var(--brand-end);
-            color: #fff
-        }
+.vdesc {
+    color: #6b7280;
+    font-size: .92rem;
+    margin-top: .05rem
+}
 
-/* ===========================
-   Lista de itens do pedido
-=========================== */
+.vtime {
+    color: #9aa0a6;
+    font-size: .82rem;
+    margin-top: .15rem;
+    display: inline-block
+}
+
+/* Estados */
+.vstep.done .vbullet {
+    background: var(--brand-end);
+    color: #fff;
+    border-color: transparent
+}
+
+.vstep.active .vbullet {
+    background: var(--brand-soft);
+    color: var(--brand-end);
+    border-color: var(--brand-end);
+    box-shadow: 0 0 0 6px rgba(37,117,252,.08);
+    animation: pulse 1.6s infinite
+}
+
+.vstep.done .vtitle {
+    opacity: .95
+}
+
+.vstep.active .vtitle {
+    color: var(--brand-end)
+}
+
+/* ============ Lista de itens ============ */
 .it {
     display: flex;
     gap: .85rem;
@@ -254,7 +261,7 @@ body {
     font-weight: 800
 }
 
-/* Totais */
+/* ============ Totais ============ */
 .tot-row {
     display: flex;
     justify-content: space-between;
@@ -268,9 +275,7 @@ body {
         padding-top: .55rem
     }
 
-/* ===========================
-   Botões
-=========================== */
+/* ============ Botões ============ */
 .actions {
     display: flex;
     gap: .55rem;
@@ -308,14 +313,7 @@ body {
         filter: brightness(1.03)
     }
 
-.btn-muted {
-    background: #f8fafc;
-    border-color: #eef2f7
-}
-
-/* ===========================
-   Cards de histórico / listagem
-=========================== */
+/* ============ Histórico ============ */
 .orders {
     display: flex;
     flex-direction: column;
@@ -375,9 +373,30 @@ body {
     font-weight: 900
 }
 
-/* ===========================
-   Abas (mostrar/ocultar)
-=========================== */
+.badge-soft {
+    border-radius: 999px;
+    padding: .2rem .55rem;
+    font-weight: 700;
+    background: #eef2ff;
+    color: #3b82f6
+}
+
+    .badge-soft.ok {
+        background: #dcfce7;
+        color: #16a34a
+    }
+
+    .badge-soft.warn {
+        background: #fef9c3;
+        color: #ca8a04
+    }
+
+    .badge-soft.err {
+        background: #fee2e2;
+        color: #dc2626
+    }
+
+/* ============ Tabs show/hide ============ */
 .tab {
     display: none
 }
@@ -386,9 +405,7 @@ body {
         display: block
     }
 
-/* ===========================
-   Layout responsivo
-=========================== */
+/* ============ Layout ============ */
 @media (min-width:992px) {
     .grid-2 {
         display: grid;
@@ -396,7 +413,7 @@ body {
         gap: 1rem;
         align-items: start
     }
-    /* Cartões menos altos no desktop */
+
     .cardx-b {
         padding: 1rem 1rem .9rem
     }
@@ -406,22 +423,34 @@ body {
     .wrap {
         padding-bottom: calc(var(--mbn-height) + 20px + env(safe-area-inset-bottom,0))
     }
-    /* Reduz “peso” visual em telas pequenas */
+
     .cardx {
         box-shadow: 0 6px 16px rgba(0,0,0,.06)
     }
+}
 
-    .order-card {
-        padding: .7rem
+@media (max-width:575.98px) {
+    :root {
+        --v-col: 48px;
     }
 
-    .steps {
-        gap: .6rem;
-        min-width: 620px
+    .vbullet {
+        width: 32px;
+        height: 32px
     }
 }
 
-.px-4 {
-    padding-right: 0;
-    padding-left: 0;
+/* ============ Anim ============ */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(37,117,252,.20)
+    }
+
+    70% {
+        box-shadow: 0 0 0 12px rgba(37,117,252,0)
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(37,117,252,0)
+    }
 }
