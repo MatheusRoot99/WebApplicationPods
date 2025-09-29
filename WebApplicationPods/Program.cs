@@ -177,27 +177,27 @@ builder.Services.AddScoped<ILojaConfigRepository, LojaConfigRepository>();
 builder.Services.AddDataProtection();
 builder.Services.AddSingleton<IClienteRememberService, ClienteRememberService>();
 
-// Seed (roles/usuário admin)
+// ====== Services ======
+builder.Services.AddControllersWithViews();
+builder.Services.AddSession();
 builder.Services.AddHostedService<IdentitySeedHostedService>();
-builder.Services.AddSignalR();
+builder.Services.AddSignalR(); // ? apenas aqui, antes do Build
 
 var app = builder.Build();
 
-// ==================== Aplicar migrations automaticamente ====================
+// ====== DB Migrations ======
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<BancoContext>();
     db.Database.Migrate();
 }
 
-// ==================== Pipeline ====================
+// ====== Pipeline ======
 app.UseRequestLocalization(app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>().Value);
 
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
-
-    // opcional: evitar cache em dev
     app.Use(async (context, next) =>
     {
         context.Response.Headers["Cache-Control"] = "no-cache, no-store";
@@ -212,25 +212,29 @@ else
     app.UseHsts();
 }
 
-app.MapHub<WebApplicationPods.Hubs.PedidosHub>("/hubs/pedidos");
-
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
 
-// ===== Sessão precisa vir antes do middleware e dos controllers
+// Sessão antes dos controllers
 app.UseSession();
 
-// ===== AUTO-LOGIN POR COOKIE (hidrata a sessão ClienteTelefone)
+// Auto-login por cookie (hidrata sessão)
 app.UseMiddleware<ClienteAutoLoginMiddleware>();
 
-// Auth/Authorization padrões do Identity (para Admin/Lojista etc.)
 app.UseAuthentication();
 app.UseAuthorization();
 
+// ====== Endpoints ======
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
+// ? Mapeie o Hub aqui (use o nome correto da classe)
+app.MapHub<WebApplicationPods.Hubs.PedidosHub>("/hubs/pedidos");
+// Se sua classe chama PedidosHub, mantenha igual nos dois lugares:
+// app.MapHub<WebApplicationPods.Hubs.PedidosHub>("/hubs/pedidos");
+
 app.Run();
+

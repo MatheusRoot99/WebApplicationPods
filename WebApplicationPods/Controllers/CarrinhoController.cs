@@ -1,17 +1,17 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
-using System.Linq;
 using WebApplicationPods.Enum;
+using WebApplicationPods.Hubs;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
-using WebApplicationPods.Repository.Repository;
 using WebApplicationPods.Services;
+
+
 
 namespace WebApplicationPods.Controllers
 {
@@ -23,6 +23,7 @@ namespace WebApplicationPods.Controllers
         private readonly IPedidoRepository _pedidoRepository;
         private readonly IClienteRememberService _remember;
         private readonly ILojaConfigRepository _lojaRepo; // loja
+        private readonly IHubContext<PedidosHub> _hub; // <= novo 
 
         public CarrinhoController(
             ICarrinhoRepository carrinhoRepository,
@@ -30,7 +31,8 @@ namespace WebApplicationPods.Controllers
             IClienteRepository clienteRepository,
             IPedidoRepository pedidoRepository,
             IClienteRememberService remember,
-            ILojaConfigRepository lojaRepo)
+            ILojaConfigRepository lojaRepo,
+             IHubContext<PedidosHub> hub)
         {
             _carrinhoRepository = carrinhoRepository;
             _produtoRepository = produtoRepository;
@@ -38,6 +40,7 @@ namespace WebApplicationPods.Controllers
             _pedidoRepository = pedidoRepository;
             _remember = remember;
             _lojaRepo = lojaRepo;
+            _hub = hub; // <= novo
         }
 
         // =================== Helpers ===================
@@ -440,7 +443,7 @@ namespace WebApplicationPods.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Finalizar(ResumoPedidoViewModel model)
+        public async Task<IActionResult> Finalizar(ResumoPedidoViewModel model)
         {
             var carrinho = _carrinhoRepository.ObterCarrinho();
             if (carrinho == null || !carrinho.Itens.Any())
@@ -499,14 +502,12 @@ namespace WebApplicationPods.Controllers
                 {
                     ProdutoId = i.Produto.Id,
                     Quantidade = i.Quantidade,
-                    // preço cheio do momento
                     PrecoOriginal = i.Produto.Preco,
-                    // preço efetivo (promocional se houver)
                     PrecoUnitario = i.Produto.EstaEmPromocao() && i.Produto.PrecoPromocional.HasValue
-                    ? i.Produto.PrecoPromocional.Value
-                    : i.Produto.Preco,
+                        ? i.Produto.PrecoPromocional.Value
+                        : i.Produto.Preco,
                     Observacoes = i.Observacoes,
-                    Sabor = i.Sabor,              // <- importante para baixa por sabor
+                    Sabor = i.Sabor,
                     EstoqueBaixado = false,
                     EstoqueBaixadoEm = null
                 }).ToList()
@@ -527,6 +528,7 @@ namespace WebApplicationPods.Controllers
 
             if (pagaNaEntrega)
             {
+                // pagamento será confirmado manualmente depois
                 pedido.Status = "Aguardando Pagamento (Entrega)";
                 _pedidoRepository.Adicionar(pedido);
 
@@ -539,6 +541,7 @@ namespace WebApplicationPods.Controllers
             }
             else
             {
+                // segue para o fluxo online (PIX/Cartão). A notificação só será enviada quando ficar “Pago”.
                 pedido.Status = "Pendente";
                 _pedidoRepository.Adicionar(pedido);
 

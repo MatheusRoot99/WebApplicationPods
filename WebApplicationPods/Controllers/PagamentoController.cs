@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using WebApplicationPods.Data;
 using WebApplicationPods.Enum;
+using WebApplicationPods.Hubs;
 using WebApplicationPods.Models;
 using WebApplicationPods.Payments;
 using WebApplicationPods.Payments.Options;
@@ -22,6 +24,7 @@ namespace WebApplicationPods.Controllers
         private readonly IPaymentCredentialsResolver _creds;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IEstoqueService _estoque;
+        private readonly IHubContext<PedidosHub> _hub;
 
         public PagamentoController(
             IPaymentService payments,
@@ -31,7 +34,8 @@ namespace WebApplicationPods.Controllers
             IConfiguration cfg,
             IPaymentCredentialsResolver creds,
             UserManager<ApplicationUser> userManager,
-            IEstoqueService estoque)
+            IEstoqueService estoque,
+            IHubContext<PedidosHub> hub) // <= novo
         {
             _payments = payments;
             _pedidos = pedidos;
@@ -41,6 +45,7 @@ namespace WebApplicationPods.Controllers
             _creds = creds;
             _userManager = userManager;
             _estoque = estoque;
+            _hub = hub; // <= novo
         }
 
         // ========= Helpers internos =========
@@ -223,6 +228,22 @@ namespace WebApplicationPods.Controllers
             });
         }
 
+
+        private Task NotifyPaidAsync(PedidoModel pedido)
+        {
+            return _hub.Clients.Group("lojistas").SendAsync("NewOrder", new
+            {
+                id = pedido.Id,
+                cliente = pedido.Cliente?.Nome ?? $"Cliente #{pedido.ClienteId}",
+                valor = pedido.ValorTotal,
+                quando = pedido.DataPedido.ToString("o"),
+                metodo = pedido.MetodoPagamento,
+                status = "Pago",
+                retirada = pedido.RetiradaNoLocal
+            });
+        }
+
+
         /// <summary>Confirmação do cartão (payload do Brick). Marca pago, baixa estoque e limpa carrinho da sessão.</summary>
         [HttpPost]
         [AllowAnonymous]
@@ -231,22 +252,29 @@ namespace WebApplicationPods.Controllers
         {
             var ok = await _payments.ConfirmCardAsync(id, clientPayload?.ToString());
 
-            var p = await _db.Pagamentos.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+            // pegar pagamento atualizado + pedido
+            var p = await _db.Pagamentos
+                .Include(x => x.Pedido).ThenInclude(pd => pd.Cliente)
+                .FirstOrDefaultAsync(x => x.Id == id);
+
             string? redirect = null;
 
             if (ok && p != null)
             {
+                // marca pedido como pago (idempotente)
                 MarcarPedidoComoPago(p.PedidoId);
                 await EnsureBaixaEstoqueAsync(p.PedidoId);
-
-                // <<< limpa carrinho desta sessão
                 ClearCartOnceForThisSession(p.PedidoId);
+
+                // 🔔 notifica lojistas agora
+                if (p.Pedido != null) await NotifyPaidAsync(p.Pedido);
 
                 redirect = Url.Action("Confirmacao", "Carrinho", new { id = p.PedidoId });
             }
 
             return Ok(new { success = ok, redirect });
         }
+
 
         /// <summary>Webhook do provedor (MP). Atualiza o pagamento no banco. Limpeza do carrinho acontece via Status/ConfirmCard/Confirmacao.</summary>
         [HttpPost]
@@ -289,7 +317,9 @@ namespace WebApplicationPods.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AprovarPagamentoEntrega(int pedidoId)
         {
-            var pedido = await _db.Pedidos.FirstOrDefaultAsync(p => p.Id == pedidoId);
+            var pedido = await _db.Pedidos
+                .Include(p => p.Cliente)
+                .FirstOrDefaultAsync(p => p.Id == pedidoId);
             if (pedido == null) return NotFound();
 
             // evita online
@@ -301,12 +331,16 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction("DetalhesPedido", "Admin", new { id = pedidoId });
             }
 
-            _pedidos.AtualizarStatus(pedidoId, "Aprovado pelo Lojista");
+            _pedidos.AtualizarStatus(pedidoId, "Pago"); // ou "Aprovado pelo Lojista" se preferir
             await EnsureBaixaEstoqueAsync(pedidoId);
+
+            // 🔔 notifica lojistas
+            await NotifyPaidAsync(pedido);
 
             TempData["Sucesso"] = "Pedido aprovado e estoque atualizado.";
             return RedirectToAction("Index", "PedidosAdmin", new { id = pedidoId });
         }
+
 
         /// <summary>Confirma PIX manual (backoffice).</summary>
         [HttpPost]
@@ -315,7 +349,7 @@ namespace WebApplicationPods.Controllers
         public async Task<IActionResult> ConfirmarPixManual(int pagamentoId)
         {
             var p = await _db.Pagamentos
-                .Include(x => x.Pedido)
+                .Include(x => x.Pedido).ThenInclude(pd => pd.Cliente)
                 .FirstOrDefaultAsync(x => x.Id == pagamentoId);
 
             if (p == null)
@@ -342,8 +376,12 @@ namespace WebApplicationPods.Controllers
             _pedidos.AtualizarStatus(p.PedidoId, "Pago");
             await EnsureBaixaEstoqueAsync(p.PedidoId);
 
+            // 🔔 notifica
+            if (p.Pedido != null) await NotifyPaidAsync(p.Pedido);
+
             TempData["Sucesso"] = "PIX confirmado e estoque atualizado.";
             return RedirectToAction("DetalhesPedido", "Admin", new { id = p.PedidoId });
         }
+
     }
 }
