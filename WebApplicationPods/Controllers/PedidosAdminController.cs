@@ -55,13 +55,14 @@ namespace WebApplicationPods.Controllers
 
         // GET /PedidosAdmin/Table?filtro=abertos|dia   (usado no live refresh)
         [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Table(string? filtro = "abertos")
         {
             var lista = string.Equals(filtro, "dia", StringComparison.OrdinalIgnoreCase)
                 ? _pedidos.ObterDoDia()
                 : _pedidos.ObterAbertos();
 
-            ViewBag.Allowed = AllowedTransitions; // <-- idem
+            ViewBag.Allowed = AllowedTransitions;
             return PartialView("_PedidosTableBody", lista);
         }
 
@@ -73,6 +74,9 @@ namespace WebApplicationPods.Controllers
             var pedido = _pedidos.ObterPorId(id);
             if (pedido is null)
             {
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                    return BadRequest(new { ok = false, error = "Pedido não encontrado." });
+
                 TempData["Erro"] = "Pedido não encontrado.";
                 return RedirectToAction(nameof(Index));
             }
@@ -81,17 +85,22 @@ namespace WebApplicationPods.Controllers
             if (!AllowedTransitions.TryGetValue(atual, out var nexts) ||
                 !nexts.Contains(status, StringComparer.OrdinalIgnoreCase))
             {
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                    return BadRequest(new { ok = false, error = $"Transição inválida de '{atual}' para '{status}'." });
+
                 TempData["Erro"] = $"Transição inválida de '{atual}' para '{status}'.";
                 return RedirectToAction(nameof(Index));
             }
 
             _pedidos.AtualizarStatus(id, status);
-
-            // avisa todos os lojistas para atualizar a grade
             await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged", new { id, status });
+
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                return Json(new { ok = true });
 
             return RedirectToAction(nameof(Index));
         }
+
 
         // ============ RELATÓRIO ============
 
@@ -134,29 +143,38 @@ namespace WebApplicationPods.Controllers
             return View(vm);
         }
 
+
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Excluir(int id)
         {
             var pedido = _pedidos.ObterPorId(id);
             if (pedido is null)
             {
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                    return BadRequest(new { ok = false, error = "Pedido não encontrado." });
+
                 TempData["Erro"] = "Pedido não encontrado.";
                 return RedirectToAction(nameof(Index));
             }
 
             if (!string.Equals(pedido.Status, "Cancelado", StringComparison.OrdinalIgnoreCase))
             {
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                    return BadRequest(new { ok = false, error = "Só é permitido excluir pedidos cancelados." });
+
                 TempData["Erro"] = "Só é permitido excluir pedidos cancelados.";
                 return RedirectToAction(nameof(Index));
             }
 
             _pedidos.ExcluirLogico(id, User.Identity?.Name);
-
             await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged", new { id, deleted = true });
+
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                return Json(new { ok = true });
+
             TempData["Sucesso"] = "Pedido excluído.";
             return RedirectToAction(nameof(Index));
         }
-
     }
 
 

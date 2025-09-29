@@ -1,48 +1,79 @@
-﻿@model IEnumerable<WebApplicationPods.Models.PedidoModel>
+﻿@using WebApplicationPods.Models
 @using System.Linq
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+
+@model IEnumerable<PedidoModel>
+
 @{
     var filtro = (string)(ViewBag.Filtro ?? "abertos");
     var tableUrl = Url.Action("Table", "PedidosAdmin", new { filtro });
+    var afToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/orders-admin.css" asp-append-version="true" />
 }
 
-<div class="container mt-4 orders-admin">
+<!-- Token anti-CSRF para o fetch -->
+<meta name="request-verification-token" content="@afToken" />
 
-    <!-- Acesso rápido ao relatório -->
-    <div class="mb-3 d-flex gap-2">
-        @if (filtro == "dia")
-        {
-            <a class="btn btn-brand"
-               asp-controller="PedidosAdmin" asp-action="Relatorio"
-               asp-route-modo="dia" asp-route-data="@DateTime.Today.ToString("yyyy-MM-dd")">
-                Relatório (hoje)
-            </a>
-        }
-        else
-        {
-            <a class="btn btn-outline-brand"
-               asp-controller="PedidosAdmin" asp-action="Relatorio"
-               asp-route-modo="mes" asp-route-ano="@DateTime.Today.Year" asp-route-mes="@DateTime.Today.Month">
-                Relatório (mês atual)
-            </a>
-        }
-    </div>
+<div class="container mt-4 orders-admin" id="ordersRoot" data-table-url="@tableUrl">
 
-    <div class="header-row d-flex align-items-center justify-content-between mb-3">
-        <h2>Pedidos (@(filtro == "dia" ? "de hoje" : "abertos"))</h2>
-        <div class="btn-group">
-            <a class="btn btn-outline-secondary @(filtro == "abertos" ? "active" : "")"
-               asp-action="Index" asp-route-filtro="abertos">Abertos</a>
-            <a class="btn btn-outline-secondary @(filtro == "dia" ? "active" : "")"
-               asp-action="Index" asp-route-filtro="dia">Hoje</a>
+    <!-- Topbar / Filtros / Busca -->
+    <div class="orders-topbar header-row d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <h2 class="m-0">Pedidos (@(filtro == "dia" ? "de hoje" : "abertos"))</h2>
+            <span class="pill-badge d-none d-md-inline">Live</span>
+        </div>
+
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <div class="btn-group" role="group" aria-label="Filtros">
+                <a class="btn btn-outline-secondary @(filtro == "abertos" ? "active" : "")"
+                   asp-action="Index" asp-route-filtro="abertos">Abertos</a>
+                <a class="btn btn-outline-secondary @(filtro == "dia" ? "active" : "")"
+                   asp-action="Index" asp-route-filtro="dia">Hoje</a>
+            </div>
+
+            <div class="vr d-none d-md-block"></div>
+
+            <div class="input-group input-group-sm quick-search">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input id="qPedidos" type="search" class="form-control" placeholder="Buscar por cliente, método..." autocomplete="off" />
+            </div>
+
+            <!-- Relatórios -->
+            @if (filtro == "dia")
+            {
+                <a class="btn btn-brand btn-sm"
+                   asp-controller="PedidosAdmin" asp-action="Relatorio"
+                   asp-route-modo="dia" asp-route-data="@DateTime.Today.ToString("yyyy-MM-dd")">
+                    Relatório (hoje)
+                </a>
+            }
+            else
+            {
+                <a class="btn btn-outline-brand btn-sm"
+                   asp-controller="PedidosAdmin" asp-action="Relatorio"
+                   asp-route-modo="mes" asp-route-ano="@DateTime.Today.Year" asp-route-mes="@DateTime.Today.Month">
+                    Relatório (mês atual)
+                </a>
+            }
         </div>
     </div>
 
+    <!-- Legenda de status (opcional) -->
+    <div class="status-legend mb-3">
+        <span class="legend-item"><i class="dot dot-info"></i> Aguardando</span>
+        <span class="legend-item"><i class="dot dot-primary"></i> Em Preparo</span>
+        <span class="legend-item"><i class="dot dot-warning"></i> Pronto</span>
+        <span class="legend-item"><i class="dot dot-secondary"></i> Saiu p/ Entrega</span>
+        <span class="legend-item"><i class="dot dot-dark"></i> Entregue</span>
+        <span class="legend-item"><i class="dot dot-danger"></i> Cancelado</span>
+    </div>
+
+    <!-- Tabela -->
     <div class="table-container">
-        <table class="table table-striped align-middle mb-0">
+        <table class="table table-striped align-middle mb-0 responsive-table" id="ordersTable">
             <thead>
                 <tr>
                     <th>Cliente</th>
@@ -58,6 +89,22 @@
             </tbody>
         </table>
     </div>
+
+    <!-- Placeholder de carregamento (skeleton) -->
+    <template id="row-skeleton">
+        <tr class="row-skeleton">
+            <td colspan="6">
+                <div class="sk-wrap">
+                    <div class="sk-line w-25"></div>
+                    <div class="sk-line w-50"></div>
+                    <div class="sk-line w-75"></div>
+                </div>
+            </td>
+        </tr>
+    </template>
+
+    <!-- Toasts -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100"></div>
 </div>
 
 @section Scripts {
@@ -65,64 +112,12 @@
             integrity="sha512-6r3o8q7yMn3x7b1n3S0tQk/3DBMuQ1E1xm1ANo1sIc9s2yQik3zYgqzZ8qXuqFj2F2f+tSgDjpFzWkOq8ESQ8A=="
             crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-    <script>
-        (function(){
-            const tbody = document.getElementById('tbodyPedidos');
-            const tableUrl = '@tableUrl';
-
-            async function refreshTable(){
-                try{
-                    tbody.classList.add('is-loading');
-                    const html = await (await fetch(tableUrl, {cache:'no-store'})).text();
-                    tbody.innerHTML = html;
-                }catch{}finally{
-                    tbody.classList.remove('is-loading');
-                }
-            }
-
-            const connection = new signalR.HubConnectionBuilder()
-                .withUrl("/hubs/pedidos")
-                .withAutomaticReconnect()
-                .build();
-
-            connection.on("PedidosChanged", function(){ refreshTable(); });
-            connection.start().catch(console.error);
-
-            // fallback: refresh a cada 30s
-            setInterval(refreshTable, 30000);
-        })();
-    </script>
+    <script src="~/js/orders-admin.js" asp-append-version="true"></script>
 
     <script>
-        (function() {
-          function highlightRowIfAny() {
-            const params = new URLSearchParams(window.location.search);
-            const id = params.get('highlight');
-            if (!id) return;
-
-            // pode demorar para a tabela carregar via fetch; tente algumas vezes
-            let tries = 0;
-            const it = setInterval(() => {
-              tries++;
-              const row = document.querySelector(`tr[data-id="${id}"]`);
-              if (row) {
-                row.classList.add('row-highlight');
-                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                clearInterval(it);
-              }
-              if (tries > 20) clearInterval(it); // ~4s se 200ms
-            }, 200);
-          }
-
-          // chame no load e também após refresh via SignalR
-          highlightRowIfAny();
-
-          // Se você já tem refreshTable(), injete o highlight depois
-          const _old = window.refreshTable;
-          window.refreshTable = async function() {
-            if (typeof _old === 'function') await _old();
-            highlightRowIfAny();
-          };
-        })();
+        window.__ORDERS_ADMIN__.boot({
+            tableUrl: '@tableUrl',
+            highlightFromQueryString: true
+        });
     </script>
 }
