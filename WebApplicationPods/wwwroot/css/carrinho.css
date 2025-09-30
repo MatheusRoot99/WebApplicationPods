@@ -577,4 +577,80 @@
         border-radius: 12px;
     }
 
+/* ======= Full-bleed no botão Atualizar + zero margem lateral (MOBILE) ======= */
+@media (max-width: 768px) {
+    /* zera a margem lateral do container */
+    .carrinho-container {
+        padding-inline: 0 !important;
+    }
+
+    /* o cartão (tr) já tem padding interno ~14–16px;
+     vamos "vazar" o botão para encostar nas bordas do cartão */
+    .carrinho-table tbody tr {
+        padding: 16px; /* garante valor estável p/ o cálculo abaixo */
+    }
+
+    .carrinho-table tbody td {
+        padding-left: 0; /* tira o acolchoado lateral da célula */
+        padding-right: 0;
+    }
+
+    /* input-group em grid (você já usa) segue igual… 
+     só deixamos o botão ocupar a linha toda e colar nas laterais */
+    .quantidade-form .btn.btn-primary.full-bleed {
+        grid-column: 1 / -1; /* 100% da largura */
+        width: 100%;
+        height: 46px;
+        border-radius: 12px;
+        /* “sangra” para fora do td para alinhar ao padding do <tr> */
+        /* tr tem 16px de padding; como o td agora tem 0, usamos -16 */
+        margin-left: -16px;
+        margin-right: -16px;
+        border-top-left-radius: .0rem;
+        border-bottom-left-radius: .0rem;
+    }
+
+    /* mantém os 3 controles de quantidade bonitos */
+    .quantidade-form .input-group {
+        grid-template-columns: 44px 1fr 44px;
+        gap: 8px;
+    }
+}
+
+/* ===== desktop: mantém como já está; só reforço leve pro botão ===== */
+@media (min-width: 769px) {
+    .quantidade-form .btn.btn-primary.full-bleed {
+        margin-left: 0;
+        margin-right: 0;
+       
+    }
+}
+
+/* Reativa o border-radius do botão Atualizar mesmo dentro de .input-group */
+.quantidade-form .input-group > .btn.full-bleed,
+.quantidade-form .input-group > .btn.btn-primary.full-bleed {
+    margin-left: 0 !important; /* cancela o -1px do Bootstrap */
+    border-top-left-radius: 12px !important; /* devolve os cantos */
+    border-bottom-left-radius: 12px !important;
+    border-top-right-radius: 12px !important;
+    border-bottom-right-radius: 12px !important;
+}
+
+/* Se o botão não tiver a classe .full-bleed, ainda assim devolva os cantos */
+.quantidade-form .input-group > .btn.btn-primary {
+    border-radius: 12px !important;
+}
+
+/* No mobile, mantemos o full-bleed (já tinha no seu CSS) */
+@media (max-width: 768px) {
+    .quantidade-form .btn.btn-primary.full-bleed {
+        grid-column: 1 / -1;
+        width: 100%;
+        height: 46px;
+        border-radius: 12px !important;
+        margin-left: -16px;
+        margin-right: -16px;
+    }
+}
+
 
