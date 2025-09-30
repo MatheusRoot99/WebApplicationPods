@@ -7,64 +7,11 @@
 @section Styles {
     <link rel="stylesheet" href="~/css/cadastro.css" asp-append-version="true" />
     <style>
-        /* ====== Somente CORES da página (sem mudar layout) ====== */
+        /* Apenas ajustes específicos de cor se necessário */
         :root {
-            --brand-start: #6a11cb; /* roxo do site */
-            --brand-end: #2575fc; /* azul do site */
+            --brand-start: #6a11cb;
+            --brand-end: #2575fc;
             --brand-end-25: rgba(37,117,252,.25);
-        }
-
-        /* Header do card com gradiente da marca */
-        .cadastro-card .card-header {
-            background: linear-gradient(135deg,var(--brand-start) 0%, var(--brand-end) 100%);
-            color: #fff;
-        }
-
-        .cadastro-card .card-title {
-            color: #fff;
-        }
-
-        .cadastro-card .card-subtitle {
-            color: rgba(255,255,255,.9);
-        }
-
-        /* Título das seções */
-        .form-section .section-title {
-            color: #374151;
-        }
-
-        /* Botão primário com gradiente da marca */
-        .btn-primary {
-            background: linear-gradient(135deg,var(--brand-start) 0%, var(--brand-end) 100%);
-            border: 0;
-            color: #fff;
-            font-weight: 700;
-        }
-
-            .btn-primary:hover {
-                filter: brightness(1.03);
-                box-shadow: 0 10px 20px var(--brand-end-25);
-            }
-
-        /* Foco dos inputs na cor da marca */
-        .form-control:focus {
-            border-color: var(--brand-end);
-            box-shadow: 0 0 0 .2rem var(--brand-end-25);
-        }
-
-        /* Checkbox com cor da marca (browsers modernos) */
-        .form-check-input {
-            accent-color: var(--brand-end);
-        }
-
-        /* Links auxiliares na cor da marca */
-        .card-body a {
-            color: var(--brand-end);
-        }
-
-        /* Spinner do CEP (seu CSS atual usa .loading-spinner) */
-        .input-with-feedback .loading-spinner {
-            border-top-color: var(--brand-end) !important;
         }
     </style>
 }
@@ -88,15 +35,23 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label asp-for="Nome" class="form-label"></label>
-                            <input asp-for="Nome" class="form-control" required
-                                   placeholder="Digite seu nome completo" />
+                            <input asp-for="Nome" class="form-control" required placeholder="Digite seu nome completo" />
                             <span asp-validation-for="Nome" class="validation-message"></span>
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="CPF" class="form-label"></label>
+                            <input asp-for="CPF" id="cpf" class="form-control" placeholder="000.000.000-00" />
+                            <span asp-validation-for="CPF" class="validation-message"></span>
                         </div>
 
                         <div class="form-group">
+                            <label asp-for="DataNascimento" class="form-label"></label>
+                            <input asp-for="DataNascimento" id="dob" class="form-control" type="date" />
+                            <span asp-validation-for="DataNascimento" class="validation-message"></span>
+                        </div>
+                        <div class="form-group">
                             <label asp-for="Email" class="form-label"></label>
-                            <input asp-for="Email" class="form-control" type="email" required
-                                   placeholder="exemplo@email.com" />
+                            <input asp-for="Email" class="form-control" type="email" required placeholder="exemplo@email.com" />
                             <span asp-validation-for="Email" class="validation-message"></span>
                         </div>
                     </div>
@@ -165,10 +120,26 @@
                 </fieldset>
 
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-check-circle"></i> Finalizar Cadastro
+                    <button id="btnSubmit"
+                            type="submit"
+                            class="btn btn-primary btn-submit"
+                            aria-live="polite"
+                            aria-busy="false"
+                            data-text-default="Finalizar Cadastro"
+                            data-text-loading="Enviando..."
+                            data-text-success="Pronto!">
+                        <i class="fas fa-check-circle btn-icon" aria-hidden="true"></i>
+                        <span class="btn-text">Finalizar Cadastro</span>
+                        <span class="btn-spinner" aria-hidden="true"></span>
                     </button>
+
+                    <a href="@(!string.IsNullOrEmpty(ViewBag.ReturnUrl) ? (string)ViewBag.ReturnUrl : Url.Action("Index", "Carrinho"))"
+                       class="btn btn-outline-secondary"
+                       onclick="if (history.length > 1) { history.back(); return false; }">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
                 </div>
+
             </form>
         </div>
     </div>
@@ -176,15 +147,106 @@
 
 @section Scripts {
     <script src="~/js/cep.js" asp-append-version="true"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
-    <partial name="_ValidationScriptsPartial" />
-    <script>
-        $(function () {
-            $('#cep').inputmask('99999-999');
-            $('#estado').inputmask('AA', { placeholder: "SP", casing: 'upper' });
-        });
-    </script>
-    <script>
 
+    <!-- CDN confiável do InputMask -->
+    <script src="https://cdn.jsdelivr.net/npm/inputmask@5.0.8/dist/jquery.inputmask.min.js"></script>
+
+    <!-- Fallback local caso o CDN falhe -->
+    <script>
+        (function() {
+            function loadInputMask() {
+                if (typeof window.Inputmask === 'undefined') {
+                    console.log('Carregando InputMask localmente...');
+                    var script = document.createElement('script');
+                    script.src = '/lib/inputmask/jquery.inputmask.min.js';
+                    script.onload = initMasks;
+                    document.head.appendChild(script);
+                } else {
+                    initMasks();
+                }
+            }
+
+            function initMasks() {
+                if (typeof window.jQuery === 'undefined') {
+                    console.error('jQuery não está disponível');
+                    return;
+                }
+                var $ = window.jQuery;
+
+                try {
+                    if ($('#cep').length) $('#cep').inputmask('99999-999');
+                    if ($('#estado').length) {
+                        $('#estado').inputmask('AA', { placeholder: 'SP', casing: 'upper' });
+                    }
+                    if ($('#cpf').length) {
+                        $('#cpf').inputmask('999.999.999-99', {
+                            showMaskOnHover: false,
+                            clearIncomplete: true
+                        });
+                    }
+                    console.log('Máscaras aplicadas com sucesso');
+                } catch (error) {
+                    console.error('Erro ao aplicar máscaras:', error);
+                }
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', loadInputMask);
+            } else {
+                loadInputMask();
+            }
+        })();
     </script>
+
+    <!-- Submit: evita duplo clique e mostra “carregando” -->
+    <script>
+        (function () {
+          const form = document.querySelector('form.cadastro-form');
+          const btn  = document.getElementById('btnSubmit');
+          if (!form || !btn) return;
+
+          const setState = (state) => {
+            // state: "default" | "loading" | "success"
+            btn.classList.toggle('is-loading', state === 'loading');
+            btn.classList.toggle('is-success', state === 'success');
+            btn.setAttribute('aria-busy', state === 'loading' ? 'true' : 'false');
+
+            const txt = btn.querySelector('.btn-text');
+            if (!txt) return;
+
+            if (state === 'loading') txt.textContent = btn.dataset.textLoading || 'Enviando...';
+            else if (state === 'success') txt.textContent = btn.dataset.textSuccess || 'Pronto!';
+            else txt.textContent = btn.dataset.textDefault || 'Finalizar Cadastro';
+          };
+
+          let submitted = false;
+
+          form.addEventListener('submit', function (e) {
+            if (submitted) { e.preventDefault(); return false; }
+
+            if (!form.checkValidity()) return;
+
+            submitted = true;
+            setState('loading');
+
+            try {
+              const fields = form.querySelectorAll('input, select, textarea, button');
+              fields.forEach(el => el.disabled = (el !== btn) ? true : false);
+              btn.disabled = true;
+            } catch {}
+
+            setTimeout(() => {
+              if (document.visibilityState === 'visible') {
+                submitted = false;
+                btn.disabled = false;
+                setState('default');
+                const fields = form.querySelectorAll('input, select, textarea, button');
+                fields.forEach(el => el.disabled = false);
+              }
+            }, 8000);
+          });
+        })();
+    </script>
+
+    <partial name="_ValidationScriptsPartial" />
 }

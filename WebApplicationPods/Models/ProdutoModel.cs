@@ -78,6 +78,10 @@ namespace WebApplicationPods.Models
         [Display(Name = "Ativo?")]
         public bool Ativo { get; set; } = true;
 
+        // ======= NOVO: Restrições por idade =======
+        [Display(Name = "Requer maioridade (18+)?")]
+        public bool RequerMaioridade { get; set; } = false;
+
         [ValidateNever]
         public virtual ICollection<PedidoItemModel> PedidoItens { get; set; }
 

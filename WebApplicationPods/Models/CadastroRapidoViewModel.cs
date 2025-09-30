@@ -47,5 +47,18 @@ namespace WebApplicationPods.Models
         [StringLength(2, MinimumLength = 2)]
         [RegularExpression(@"^[A-Za-z]{2}$", ErrorMessage = "UF inválida")]
         public string Estado { get; set; } = string.Empty;
+
+
+        // ...campos existentes...
+
+        [Required(ErrorMessage = "O CPF é obrigatório")]
+        [Display(Name = "CPF")]
+        [RegularExpression(@"^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$", ErrorMessage = "CPF inválido")]
+        public string CPF { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "A data de nascimento é obrigatória")]
+        [DataType(DataType.Date)]
+        [Display(Name = "Data de nascimento")]
+        public DateTime? DataNascimento { get; set; }
     }
 }

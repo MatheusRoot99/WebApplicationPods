@@ -32,6 +32,7 @@ namespace WebApplicationPods.Repository.Repository
 
         public PedidoModel ObterPorId(int id)
         {
+            // inclui relações essenciais para exibição detalhada
             return _context.Pedidos
                 .Include(p => p.Cliente)
                 .Include(p => p.Endereco)
@@ -67,6 +68,8 @@ namespace WebApplicationPods.Repository.Repository
 
             _context.Pedidos.Add(pedido);
             _context.SaveChanges(); // Id e Token persistidos
+
+            // SUGESTÃO (fora do repo): emitir _hub.Clients.Group("lojistas").SendAsync("NewOrder", ...) aqui via service/controller
         }
 
         public void AtualizarStatus(int pedidoId, string status)
@@ -78,6 +81,10 @@ namespace WebApplicationPods.Repository.Repository
             {
                 pedido.Status = status;
                 _context.SaveChanges();
+
+                // SUGESTÃO (fora do repo):
+                // - Se virou "Pago": disparar notificação realtime pro painel
+                // - Se virou "Saiu p/ Entrega" ou "Pronto": idem
             }
         }
 
