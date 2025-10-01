@@ -1,14 +1,17 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
-using Newtonsoft.Json;
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 using System.Globalization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using WebApplicationPods.Data;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
-using WebApplicationPods.Repository.Repository;
-
 
 namespace WebApplicationPods.Controllers
 {
@@ -31,14 +34,35 @@ namespace WebApplicationPods.Controllers
             _context = context;
         }
 
-        public async Task<IActionResult> Index(
-    string? q,                // busca por nome/descrição
-    int? categoriaId,         // filtro por categoria
-    bool? emPromocao,         // filtrar se está em promoção
-    string? sort = "nome",    // nome|preco|preco_desc|promo|novidades
-    int page = 1,             // página atual
-    int pageSize = 12)        // itens por página
+        // ===== Helpers de Flash (padroniza chaves e origem) =====
+        private void FlashOk(string msg)
         {
+            TempData["MensagemSucesso"] = msg;
+            TempData["FlashSource"] = "Produto";
+        }
+        private void FlashErr(string msg)
+        {
+            TempData["MensagemErro"] = msg;
+            TempData["FlashSource"] = "Produto";
+        }
+
+        // ===== Index com "gate" de mensagens (só deixa passar as do próprio controller) =====
+        public async Task<IActionResult> Index(
+            string? q,                // busca por nome/descrição
+            int? categoriaId,         // filtro por categoria
+            bool? emPromocao,         // filtrar se está em promoção
+            string? sort = "nome",    // nome|preco|preco_desc|promo|novidades
+            int page = 1,             // página atual
+            int pageSize = 12)        // itens por página
+        {
+            // Gate de flash
+            var src = TempData.Peek("FlashSource") as string;
+            if (!string.Equals(src, "Produto", StringComparison.OrdinalIgnoreCase))
+            {
+                TempData.Remove("MensagemSucesso");
+                TempData.Remove("MensagemErro");
+            }
+
             // Sanitize
             page = page < 1 ? 1 : page;
             pageSize = pageSize is < 1 or > 60 ? 12 : pageSize;
@@ -73,9 +97,9 @@ namespace WebApplicationPods.Controllers
                 "preco" => query.OrderBy(p => p.Preco),
                 "preco_desc" => query.OrderByDescending(p => p.Preco),
                 "promo" => query
-                                   .OrderByDescending(p => p.PrecoPromocional.HasValue && p.PrecoPromocional < p.Preco)
-                                   .ThenBy(p => p.Nome),
-                "novidades" => query.OrderByDescending(p => p.Id), // ou DataCriacao, se existir
+                                  .OrderByDescending(p => p.PrecoPromocional.HasValue && p.PrecoPromocional < p.Preco)
+                                  .ThenBy(p => p.Nome),
+                "novidades" => query.OrderByDescending(p => p.Id), // ou DataCriacao
                 _ => query.OrderBy(p => p.Nome),
             };
 
@@ -111,7 +135,7 @@ namespace WebApplicationPods.Controllers
             var produto = _produtoRepository.ObterPorId(id);
             if (produto == null)
             {
-                TempData["MensagemErro"] = "Produto não encontrado";
+                FlashErr("Produto não encontrado");
                 return RedirectToAction(nameof(Index));
             }
             return View(produto);
@@ -122,14 +146,12 @@ namespace WebApplicationPods.Controllers
         {
             try
             {
-                // Carrega as categorias
                 var categorias = _categoriaRepository.ObterTodos()
                     .OrderBy(c => c.Nome)
                     .ToList();
 
                 ViewBag.Categorias = new SelectList(categorias, "Id", "Nome");
 
-                // Cria o modelo com a lista de sabores disponíveis
                 var model = new ProdutoModel
                 {
                     TodosSabores = ObterTodosSabores()
@@ -137,9 +159,9 @@ namespace WebApplicationPods.Controllers
 
                 return View(model);
             }
-            catch (Exception ex)
+            catch
             {
-                TempData["MensagemErro"] = "Erro ao carregar o formulário de cadastro";
+                FlashErr("Erro ao carregar o formulário de cadastro");
                 return RedirectToAction(nameof(Index));
             }
         }
@@ -147,20 +169,21 @@ namespace WebApplicationPods.Controllers
         private List<SelectListItem> ObterTodosSabores()
         {
             return new List<SelectListItem>
-    {
-        new SelectListItem { Value = "Aloe Grape - Aloe Vera e Uva", Text = "Aloe Grape - Aloe Vera e Uva" },
-        new SelectListItem { Value = "Banana Coconut - Banana e Água de Coco", Text = "Banana Coconut - Banana e Água de Coco" },
-        new SelectListItem { Value = "Banana Ice", Text = "Banana Ice" },
-        new SelectListItem { Value = "Blueberry Ice - Mirtilo Ice", Text = "Blueberry Ice - Mirtilo Ice" },
-        new SelectListItem { Value = "Blueberry Straw Coco - Mirtilo, Morango, Coco", Text = "Blueberry Straw Coco - Mirtilo, Morango, Coco" },
-        new SelectListItem { Value = "Grape Ice - Uva Ice", Text = "Grape Ice - Uva Ice" },
-        new SelectListItem { Value = "Green Apple - Maçã Verde", Text = "Green Apple - Maçã Verde" },
-        new SelectListItem { Value = "Icy Mint - Menta Ice", Text = "Icy Mint - Menta Ice" },
-        new SelectListItem { Value = "Menthal - Menta e Hortelã Ice", Text = "Menthal - Menta e Hortelã Ice" },
-        new SelectListItem { Value = "Pineapple Ice - Abacaxi Ice", Text = "Pineapple Ice - Abacaxi Ice" },
-        new SelectListItem { Value = "Strawberry Banana - Morango e Banana", Text = "Strawberry Banana - Morango e Banana" },
-        new SelectListItem { Value = "Strawberry Ice - Morango Ice", Text = "Strawberry Ice - Morango Ice" },
-        new SelectListItem { Value = "Watermelon Ice - Melancia Ice", Text = "Watermelon Ice - Melancia Ice" }};
+            {
+                new SelectListItem { Value = "Aloe Grape - Aloe Vera e Uva", Text = "Aloe Grape - Aloe Vera e Uva" },
+                new SelectListItem { Value = "Banana Coconut - Banana e Água de Coco", Text = "Banana Coconut - Banana e Água de Coco" },
+                new SelectListItem { Value = "Banana Ice", Text = "Banana Ice" },
+                new SelectListItem { Value = "Blueberry Ice - Mirtilo Ice", Text = "Blueberry Ice - Mirtilo Ice" },
+                new SelectListItem { Value = "Blueberry Straw Coco - Mirtilo, Morango, Coco", Text = "Blueberry Straw Coco - Mirtilo, Morango, Coco" },
+                new SelectListItem { Value = "Grape Ice - Uva Ice", Text = "Grape Ice - Uva Ice" },
+                new SelectListItem { Value = "Green Apple - Maçã Verde", Text = "Green Apple - Maçã Verde" },
+                new SelectListItem { Value = "Icy Mint - Menta Ice", Text = "Icy Mint - Menta Ice" },
+                new SelectListItem { Value = "Menthal - Menta e Hortelã Ice", Text = "Menthal - Menta e Hortelã Ice" },
+                new SelectListItem { Value = "Pineapple Ice - Abacaxi Ice", Text = "Pineapple Ice - Abacaxi Ice" },
+                new SelectListItem { Value = "Strawberry Banana - Morango e Banana", Text = "Strawberry Banana - Morango e Banana" },
+                new SelectListItem { Value = "Strawberry Ice - Morango Ice", Text = "Strawberry Ice - Morango Ice" },
+                new SelectListItem { Value = "Watermelon Ice - Melancia Ice", Text = "Watermelon Ice - Melancia Ice" }
+            };
         }
 
         [HttpPost]
@@ -169,7 +192,7 @@ namespace WebApplicationPods.Controllers
         {
             try
             {
-                // 1. Processar Sabores e Quantidades a partir do form
+                // 1) Sabores do form
                 var saboresList = new List<ProdutoModel.SaborQuantidade>();
                 produto.SaboresQuantidadesList = saboresList;
 
@@ -198,69 +221,57 @@ namespace WebApplicationPods.Controllers
                     }
                 }
 
-                // 2. Validação de sabores
+                // 2) Validação de sabores
                 if (saboresList.Count == 0)
-                {
                     ModelState.AddModelError("", "Adicione pelo menos um sabor com quantidade válida.");
-                }
 
-                // 3. Atualizar estoque total com base nas quantidades
+                // 3) Estoque total
                 produto.Estoque = saboresList.Sum(s => s.Quantidade);
 
-                // 4. Remover validações de propriedades que não serão validadas diretamente
+                // 4) Remover validações não usadas diretamente
                 ModelState.Remove("Categoria");
                 ModelState.Remove("ImagemUrl");
                 ModelState.Remove("SaboresQuantidadesList");
                 ModelState.Remove("SaboresQuantidades");
 
-                // 5. Serializar sabores para armazenar no banco
+                // 5) Serializar JSON
                 produto.SerializarSaboresQuantidades();
 
-                // 6. Verificar se o ModelState está válido
+                // 6) Persistência
                 if (ModelState.IsValid)
                 {
-                    // 6.1. Processar imagem se enviada
+                    // Imagem (opcional)
                     if (produto.ImagemUpload != null && produto.ImagemUpload.Length > 0)
                     {
                         var pastaUploads = Path.Combine(_hostEnvironment.WebRootPath, "imagens/produtos");
                         if (!Directory.Exists(pastaUploads))
-                        {
                             Directory.CreateDirectory(pastaUploads);
-                        }
 
                         var nomeArquivo = $"{Guid.NewGuid()}_{Path.GetFileName(produto.ImagemUpload.FileName)}";
                         var caminhoArquivo = Path.Combine(pastaUploads, nomeArquivo);
 
                         using (var fileStream = new FileStream(caminhoArquivo, FileMode.Create))
-                        {
                             await produto.ImagemUpload.CopyToAsync(fileStream);
-                        }
 
                         produto.ImagemUrl = $"/imagens/produtos/{nomeArquivo}";
                     }
 
-                    // 6.2. Salvar no banco
                     _produtoRepository.Adicionar(produto);
-
-                    TempData["MensagemSucesso"] = "Produto cadastrado com sucesso!";
+                    FlashOk("Produto cadastrado com sucesso!");
                     return RedirectToAction(nameof(Index));
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Erro no cadastro: {ex}");
-                TempData["MensagemErro"] = $"Erro ao cadastrar produto: {ex.Message}";
+                FlashErr($"Erro ao cadastrar produto: {ex.Message}");
             }
 
-            // 7. Se chegamos aqui, houve erro → recarrega categorias e sabores
+            // 7) Recarrega auxiliares em caso de erro
             produto.TodosSabores = ObterTodosSabores();
             CarregarCategorias();
-
             return View(produto);
         }
-
-
-
 
         [HttpGet]
         public IActionResult Editar(int id)
@@ -268,19 +279,16 @@ namespace WebApplicationPods.Controllers
             var produto = _produtoRepository.ObterPorId(id);
             if (produto == null)
             {
-                TempData["MensagemErro"] = "Produto não encontrado";
+                FlashErr("Produto não encontrado");
                 return RedirectToAction(nameof(Index));
             }
 
-            // carrega listas auxiliares
             produto.DeserializarSaboresQuantidades();
             produto.TodosSabores = ObterTodosSabores();
             CarregarCategorias();
 
             return View(produto);
         }
-
-
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -290,18 +298,18 @@ namespace WebApplicationPods.Controllers
             var produto = _produtoRepository.ObterPorId(id);
             if (produto == null)
             {
-                TempData["MensagemErro"] = "Produto não encontrado";
+                FlashErr("Produto não encontrado");
                 return RedirectToAction(nameof(Index));
             }
 
-            // ---- Conversão de preços pt-BR
+            // Conversão de preços pt-BR
             static decimal? ParsePtBr(string raw)
             {
                 if (string.IsNullOrWhiteSpace(raw)) return null;
                 if (decimal.TryParse(raw, NumberStyles.Currency, new CultureInfo("pt-BR"), out var d))
                     return d;
                 raw = raw.Replace(".", "").Replace(",", ".");
-                return decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out d) ? d : null;
+                return decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out d) ? d : (decimal?)null;
             }
 
             var precoRaw = Request.Form[nameof(ProdutoModel.Preco)];
@@ -333,7 +341,7 @@ namespace WebApplicationPods.Controllers
                 }
             }
 
-            // ---- Bind restante
+            // Bind restante
             var ok = await TryUpdateModelAsync(produto, prefix: "",
                 p => p.Nome, p => p.Descricao, p => p.CategoriaId, p => p.Ativo,
                 p => p.EmPromocao, p => p.MaisVendido, p => p.Sabor, p => p.Cor,
@@ -342,7 +350,7 @@ namespace WebApplicationPods.Controllers
             if (!ok)
                 ModelState.AddModelError(string.Empty, "Não foi possível vincular os dados do formulário.");
 
-            // ---- Sabores
+            // Sabores
             var saboresList = new List<ProdutoModel.SaborQuantidade>();
             if (Request.Form.TryGetValue("SaboresQuantidadesList", out var itens))
             {
@@ -368,9 +376,9 @@ namespace WebApplicationPods.Controllers
             produto.SaboresQuantidadesList = saboresList;
             produto.Estoque = saboresList.Sum(s => s.Quantidade);
             produto.SerializarSaboresQuantidades();
-            ModelState.Remove(nameof(ProdutoModel.SaboresQuantidades)); // <- evita falso "required"
+            ModelState.Remove(nameof(ProdutoModel.SaboresQuantidades)); // evita falso "required"
 
-            // ---- Regras adicionais
+            // Regras adicionais
             if (!_context.Categorias.AsNoTracking().Any(c => c.Id == produto.CategoriaId))
                 ModelState.AddModelError(nameof(ProdutoModel.CategoriaId), "Selecione uma categoria válida.");
 
@@ -383,10 +391,10 @@ namespace WebApplicationPods.Controllers
             }
             else
             {
-                produto.PrecoPromocional = null; // garante consistência
+                produto.PrecoPromocional = null;
             }
 
-            // ---- Imagem opcional
+            // Imagem opcional
             ModelState.Remove(nameof(ProdutoModel.ImagemUpload));
             var file = Request.Form.Files[nameof(ProdutoModel.ImagemUpload)];
             if (file is { Length: > 0 })
@@ -408,7 +416,7 @@ namespace WebApplicationPods.Controllers
                 return View("Editar", produto);
             }
 
-            // ---- Persistência da imagem (se enviada)
+            // Persistência da imagem (se enviada)
             if (file is { Length: > 0 })
             {
                 var uploads = Path.Combine(_hostEnvironment.WebRootPath, "imagens/produtos");
@@ -427,51 +435,9 @@ namespace WebApplicationPods.Controllers
             }
 
             _produtoRepository.Atualizar(produto);
-            TempData["MensagemSucesso"] = "Produto atualizado com sucesso!";
+            FlashOk("Produto atualizado com sucesso!");
             return RedirectToAction(nameof(Index));
         }
-
-
-        /// <summary>
-        /// //////
-        /// </summary>
-        // Função para converter formato brasileiro para decimal
-        decimal? ConverterParaDecimal(string valor)
-        {
-            if (string.IsNullOrWhiteSpace(valor)) return null;
-
-            // Remove "R$" e espaços
-            valor = valor.Replace("R$", "").Trim();
-
-            // Usa CultureInfo pt-BR para converter
-            if (decimal.TryParse(valor, NumberStyles.Currency,
-                new CultureInfo("pt-BR"), out decimal resultado))
-            {
-                return resultado;
-            }
-
-            // Tenta converter removendo pontos de milhar manualmente
-            valor = valor.Replace(".", "").Replace(",", ".");
-            if (decimal.TryParse(valor, NumberStyles.Any, CultureInfo.InvariantCulture, out resultado))
-            {
-                return resultado;
-            }
-
-            return null;
-        }
-        /// <returns></returns>
-
-
-        // helper
-        private static bool TryReadDecimalAnyCulture(string raw, out decimal value)
-        {
-            var s = (raw ?? "").Trim();
-            var styles = NumberStyles.AllowDecimalPoint | NumberStyles.AllowThousands;
-            return decimal.TryParse(s, styles, CultureInfo.GetCultureInfo("pt-BR"), out value)
-                || decimal.TryParse(s.Replace(".", "").Replace(',', '.'), styles, CultureInfo.InvariantCulture, out value);
-        }
-
-
 
         [HttpGet]
         public IActionResult Excluir(int id)
@@ -479,7 +445,7 @@ namespace WebApplicationPods.Controllers
             var produto = _produtoRepository.ObterPorId(id);
             if (produto == null)
             {
-                TempData["MensagemErro"] = "Produto não encontrado";
+                FlashErr("Produto não encontrado");
                 return RedirectToAction(nameof(Index));
             }
             return View(produto);
@@ -494,16 +460,16 @@ namespace WebApplicationPods.Controllers
                 var produto = _produtoRepository.ObterPorId(id);
                 if (produto == null)
                 {
-                    TempData["MensagemErro"] = "Produto não encontrado";
+                    FlashErr("Produto não encontrado");
                     return RedirectToAction(nameof(Index));
                 }
 
                 _produtoRepository.Remover(id);
-                TempData["MensagemSucesso"] = "Produto excluído com sucesso!";
+                FlashOk("Produto excluído com sucesso!");
             }
             catch (Exception ex)
             {
-                TempData["MensagemErro"] = $"Erro ao excluir produto: {ex.Message}";
+                FlashErr($"Erro ao excluir produto: {ex.Message}");
             }
 
             return RedirectToAction(nameof(Index));
@@ -521,9 +487,8 @@ namespace WebApplicationPods.Controllers
             }
             catch (Exception ex)
             {
-                // Logar o erro se necessário
                 ViewBag.Categorias = new SelectList(Enumerable.Empty<SelectListItem>());
-                TempData["MensagemErro"] = $"Erro ao carregar categorias: {ex.Message}";
+                FlashErr($"Erro ao carregar categorias: {ex.Message}");
             }
         }
 
@@ -536,13 +501,10 @@ namespace WebApplicationPods.Controllers
             if (produto == null)
                 return NotFound();
 
-            // 👇 PRECISA desserializar os sabores do JSON do banco:
+            // Desserializa sabores do JSON
             produto.DeserializarSaboresQuantidades();
-
-            // Se quiser garantir que a lista não fique null:
             produto.SaboresQuantidadesList ??= new List<ProdutoModel.SaborQuantidade>();
 
-            // Monta a lista para a view (ordena: com estoque primeiro, depois nome)
             var saboresDisponiveis = produto.SaboresQuantidadesList
                 .Select(sq => new ProdutoModel.SaborQuantidade
                 {
@@ -572,18 +534,29 @@ namespace WebApplicationPods.Controllers
             return View("Detalhes", viewModel);
         }
 
+        // ===== Helpers de conversão (se precisar em outros pontos) =====
+        private static decimal? ConverterParaDecimal(string valor)
+        {
+            if (string.IsNullOrWhiteSpace(valor)) return null;
+            valor = valor.Replace("R$", "").Trim();
 
-        //[HttpGet]
-        //public IActionResult ProdutoCard(int id)
-        //{
-        //    var produto = _produtoRepository.ObterPorId(id);
-        //    if (produto == null)
-        //    {
-        //        TempData["MensagemErro"] = "Produto não encontrado";
-        //        return RedirectToAction(nameof(Index));
-        //    }
-        //    return View(produto); // Views/Produto/ProdutoCard.cshtml -> @model ProdutoModel
-        //}
+            if (decimal.TryParse(valor, NumberStyles.Currency,
+                new CultureInfo("pt-BR"), out decimal resultado))
+                return resultado;
 
+            valor = valor.Replace(".", "").Replace(",", ".");
+            if (decimal.TryParse(valor, NumberStyles.Any, CultureInfo.InvariantCulture, out resultado))
+                return resultado;
+
+            return null;
+        }
+
+        private static bool TryReadDecimalAnyCulture(string raw, out decimal value)
+        {
+            var s = (raw ?? "").Trim();
+            var styles = NumberStyles.AllowDecimalPoint | NumberStyles.AllowThousands;
+            return decimal.TryParse(s, styles, CultureInfo.GetCultureInfo("pt-BR"), out value)
+                || decimal.TryParse(s.Replace(".", "").Replace(',', '.'), styles, CultureInfo.InvariantCulture, out value);
+        }
     }
 }

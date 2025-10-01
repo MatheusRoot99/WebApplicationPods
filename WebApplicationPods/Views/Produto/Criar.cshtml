@@ -87,7 +87,7 @@
                                 <div class="card border-0 shadow-sm mb-3">
                                     <div class="card-body p-3">
                                         <div class="row g-2 align-items-center">
-                                            <div class="col-md-7">
+                                            <div class="col-md-5">
                                                 <select class="form-select" id="saborSelect">
                                                     <option value="">Selecione um sabor...</option>
                                                     @foreach (var sabor in Model.TodosSabores)
@@ -99,10 +99,13 @@
                                             <div class="col-md-3">
                                                 <input type="number" min="1" value="1" class="form-control" id="quantidadeInput" placeholder="Qtd">
                                             </div>
-                                            <div class="col-md-2">
-                                                <button type="button" class="btn btn-primary w-100" id="addSaborBtn">
-                                                    <i class="fas fa-plus-circle me-1"></i> Add
-                                                </button>
+                                            <div class="col-md-4">
+                                                <div class="input-group">
+                                                    <input type="text" class="form-control" id="novoSaborInput" placeholder="Ou digite novo sabor">
+                                                    <button type="button" class="btn btn-outline-primary" id="addSaborBtn">
+                                                        <i class="fas fa-plus-circle me-1"></i> Add
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -116,13 +119,27 @@
                                             <div class="card mb-2 border-0 shadow-sm sabor-item" data-sabor="@sq.Sabor">
                                                 <div class="card-body py-2 px-3">
                                                     <div class="d-flex justify-content-between align-items-center">
-                                                        <div>
-                                                            <span class="fw-bold text-primary">@sq.Sabor</span>
-                                                            <span class="badge bg-light text-primary ms-2">@sq.Quantidade un.</span>
+                                                        <div class="flex-grow-1">
+                                                            <span class="fw-bold text-primary sabor-nome">@sq.Sabor</span>
+                                                            <div class="mt-1">
+                                                                <span class="badge bg-light text-dark me-2">Quantidade:</span>
+                                                                <div class="btn-group btn-group-sm" role="group">
+                                                                    <button type="button" class="btn btn-outline-secondary diminuir-qtd">
+                                                                        <i class="fas fa-minus"></i>
+                                                                    </button>
+                                                                    <span class="btn btn-light quantidade-display" style="min-width: 50px;">@sq.Quantidade</span>
+                                                                    <button type="button" class="btn btn-outline-secondary aumentar-qtd">
+                                                                        <i class="fas fa-plus"></i>
+                                                                    </button>
+                                                                </div>
+                                                                <span class="badge bg-primary ms-2 quantidade-badge">@sq.Quantidade un.</span>
+                                                            </div>
                                                         </div>
-                                                        <button type="button" class="btn btn-sm btn-link text-danger remove-sabor">
-                                                            <i class="fas fa-trash-alt"></i>
-                                                        </button>
+                                                        <div class="ms-3">
+                                                            <button type="button" class="btn btn-sm btn-link text-danger remove-sabor">
+                                                                <i class="fas fa-trash-alt"></i>
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                     <input type="hidden" name="SaboresQuantidadesList"
                                                            value='@JsonConvert.SerializeObject(new { Sabor = sq.Sabor, Quantidade = sq.Quantidade })'>
@@ -140,7 +157,7 @@
                                 </div>
 
                                 <div class="text-muted small">
-                                    <i class="fas fa-info-circle me-1"></i> Adicione os sabores disponíveis e suas quantidades
+                                    <i class="fas fa-info-circle me-1"></i> Selecione um sabor existente ou digite um novo. Use os botões + e - para ajustar as quantidades.
                                 </div>
                             </div>
 
@@ -216,7 +233,8 @@
                                     <label asp-for="Estoque" class="form-label fw-bold text-primary"></label>
                                     <div class="input-group">
                                         <span class="input-group-text bg-light"><i class="fas fa-boxes"></i></span>
-                                        <input asp-for="Estoque" class="form-control" value="0" min="0" />
+                                        <input asp-for="Estoque" class="form-control estoque-readonly" readonly />
+
                                     </div>
                                     <span asp-validation-for="Estoque" class="text-danger small"></span>
                                 </div>

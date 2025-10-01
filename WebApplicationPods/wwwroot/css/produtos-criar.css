@@ -1,238 +1,518 @@
-﻿/* Estilos Gerais */
+﻿/* =========================
+   Tokens de tema / escala
+   ========================= */
 :root {
-    --primary-color: #6e48aa;
-    --secondary-color: #9d50bb;
-    --light-gray: #f8f9fa;
-    --medium-gray: #e9ecef;
-    --dark-gray: #6c757d;
-    --success-color: #28a745;
-    --danger-color: #dc3545;
+    /* Cores principais */
+    --primary-500: #6e48aa;
+    --primary-600: #5e3f95;
+    --primary-700: #50367f;
+    --accent-500: #9d50bb;
+    /* Neutros */
+    --bg: #ffffff;
+    --muted: #f8f9fa;
+    --muted-2: #eef1f4;
+    --line: #e6e8ec;
+    --ink: #1e1e2a;
+    --ink-2: #6c757d;
+    /* Estados */
+    --success: #28a745;
+    --danger: #dc3545;
+    --warn: #f59e0b;
+    /* Sombra */
+    --shadow-sm: 0 2px 8px rgba(0,0,0,.06);
+    --shadow-md: 0 6px 22px rgba(0,0,0,.08);
+    --shadow-lg: 0 10px 30px rgba(0,0,0,.12);
+    /* Bordas / raios */
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-pill: 999px;
+    /* Heights utilitárias */
+    --mbn-height: 68px;
 }
 
-/* Hero Section */
+/* =========================
+   Reset e base
+   ========================= */
+html, body {
+    overflow-x: hidden;
+}
+
+.py-3 {
+    padding-top: 0rem;
+    padding-bottom: 0rem;
+}
+
+/* =========================
+   Hero
+   ========================= */
 .hero-pods {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    background: linear-gradient(135deg, var(--primary-500) 0%, var(--accent-500) 100%);
     position: relative;
     overflow: hidden;
     border-radius: 0 0 20px 20px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
+    padding: 2rem 0;
 }
 
     .hero-pods::before {
         content: "";
         position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: url('https://clubedovapor.net/13061-thickbox_default/pod-ignite-v300-30000-puffs.jpg') center/cover;
-        opacity: 0.1;
+        inset: 0;
+        background: url('https://clubedovapor.net/13061-thickbox_default/pod-ignite-v300-30000-puffs.jpg') center/cover no-repeat;
+        opacity: .08;
+        filter: grayscale(100%);
+        pointer-events: none;
     }
 
 .hero-badge {
-    display: inline-block;
-    background: rgba(255, 255, 255, 0.2);
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    background: rgba(255,255,255,.18);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
-    padding: 8px 20px;
-    border-radius: 50px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    font-size: 0.9rem;
+    padding: 8px 16px;
+    border-radius: var(--radius-pill);
+    font-weight: 700;
+    letter-spacing: .04em;
+    font-size: .85rem;
     text-transform: uppercase;
 }
 
-/* Card Principal */
+/* =========================
+   Cartões / contêineres
+   ========================= */
 .card {
     border: none;
-    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.08);
-    border-radius: 12px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
     overflow: hidden;
 }
 
 .card-header {
-    background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+    background: linear-gradient(90deg, var(--primary-500), var(--accent-500));
     border-bottom: none;
+    color: white;
 }
 
-/* Formulário */
+.card.shadow-lg {
+    box-shadow: var(--shadow-lg);
+}
+
+/* =========================
+   Form / inputs
+   ========================= */
+.form-label {
+    margin-bottom: 8px;
+    font-weight: 700;
+    color: var(--primary-600);
+}
+
 .form-control, .form-select {
-    border-radius: 8px;
-    padding: 12px 15px;
-    border: 1px solid #e0e0e0;
-    transition: all 0.3s;
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    transition: box-shadow .2s, border-color .2s, background .2s;
 }
 
     .form-control:focus, .form-select:focus {
-        border-color: var(--secondary-color);
-        box-shadow: 0 0 0 0.25rem rgba(157, 80, 187, 0.15);
+        border-color: var(--accent-500);
+        box-shadow: 0 0 0 .25rem rgba(157,80,187,.15);
     }
 
 .form-control-lg {
-    padding: 15px 20px;
-}
-
-.form-label {
-    margin-bottom: 8px;
-    font-size: 0.95rem;
-    color: var(--primary-color);
+    padding: 14px 16px;
 }
 
 .input-group-text {
-    background-color: var(--light-gray);
-    border-color: #e0e0e0;
-    color: var(--primary-color);
+    background: var(--muted);
+    border-color: var(--line);
+    color: var(--primary-600);
 }
 
-/* Upload de Imagem */
+.mb-4 .input-group-text.text-primary {
+    color: var(--accent-500) !important;
+}
+
+/* Campo calculado (Estoque) desabilitado */
+#Estoque:disabled {
+    background: linear-gradient(180deg, #fbfbfc, #f3f5f8);
+    color: #475569;
+    border-color: #dfe3ea;
+    font-weight: 600;
+    cursor: not-allowed;
+    opacity: 1;
+}
+
+/* Placeholder */
+::placeholder {
+    color: #9aa4b2;
+    opacity: 1;
+}
+
+/* =========================
+   Upload de imagem
+   ========================= */
 .file-upload-wrapper {
     position: relative;
-    margin-bottom: 5px;
 }
 
 .file-upload-label {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
     padding: 12px 15px;
-    background-color: var(--light-gray);
-    border: 1px dashed #ced4da;
-    border-radius: 8px;
+    background: var(--muted);
+    border: 1px dashed #cfd6df;
+    border-radius: var(--radius-sm);
     text-align: center;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: .2s;
 }
 
     .file-upload-label:hover {
-        background-color: var(--medium-gray);
-        border-color: var(--secondary-color);
+        background: var(--muted-2);
+        border-color: var(--accent-500);
     }
 
 .file-upload-text {
-    color: var(--dark-gray);
+    color: var(--ink-2);
 }
 
-#imagemUpload {
+.file-upload-wrapper input[type="file"] {
     position: absolute;
-    left: 0;
-    top: 0;
+    inset: 0;
     opacity: 0;
-    width: 100%;
-    height: 100%;
     cursor: pointer;
 }
 
-/* Switches Personalizados */
-.form-switch-lg .form-check-input {
-    width: 3rem;
-    height: 1.5rem;
-    margin-left: -0.5rem;
-}
-
-.form-switch-lg .form-check-label {
-    margin-left: 0.5rem;
-    font-weight: 500;
-}
-
-/* Seção de Sabores */
-#saboresContainer {
-    border: 1px solid #e0e0e0;
+/* =========================
+   Sabores (lista + itens)
+   ========================= */
+#saboresSelecionadosList .sabor-item {
+    border-left: 3px solid var(--primary-500);
     border-radius: 10px;
-    padding: 15px;
-    background-color: var(--light-gray);
-    max-height: 400px;
-    overflow-y: auto;
+    box-shadow: var(--shadow-sm);
+    transition: transform .15s ease, box-shadow .15s ease;
+    margin-bottom: 0.75rem;
 }
 
-.sabor-item {
-    display: inline-flex;
-    align-items: center;
-    margin: 0 8px 8px 0;
-    background-color: white;
-    border-radius: 20px;
-    padding: 5px 10px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    transition: all 0.2s;
-}
-
-    .sabor-item:hover {
+    #saboresSelecionadosList .sabor-item:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        box-shadow: var(--shadow-md);
     }
 
-.sabor-badge {
-    display: inline-flex;
-    align-items: center;
-    background-color: var(--primary-color);
-    color: white;
-    padding: 5px 12px;
-    border-radius: 20px;
+    #saboresSelecionadosList .sabor-item .card-body {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 1rem;
+    }
+
+    #saboresSelecionadosList .sabor-item .badge {
+        background: #f1ecfa;
+        color: var(--primary-700);
+        border: 1px solid #e6dcff;
+    }
+
+.editar-sabor {
+    border-color: #d9deea;
+    background: transparent;
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--radius-sm);
+    transition: all .15s ease;
 }
 
-.quantidade-badge {
-    background-color: white;
-    color: var(--primary-color);
-    margin-left: 8px;
-    padding: 3px 8px;
-    border-radius: 10px;
-    font-weight: bold;
-}
+    .editar-sabor:hover {
+        border-color: var(--accent-500);
+        color: var(--accent-500);
+    }
 
 .remove-sabor {
-    cursor: pointer;
-    margin-left: 8px;
-    opacity: 0.7;
-    transition: opacity 0.2s;
-    color: white;
-    background: none;
+    opacity: .7;
+    transition: transform .15s, opacity .15s;
+    background: transparent;
     border: none;
-    padding: 0;
-    font-size: 0.8rem;
+    color: var(--danger);
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
 }
 
     .remove-sabor:hover {
         opacity: 1;
+        transform: scale(1.06);
+        background: rgba(220, 53, 69, 0.1);
     }
 
-/* Barra de rolagem */
-#saboresContainer::-webkit-scrollbar {
-    width: 6px;
+/* Estado vazio */
+#saboresSelecionadosList .alert {
+    background: linear-gradient(180deg, #ffffff, #fafbfc);
+    border: 1px dashed #d7dbe3;
+    color: #7b8494;
 }
 
-#saboresContainer::-webkit-scrollbar-track {
-    background: #f1f1f1;
+/* Input de sabor */
+#saborInput[list] {
+    caret-color: var(--accent-500);
+}
+
+/* =========================
+   Botões
+   ========================= */
+.btn {
     border-radius: 10px;
+    transition: all .2s ease;
 }
 
-#saboresContainer::-webkit-scrollbar-thumb {
-    background: var(--primary-color);
-    border-radius: 10px;
-}
-
-/* Botões */
 .btn-primary {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
-    padding: 10px 25px;
-    border-radius: 8px;
-    transition: all 0.3s;
+    background: var(--primary-500);
+    border-color: var(--primary-500);
+    transition: transform .15s ease, box-shadow .2s ease, background .2s ease;
 }
 
     .btn-primary:hover {
-        background-color: var(--secondary-color);
-        border-color: var(--secondary-color);
+        background: var(--accent-500);
+        border-color: var(--accent-500);
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(110, 72, 170, 0.3);
+        box-shadow: 0 6px 16px rgba(110,72,170,.3);
     }
 
 .btn-outline-primary {
-    color: var(--primary-color);
-    border-color: var(--primary-color);
+    color: var(--primary-600);
+    border-color: var(--primary-600);
 }
 
     .btn-outline-primary:hover {
-        background-color: var(--primary-color);
-        border-color: var(--primary-color);
+        background: var(--primary-500);
+        border-color: var(--primary-500);
+        color: #fff;
     }
 
-/* Responsividade */
+/* =========================
+   Componentes específicos
+   ========================= */
+.bg-gradient-purple {
+    background: linear-gradient(90deg, #6e48aa, #9d50bb) !important;
+    border: none;
+}
+
+.sabores-input-row .input-group-text {
+    background: #f6f7fb;
+    color: #5e3f95;
+}
+
+/* Quantidade editável no card */
+.sabor-qty-inline {
+    min-width: 64px;
+    text-align: center;
+    border: 1px solid #e6e8ed;
+    border-radius: 8px;
+    padding: .25rem .5rem;
+    background: #fff;
+}
+
+    .sabor-qty-inline:focus {
+        outline: 0;
+        border-color: #9d50bb;
+        box-shadow: 0 0 0 .2rem rgba(157,80,187,.15);
+    }
+
+/* =========================
+   LINHA DE SABORES COMPACTA - TUDO NA MESMA LINHA
+   ========================= */
+.sabores-input-compact {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    height: 44px;
+}
+
+/* Sabor - ocupa mais espaço */
+.sabor-input-wrapper {
+    flex: 1;
+    min-width: 0; /* Permite que o flex shrink funcione */
+}
+
+    .sabor-input-wrapper .input-group {
+        height: 100%;
+    }
+
+    .sabor-input-wrapper .form-control {
+        height: 100%;
+        border-radius: var(--radius-sm);
+    }
+
+/* Quantidade - tamanho fixo */
+.quantidade-compact {
+    width: 120px;
+    flex-shrink: 0;
+}
+
+    .quantidade-compact .input-group {
+        height: 100%;
+    }
+
+    .quantidade-compact .input-group-text {
+        height: 100%;
+        background: var(--muted);
+        color: var(--primary-600);
+        font-weight: 600;
+        font-size: 0.875rem;
+        padding: 0 12px;
+    }
+
+    .quantidade-compact .form-control {
+        height: 100%;
+        text-align: center;
+        font-weight: 600;
+        padding: 0 8px;
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+
+/* Botão Add - tamanho fixo */
+.btn-add-compact {
+    width: 80px;
+    height: 100%;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-weight: 700;
+    font-size: 0.875rem;
+    box-shadow: 0 4px 12px rgba(110,72,170,.25);
+    flex-shrink: 0;
+}
+
+    .btn-add-compact i {
+        font-size: 14px;
+    }
+
+    .btn-add-compact:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(110,72,170,.3);
+    }
+
+/* Remove o texto em mobile */
+@media (max-width: 576px) {
+    .btn-add-compact .label {
+        display: none;
+    }
+
+    .btn-add-compact {
+        width: 50px;
+    }
+
+    .quantidade-compact {
+        width: 100px;
+    }
+}
+
+/* Texto de ajuda abaixo da linha */
+.sabores-help-text {
+    margin-top: 8px;
+    font-size: 0.875rem;
+    color: var(--ink-2);
+}
+
+/* =========================
+   Animações
+   ========================= */
+.sabor-bump {
+    animation: bump .38s ease;
+}
+
+@keyframes bump {
+    0% {
+        transform: scale(.98);
+    }
+
+    50% {
+        transform: scale(1.02);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* =========================
+   Toasts
+   ========================= */
+.toast {
+    z-index: 1100;
+    opacity: 1;
+    box-shadow: var(--shadow-md);
+    border-radius: 10px;
+}
+
+    .toast.bg-warning {
+        background: linear-gradient(180deg, #facc15, #f59e0b);
+        color: #111827;
+    }
+
+    .toast .btn-close-white {
+        filter: invert(1);
+    }
+
+/* =========================
+   Layout / respiração
+   ========================= */
+.page-has-bottom-nav {
+    padding-bottom: calc(var(--mbn-height) + env(safe-area-inset-bottom,0px) + 20px);
+}
+
+@supports(padding:max(0px)) {
+    .page-has-bottom-nav {
+        padding-bottom: max(calc(var(--mbn-height) + 20px), calc(env(safe-area-inset-bottom,0px) + 20px));
+    }
+}
+
+.produtos-criar-page {
+    max-width: 100%;
+}
+
+@media (min-width:1600px) {
+    .produtos-criar-page {
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+    }
+}
+
+/* =========================
+   Acessibilidade / focus
+   ========================= */
+a:focus, button:focus, .btn:focus, .form-control:focus, .form-select:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 .25rem rgba(109, 40, 217, .22);
+}
+
+/* Input-group com foco */
+.input-group:has(.form-control:focus),
+.input-group:has(.form-select:focus) {
+    box-shadow: 0 0 0 .15rem rgba(157,80,187,.12);
+    border-radius: var(--radius-sm);
+}
+
+/* Badges */
+.badge.bg-primary {
+    background: linear-gradient(180deg, var(--primary-500), var(--accent-500));
+    border: none;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.2);
+}
+
+#totalEstoque {
+    font-weight: 700;
+    letter-spacing: .2px;
+}
+
+/* =========================
+   Responsividade
+   ========================= */
 @media (max-width: 992px) {
     .hero-pods {
         text-align: center;
@@ -256,156 +536,147 @@
             font-size: 1.8rem;
         }
 
-    .form-row > .col-md-6 {
-        margin-bottom: 1.5rem;
-    }
-
     .d-flex {
-        flex-direction: column;
         gap: 1rem;
     }
 
         .d-flex .btn {
             width: 100%;
         }
-
-    #saboresContainer {
-        max-height: none;
-    }
 }
 
+/* Ajustes para linha compacta em telas menores */
 @media (max-width: 576px) {
     .hero-pods h1 {
-        font-size: 1.5rem;
+        font-size: 1.55rem;
     }
 
     .hero-badge {
-        font-size: 0.8rem;
-        padding: 6px 15px;
+        font-size: .8rem;
+        padding: 6px 14px;
     }
 
     .form-control, .form-select {
         padding: 10px 12px;
     }
-}
 
-
-/* Estilos para a seção de sabores */
-.sabor-item {
-    transition: all 0.3s ease;
-    border-left: 3px solid var(--primary-color);
-}
-
-    .sabor-item:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    /* Linha de sabores em mobile */
+    .sabores-input-compact {
+        flex-wrap: wrap;
+        height: auto;
+        gap: 12px;
     }
 
-.remove-sabor {
-    opacity: 0.6;
-    transition: all 0.2s;
-}
-
-    .remove-sabor:hover {
-        opacity: 1;
-        transform: scale(1.1);
+    .sabor-input-wrapper {
+        flex: 1 1 100%;
     }
 
-/* Estado vazio */
-#saboresSelecionadosList:empty {
-    display: none;
-}
-
-/* Ajustes de responsividade */
-@media (max-width: 768px) {
-    .sabor-item {
-        margin-bottom: 10px;
+    .quantidade-compact {
+        flex: 1;
+        width: auto;
     }
 
-    #saborSelect, #quantidadeInput {
-        margin-bottom: 10px;
+    .btn-add-compact {
+        flex: 0 0 auto;
     }
 }
 
-/* Estilos para os toasts */
-.toast {
-    z-index: 1100;
-    opacity: 1;
+/* =========================
+   Alertas e estados
+   ========================= */
+.alert {
+    border-radius: var(--radius);
+    border: none;
 }
 
-/* Efeito de hover nos botões de remover sabor */
-.remove-sabor {
-    transition: all 0.2s ease;
+.alert-success {
+    background: linear-gradient(135deg, var(--success), #20c997);
+    color: white;
 }
 
-    .remove-sabor:hover {
-        transform: scale(1.1);
+.alert-danger {
+    background: linear-gradient(135deg, var(--danger), #e83e8c);
+    color: white;
+}
+
+.alert-warning {
+    background: linear-gradient(135deg, var(--warn), #fd7e14);
+    color: white;
+}
+
+/* =========================
+   Utilitários visuais
+   ========================= */
+.bg-gradient-primary {
+    background: linear-gradient(90deg, var(--primary-500), var(--accent-500)) !important;
+}
+
+.text-primary {
+    color: var(--primary-600) !important;
+}
+
+/* Switch personalizado */
+.form-switch-lg .form-check-input {
+    height: 1.5rem;
+    width: 3rem;
+}
+
+.form-switch-lg .form-check-label {
+    font-weight: 600;
+}
+
+/* ===== Sabores: deixar QUANTIDADE menor e novo sabor maior (desktop+) ===== */
+@media (min-width: 768px) {
+    /* Escopo seguro só para a linha dos sabores dentro da página de produtos */
+    .produtos-criar-page .card .row.g-2.align-items-center {
+        display: flex; /* garante flex layout independente do grid */
     }
 
-/* ===== ajustes globais úteis ===== */
-:root {
-    /* altura padrão da bottom-nav; se sua nav fixa tiver outra altura, você pode ajustar via JS também */
-    --mbn-height: 68px;
+        .produtos-criar-page .card .row.g-2.align-items-center > div {
+            width: auto; /* libera os widths fixos do .col-md-* */
+        }
+
+            /* 1) Coluna 1 (select de sabor) — ocupa uma parte, mas pode encolher */
+            .produtos-criar-page .card .row.g-2.align-items-center > div:nth-child(1) {
+                flex: 0 1 38%;
+                min-width: 220px;
+            }
+
+            /* 2) Coluna 2 (QUANTIDADE) — fica bem compacta */
+            .produtos-criar-page .card .row.g-2.align-items-center > div:nth-child(2) {
+                flex: 0 0 auto; /* só o necessário para o input */
+            }
+
+    #quantidadeInput.form-control {
+        width: 72px; /* << ajuste principal */
+        max-width: 90px;
+        text-align: center;
+        padding-left: .5rem;
+        padding-right: .5rem;
+        font-weight: 600;
+    }
+
+    /* 3) Coluna 3 (novo sabor + botão Add) — cresce para usar o espaço livre */
+    .produtos-criar-page .card .row.g-2.align-items-center > div:nth-child(3) {
+        flex: 1 1 0%; /* ocupa todo o restante */
+        min-width: 260px;
+    }
+        /* Dentro do input-group: input expande, botão mantém largura natural */
+        .produtos-criar-page .card .row.g-2.align-items-center > div:nth-child(3) .input-group > input#novoSaborInput {
+            flex: 1 1 auto;
+        }
+
+        .produtos-criar-page .card .row.g-2.align-items-center > div:nth-child(3) .input-group > .btn {
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
 }
 
-/* Dá respiro no fim da página para a bottom-nav não cobrir o conteúdo */
-.page-has-bottom-nav {
-    padding-bottom: calc(var(--mbn-height) + env(safe-area-inset-bottom,0px) + 20px);
-}
-
-@supports(padding:max(0px)) {
-    .page-has-bottom-nav {
-        padding-bottom: max(calc(var(--mbn-height) + 20px), calc(env(safe-area-inset-bottom,0px) + 20px));
+/* Opcional (mobile): mantêm tudo confortável sem quebrar o layout */
+@media (max-width: 575.98px) {
+    #quantidadeInput.form-control {
+        width: 88px;
+        text-align: center;
     }
 }
 
-/* ===== página larga no desktop ===== */
-.produtos-criar-page {
-    max-width: 100%;
-}
-
-/* Melhor controle de respiro em telas muito largas */
-@media (min-width: 1600px) {
-    .produtos-criar-page {
-        padding-left: 2rem !important;
-        padding-right: 2rem !important;
-    }
-}
-
-/* Os cards de “sabor” quebram bonitinho em várias linhas sem empurrar layout */
-#saboresSelecionadosList .sabor-item .card-body {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-/* Evita quebra feia em labels longos dentro dos cards */
-#saboresSelecionadosList .sabor-item {
-    word-break: break-word;
-}
-
-/* File upload: garante clique em toda a faixa */
-.file-upload-wrapper {
-    position: relative;
-}
-
-    .file-upload-wrapper input[type="file"] {
-        position: absolute;
-        inset: 0;
-        opacity: 0;
-        cursor: pointer;
-    }
-
-/* Form: cantos arredondados seguem seu tema, mas sem alterar seu arquivo base */
-.form-control, .form-select {
-    border-radius: 8px;
-}
-
-/* Evita rolagem horizontal no desktop (quando aparecer algum nome enorme) */
-html, body {
-    overflow-x: hidden;
-}
-.py-3 {
-    padding-top: 0rem;
-    padding-bottom: 0rem;
-}
