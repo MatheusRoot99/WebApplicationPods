@@ -270,7 +270,7 @@
     align-items: center;
     justify-content: center;
     /*background: #fff;*/
-    color: var(--brand-end, #2575fc);
+    /*color: var(--brand-end, #2575fc);*/
     text-decoration: none;
     box-shadow: 0 6px 18px rgba(0,0,0,.12);
     border: 1px solid rgba(0,0,0,.06);
@@ -380,7 +380,7 @@
     align-items: center;
     justify-content: center;
     /*background: #fff;*/
-    color: var(--brand-end, #2575fc);
+    /*color: var(--brand-end, #2575fc);*/
     box-shadow: 0 6px 18px rgba(0,0,0,.12);
     border: 1px solid rgba(0,0,0,.06);
     transition: transform .15s ease, opacity .15s ease, background .15s ease;
@@ -392,6 +392,7 @@
     .quick-add .qa-done {
         font-size: 1rem;
         line-height: 1;
+        color: black;
     }
 
     .quick-add .qa-spin,

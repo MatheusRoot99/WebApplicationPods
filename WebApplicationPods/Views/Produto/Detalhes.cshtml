@@ -1,28 +1,55 @@
 ﻿@using System.Globalization
 @model WebApplicationPods.Models.ProdutoDetalhesViewModel
 @{
+    Layout = "_Layout";
     ViewData["Title"] = Model?.Produto?.Nome ?? "Produto";
 
     var temPromocao = Model?.Produto?.PrecoPromocional.HasValue == true && Model.Produto.PrecoPromocional!.Value < Model.Produto.Preco;
     var precoBase = temPromocao ? Model!.Produto!.PrecoPromocional!.Value : Model!.Produto!.Preco;
 
-    // preço para Pix/Dinheiro (à vista) com 10% OFF (ajuste a regra se quiser)
     var precoAvista = Math.Round(precoBase * 0.90m, 2);
-
     var totalSabores = Model?.SaboresDisponiveis?.Count ?? 0;
     var totalSaboresComEstoque = Model?.SaboresDisponiveis?.Count(s => s.Quantidade > 0) ?? 0;
 }
 
+/* CSS base da página */
 <link rel="stylesheet" href="~/css/produto-detalhes.css" asp-append-version="true" />
 
-<!-- 👇 Passa dados para JS -->
+@section Styles {
+    <style>
+        /* respiro só nesta página para não cobrir nada com o BottomNav */
+        .produto-detalhes-container {
+            padding-bottom: calc(var(--mbn-height) + env(safe-area-inset-bottom) + 16px) !important;
+        }
+
+        /* Em desktop (sem BottomNav) volta ao normal */
+        @@media (min-width: 992px) {
+            .produto-detalhes-container {
+                padding-bottom: 2rem !important;
+            }
+        }
+
+        /* A sticky CTA não bate no BottomNav */
+        @@media (max-width: 991.98px) {
+            .sticky-cta {
+                position: sticky;
+                bottom: calc(var(--mbn-height) + env(safe-area-inset-bottom));
+                z-index: 5; /* acima do conteúdo, abaixo do BottomNav */
+            }
+        }
+    </style>
+}
+
+
+<!-- dados para o JS -->
 <div id="product-data"
      data-stock="@Model.Produto.Estoque"
      data-is-out-of-stock="@(Model.Produto.Estoque <= 0 ? "true" : "false")"
      data-resumo-url="@Url.Action("Resumo", "Carrinho")"
      hidden></div>
 
-<div class="produto-detalhes-container" itemscope itemtype="https://schema.org/Product">
+<!-- wrapper marcado como page-content para herdar o padding do layout se precisar -->
+<div class="produto-detalhes-container page-content" itemscope itemtype="https://schema.org/Product">
 
     <!-- Top / voltar -->
     <div class="navigation-header d-flex align-items-center gap-2 flex-wrap">
@@ -69,12 +96,8 @@
                 }
 
                 <ul class="product-badges" aria-label="Diferenciais do produto">
-                    <li class="badge-item">
-                        <i class="fas fa-truck" aria-hidden="true"></i><span>Entrega Rápida</span>
-                    </li>
-                    <li class="badge-item">
-                        <i class="fas fa-shield-alt" aria-hidden="true"></i><span>Pagamento Seguro</span>
-                    </li>
+                    <li class="badge-item"><i class="fas fa-truck" aria-hidden="true"></i><span>Entrega Rápida</span></li>
+                    <li class="badge-item"><i class="fas fa-shield-alt" aria-hidden="true"></i><span>Pagamento Seguro</span></li>
                 </ul>
             </div>
         </div>
@@ -90,7 +113,7 @@
                 <span class="stock-badge promotion" aria-live="polite">PROMOÇÃO</span>
             }
 
-            <!-- Preço & pagamento (sem parcelamento) -->
+            <!-- Preço & pagamento -->
             <section class="price-section" aria-label="Informações de preço" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
                 <meta itemprop="priceCurrency" content="BRL" />
                 <meta itemprop="price" content="@precoBase.ToString(CultureInfo.InvariantCulture)" />
@@ -108,15 +131,11 @@
                         }
                         else
                         {
+
                             <span class="current-price">@precoBase.ToString("C")</span>
                         }
 
-                        <div class="pix-price-line">
-                            @* <i class="fas fa-qrcode"></i> *@
-                            @* <span>Pix à vista</span> *@
-                            @* <strong>@precoAvista.ToString("C")</strong> *@
-                            @* <small class="off-pill">10% OFF</small> *@
-                        </div>
+                        <div class="pix-price-line"><!-- reservado --></div>
                     </div>
 
                     <div class="stock-chip @(Model.Produto.Estoque > 0 ? "in" : "out")">
@@ -125,31 +144,10 @@
                     </div>
                 </div>
 
-                <!-- Somente 1x Cartão, Pix, Dinheiro -->
                 <div class="pay-options" role="group" aria-label="Opções de pagamento">
-                    <div class="pay-chip">
-                        <i class="fas fa-credit-card" aria-hidden="true"></i>
-                        <div>
-                            <div class="chip-title">Cartão</div>
-                            <div class="chip-sub">1x à vista</div> 
-                        </div>
-                    </div>
-
-                    <div class="pay-chip">
-                        <i class="fas fa-qrcode" aria-hidden="true"></i>
-                        <div>
-                            <div class="chip-title">Pix</div>
-                            <div class="chip-sub">à vista • @precoBase.ToString("C")</div> 
-                        </div>
-                    </div>
-
-                    <div class="pay-chip">
-                        <i class="fas fa-money-bill-wave" aria-hidden="true"></i>
-                        <div>
-                            <div class="chip-title">Dinheiro</div>
-                             <div class="chip-sub">@precoBase.ToString("C")</div> 
-                        </div>
-                    </div>
+                    <div class="pay-chip"><i class="fas fa-credit-card" aria-hidden="true"></i><div><div class="chip-title">Cartão</div><div class="chip-sub">1x à vista</div></div></div>
+                    <div class="pay-chip"><i class="fas fa-qrcode" aria-hidden="true"></i><div><div class="chip-title">Pix</div><div class="chip-sub">à vista • @precoBase.ToString("C")</div></div></div>
+                    <div class="pay-chip"><i class="fas fa-money-bill-wave" aria-hidden="true"></i><div><div class="chip-title">Dinheiro</div><div class="chip-sub">@precoBase.ToString("C")</div></div></div>
                 </div>
             </section>
 
@@ -394,33 +392,31 @@
 @section Scripts {
     <script src="~/js/Detalhe-form.js" asp-append-version="true"></script>
     <script>
-        // Controles de quantidade + sincronização do hidden
+        // Quantidade -> hidden
         (function () {
-            const qtd = document.getElementById('quantity');
-            const qtdHidden = document.getElementById('quantidadeHidden');
-            const minus = document.querySelector('.quantity-btn.minus');
-            const plus = document.querySelector('.quantity-btn.plus');
-
-            function sync() { if (qtdHidden) qtdHidden.value = qtd.value; }
-            if (minus) minus.addEventListener('click', () => { qtd.stepDown(); sync(); });
-            if (plus) plus.addEventListener('click', () => { qtd.stepUp(); sync(); });
-            if (qtd) qtd.addEventListener('input', sync);
+          const qtd = document.getElementById('quantity');
+          const qtdHidden = document.getElementById('quantidadeHidden');
+          const minus = document.querySelector('.quantity-btn.minus');
+          const plus  = document.querySelector('.quantity-btn.plus');
+          function sync(){ if(qtdHidden) qtdHidden.value = qtd.value; }
+          minus?.addEventListener('click',()=>{ qtd.stepDown(); sync(); });
+          plus?.addEventListener('click', ()=>{ qtd.stepUp();   sync(); });
+          qtd?.addEventListener('input', sync);
         })();
 
-        // Seleção de sabor -> hidden
+        // Sabor -> hidden + info
         (function () {
-            const radios = document.querySelectorAll('.flavor-radio');
-            const hidden = document.getElementById('saborSelecionado');
-            const info = document.getElementById('estoque-info');
-            const span = document.getElementById('estoque-quantidade');
-
-            radios.forEach(r => {
-                r.addEventListener('change', (e) => {
-                    if (hidden) hidden.value = e.target.value;
-                    const estoque = e.target.getAttribute('data-estoque');
-                    if (info && span) { span.textContent = estoque || "0"; info.hidden = false; }
-                });
+          const radios = document.querySelectorAll('.flavor-radio');
+          const hidden = document.getElementById('saborSelecionado');
+          const info   = document.getElementById('estoque-info');
+          const span   = document.getElementById('estoque-quantidade');
+          radios.forEach(r => {
+            r.addEventListener('change', (e) => {
+              if (hidden) hidden.value = e.target.value;
+              const est = e.target.getAttribute('data-estoque');
+              if (info && span) { span.textContent = est || '0'; info.hidden = false; }
             });
+          });
         })();
     </script>
 }
