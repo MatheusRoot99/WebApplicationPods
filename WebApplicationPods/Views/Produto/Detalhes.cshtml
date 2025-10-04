@@ -12,58 +12,64 @@
     var totalSaboresComEstoque = Model?.SaboresDisponiveis?.Count(s => s.Quantidade > 0) ?? 0;
 }
 
-/* CSS base da página */
+<!-- CSS específico desta página -->
 <link rel="stylesheet" href="~/css/produto-detalhes.css" asp-append-version="true" />
 
 @section Styles {
     <style>
-        /* respiro só nesta página para não cobrir nada com o BottomNav */
+        /* ===== respiro APENAS nesta página para conviver com o BottomNav ===== */
         .produto-detalhes-container {
             padding-bottom: calc(var(--mbn-height) + env(safe-area-inset-bottom) + 16px) !important;
         }
 
-        /* Em desktop (sem BottomNav) volta ao normal */
+        /* desktop não precisa do respiro extra */
         @@media (min-width: 992px) {
-            .produto-detalhes-container {
-                padding-bottom: 2rem !important;
-            }
+            .produto-detalhes-container
+
+        {
+            padding-bottom: 2rem !important;
         }
 
-        /* A sticky CTA não bate no BottomNav */
+        }
+
+        /* a CTA “gruda” acima do BottomNav no mobile */
         @@media (max-width: 991.98px) {
-            .sticky-cta {
-                position: sticky;
-                bottom: calc(var(--mbn-height) + env(safe-area-inset-bottom));
-                z-index: 5; /* acima do conteúdo, abaixo do BottomNav */
-            }
+            .sticky-cta
+
+        {
+            position: sticky;
+            bottom: calc(var(--mbn-height) + env(safe-area-inset-bottom));
+            z-index: 5; /* acima do conteúdo, abaixo do BottomNav */
+        }
+
         }
     </style>
 }
 
-
-<!-- dados para o JS -->
+<!-- dados para JS -->
 <div id="product-data"
      data-stock="@Model.Produto.Estoque"
      data-is-out-of-stock="@(Model.Produto.Estoque <= 0 ? "true" : "false")"
      data-resumo-url="@Url.Action("Resumo", "Carrinho")"
      hidden></div>
 
-<!-- wrapper marcado como page-content para herdar o padding do layout se precisar -->
+<!-- wrapper principal marcado como page-content -->
 <div class="produto-detalhes-container page-content" itemscope itemtype="https://schema.org/Product">
 
-    <!-- Top / voltar -->
+    <!-- voltar -->
     <div class="navigation-header d-flex align-items-center gap-2 flex-wrap">
         <a href="javascript:history.back()" class="btn-voltar btn btn-light d-inline-flex align-items-center">
             <i class="fas fa-arrow-left me-2" aria-hidden="true"></i><span>Voltar</span>
         </a>
     </div>
 
-    <!-- Título + rating -->
+    <!-- título + rating -->
     <header class="product-header">
         <h1 class="product-title" itemprop="name">@Model.Produto.Nome</h1>
         <div class="product-rating" aria-label="Avaliação média 4,8 de 5">
             <div class="stars" aria-hidden="true">
-                <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
+                <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                <i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
             </div>
             <span class="rating-text">
                 <span itemprop="aggregateRating" itemscope itemtype="https://schema.org/AggregateRating">
@@ -74,9 +80,9 @@
         </div>
     </header>
 
-    <!-- Grid principal -->
+    <!-- grid principal -->
     <div class="produto-main-content">
-        <!-- Coluna imagem -->
+        <!-- coluna imagem -->
         <div class="produto-image-column">
             <div class="product-image-container">
                 @if (!string.IsNullOrEmpty(Model!.Produto!.ImagemUrl))
@@ -102,7 +108,7 @@
             </div>
         </div>
 
-        <!-- Coluna info -->
+        <!-- coluna info -->
         <div class="produto-info-column">
             @if (Model.Produto.Estoque <= 0)
             {
@@ -113,7 +119,7 @@
                 <span class="stock-badge promotion" aria-live="polite">PROMOÇÃO</span>
             }
 
-            <!-- Preço & pagamento -->
+            <!-- preço & pagamento -->
             <section class="price-section" aria-label="Informações de preço" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
                 <meta itemprop="priceCurrency" content="BRL" />
                 <meta itemprop="price" content="@precoBase.ToString(CultureInfo.InvariantCulture)" />
@@ -131,7 +137,6 @@
                         }
                         else
                         {
-
                             <span class="current-price">@precoBase.ToString("C")</span>
                         }
 
@@ -151,7 +156,7 @@
                 </div>
             </section>
 
-            <!-- Sabores -->
+            <!-- sabores -->
             <section class="flavors-section" aria-labelledby="titulo-sabores">
                 <h3 id="titulo-sabores" class="section-title">
                     Escolha o sabor
@@ -169,6 +174,7 @@
                             var saborId = $"flavor-{index++}";
                             var parts = (sabor.Sabor ?? string.Empty).Split(new[] { " - " }, StringSplitOptions.None);
                             var disabled = sabor.Quantidade <= 0;
+
                             <div class="flavor-card @(disabled ? "is-disabled" : "")">
                                 <input type="radio"
                                        name="flavor"
@@ -209,7 +215,7 @@
                 }
             </section>
 
-            <!-- Ações -->
+            <!-- ações -->
             <div class="action-buttons">
                 <div class="quantity-selector mb-3">
                     <label for="quantity">Quantidade</label>
@@ -245,7 +251,7 @@
         </div>
     </div>
 
-    <!-- Abas -->
+    <!-- abas -->
     <section class="product-details-tabs" aria-label="Detalhes do produto">
         <div class="tabs-header" role="tablist">
             <button class="tab-button active" role="tab" aria-selected="true" aria-controls="tab-description" id="tabbtn-description" data-tab="description">Descrição</button>
@@ -286,7 +292,8 @@
                     <div class="rating-overview">
                         <div class="average-rating">4.8</div>
                         <div class="stars" aria-hidden="true">
-                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
                         </div>
                         <p>Baseado em 42 avaliações</p>
                     </div>
@@ -295,7 +302,8 @@
                             <div class="review-header">
                                 <h4>Ótimo produto!</h4>
                                 <div class="stars" aria-hidden="true">
-                                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i><i class="fas fa-star"></i>
                                 </div>
                             </div>
                             <p class="review-text">"Comprei o sabor Melancia Ice e adorei! Duração excelente e sabor muito bom."</p>
@@ -305,7 +313,8 @@
                             <div class="review-header">
                                 <h4>Recomendo</h4>
                                 <div class="stars" aria-hidden="true">
-                                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i><i class="fas fa-star"></i>
                                 </div>
                             </div>
                             <p class="review-text">"Já é meu segundo pod dessa marca. O sabor de Menta Ice é refrescante e dura bastante."</p>
@@ -329,8 +338,7 @@
                     var precoAtual = temPromo ? pr.PrecoPromocional!.Value : pr.Preco;
 
                     <article class="related-product-card" itemscope itemtype="https://schema.org/Product">
-                        <a asp-controller="Produto" asp-action="DetalhesProdutos" asp-route-id="@pr.Id" class="card-link"
-                           aria-label="Ver @pr.Nome" itemprop="url">
+                        <a asp-controller="Produto" asp-action="DetalhesProdutos" asp-route-id="@pr.Id" class="card-link" aria-label="Ver @pr.Nome" itemprop="url">
                             <div class="product-image">
                                 @if (!string.IsNullOrEmpty(pr.ImagemUrl))
                                 {
@@ -377,22 +385,23 @@
     }
 </div>
 
-<!-- Sticky CTA para mobile -->
+@* <!-- Sticky CTA (mobile) -->
 <div class="sticky-cta @(Model.Produto.Estoque <= 0 ? "disabled" : "")">
     <div class="sticky-price">
         <span class="sticky-price-main">@precoBase.ToString("C")</span>
-        <span class="sticky-price-sub">Pix: @precoAvista.ToString("C")</span>
+        @* <span class="sticky-price-sub">Pix: @precoAvista.ToString("C")</span> 
     </div>
     <button class="sticky-btn" @(Model.Produto.Estoque <= 0 ? "disabled" : null)
             onclick="document.getElementById('addToCartForm')?.requestSubmit()">
         <i class="fas fa-cart-plus"></i> Adicionar
     </button>
 </div>
-
+ *@
 @section Scripts {
     <script src="~/js/Detalhe-form.js" asp-append-version="true"></script>
+
     <script>
-        // Quantidade -> hidden
+        // quantidade -> hidden (fallback simples)
         (function () {
           const qtd = document.getElementById('quantity');
           const qtdHidden = document.getElementById('quantidadeHidden');
@@ -404,7 +413,7 @@
           qtd?.addEventListener('input', sync);
         })();
 
-        // Sabor -> hidden + info
+        // sabor -> hidden + info (fallback simples)
         (function () {
           const radios = document.querySelectorAll('.flavor-radio');
           const hidden = document.getElementById('saborSelecionado');

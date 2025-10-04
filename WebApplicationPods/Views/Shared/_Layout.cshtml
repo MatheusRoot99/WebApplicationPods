@@ -15,7 +15,6 @@
 <html lang="pt-br">
 <head>
     <meta charset="utf-8" />
-    <!-- VIEWPORT p/ iOS + safe areas -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
     <title>@ViewData["Title"] - Pods Eletrônicos</title>
@@ -34,7 +33,9 @@
 
     <style>
         :root {
-            --mbn-height: 68px;
+            /* altura do bottom nav e deslocamento por teclado (conteúdo) */
+            --mbn-height: 70px;
+            --kb-shift: 0px;
         }
 
         /* iOS não deve auto-zoomar */
@@ -68,18 +69,15 @@
                 opacity: .9;
             }
 
-        /* ====== SCOPED padding para o conteúdo (não afeta cards de home) ====== */
+        /* ====== SCOPED padding para o conteúdo ======
+                   Só quando existir bottom-nav na página */
         .has-bottom-nav .page-content {
-            padding-bottom: calc(var(--mbn-height) + env(safe-area-inset-bottom) + 12px);
+            padding-bottom: calc(var(--mbn-height) + var(--kb-shift) + env(safe-area-inset-bottom) + 12px);
         }
-
-        /* O bottom-nav (no partial) usa translateY(var(--vv-inset)) para não subir com teclado */
     </style>
 </head>
 
-<!-- marque o body com has-bottom-nav quando o BottomNav está presente -->
-<body class="has-bottom-nav">
-
+<body>
     <!-- Token antiforgery fallback -->
     <input type="hidden" id="__RequestVerificationToken"
            name="__RequestVerificationToken"
@@ -233,36 +231,33 @@
                 </div>
             </nav>
 
-            @* Top bar da loja vinda do banco *@
             @await Html.PartialAsync("_StoreHeader", headerVM)
 
             <!-- ====== CONTEÚDO (wrapper com padding-bottom SCOPED) ====== -->
             <main id="page-content" class="page-content container-fluid pt-3">
                 @RenderBody()
-
             </main>
-                <script>
-                    // Se a página não tiver .page-content, marca o primeiro wrapper típico como .page-content
-                    (function () {
-                      if (document.querySelector('.page-content')) return; // já tem
 
-                      const candidates = [
-                        '#page-content-wrapper > .container-fluid',
-                        '#page-content-wrapper > .container',
-                        '.container-fluid',
-                        '.container',
-                        '.produto-detalhes-container',
-                        '.auth-shell',
-                        '.cadastro-container',
-                        'main'
-                      ];
-
-                      for (const sel of candidates) {
-                        const el = document.querySelector(sel);
-                        if (el) { el.classList.add('page-content'); break; }
-                      }
-                    })();
-                </script>
+            <script>
+                // Se a página não tiver .page-content, marca o primeiro wrapper típico como .page-content
+                (function () {
+                  if (document.querySelector('.page-content')) return; // já tem
+                  const candidates = [
+                    '#page-content-wrapper > .container-fluid',
+                    '#page-content-wrapper > .container',
+                    '.container-fluid',
+                    '.container',
+                    '.produto-detalhes-container',
+                    '.auth-shell',
+                    '.cadastro-container',
+                    'main'
+                  ];
+                  for (const sel of candidates) {
+                    const el = document.querySelector(sel);
+                    if (el) { el.classList.add('page-content'); break; }
+                  }
+                })();
+            </script>
         </div>
     </div>
 
@@ -404,28 +399,29 @@
         })();
     </script>
 
-    <!-- Compensação do teclado: mantém o BottomNav “absoluto” -->
+    <!-- Compensação do teclado: só aumenta respiro do CONTEÚDO -->
     <script>
-            (function(){
-              function applyVVInset(){
-                var inset = 0;
-                if (window.visualViewport){
-                  var vv = visualViewport;
-                  inset = Math.max(0, (window.innerHeight - vv.height - vv.offsetTop));
-                }
-                document.documentElement.style.setProperty('--vv-inset', inset + 'px');
-              }
-              applyVVInset();
-              window.addEventListener('resize', applyVVInset);
-              if (window.visualViewport){
-                visualViewport.addEventListener('resize', applyVVInset);
-                visualViewport.addEventListener('scroll', applyVVInset);
-              }
-              document.addEventListener('focusin', function(e){
-                if (e.target.matches('input,textarea,select')) setTimeout(applyVVInset, 50);
-              });
+        (function(){
+          function applyKbShift(){
+            var shift = 0;
+            if (window.visualViewport){
+              var vv = visualViewport;
+              shift = Math.max(0, (window.innerHeight - vv.height - vv.offsetTop));
+            }
+            document.documentElement.style.setProperty('--kb-shift', shift + 'px');
+          }
+          applyKbShift();
+          window.addEventListener('resize', applyKbShift);
+          if (window.visualViewport){
+            visualViewport.addEventListener('resize', applyKbShift);
+            visualViewport.addEventListener('scroll', applyKbShift);
+          }
+          document.addEventListener('focusin', function(e){
+            if (e.target.matches('input,textarea,select')) setTimeout(applyKbShift, 50);
+          });
         })();
     </script>
+
     <script>
         // adiciona a classe só se o BottomNav existir
         (function(){

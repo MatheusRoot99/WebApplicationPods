@@ -3,10 +3,13 @@
    ========================================================= */
 
 :root {
+    /* altura do bottom nav */
     --mbn-height: 70px;
+    /* deslocamento opcional quando o teclado abre (definido via JS) */
+    --kb-shift: 0px;
 }
 
-/* Nav fixo na base + compensação de teclado/viewport */
+/* ======= NAV FIXO NO RODAPÉ DO VIEWPORT ======= */
 .mobile-bottom-nav {
     position: fixed;
     left: 0;
@@ -22,12 +25,12 @@
     z-index: 1080;
     backdrop-filter: blur(10px);
     box-shadow: 0 -4px 20px rgba(0,0,0,.08);
-    /* 👇 não subir junto quando teclado aparece (iOS/Chrome iOS) */
-    transform: translateY(var(--vv-inset, 0px));
+    /* NÃO usar transform aqui (poderia quebrar o fixed em iOS) */
+    /* transform: translateY(var(--vv-inset, 0px)); */
     will-change: transform;
 }
 
-    /* Itens */
+    /* ======= ITENS ======= */
     .mobile-bottom-nav .mbn-item {
         position: relative;
         display: inline-flex;
@@ -59,7 +62,7 @@
                 color: #0d6efd;
             }
 
-    /* Badge */
+    /* ======= BADGE ======= */
     .mobile-bottom-nav .mbn-badge {
         position: absolute;
         top: 4px;
@@ -77,7 +80,7 @@
         box-shadow: 0 0 0 2px rgba(255,255,255,.9);
     }
 
-/* Bump animation (usada no JS) */
+/* animação usada no JS */
 @keyframes mbn-bump {
     0% {
         transform: translate(50%,-50%) scale(1);
@@ -96,12 +99,12 @@
     animation: mbn-bump .35s ease;
 }
 
-/* Esconde o item de auth quando não deve aparecer */
+/* esconde item de auth quando não deve aparecer */
 .mbn-item--auth {
     display: none !important;
 }
 
-/* Oculta no desktop */
+/* ======= ESCONDE NO DESKTOP ======= */
 @media (min-width: 992px) {
     .mobile-bottom-nav {
         display: none;
@@ -109,9 +112,9 @@
 }
 
 /* =========================================================
-   SCOPED padding para o conteúdo (não bagunça Home)
-   — só quando o body tem a classe has-bottom-nav
+   “Respiro” do conteúdo — somente quando o BottomNav existir
+   (o <body> recebe a classe .has-bottom-nav via JS)
    ========================================================= */
 .has-bottom-nav .page-content {
-    padding-bottom: calc(var(--mbn-height) + env(safe-area-inset-bottom) + 12px);
+    padding-bottom: calc( var(--mbn-height) + var(--kb-shift, 0px) + env(safe-area-inset-bottom) + 12px );
 }
