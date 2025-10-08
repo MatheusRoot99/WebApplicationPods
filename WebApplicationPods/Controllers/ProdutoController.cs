@@ -1,14 +1,15 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Globalization;
+﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using WebApplicationPods.Data;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
@@ -142,6 +143,26 @@ namespace WebApplicationPods.Controllers
         }
 
         [HttpGet]
+        private List<SelectListItem> ObterTodosSabores()
+        {
+            return new List<SelectListItem>
+            {
+                new SelectListItem { Value = "Aloe Grape - Aloe Vera e Uva", Text = "Aloe Grape - Aloe Vera e Uva" },
+                new SelectListItem { Value = "Banana Coconut - Banana e Água de Coco", Text = "Banana Coconut - Banana e Água de Coco" },
+                new SelectListItem { Value = "Banana Ice", Text = "Banana Ice" },
+                new SelectListItem { Value = "Blueberry Ice - Mirtilo Ice", Text = "Blueberry Ice - Mirtilo Ice" },
+                new SelectListItem { Value = "Blueberry Straw Coco - Mirtilo, Morango, Coco", Text = "Blueberry Straw Coco - Mirtilo, Morango, Coco" },
+                new SelectListItem { Value = "Grape Ice - Uva Ice", Text = "Grape Ice - Uva Ice" },
+                new SelectListItem { Value = "Green Apple - Maçã Verde", Text = "Green Apple - Maçã Verde" },
+                new SelectListItem { Value = "Icy Mint - Menta Ice", Text = "Icy Mint - Menta Ice" },
+                new SelectListItem { Value = "Menthal - Menta e Hortelã Ice", Text = "Menthal - Menta e Hortelã Ice" },
+                new SelectListItem { Value = "Pineapple Ice - Abacaxi Ice", Text = "Pineapple Ice - Abacaxi Ice" },
+                new SelectListItem { Value = "Strawberry Banana - Morango e Banana", Text = "Strawberry Banana - Morango e Banana" },
+                new SelectListItem { Value = "Strawberry Ice - Morango Ice", Text = "Strawberry Ice - Morango Ice" },
+                new SelectListItem { Value = "Watermelon Ice - Melancia Ice", Text = "Watermelon Ice - Melancia Ice" }
+            };
+        }
+        // ====== GET: /Produto/Criar ======
         public IActionResult Criar()
         {
             try
@@ -166,26 +187,7 @@ namespace WebApplicationPods.Controllers
             }
         }
 
-        private List<SelectListItem> ObterTodosSabores()
-        {
-            return new List<SelectListItem>
-            {
-                new SelectListItem { Value = "Aloe Grape - Aloe Vera e Uva", Text = "Aloe Grape - Aloe Vera e Uva" },
-                new SelectListItem { Value = "Banana Coconut - Banana e Água de Coco", Text = "Banana Coconut - Banana e Água de Coco" },
-                new SelectListItem { Value = "Banana Ice", Text = "Banana Ice" },
-                new SelectListItem { Value = "Blueberry Ice - Mirtilo Ice", Text = "Blueberry Ice - Mirtilo Ice" },
-                new SelectListItem { Value = "Blueberry Straw Coco - Mirtilo, Morango, Coco", Text = "Blueberry Straw Coco - Mirtilo, Morango, Coco" },
-                new SelectListItem { Value = "Grape Ice - Uva Ice", Text = "Grape Ice - Uva Ice" },
-                new SelectListItem { Value = "Green Apple - Maçã Verde", Text = "Green Apple - Maçã Verde" },
-                new SelectListItem { Value = "Icy Mint - Menta Ice", Text = "Icy Mint - Menta Ice" },
-                new SelectListItem { Value = "Menthal - Menta e Hortelã Ice", Text = "Menthal - Menta e Hortelã Ice" },
-                new SelectListItem { Value = "Pineapple Ice - Abacaxi Ice", Text = "Pineapple Ice - Abacaxi Ice" },
-                new SelectListItem { Value = "Strawberry Banana - Morango e Banana", Text = "Strawberry Banana - Morango e Banana" },
-                new SelectListItem { Value = "Strawberry Ice - Morango Ice", Text = "Strawberry Ice - Morango Ice" },
-                new SelectListItem { Value = "Watermelon Ice - Melancia Ice", Text = "Watermelon Ice - Melancia Ice" }
-            };
-        }
-
+        // ====== POST: /Produto/Criar ======
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Criar(ProdutoModel produto)
@@ -240,20 +242,30 @@ namespace WebApplicationPods.Controllers
                 // 6) Persistência
                 if (ModelState.IsValid)
                 {
-                    // Imagem (opcional)
+                    // Imagem (opcional) — agora com nome curto + suporte a .webp
                     if (produto.ImagemUpload != null && produto.ImagemUpload.Length > 0)
                     {
+                        var file = produto.ImagemUpload;
+
+                        var erroImg = ValidateImage(file, out var extLower);
+                        if (erroImg != null)
+                        {
+                            ModelState.AddModelError(nameof(ProdutoModel.ImagemUpload), erroImg);
+                            produto.TodosSabores = ObterTodosSabores();
+                            CarregarCategorias();
+                            return View(produto);
+                        }
+
                         var pastaUploads = Path.Combine(_hostEnvironment.WebRootPath, "imagens/produtos");
-                        if (!Directory.Exists(pastaUploads))
-                            Directory.CreateDirectory(pastaUploads);
+                        Directory.CreateDirectory(pastaUploads);
 
-                        var nomeArquivo = $"{Guid.NewGuid()}_{Path.GetFileName(produto.ImagemUpload.FileName)}";
-                        var caminhoArquivo = Path.Combine(pastaUploads, nomeArquivo);
+                        var fileName = MakeShortFileName(produto.Nome, extLower); // << curto!
+                        var caminhoArquivo = Path.Combine(pastaUploads, fileName);
 
-                        using (var fileStream = new FileStream(caminhoArquivo, FileMode.Create))
-                            await produto.ImagemUpload.CopyToAsync(fileStream);
+                        using (var fs = new FileStream(caminhoArquivo, FileMode.Create))
+                            await file.CopyToAsync(fs);
 
-                        produto.ImagemUrl = $"/imagens/produtos/{nomeArquivo}";
+                        produto.ImagemUrl = $"/imagens/produtos/{fileName}";
                     }
 
                     _produtoRepository.Adicionar(produto);
@@ -273,6 +285,7 @@ namespace WebApplicationPods.Controllers
             return View(produto);
         }
 
+        // ====== GET: /Produto/Editar/{id} ======
         [HttpGet]
         public IActionResult Editar(int id)
         {
@@ -290,16 +303,15 @@ namespace WebApplicationPods.Controllers
             // 2) Carrega lista master de sabores
             var baseSabores = ObterTodosSabores();
 
-            // 3) Garante que sabores já usados pelo produto (mesmo que não estejam na master) apareçam no <select>
+            // 3) Garante que sabores já usados pelo produto também apareçam no <select>
             var mesclados = MesclarSabores(baseSabores, produto.SaboresQuantidadesList.Select(s => s.Sabor));
-
             produto.TodosSabores = mesclados;
 
             CarregarCategorias();
-
             return View(produto);
         }
 
+        // ====== POST: /Produto/Editar/{id} ======
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ActionName("Editar")]
@@ -312,7 +324,7 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            // Conversão de preços pt-BR (igual você já tinha)
+            // Conversão de preços pt-BR
             static decimal? ParsePtBr(string raw)
             {
                 if (string.IsNullOrWhiteSpace(raw)) return null;
@@ -359,7 +371,7 @@ namespace WebApplicationPods.Controllers
             if (!ok)
                 ModelState.AddModelError(string.Empty, "Não foi possível vincular os dados do formulário.");
 
-            // ===== Sabores vindos do form (hidden inputs) =====
+            // ===== Sabores do form
             var saboresList = new List<ProdutoModel.SaborQuantidade>();
             if (Request.Form.TryGetValue("SaboresQuantidadesList", out var itens))
             {
@@ -368,7 +380,6 @@ namespace WebApplicationPods.Controllers
                     if (string.IsNullOrWhiteSpace(item)) continue;
                     try
                     {
-                        // Newtonsoft.Json é case-insensitive, mas manteremos "Sabor/Quantidade" corretamente
                         var sq = JsonConvert.DeserializeObject<ProdutoModel.SaborQuantidade>(item);
                         if (sq != null && !string.IsNullOrWhiteSpace(sq.Sabor) && sq.Quantidade > 0)
                             saboresList.Add(sq);
@@ -404,18 +415,14 @@ namespace WebApplicationPods.Controllers
                 produto.PrecoPromocional = null;
             }
 
-            // Imagem opcional (igual você já tinha)
+            // Imagem opcional
             ModelState.Remove(nameof(ProdutoModel.ImagemUpload));
             var file = Request.Form.Files[nameof(ProdutoModel.ImagemUpload)];
             if (file is { Length: > 0 })
             {
-                if (file.Length > 2 * 1024 * 1024)
-                    ModelState.AddModelError(nameof(ProdutoModel.ImagemUpload), "O tamanho da imagem não pode exceder 2MB");
-
-                var allowed = new[] { ".jpg", ".jpeg", ".png" };
-                var ext = Path.GetExtension(file.FileName);
-                if (!allowed.Contains(ext, StringComparer.OrdinalIgnoreCase))
-                    ModelState.AddModelError(nameof(ProdutoModel.ImagemUpload), "Apenas arquivos JPG, JPEG e PNG são permitidos");
+                var erroImg = ValidateImage(file, out var extLower);
+                if (erroImg != null)
+                    ModelState.AddModelError(nameof(ProdutoModel.ImagemUpload), erroImg);
             }
 
             if (!ModelState.IsValid)
@@ -428,19 +435,21 @@ namespace WebApplicationPods.Controllers
                 return View("Editar", produto);
             }
 
-            // Persistência da imagem (se enviada)
+            // Persistência da nova imagem (se enviada)
             if (file is { Length: > 0 })
             {
                 var uploads = Path.Combine(_hostEnvironment.WebRootPath, "imagens/produtos");
                 Directory.CreateDirectory(uploads);
 
+                // remove a antiga
                 if (!string.IsNullOrEmpty(produto.ImagemUrl))
                 {
-                    var oldPath = Path.Combine(_hostEnvironment.WebRootPath, produto.ImagemUrl.TrimStart('/'));
+                    var oldPath = Path.Combine(_hostEnvironment.WebRootPath, produto.ImagemUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
                     if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
                 }
 
-                var fileName = $"{Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
+                var extLower = Path.GetExtension(file.FileName).ToLowerInvariant();
+                var fileName = MakeShortFileName(produto.Nome, extLower); // << curto!
                 using var fs = System.IO.File.Create(Path.Combine(uploads, fileName));
                 await file.CopyToAsync(fs);
                 produto.ImagemUrl = $"/imagens/produtos/{fileName}";
@@ -562,7 +571,30 @@ namespace WebApplicationPods.Controllers
 
             return null;
         }
+        private static string? ValidateImage(Microsoft.AspNetCore.Http.IFormFile file, out string extLower)
+        {
+            extLower = Path.GetExtension(file.FileName).ToLowerInvariant();
+            var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp" }; // inclui .webp
+            if (!allowed.Contains(extLower))
+                return "Apenas arquivos JPG, JPEG, PNG e WEBP são permitidos.";
 
+            // 2MB
+            if (file.Length > 2 * 1024 * 1024)
+                return "O tamanho da imagem não pode exceder 2MB.";
+
+            return null;
+        }
+        private static string MakeShortFileName(string? productName, string extLower)
+        {
+            var slug = Slugify(productName ?? "produto");
+            if (slug.Length > 32) slug = slug[..32];
+            return $"{slug}-{Guid.NewGuid():N[..8]}{extLower}";
+        }
+        private static string Slugify(string s)
+        {
+            var slug = Regex.Replace(s ?? "", "[^a-zA-Z0-9]+", "-").Trim('-');
+            return slug.ToLowerInvariant();
+        }
         private static bool TryReadDecimalAnyCulture(string raw, out decimal value)
         {
             var s = (raw ?? "").Trim();
