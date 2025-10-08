@@ -34,10 +34,13 @@
     <!-- Hero -->
     <section class="hero-section text-center text-white mb-3">
         <div class="container">
-            <h1 class="display-6 fw-bold mb-1">Bem-vindo à PodsPlatform</h1>
+            <h1 class="display-6 fw-bold mb-1">
+                Bem-vindo à @(Model.Loja?.Nome ?? "nossa loja")
+            </h1>
             <p class="lead fs-6 mb-0">Os melhores pods eletrônicos do mercado!</p>
         </div>
     </section>
+
 
     <!-- Filtros (collapse no mobile) -->
     <div class="container mb-3">

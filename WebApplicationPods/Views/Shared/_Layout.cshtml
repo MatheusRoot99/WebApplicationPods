@@ -276,8 +276,14 @@
 
     <!-- Banner para liberar áudio -->
     <div id="rt-audio-banner" title="Clique para habilitar som">
-        <i class="fa fa-volume-up"></i> Ativar som das notificações
+        <i class="fa fa-volume-up"></i>
+        <span>Ativar som das notificações</span>
+        <button id="rt-audio-never" type="button"
+                style="margin-left:.5rem;background:transparent;border:0;color:#fff;opacity:.8">
+            ×
+        </button>
     </div>
+
 
     <!-- Scripts base -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -462,39 +468,58 @@
               console.log('[RT] bootstrap…');
               if (!window.signalR) { console.warn('[RT] SignalR não encontrado.'); return; }
 
-              let audioUnlocked = false;
+              const OPT_OUT_KEY = 'rt_audio_opt_out';            // preferências
+              const SESSION_UNLOCK_KEY = 'rt_audio_unlocked';    // por aba
+
+              let audioUnlocked = sessionStorage.getItem(SESSION_UNLOCK_KEY) === '1';
               let pendingDings = 0;
+
               const ding = new Audio('/audio/novo-pedido.mp3'); ding.preload = 'auto';
               ding.addEventListener('error', (e) => console.warn('[RT] Falha ao carregar áudio', e));
 
               const banner = document.getElementById('rt-audio-banner');
-              const showBanner = () => { if (banner) banner.style.display = 'flex'; };
+              const showBanner = () => {
+                if (!banner) return;
+                if (localStorage.getItem(OPT_OUT_KEY) === '1') return; // respeita “não mostrar de novo”
+                banner.style.display = 'flex';
+              };
               const hideBanner = () => { if (banner) banner.style.display = 'none'; };
 
-              function tryUnlockAudio(source) {
-                if (audioUnlocked) return;
-                ding.play().then(() => {
-                  ding.pause(); ding.currentTime = 0; audioUnlocked = true; hideBanner();
-                  if (pendingDings > 0) { const c = pendingDings; pendingDings = 0; try { ding.currentTime = 0; ding.play(); } catch {} }
-                }).catch(() => { showBanner(); });
+              // tenta liberar áudio silenciosamente em interações do usuário
+              async function tryUnlockAudio(source) {
+                if (audioUnlocked) return true;
+                try {
+                  await ding.play();        // alguns browsers liberam com 1ª interação
+                  ding.pause(); ding.currentTime = 0;
+                  audioUnlocked = true;
+                  sessionStorage.setItem(SESSION_UNLOCK_KEY, '1');
+                  hideBanner();
+                  if (pendingDings > 0) { pendingDings = 0; ding.currentTime = 0; await ding.play().catch(()=>{}); }
+                  return true;
+                } catch {
+                  // não libera aqui; só mostra o banner quando realmente precisar tocar
+                  return false;
+                }
               }
 
               ['click','keydown','touchstart'].forEach(ev =>
                 window.addEventListener(ev, () => tryUnlockAudio(ev), { once: true })
               );
-              let lastMove = 0;
-              window.addEventListener('mousemove', () => {
-                const t = Date.now(); if (t - lastMove < 1500) return; lastMove = t;
-                tryUnlockAudio('mousemove');
-              });
-              if (banner) banner.addEventListener('click', () => tryUnlockAudio('banner'));
 
-              document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'visible' && pendingDings > 0 && audioUnlocked) {
-                  const c = pendingDings; pendingDings = 0; try { ding.currentTime = 0; ding.play(); } catch {}
-                }
-              });
+              // botões do banner (opcional: clique no próprio banner = tentar liberar)
+              if (banner) {
+                banner.addEventListener('click', () => tryUnlockAudio('banner'));
+                // suporte “não mostrar de novo” via botão X se você quiser:
+                // <div id="rt-audio-banner"><button id="rt-audio-never" ...>×</button> Ativar som...</div>
+                const never = document.getElementById('rt-audio-never');
+                if (never) never.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  localStorage.setItem(OPT_OUT_KEY, '1');
+                  hideBanner();
+                });
+              }
 
+              // notificações do sistema (opcional)
               if ('Notification' in window && Notification.permission === 'default') {
                 Notification.requestPermission().catch(()=>{});
               }
@@ -526,22 +551,34 @@
                 .withAutomaticReconnect()
                 .build();
 
-              connection.on('NewOrder', payload => {
-                if (audioUnlocked && document.visibilityState === 'visible') {
-                  try { ding.currentTime = 0; ding.play(); } catch {}
-                } else {
-                  pendingDings++; showBanner();
+              connection.on('NewOrder', async payload => {
+                // tenta tocar; se não conseguir (autoplay), só então mostra o banner
+                let played = false;
+                if (document.visibilityState === 'visible') {
+                  try { ding.currentTime = 0; await ding.play(); played = true; }
+                  catch { played = false; }
                 }
+                if (!played) {
+                  pendingDings++;
+                  // só mostra banner quando realmente há algo pra tocar e o usuário não optou por esconder
+                  showBanner();
+                }
+
                 if (window.showToast) window.showToast(`Novo pedido pago #${payload.id} de ${payload.cliente}`, true);
                 notify(payload); incNotifBadge();
                 if (navigator.vibrate) navigator.vibrate(120);
               });
 
               connection.start()
-                .then(() => { console.log('[RT] SignalR conectado'); showBanner(); })
+                .then(() => {
+                  console.log('[RT] SignalR conectado');
+                  // ⚠️ não chama showBanner() aqui: não queremos mostrar no load.
+                  // o banner só aparece se chegar notificação e o áudio não puder tocar.
+                })
                 .catch(err => console.error('[RT] Erro ao conectar SignalR:', err));
             })();
         </script>
+
     }
 
     @await RenderSectionAsync("Scripts", required: false)

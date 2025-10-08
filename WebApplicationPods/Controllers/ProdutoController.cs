@@ -283,8 +283,18 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            // 1) Desserializa sabores do produto
             produto.DeserializarSaboresQuantidades();
-            produto.TodosSabores = ObterTodosSabores();
+            produto.SaboresQuantidadesList ??= new List<ProdutoModel.SaborQuantidade>();
+
+            // 2) Carrega lista master de sabores
+            var baseSabores = ObterTodosSabores();
+
+            // 3) Garante que sabores já usados pelo produto (mesmo que não estejam na master) apareçam no <select>
+            var mesclados = MesclarSabores(baseSabores, produto.SaboresQuantidadesList.Select(s => s.Sabor));
+
+            produto.TodosSabores = mesclados;
+
             CarregarCategorias();
 
             return View(produto);
@@ -302,7 +312,7 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            // Conversão de preços pt-BR
+            // Conversão de preços pt-BR (igual você já tinha)
             static decimal? ParsePtBr(string raw)
             {
                 if (string.IsNullOrWhiteSpace(raw)) return null;
@@ -341,7 +351,6 @@ namespace WebApplicationPods.Controllers
                 }
             }
 
-            // Bind restante
             var ok = await TryUpdateModelAsync(produto, prefix: "",
                 p => p.Nome, p => p.Descricao, p => p.CategoriaId, p => p.Ativo,
                 p => p.EmPromocao, p => p.MaisVendido, p => p.Sabor, p => p.Cor,
@@ -350,7 +359,7 @@ namespace WebApplicationPods.Controllers
             if (!ok)
                 ModelState.AddModelError(string.Empty, "Não foi possível vincular os dados do formulário.");
 
-            // Sabores
+            // ===== Sabores vindos do form (hidden inputs) =====
             var saboresList = new List<ProdutoModel.SaborQuantidade>();
             if (Request.Form.TryGetValue("SaboresQuantidadesList", out var itens))
             {
@@ -359,6 +368,7 @@ namespace WebApplicationPods.Controllers
                     if (string.IsNullOrWhiteSpace(item)) continue;
                     try
                     {
+                        // Newtonsoft.Json é case-insensitive, mas manteremos "Sabor/Quantidade" corretamente
                         var sq = JsonConvert.DeserializeObject<ProdutoModel.SaborQuantidade>(item);
                         if (sq != null && !string.IsNullOrWhiteSpace(sq.Sabor) && sq.Quantidade > 0)
                             saboresList.Add(sq);
@@ -376,7 +386,7 @@ namespace WebApplicationPods.Controllers
             produto.SaboresQuantidadesList = saboresList;
             produto.Estoque = saboresList.Sum(s => s.Quantidade);
             produto.SerializarSaboresQuantidades();
-            ModelState.Remove(nameof(ProdutoModel.SaboresQuantidades)); // evita falso "required"
+            ModelState.Remove(nameof(ProdutoModel.SaboresQuantidades)); // evita falso required
 
             // Regras adicionais
             if (!_context.Categorias.AsNoTracking().Any(c => c.Id == produto.CategoriaId))
@@ -394,7 +404,7 @@ namespace WebApplicationPods.Controllers
                 produto.PrecoPromocional = null;
             }
 
-            // Imagem opcional
+            // Imagem opcional (igual você já tinha)
             ModelState.Remove(nameof(ProdutoModel.ImagemUpload));
             var file = Request.Form.Files[nameof(ProdutoModel.ImagemUpload)];
             if (file is { Length: > 0 })
@@ -410,8 +420,10 @@ namespace WebApplicationPods.Controllers
 
             if (!ModelState.IsValid)
             {
+                // Recarrega listas e categorias em caso de erro
                 produto.DeserializarSaboresQuantidades();
-                produto.TodosSabores = ObterTodosSabores();
+                var baseSabores = ObterTodosSabores();
+                produto.TodosSabores = MesclarSabores(baseSabores, produto.SaboresQuantidadesList.Select(s => s.Sabor));
                 CarregarCategorias();
                 return View("Editar", produto);
             }
@@ -557,6 +569,27 @@ namespace WebApplicationPods.Controllers
             var styles = NumberStyles.AllowDecimalPoint | NumberStyles.AllowThousands;
             return decimal.TryParse(s, styles, CultureInfo.GetCultureInfo("pt-BR"), out value)
                 || decimal.TryParse(s.Replace(".", "").Replace(',', '.'), styles, CultureInfo.InvariantCulture, out value);
+        }
+
+        // ===== Helpers =====
+
+        private List<SelectListItem> MesclarSabores(List<SelectListItem> baseSabores, IEnumerable<string> saboresDoProduto)
+        {
+            var set = new HashSet<string>(baseSabores.Select(s => s.Value), StringComparer.OrdinalIgnoreCase);
+            var result = new List<SelectListItem>(baseSabores);
+
+            foreach (var s in saboresDoProduto.Where(x => !string.IsNullOrWhiteSpace(x)))
+            {
+                if (!set.Contains(s))
+                {
+                    result.Add(new SelectListItem { Value = s, Text = s + " (do produto)" });
+                    set.Add(s);
+                }
+            }
+
+            return result
+                .OrderBy(s => s.Text.Replace(" (do produto)", ""), StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
     }
 }
