@@ -12,7 +12,7 @@ namespace WebApplicationPods.Data
         public BancoContext(DbContextOptions<BancoContext> options) : base(options)
         {
             // Em DEV: crie se não existir (opcional)
-            // Database.EnsureCreated();
+             Database.EnsureCreated();
         }
 
         // ====== Suas entidades ======
