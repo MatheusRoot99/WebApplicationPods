@@ -4,17 +4,11 @@
 		<TargetFramework>net9.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
-
-		<!-- Publicação self-contained: leva o runtime junto (evita “runtime não instalado”) -->
-		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
-		<SelfContained>true</SelfContained>
-		<PublishSingleFile>true</PublishSingleFile>
-		<PublishTrimmed>false</PublishTrimmed>
-		<InvariantGlobalization>true</InvariantGlobalization>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<!-- EF Core -->
+		<!-- Dependências principais do Entity Framework -->
+		<PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.0" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
@@ -26,35 +20,21 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 
-		<!-- Identity -->
+		<!-- Dependências do Identity -->
 		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="9.0.0" />
 
-		<!-- SignalR: REMOVA o pacote antigo de servidor; use o Client se precisar em apps .NET -->
-		<!-- <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />  -- REMOVIDO -->
-		<!-- Descomente se você tem um consumidor .NET (não browser) conectando no hub -->
-		<!-- <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.0" /> -->
-
-		<!-- Outros -->
+		<!-- Outras dependências -->
 		<PackageReference Include="AutoMapper" Version="12.0.1" />
 		<PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
 		<PackageReference Include="mercadopago-sdk" Version="2.8.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="QRCoder" Version="1.6.0" />
 		<PackageReference Include="Stripe.net" Version="48.4.0" />
-	</ItemGroup>
 
-	<!-- NÃO publique os uploads (evita o erro de cópia e reduz o pacote) -->
-	<ItemGroup>
-		<Content Update="wwwroot\imagens\produtos\**\*">
-			<CopyToPublishDirectory>Never</CopyToPublishDirectory>
-		</Content>
-		<StaticWebAsset Remove="wwwroot\imagens\produtos\**\*" />
+		<!-- Remova ou atualize esta referência se estiver causando problemas -->
+		<!-- <PackageReference Include="Fluent.Infrastructure" Version="2.0.0-beta-01" /> -->
+		<!-- <PackageReference Include="Microsoft.Azure.DocumentDB.Core" Version="2.22.0" /> -->
 	</ItemGroup>
-
-	<!-- Cria a pasta vazia no destino do publish -->
-	<Target Name="EnsureUploadsFolder" BeforeTargets="Publish">
-		<MakeDir Directories="$(PublishDir)wwwroot\imagens\produtos" />
-	</Target>
 
 </Project>
