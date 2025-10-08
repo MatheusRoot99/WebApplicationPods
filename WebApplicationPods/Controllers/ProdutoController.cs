@@ -588,7 +588,11 @@ namespace WebApplicationPods.Controllers
         {
             var slug = Slugify(productName ?? "produto");
             if (slug.Length > 32) slug = slug[..32];
-            return $"{slug}-{Guid.NewGuid():N[..8]}{extLower}";
+
+            // pega 8 caracteres do GUID já no formato N (sem hifens)
+            var guid8 = Guid.NewGuid().ToString("N")[..8];
+
+            return $"{slug}-{guid8}{extLower}";
         }
         private static string Slugify(string s)
         {
