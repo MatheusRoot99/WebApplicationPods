@@ -18,14 +18,34 @@
         $('.file-upload-label').toggleClass('border-primary', !!fileName);
     });
 
-    // 3. Adicionar sabor
+    // 3. Adicionar sabor (selecionado ou novo)
     $('#addSaborBtn').click(function () {
-        const sabor = $('#saborSelect').val();
-        const saborText = $('#saborSelect option:selected').text();
+        addSabor();
+    });
+
+    // 4. Permitir adicionar com Enter no campo de novo sabor
+    $('#novoSaborInput').keypress(function (e) {
+        if (e.which === 13) {
+            addSabor();
+            e.preventDefault();
+        }
+    });
+
+    // 5. Função para adicionar sabor
+    function addSabor() {
+        let sabor = $('#saborSelect').val();
+        let saborText = $('#saborSelect option:selected').text();
+        const novoSabor = $('#novoSaborInput').val().trim();
         const quantidade = parseInt($('#quantidadeInput').val());
 
+        // Verifica se está usando sabor selecionado ou novo sabor
+        if (novoSabor) {
+            sabor = novoSabor;
+            saborText = novoSabor;
+        }
+
         if (!sabor) {
-            showToast('Selecione um sabor primeiro', 'warning');
+            showToast('Selecione um sabor ou digite um novo', 'warning');
             return;
         }
 
@@ -37,15 +57,10 @@
         const existingItem = $(`.sabor-item[data-sabor="${sabor}"]`);
         if (existingItem.length > 0) {
             // Atualiza quantidade existente
-            const currentQty = parseInt(existingItem.find('.badge').text().replace(' un.', ''));
+            const currentQty = parseInt(existingItem.find('.quantidade-display').text());
             const newQty = currentQty + quantidade;
 
-            existingItem.find('.badge').text(newQty + ' un.');
-            existingItem.find('input').val(JSON.stringify({
-                sabor: sabor,
-                quantidade: newQty // ← atualiza para nova quantidade total
-            }));
-
+            updateQuantidadeSabor(existingItem, newQty);
             showToast('Quantidade atualizada para ' + saborText, 'info');
         } else {
             // Cria novo item
@@ -53,13 +68,27 @@
                 <div class="card mb-2 border-0 shadow-sm sabor-item" data-sabor="${sabor}">
                     <div class="card-body py-2 px-3">
                         <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <span class="fw-bold text-primary">${saborText}</span>
-                                <span class="badge bg-light text-primary ms-2">${quantidade} un.</span>
+                            <div class="flex-grow-1">
+                                <span class="fw-bold text-primary sabor-nome">${saborText}</span>
+                                <div class="mt-1">
+                                    <span class="badge bg-light text-dark me-2">Quantidade:</span>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button" class="btn btn-outline-secondary diminuir-qtd">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        <span class="btn btn-light quantidade-display" style="min-width: 50px;">${quantidade}</span>
+                                        <button type="button" class="btn btn-outline-secondary aumentar-qtd">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                    <span class="badge bg-primary ms-2 quantidade-badge">${quantidade} un.</span>
+                                </div>
                             </div>
-                            <button type="button" class="btn btn-sm btn-link text-danger remove-sabor">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
+                            <div class="ms-3">
+                                <button type="button" class="btn btn-sm btn-link text-danger remove-sabor">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
                         </div>
                         <input type="hidden" name="SaboresQuantidadesList" value='${JSON.stringify({
                 sabor: sabor,
@@ -74,14 +103,57 @@
         }
 
         updateCounters();
+
+        // Limpa campos
         $('#saborSelect').val('');
+        $('#novoSaborInput').val('');
         $('#quantidadeInput').val(1);
+    }
+
+    // 6. Aumentar quantidade de sabor existente
+    $('#saboresSelecionadosList').on('click', '.aumentar-qtd', function () {
+        const item = $(this).closest('.sabor-item');
+        const currentQty = parseInt(item.find('.quantidade-display').text());
+        const newQty = currentQty + 1;
+        updateQuantidadeSabor(item, newQty);
+        updateCounters();
     });
 
-    // 4. Remover sabor com confirmação
+    // 7. Diminuir quantidade de sabor existente
+    $('#saboresSelecionadosList').on('click', '.diminuir-qtd', function () {
+        const item = $(this).closest('.sabor-item');
+        const currentQty = parseInt(item.find('.quantidade-display').text());
+
+        if (currentQty > 1) {
+            const newQty = currentQty - 1;
+            updateQuantidadeSabor(item, newQty);
+            updateCounters();
+        } else {
+            showToast('Quantidade mínima é 1. Use o botão de lixeira para remover o sabor.', 'warning');
+        }
+    });
+
+    // 8. Função para atualizar quantidade de um sabor
+    function updateQuantidadeSabor(item, novaQuantidade) {
+        const sabor = item.data('sabor');
+        const saborText = item.find('.sabor-nome').text();
+
+        item.find('.quantidade-display').text(novaQuantidade);
+        item.find('.quantidade-badge').text(novaQuantidade + ' un.');
+
+        // Atualiza o valor do input hidden
+        item.find('input[name="SaboresQuantidadesList"]').val(JSON.stringify({
+            sabor: sabor,
+            quantidade: novaQuantidade
+        }));
+
+        showToast(`Quantidade de ${saborText} atualizada para ${novaQuantidade}`, 'info');
+    }
+
+    // 9. Remover sabor com confirmação
     $('#saboresSelecionadosList').on('click', '.remove-sabor', function () {
         const item = $(this).closest('.sabor-item');
-        const saborText = item.find('.fw-bold').text();
+        const saborText = item.find('.sabor-nome').text();
 
         if (confirm(`Remover o sabor "${saborText}"?`)) {
             item.fadeOut(300, function () {
@@ -100,7 +172,7 @@
         }
     });
 
-    // 5. Atualizar contadores de sabores e estoque total
+    // 10. Atualizar contadores de sabores e estoque total
     function updateCounters() {
         try {
             const count = $('#saboresSelecionadosList .sabor-item').length;
@@ -111,8 +183,6 @@
             $('input[name="SaboresQuantidadesList"]').each(function () {
                 try {
                     const data = JSON.parse($(this).val());
-
-                    // Corrigido para minúsculo (quantidade) — verifique se front e back estão alinhados
                     const qty = parseInt(data.quantidade);
 
                     if (!isNaN(qty)) {
@@ -133,7 +203,7 @@
         }
     }
 
-    // 6. Toast genérico
+    // 11. Toast genérico
     function showToast(message, type) {
         const toast = $(`
             <div class="toast align-items-center text-white bg-${type} border-0 position-fixed bottom-0 end-0 m-3" role="alert">
@@ -148,6 +218,13 @@
         setTimeout(() => toast.remove(), 3000);
     }
 
-    // 7. Inicialização
+    // 12. Foco automático no campo de novo sabor quando selecionar "Selecione um sabor..."
+    $('#saborSelect').change(function () {
+        if ($(this).val() === '') {
+            $('#novoSaborInput').focus();
+        }
+    });
+
+    // 13. Inicialização
     updateCounters();
 });

@@ -1,4 +1,4 @@
-// Program.cs
+Ôªø// Program.cs
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,7 +13,7 @@ using WebApplicationPods.Payments;             // IPaymentService, PaymentServic
 using WebApplicationPods.Payments.Gateways;    // MercadoPagoGateway, StripeGateway
 using WebApplicationPods.Payments.Options;     // PaymentsOptions
 using WebApplicationPods.Repositories;         // ICepService, CepService
-using WebApplicationPods.Repository.Interface; // RepositÛrios
+using WebApplicationPods.Repository.Interface; // Reposit√≥rios
 using WebApplicationPods.Repository.Repository;
 using WebApplicationPods.Services;
 using WebApplicationPods.Services.Interface;   // IEmailSenderService, ICarrinhoService
@@ -65,7 +65,7 @@ builder.Services.AddAntiforgery(o =>
     o.Cookie.Name = "Pods.AntiForgery";
     o.Cookie.HttpOnly = true;
     o.Cookie.SameSite = SameSiteMode.Lax;
-    // Em DEV, n„o force Secure, sen„o o cookie n„o vai em http://localhost
+    // Em DEV, n√£o force Secure, sen√£o o cookie n√£o vai em http://localhost
     o.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
         ? CookieSecurePolicy.SameAsRequest
         : CookieSecurePolicy.Always;
@@ -73,7 +73,7 @@ builder.Services.AddAntiforgery(o =>
     o.HeaderName = "RequestVerificationToken";
 });
 
-// PolÌtica "Admin"
+// Pol√≠tica "Admin"
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
@@ -98,11 +98,11 @@ builder.Services
     .AddEntityFrameworkStores<BancoContext>()
     .AddDefaultTokenProviders();
 
-// ==================== Cookie de autenticaÁ„o ====================
+// ==================== Cookie de autentica√ß√£o ====================
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
-    // Em produÁ„o force HTTPS; em dev deixa conforme a requisiÁ„o para n„o quebrar em http://localhost
+    // Em produ√ß√£o force HTTPS; em dev deixa conforme a requisi√ß√£o para n√£o quebrar em http://localhost
     options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
         ? CookieSecurePolicy.SameAsRequest
         : CookieSecurePolicy.Always;
@@ -113,7 +113,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
 });
 
-// ==================== Sess„o ====================
+// ==================== Sess√£o ====================
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -154,15 +154,15 @@ builder.Services.AddScoped<Func<string, IPaymentGateway>>(sp => provider =>
         return sp.GetRequiredService<StripeGateway>();
     if (provider.Equals("PixManual", StringComparison.OrdinalIgnoreCase))
         return sp.GetRequiredService<PixManualGateway>();
-    throw new InvalidOperationException($"Provedor de pagamento n„o suportado: {provider}");
+    throw new InvalidOperationException($"Provedor de pagamento n√£o suportado: {provider}");
 });
 
-// Resolver de credenciais e serviÁo de pagamento
+// Resolver de credenciais e servi√ßo de pagamento
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IPaymentCredentialsResolver, PaymentCredentialsResolver>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 
-// ==================== Infra / RepositÛrios / ServiÁos ====================
+// ==================== Infra / Reposit√≥rios / Servi√ßos ====================
 builder.Services.AddScoped<IProdutoRepository, ProdutoRepository>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<ICategoriaRepository, CategoriaRepository>();
@@ -179,27 +179,27 @@ builder.Services.AddSingleton<IClienteRememberService, ClienteRememberService>()
 builder.Services.AddScoped<ICurrentLojaService, CurrentLojaService>();
 
 
-// Seed (roles/usu·rio admin)
+// ====== Services ======
+//builder.Services.AddControllersWithViews();
+//builder.Services.AddSession();
 builder.Services.AddHostedService<IdentitySeedHostedService>();
-builder.Services.AddSignalR();
+builder.Services.AddSignalR(); // ? apenas aqui, antes do Build
 
 var app = builder.Build();
 
-// ==================== Aplicar migrations automaticamente ====================
+// ====== DB Migrations ======
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<BancoContext>();
     db.Database.Migrate();
 }
 
-// ==================== Pipeline ====================
+// ====== Pipeline ======
 app.UseRequestLocalization(app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>().Value);
 
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
-
-    // opcional: evitar cache em dev
     app.Use(async (context, next) =>
     {
         context.Response.Headers["Cache-Control"] = "no-cache, no-store";
@@ -214,27 +214,34 @@ else
     app.UseHsts();
 }
 
-app.MapHub<WebApplicationPods.Hubs.PedidosHub>("/hubs/pedidos");
-
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
 
-// ===== Sess„o precisa vir antes do middleware e dos controllers
+// Sess√£o antes dos controllers
 app.UseSession();
 
-// ===== AUTO-LOGIN POR COOKIE (hidrata a sess„o ClienteTelefone)
+// Auto-login por cookie (hidrata sess√£o)
 app.UseMiddleware<ClienteAutoLoginMiddleware>();
 
-// Auth/Authorization padrıes do Identity (para Admin/Lojista etc.)
 app.UseAuthentication();
 app.UseAuthorization();
 // GARANTE LOJA CONTEXT + BLOQUEIOS
 app.UseMiddleware<WebApplicationPods.Middlewares.LojaContextMiddleware>();
 
+// ====== Endpoints ======
+// Rotas MVC padr√£o (views)
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
+// üî¥ Necess√°rio para controllers com [ApiController]/attribute routing (ex: CepController)
+app.MapControllers();
+
+// Hubs
+app.MapHub<WebApplicationPods.Hubs.PedidosHub>("/hubs/pedidos");
+
 app.Run();
+
+

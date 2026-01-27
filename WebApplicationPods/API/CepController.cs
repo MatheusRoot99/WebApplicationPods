@@ -28,7 +28,7 @@ namespace WebApplicationPods.API
             if (endereco == null)
                 return NotFound("CEP não encontrado");
 
-            return Ok(endereco);
+            return Ok(endereco); // Obs.: normalmente vem com PascalCase (Logradouro, Bairro, Cidade, Estado)
         }
     }
 }

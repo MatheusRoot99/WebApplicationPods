@@ -76,3 +76,165 @@
         max-height: 180px;
     }
 }
+/* ===== Novo Sabor (campo de texto) ===== */
+/* container opcional (caso queira envolver o select+input) */
+.sabor-inline-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr 120px 60px; /* select | novo-sabor | qtd | ação */
+    gap: .5rem;
+    align-items: center;
+}
+
+/* mantém o mesmo raio e altura do restante */
+.novo-sabor-input {
+    border-radius: 8px;
+    transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+    /* foco com a cor primária do tema, igual aos inputs padrão */
+    .novo-sabor-input:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 .2rem rgba(106, 17, 203, .15); /* roxinho suave */
+        outline: none;
+    }
+
+    /* placeholder mais discreto */
+    .novo-sabor-input::placeholder {
+        color: var(--dark-gray);
+        opacity: .6;
+    }
+
+/* ajuda/legenda sob o campo (classe .form-text do bootstrap) */
+.sabores-table .form-text {
+    margin-top: .25rem;
+    color: var(--dark-gray);
+    font-size: .8rem;
+}
+
+/* validação visual (opcional, se você adicionar is-valid/is-invalid no input) */
+.novo-sabor-input.is-valid {
+    border-color: #28a745;
+    box-shadow: 0 0 0 .2rem rgba(40, 167, 69, .15);
+}
+
+.novo-sabor-input.is-invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 .2rem rgba(220, 53, 69, .15);
+}
+
+/* alinha melhor os controles na tabela */
+.sabores-table td {
+    vertical-align: middle;
+}
+
+/* o select e o novo campo ficam com largura confortável no desktop */
+.sabores-table .sabor-select {
+    min-width: 220px;
+}
+
+.sabores-table .novo-sabor-input {
+    min-width: 220px;
+}
+
+/* ===== Responsivo ===== */
+@media (max-width: 991.98px) {
+    /* na tabela, deixa os campos respirarem em pilha quando necessário */
+    .sabores-table .sabor-select,
+    .sabores-table .novo-sabor-input {
+        min-width: unset;
+        width: 100%;
+    }
+    /* se usar o wrapper grid, muda para duas colunas em telas menores */
+    .sabor-inline-wrap {
+        grid-template-columns: 1fr 1fr; /* select | novo-sabor */
+        grid-auto-rows: auto;
+        gap: .5rem .75rem;
+    }
+
+        .sabor-inline-wrap .qty-input {
+            grid-column: 1 / span 1;
+        }
+
+        .sabor-inline-wrap .remove-row {
+            justify-self: end;
+        }
+}
+
+/* ===== Harmonias visuais extras (opcional) ===== */
+/* de leve, para o input parecer “irmão” do select */
+.sabores-table .sabor-select,
+.sabores-table .novo-sabor-input,
+.sabores-table .qty-input {
+    background-color: #fff;
+    border: 1px solid var(--medium-gray);
+}
+
+    /* quando desabilitado */
+    .sabores-table .novo-sabor-input:disabled {
+        background-color: var(--light-gray);
+        opacity: .8;
+        cursor: not-allowed;
+    }
+/* ===== Linha de Sabores 100% horizontal ===== */
+
+/* fixa a largura das colunas sem quebrar */
+.sabores-table {
+    table-layout: fixed;
+}
+
+    .sabores-table th:nth-child(1), .sabores-table td:nth-child(1) {
+        width: 45%;
+    }
+
+    .sabores-table th:nth-child(2), .sabores-table td:nth-child(2) {
+        width: 35%;
+    }
+
+    .sabores-table th:nth-child(3), .sabores-table td:nth-child(3) {
+        width: 12%;
+    }
+
+    .sabores-table th:nth-child(4), .sabores-table td:nth-child(4) {
+        width: 8%;
+    }
+
+    /* inputs ocupam a célula inteira e têm mesma altura */
+    .sabores-table .form-select,
+    .sabores-table .novo-sabor-input,
+    .sabores-table .qty-input {
+        width: 100%;
+        border-radius: 8px;
+        height: 42px;
+        padding-top: .4rem;
+        padding-bottom: .4rem;
+    }
+
+/* evita a quebra por causa do help text no desktop */
+@media (min-width: 992px) {
+    .sabores-table .form-text {
+        display: none;
+    }
+}
+
+/* botão de remover compactado e sem quebrar */
+.sabores-table td:last-child {
+    white-space: nowrap;
+    text-align: right;
+}
+
+.sabores-table .remove-row {
+    height: 42px;
+    padding: .35rem .6rem;
+}
+
+/* mantém tudo bem centralizado verticalmente */
+.sabores-table td, .sabores-table th {
+    vertical-align: middle;
+}
+
+/* responsivo: pode voltar a exibir o help em telas menores */
+@media (max-width: 991.98px) {
+    .sabores-table .form-text {
+        display: block;
+    }
+}

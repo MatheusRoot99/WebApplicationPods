@@ -6,5 +6,7 @@ namespace WebApplicationPods.Models
     {
         public IEnumerable<ProdutoModel> Produtos { get; set; } // Mude para IEnumerable
         public FiltrosModel Filtros { get; set; }
+
+        public LojaConfig Loja { get; set; }
     }
 }

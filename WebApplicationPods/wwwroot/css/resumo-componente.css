@@ -472,3 +472,14 @@
         padding-bottom: max(1rem, env(safe-area-inset-bottom));
     }
 }
+
+
+.row > * {
+    flex-shrink: 0;
+    width: 100%;
+    max-width: 100%;
+     padding-right: calc(var(--bs-gutter-x) * .0); 
+     padding-left: calc(var(--bs-gutter-x) * .0); 
+    margin-top: var(--bs-gutter-y);
+}
+

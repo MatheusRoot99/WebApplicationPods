@@ -4,22 +4,19 @@
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery
 @inject ILojaConfigService LojaSvc
 @{
-    // Busca config uma única vez
     var cfg = await LojaSvc.GetAsync();
     var baseUrl = $"{Context.Request?.Scheme}://{Context.Request?.Host}";
     var headerVM = LojaSvc.BuildHeader(cfg, baseUrl, Url.Action("Perfil", "Loja"));
-
-    // Deixa pronto pro partial _StoreHeader
     ViewData["StoreHeader"] = headerVM;
-
-    // Nome para a barra mobile
     var mobileBrand = headerVM?.Nome ?? "Pods Eletrônicos";
 }
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
     <title>@ViewData["Title"] - Pods Eletrônicos</title>
 
     <!-- Bootstrap CSS -->
@@ -28,18 +25,60 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
-    <!-- Estilos -->
+    <!-- Estilos globais -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/sidebar.css" asp-append-version="true" />
 
     @await RenderSectionAsync("Styles", required: false)
 
     <style>
-        
+        :root {
+            /* altura do bottom nav e deslocamento por teclado (conteúdo) */
+            --mbn-height: 70px;
+            --kb-shift: 0px;
+        }
+
+        /* iOS não deve auto-zoomar */
+        html {
+            -webkit-text-size-adjust: 100%;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        /* Banner para habilitar som (fica no BODY) */
+        #rt-audio-banner {
+            position: fixed;
+            right: 16px;
+            bottom: calc(16px + env(safe-area-inset-bottom));
+            z-index: 2000;
+            background: #111;
+            color: #fff;
+            border-radius: 999px;
+            display: none;
+            align-items: center;
+            gap: .5rem;
+            padding: .55rem .9rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,.2);
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+            #rt-audio-banner i {
+                opacity: .9;
+            }
+
+        /* ====== SCOPED padding para o conteúdo ======
+                   Só quando existir bottom-nav na página */
+        .has-bottom-nav .page-content {
+            padding-bottom: calc(var(--mbn-height) + var(--kb-shift) + env(safe-area-inset-bottom) + 12px);
+        }
     </style>
 </head>
-<body>
 
+<body>
+    <!-- Token antiforgery fallback -->
     <input type="hidden" id="__RequestVerificationToken"
            name="__RequestVerificationToken"
            value="@antiforgery.GetAndStoreTokens(Context).RequestToken" />
@@ -54,7 +93,6 @@
 
                     <!-- ===== MOBILE TOOLBAR (até lg) ===== -->
                     <div class="mobile-toolbar d-lg-none w-100">
-                        <!-- menu -->
                         <button class="icon-btn"
                                 type="button"
                                 data-bs-toggle="offcanvas"
@@ -64,11 +102,8 @@
                             <i class="fas fa-bars"></i>
                         </button>
 
-                        <!-- título/brand -->
-                        <!-- título/brand -->
                         <div class="mobile-brand text-truncate">@mobileBrand</div>
 
-                        <!-- ações -->
                         <div class="toolbar-actions">
                             @* Carrinho (cliente) *@
                             @if (!User.IsInRole("Admin") && !User.IsInRole("Lojista"))
@@ -122,7 +157,6 @@
 
                     <!-- ===== DESKTOP NAV (lg+) ===== -->
                     <div class="d-none d-lg-flex align-items-center w-100">
-                        <!-- Breadcrumb à esquerda -->
                         <div class="d-flex align-items-center">
                             <nav aria-label="breadcrumb" class="ms-1">
                                 <ol class="breadcrumb mb-0">
@@ -143,7 +177,6 @@
                             </nav>
                         </div>
 
-                        <!-- Ações à direita -->
                         <div class="ms-auto d-flex align-items-center gap-2">
                             @if (!User.IsInRole("Admin") && !User.IsInRole("Lojista"))
                             {
@@ -192,18 +225,39 @@
                                 </ul>
                             </div>
                         </div>
+
                     </div>
 
                 </div>
             </nav>
 
-            @* ===== Store Header (Top Bar) vindo do banco ===== *@
             @await Html.PartialAsync("_StoreHeader", headerVM)
 
-            <!-- Content -->
-            <div class="container-fluid py-3">
+            <!-- ====== CONTEÚDO (wrapper com padding-bottom SCOPED) ====== -->
+            <main id="page-content" class="page-content container-fluid pt-3">
                 @RenderBody()
-            </div>
+            </main>
+
+            <script>
+                // Se a página não tiver .page-content, marca o primeiro wrapper típico como .page-content
+                (function () {
+                  if (document.querySelector('.page-content')) return; // já tem
+                  const candidates = [
+                    '#page-content-wrapper > .container-fluid',
+                    '#page-content-wrapper > .container',
+                    '.container-fluid',
+                    '.container',
+                    '.produto-detalhes-container',
+                    '.auth-shell',
+                    '.cadastro-container',
+                    'main'
+                  ];
+                  for (const sel of candidates) {
+                    const el = document.querySelector(sel);
+                    if (el) { el.classList.add('page-content'); break; }
+                  }
+                })();
+            </script>
         </div>
     </div>
 
@@ -220,6 +274,17 @@
         </div>
     </div>
 
+    <!-- Banner para liberar áudio -->
+    <div id="rt-audio-banner" title="Clique para habilitar som">
+        <i class="fa fa-volume-up"></i>
+        <span>Ativar som das notificações</span>
+        <button id="rt-audio-never" type="button"
+                style="margin-left:.5rem;background:transparent;border:0;color:#fff;opacity:.8">
+            ×
+        </button>
+    </div>
+
+
     <!-- Scripts base -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="~/js/jquery.mask.min.js"></script>
@@ -228,71 +293,57 @@
     <script src="~/js/sidebar.js" asp-append-version="true"></script>
     <script src="~/js/sabores.js" asp-append-version="true"></script>
 
+    <!-- ====== JS global: badges / toast / storage / csrf / sync ====== -->
     <script>
-        // =============== CART BADGE / DOT - SCRIPT GLOBAL (Layout) ===============
-              (function () {
-        const KEY_COUNT  = 'cart_count';
-        const KEY_UNSEEN = 'cart_unseen';
+        (function () {
+          const KEY_COUNT  = 'cart_count';
+          const KEY_UNSEEN = 'cart_unseen';
 
-        function setBadgeCount(n) {
-          const num = Math.max(0, parseInt(n || 0, 10) || 0);
-          // 👉 agora pega TODOS os badges do carrinho
-          document.querySelectorAll('.js-cart-badge').forEach(el => {
-            if (num > 0) {
-              el.textContent = String(num);
-              el.classList.remove('visually-hidden');
-              el.classList.remove('mbn-badge-bump'); void el.offsetWidth;
-              el.classList.add('mbn-badge-bump');
-              setTimeout(() => el.classList.remove('mbn-badge-bump'), 400);
-            } else {
-              el.textContent = '0';
-              el.classList.add('visually-hidden');
-            }
-          });
-        }
-
-        function setDot(on) {
-          // cobre os dois ícones que você usa (cart-shopping e shopping-cart)
-              document.querySelectorAll(
-                '.mbn-item .fa-cart-shopping, .nav-link.cart-link i.fa-shopping-cart, .icon-btn i.fa-shopping-cart'
-              ).forEach(el => el.classList.toggle('has-unseen', !!on));
-
-              const dotDesktop = document.getElementById('cart-dot-desktop');
-              const dotMobile  = document.getElementById('cart-new-dot');
-              if (dotDesktop) dotDesktop.classList.toggle('visually-hidden', !on);
-              if (dotMobile)  dotMobile.classList.toggle('visually-hidden', !on);
-        }
-
-        (function normalizeBadgesAtStart () {
-          // normaliza TODOS os badges do carrinho e o de notificação
-              document.querySelectorAll('.js-cart-badge, #notif-badge').forEach(el => {
-                const m = (el.textContent || '').match(/\d+/);
-                const n = m ? (parseInt(m[0],10)||0) : 0;
-                if (n <= 0) { el.textContent = '0'; el.classList.add('visually-hidden'); }
-                else        { el.textContent = String(n); el.classList.remove('visually-hidden'); }
-              });
-        })();
-
-          // ----------- Toast a partir do TempData -----------
-          const sucesso = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["Sucesso"] ?? ""));
-          const erro    = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["Erro"] ?? ""));
-          if (sucesso || erro) {
-            const ok = !!sucesso;
-            window.showToast && window.showToast(ok ? sucesso : erro, ok);
-
-            // Se a mensagem sugere alteração no carrinho, dá o "bump" e marca como não visto
-            const msg = (sucesso || erro || '').toString();
-            if (/(carrinho|adicionado|atualizada|removido)/i.test(msg)) {
-              const b = document.getElementById('cart-badge-mobile');
-              if (b) { b.classList.remove('mbn-badge-bump'); void b.offsetWidth; b.classList.add('mbn-badge-bump'); }
-              if (window.cartMarkUnseen) window.cartMarkUnseen();
-              // Se você incluir o total na mensagem (ex.: "Total: 3"), descomente abaixo
-              // const m = msg.match(/(\d+)\s*$/);
-              // if (m && window.updateCartBadges) window.updateCartBadges(parseInt(m[1],10)||0);
-            }
+          function setBadgeCount(n) {
+            const num = Math.max(0, parseInt(n || 0, 10) || 0);
+            document.querySelectorAll('.js-cart-badge').forEach(el => {
+              if (num > 0) {
+                el.textContent = String(num);
+                el.classList.remove('visually-hidden');
+                el.classList.remove('mbn-badge-bump'); void el.offsetWidth;
+                el.classList.add('mbn-badge-bump');
+                setTimeout(() => el.classList.remove('mbn-badge-bump'), 400);
+              } else {
+                el.textContent = '0';
+                el.classList.add('visually-hidden');
+              }
+            });
           }
 
-          // ----------- Fecha offcanvas ao clicar em um link -----------
+          function setDot(on) {
+            document.querySelectorAll(
+              '.mbn-item .fa-cart-shopping, .nav-link.cart-link i.fa-shopping-cart, .icon-btn i.fa-shopping-cart'
+            ).forEach(el => el.classList.toggle('has-unseen', !!on));
+            const dotDesktop = document.getElementById('cart-dot-desktop');
+            const dotMobile  = document.getElementById('cart-new-dot');
+            if (dotDesktop) dotDesktop.classList.toggle('visually-hidden', !on);
+            if (dotMobile)  dotMobile.classList.toggle('visually-hidden', !on);
+          }
+
+          (function normalizeBadgesAtStart () {
+            document.querySelectorAll('.js-cart-badge, #notif-badge').forEach(el => {
+              const m = (el.textContent || '').match(/\d+/);
+              const n = m ? (parseInt(m[0],10)||0) : 0;
+              if (n <= 0) { el.textContent = '0'; el.classList.add('visually-hidden'); }
+              else        { el.textContent = String(n); el.classList.remove('visually-hidden'); }
+            });
+          })();
+
+          window.showToast = function(message, ok = true) {
+            const toastEl = document.getElementById('appToast');
+            const bodyEl  = document.getElementById('appToastBody');
+            if (!toastEl || !bodyEl) return;
+            bodyEl.textContent = message;
+            toastEl.classList.remove('bg-success','bg-danger');
+            toastEl.classList.add(ok ? 'bg-success' : 'bg-danger');
+            new bootstrap.Toast(toastEl, { delay: 2400 }).show();
+          };
+
           document.querySelectorAll('#mobileMenu .list-group-item').forEach(item => {
             item.addEventListener('click', function () {
               const off = bootstrap.Offcanvas.getInstance(document.getElementById('mobileMenu'));
@@ -300,7 +351,6 @@
             });
           });
 
-          // ----------- Restaura estado a partir do localStorage -----------
           function restoreFromStorage() {
             let n = 0, unseen = false;
             try {
@@ -312,13 +362,11 @@
           }
           restoreFromStorage();
 
-          // ----------- Escuta mudanças entre abas -----------
           window.addEventListener('storage', (e) => {
             if (e.key === KEY_COUNT)  setBadgeCount(parseInt(e.newValue || '0', 10) || 0);
             if (e.key === KEY_UNSEEN) setDot(e.newValue === '1');
           });
 
-          // ----------- API Global (para qualquer página usar) -----------
           window.updateCartBadges = function(count){
             const n = Math.max(0, parseInt(count || 0, 10) || 0);
             try { localStorage.setItem(KEY_COUNT, String(n)); } catch {}
@@ -340,26 +388,12 @@
             setDot(false);
           };
 
-          // ----------- Helper global de toast -----------
-          window.showToast = function(message, ok = true) {
-            const toastEl = document.getElementById('appToast');
-            const bodyEl  = document.getElementById('appToastBody');
-            if (!toastEl || !bodyEl) return;
-            bodyEl.textContent = message;
-            toastEl.classList.remove('bg-success','bg-danger');
-            toastEl.classList.add(ok ? 'bg-success' : 'bg-danger');
-            new bootstrap.Toast(toastEl, { delay: 2400 }).show();
-          };
-
-          // ----------- Helper global de CSRF (fallback) -----------
           window.getAntiForgeryToken = function () {
-            // tenta pegar de um form (recomendado) e cai para o hidden do layout
             return document.querySelector('input[name="__RequestVerificationToken"]')?.value
                    || document.getElementById('__RequestVerificationToken')?.value
                    || '';
           };
 
-          // ----------- (Opcional, mas recomendado) Sync inicial com servidor -----------
           (async function syncCountOnLoad(){
             try {
               const r = await fetch('/Carrinho/Count', { cache: 'no-store', credentials: 'same-origin' });
@@ -368,24 +402,53 @@
               if (typeof data.count !== 'undefined') window.updateCartBadges(data.count);
             } catch {}
           })();
-
         })();
     </script>
+
+    <!-- Compensação do teclado: só aumenta respiro do CONTEÚDO -->
     <script>
-        // retorna a contagem atual (pref. do localStorage; cai para o DOM se precisar)
+        (function(){
+          function applyKbShift(){
+            var shift = 0;
+            if (window.visualViewport){
+              var vv = visualViewport;
+              shift = Math.max(0, (window.innerHeight - vv.height - vv.offsetTop));
+            }
+            document.documentElement.style.setProperty('--kb-shift', shift + 'px');
+          }
+          applyKbShift();
+          window.addEventListener('resize', applyKbShift);
+          if (window.visualViewport){
+            visualViewport.addEventListener('resize', applyKbShift);
+            visualViewport.addEventListener('scroll', applyKbShift);
+          }
+          document.addEventListener('focusin', function(e){
+            if (e.target.matches('input,textarea,select')) setTimeout(applyKbShift, 50);
+          });
+        })();
+    </script>
+
+    <script>
+        // adiciona a classe só se o BottomNav existir
+        (function(){
+          if (document.querySelector('.mobile-bottom-nav')) {
+            document.body.classList.add('has-bottom-nav');
+          } else {
+            document.body.classList.remove('has-bottom-nav');
+          }
+        })();
+    </script>
+
+    <script>
         window.getCartCount = function () {
           const ls = parseInt(localStorage.getItem('cart_count') || '0', 10);
           if (!isNaN(ls) && ls >= 0) return ls;
-
-          // fallback DOM (tenta ler do badge)
           const txt =
             document.getElementById('cart-badge')?.textContent ||
-            document.getElementById('cart-badge-mobile')?.textContent || '0';
+            document.getElementById('cart-badge-mobile-top')?.textContent || '0';
           const m = (txt || '').match(/\d+/);
           return m ? (parseInt(m[0], 10) || 0) : 0;
         };
-
-        // incrementa/ajusta localmente e atualiza badges/dot
         window.bumpCartCount = function (deltaOrAbsolute, isDelta = true) {
           let current = window.getCartCount();
           let next = isDelta ? (current + (parseInt(deltaOrAbsolute,10)||0)) : (parseInt(deltaOrAbsolute,10)||0);
@@ -396,6 +459,127 @@
         };
     </script>
 
+    @* ===== Realtime do Lojista (SignalR + Som + Notificação) ===== *@
+    @if (User?.Identity?.IsAuthenticated == true && User.IsInRole("Lojista"))
+    {
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js" crossorigin="anonymous"></script>
+        <script>
+            (function () {
+              console.log('[RT] bootstrap…');
+              if (!window.signalR) { console.warn('[RT] SignalR não encontrado.'); return; }
+
+              const OPT_OUT_KEY = 'rt_audio_opt_out';            // preferências
+              const SESSION_UNLOCK_KEY = 'rt_audio_unlocked';    // por aba
+
+              let audioUnlocked = sessionStorage.getItem(SESSION_UNLOCK_KEY) === '1';
+              let pendingDings = 0;
+
+              const ding = new Audio('/audio/novo-pedido.mp3'); ding.preload = 'auto';
+              ding.addEventListener('error', (e) => console.warn('[RT] Falha ao carregar áudio', e));
+
+              const banner = document.getElementById('rt-audio-banner');
+              const showBanner = () => {
+                if (!banner) return;
+                if (localStorage.getItem(OPT_OUT_KEY) === '1') return; // respeita “não mostrar de novo”
+                banner.style.display = 'flex';
+              };
+              const hideBanner = () => { if (banner) banner.style.display = 'none'; };
+
+              // tenta liberar áudio silenciosamente em interações do usuário
+              async function tryUnlockAudio(source) {
+                if (audioUnlocked) return true;
+                try {
+                  await ding.play();        // alguns browsers liberam com 1ª interação
+                  ding.pause(); ding.currentTime = 0;
+                  audioUnlocked = true;
+                  sessionStorage.setItem(SESSION_UNLOCK_KEY, '1');
+                  hideBanner();
+                  if (pendingDings > 0) { pendingDings = 0; ding.currentTime = 0; await ding.play().catch(()=>{}); }
+                  return true;
+                } catch {
+                  // não libera aqui; só mostra o banner quando realmente precisar tocar
+                  return false;
+                }
+              }
+
+              ['click','keydown','touchstart'].forEach(ev =>
+                window.addEventListener(ev, () => tryUnlockAudio(ev), { once: true })
+              );
+
+              // botões do banner (opcional: clique no próprio banner = tentar liberar)
+              if (banner) {
+                banner.addEventListener('click', () => tryUnlockAudio('banner'));
+                // suporte “não mostrar de novo” via botão X se você quiser:
+                // <div id="rt-audio-banner"><button id="rt-audio-never" ...>×</button> Ativar som...</div>
+                const never = document.getElementById('rt-audio-never');
+                if (never) never.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  localStorage.setItem(OPT_OUT_KEY, '1');
+                  hideBanner();
+                });
+              }
+
+              // notificações do sistema (opcional)
+              if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission().catch(()=>{});
+              }
+              function notify(payload) {
+                try {
+                  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+                  const body = `#${payload.id} • ${payload.cliente}\nTotal: ${(payload.valor||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}`;
+                  const n = new Notification('Novo pedido pago!', { body, icon: '/favicon.ico', tag: 'pedido-pago' });
+                  n.onclick = () => window.focus();
+                } catch {}
+              }
+
+              let unreadNotif = 0;
+              const notifEl = document.getElementById('notif-badge');
+              const baseTitle = document.title;
+              function incNotifBadge() {
+                unreadNotif++;
+                if (notifEl) { notifEl.textContent = String(unreadNotif); notifEl.classList.remove('visually-hidden'); }
+                document.title = `(${unreadNotif}) ${baseTitle}`;
+              }
+              window.addEventListener('focus', () => {
+                unreadNotif = 0;
+                if (notifEl) { notifEl.textContent = '0'; notifEl.classList.add('visually-hidden'); }
+                document.title = baseTitle;
+              });
+
+              const connection = new signalR.HubConnectionBuilder()
+                .withUrl('/hubs/pedidos')
+                .withAutomaticReconnect()
+                .build();
+
+              connection.on('NewOrder', async payload => {
+                // tenta tocar; se não conseguir (autoplay), só então mostra o banner
+                let played = false;
+                if (document.visibilityState === 'visible') {
+                  try { ding.currentTime = 0; await ding.play(); played = true; }
+                  catch { played = false; }
+                }
+                if (!played) {
+                  pendingDings++;
+                  // só mostra banner quando realmente há algo pra tocar e o usuário não optou por esconder
+                  showBanner();
+                }
+
+                if (window.showToast) window.showToast(`Novo pedido pago #${payload.id} de ${payload.cliente}`, true);
+                notify(payload); incNotifBadge();
+                if (navigator.vibrate) navigator.vibrate(120);
+              });
+
+              connection.start()
+                .then(() => {
+                  console.log('[RT] SignalR conectado');
+                  // ⚠️ não chama showBanner() aqui: não queremos mostrar no load.
+                  // o banner só aparece se chegar notificação e o áudio não puder tocar.
+                })
+                .catch(err => console.error('[RT] Erro ao conectar SignalR:', err));
+            })();
+        </script>
+
+    }
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

@@ -1,44 +1,25 @@
 ﻿/* ============ PedidosAdmin (Orders) ============ */
-/* Depende das variáveis globais do site:
-   --brand-start, --brand-end, --primary, --primary-dark,
-   --dark, --light, --gray, --text-dark, --text-light,
-   --primary-grad, --mbn-height
-*/
+/* Usa as variáveis DO SITE. Mantém layout do modelo, só troca cores por vars globais. */
 
-/* ===== Paleta de cores (fallback local – remova se já vem do site) ===== */
+/* Altura do bottom-nav vinda do site (com fallback) */
 :root {
-    /* marca */
-    --brand-start: #6a11cb; /* roxo */
-    --brand-end: #2575fc; /* azul  */
-    --primary: #2575fc; /* azul sólido para bordas/textos */
-    --primary-dark: #1e56d9;
-    /* base */
-    --dark: #111827; /* quase preto */
-    --light: #ffffff;
-    --gray: #f5f5f7;
-    --text-dark: #111827;
-    --text-light: #6b7280;
-    /* util */
-    --primary-grad: linear-gradient(135deg,var(--brand-start),var(--brand-end));
-    --shadow-1: 0 4px 20px rgba(0,0,0,.08);
-    /* altura do bottom-nav (ajuste se diferente) */
-    --mbn-height: 68px;
+    --mbn-height: var(--mbn-height, 68px);
 }
 
-/* -------- Fix 3: espaço para o bottom-nav não sobrepor o conteúdo -------- */
+/* Container principal (reserva espaço p/ bottom-nav mobile) */
 .orders-admin {
     padding-bottom: calc(var(--mbn-height) + 16px);
 }
 
     .orders-admin h2 {
         font-weight: 700;
-        color: var(--dark);
+        color: var(--text-dark, #111827);
         margin: 0;
     }
 
-    /* Botões rápidos (relatório) */
+    /* Botões “brand” usando gradient oficial do site */
     .orders-admin .btn-brand {
-        background: var(--primary-grad, linear-gradient(135deg, var(--brand-start), var(--brand-end)));
+        background: var(--primary-grad, linear-gradient(135deg, var(--brand-start, #6a11cb), var(--brand-end, #2575fc)));
         color: #fff;
         border: 0;
         border-radius: 8px;
@@ -49,13 +30,13 @@
 
         .orders-admin .btn-brand:hover {
             transform: translateY(-1px);
-            box-shadow: 0 6px 18px color-mix(in srgb, var(--primary) 25%, transparent);
+            box-shadow: 0 6px 18px color-mix(in srgb, var(--primary, #2575fc) 25%, transparent);
             color: #fff;
         }
 
     .orders-admin .btn-outline-brand {
-        color: var(--primary);
-        border: 1px solid var(--primary);
+        color: var(--primary, #2575fc);
+        border: 1px solid var(--primary, #2575fc);
         border-radius: 8px;
         padding: .5rem 1.25rem;
         font-weight: 500;
@@ -64,57 +45,57 @@
     }
 
         .orders-admin .btn-outline-brand:hover {
-            background: var(--primary);
+            background: var(--primary, #2575fc);
             color: #fff;
         }
 
     /* Cabeçalho da lista */
     .orders-admin .header-row {
-        background: var(--light);
+        background: var(--light, #ffffff);
         border-radius: 12px;
         padding: 1rem 1.25rem;
         box-shadow: 0 4px 20px rgba(0,0,0,.08);
         border: 1px solid rgba(0,0,0,0.04);
     }
 
-    /* ---------------- Fix 2: tabela com scroll horizontal no mobile ---------------- */
+    /* Tabela com scroll no mobile */
     .orders-admin .table-container {
-        background: var(--light);
+        background: var(--light, #ffffff);
         border-radius: 12px;
         box-shadow: 0 4px 20px rgba(0,0,0,.08);
         border: 1px solid rgba(0,0,0,0.04);
-        overflow: auto; /* permite rolar horizontal e vertical quando necessário */
+        overflow: auto;
         -webkit-overflow-scrolling: touch;
     }
 
     .orders-admin .table {
         margin-bottom: 0;
-        min-width: 720px; /* força largura mínima para ativar o scroll em telas estreitas */
+        min-width: 720px;
     }
 
         .orders-admin .table thead th {
-            background-color: #f8fafc;
-            color: var(--text-dark);
+            background-color: var(--table-head-bg, #f8fafc);
+            color: var(--text-dark, #111827);
             font-weight: 600;
             padding: 1rem;
-            border-bottom: 2px solid #e2e8f0;
+            border-bottom: 2px solid var(--table-head-border, #e2e8f0);
         }
 
         .orders-admin .table td {
             padding: 1rem;
             vertical-align: middle;
-            border-color: #f1f5f9;
+            border-color: var(--table-row-border, #f1f5f9);
         }
 
     .orders-admin .table-striped tbody tr:nth-of-type(odd) {
-        background-color: #fafafb;
+        background-color: var(--table-row-alt, #fafafb);
     }
 
     .orders-admin .table tbody tr:hover {
-        background-color: #f8fafc;
+        background-color: var(--table-row-hover, #f8fafc);
     }
 
-    /* Estado de carregamento do tbody (refresh/SignalR) */
+    /* Estado de carregamento (refresh/SignalR) */
     .orders-admin #tbodyPedidos.is-loading {
         opacity: .6;
         filter: grayscale(.05);
@@ -128,19 +109,19 @@
             right: .75rem;
             top: .5rem;
             font-size: .85rem;
-            color: var(--text-light);
+            color: var(--text-light, #6b7280);
         }
 
-    /* Botões de ação na tabela */
+    /* Grupo de botões na tabela */
     .orders-admin .btn-group .btn {
         border-radius: 8px;
     }
 
-    /* --------------- Fix 1: gráficos responsivos (caso essa tela tenha charts) --------------- */
+    /* Gráficos responsivos (se houver) */
     .orders-admin .chart-wrap {
         position: relative;
         width: 100%;
-        height: 320px; /* altura controlada por CSS */
+        height: 320px;
     }
 
         .orders-admin .chart-wrap.h260 {
@@ -151,7 +132,6 @@
             height: 320px;
         }
 
-        /* o canvas ocupa 100% do container (Chart.js se adapta) */
         .orders-admin .chart-wrap canvas {
             display: block;
             width: 100% !important;
@@ -170,22 +150,15 @@
 }
 
 @media (max-width: 576px) {
-    /* Se quiser ocultar a coluna "Data" no mobile, descomente: */
-    /*
-  .orders-admin .table thead th:nth-child(2),
-  .orders-admin .table tbody td:nth-child(2) { display: none; }
-  */
-
     .orders-admin .chart-wrap {
         height: 260px;
     }
-    /* gráficos mais compactos no mobile */
 }
 
-/* Botão excluir (sobrescreve o Bootstrap) */
+/* Botão Excluir (aproveita a cor danger do tema se existir) */
 .btn-excluir {
-    background-color: #dc3545; /* vermelho bootstrap */
-    border-color: #dc3545;
+    background-color: var(--bs-danger, #dc3545);
+    border-color: var(--bs-danger, #dc3545);
     color: #fff;
     font-weight: 600;
     display: inline-flex;
@@ -195,8 +168,8 @@
 }
 
     .btn-excluir:hover {
-        background-color: #bb2d3b; /* vermelho mais escuro */
-        border-color: #b02a37;
+        background-color: color-mix(in srgb, var(--bs-danger, #dc3545) 85%, black);
+        border-color: color-mix(in srgb, var(--bs-danger, #dc3545) 85%, black);
         transform: scale(1.05);
         color: #fff;
     }
@@ -205,6 +178,7 @@
         font-size: 0.9rem;
     }
 
+/* Destaque de linha */
 tr.row-highlight {
     animation: rowFlash 2.5s ease-in-out 1;
 }
@@ -221,4 +195,290 @@ tr.row-highlight {
     100% {
         background-color: transparent;
     }
+}
+
+/* Badges/status + legenda com cores do tema */
+.pill-badge {
+    background: var(--primary-grad, linear-gradient(135deg, var(--brand-start, #6a11cb), var(--brand-end, #2575fc)));
+    color: #fff;
+    border-radius: 999px;
+    padding: .25rem .6rem;
+    font-size: .75rem;
+    font-weight: 600;
+}
+
+.quick-search .form-control {
+    min-width: 220px;
+}
+
+.status-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1rem;
+}
+
+    .status-legend .legend-item {
+        font-size: .875rem;
+        color: var(--text-light, #6b7280);
+        display: flex;
+        align-items: center;
+        gap: .4rem;
+    }
+
+    .status-legend .dot {
+        display: inline-block;
+        width: .65rem;
+        height: .65rem;
+        border-radius: 50%;
+        background: #cbd5e1;
+    }
+
+        .status-legend .dot.dot-info {
+            background: var(--bs-info, #0dcaf0);
+        }
+
+        .status-legend .dot.dot-primary {
+            background: var(--primary, #0d6efd);
+        }
+
+        .status-legend .dot.dot-warning {
+            background: var(--bs-warning, #ffc107);
+        }
+
+        .status-legend .dot.dot-secondary {
+            background: var(--bs-secondary, #6c757d);
+        }
+
+        .status-legend .dot.dot-dark {
+            background: var(--text-dark, #212529);
+        }
+
+        .status-legend .dot.dot-danger {
+            background: var(--bs-danger, #dc3545);
+        }
+
+/* Célula com título + subtítulo */
+.cell-primary .title {
+    font-weight: 700;
+    color: var(--text-dark, #111827);
+    line-height: 1.15;
+}
+
+.cell-primary .sub {
+    color: var(--text-light, #6b7280);
+    font-size: .85rem;
+}
+
+/* Badge de status – heurística por texto (mantém do modelo, mas com vars) */
+.badge-state[data-state*="Aguardando"] {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.badge-state[data-state*="Prepara"] {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.badge-state[data-state*="Pronto"] {
+    background: #fff7e6;
+    color: #b45309;
+}
+
+.badge-state[data-state*="Saiu"] {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.badge-state[data-state*="Entregue"] {
+    background: #e2e3e5;
+    color: var(--text-dark, #212529);
+}
+
+.badge-state[data-state*="Cancel"] {
+    background: #fde2e1;
+    color: #b42318;
+}
+
+/* Skeleton loader (cores neutras, não conflitam com tema) */
+.row-skeleton .sk-wrap {
+    display: grid;
+    gap: .5rem;
+    padding: .5rem 0;
+}
+
+.row-skeleton .sk-line {
+    height: 12px;
+    background: linear-gradient(90deg,#f2f4f8 25%,#e9eef5 37%,#f2f4f8 63%);
+    background-size: 400% 100%;
+    animation: skShine 1.2s ease-in-out infinite;
+    border-radius: 6px;
+}
+
+    .row-skeleton .sk-line.w-25 {
+        width: 25%;
+    }
+
+    .row-skeleton .sk-line.w-50 {
+        width: 50%;
+    }
+
+    .row-skeleton .sk-line.w-75 {
+        width: 75%;
+    }
+
+@keyframes skShine {
+    0% {
+        background-position: 100% 0
+    }
+
+    100% {
+        background-position: 0 0
+    }
+}
+
+@media (max-width: 768px) {
+    .orders-admin .table {
+        min-width: 640px;
+    }
+
+    .quick-search .form-control {
+        min-width: 160px;
+    }
+}
+/* ===== Tabela responsiva em "cards" (mobile) ===== */
+.responsive-table thead th {
+    background-color: var(--table-head-bg, #f8fafc);
+}
+
+/* Desktop/tablet: mantém comportamento atual */
+@media (min-width: 768px) {
+    .responsive-table {
+        min-width: 720px;
+    }
+}
+
+/* Mobile: transforma linhas em cards */
+@media (max-width: 767.98px) {
+
+    /* Esconde cabeçalho e empilha células */
+    .responsive-table thead {
+        position: absolute;
+        left: -9999px;
+        top: -9999px;
+        height: 0;
+        width: 0;
+        overflow: hidden;
+    }
+
+    .responsive-table,
+    .responsive-table tbody,
+    .responsive-table tr,
+    .responsive-table td {
+        display: block;
+        width: 100%;
+    }
+
+        /* Cada linha vira um "card" */
+        .responsive-table tr {
+            background: var(--light, #fff);
+            border: 1px solid rgba(0,0,0,.05);
+            border-radius: 12px;
+            box-shadow: 0 4px 14px rgba(0,0,0,.06);
+            margin: .5rem .25rem .875rem;
+            overflow: hidden;
+        }
+
+        /* Cada célula: label à esquerda + valor à direita */
+        .responsive-table td {
+            border: 0;
+            border-bottom: 1px solid var(--table-row-border, #eef2f7);
+            padding: .65rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            justify-content: space-between;
+        }
+
+            .responsive-table td:last-child {
+                border-bottom: 0;
+                padding-bottom: .85rem;
+            }
+
+            /* Label vindo de data-th */
+            .responsive-table td::before {
+                content: attr(data-th);
+                flex: 0 0 auto;
+                font-weight: 600;
+                color: var(--text-light, #6b7280);
+                margin-right: 1rem;
+            }
+
+            /* Conteúdo “Cliente” fica como bloco bonito */
+            .responsive-table td[data-th="Cliente"] {
+                padding-top: .9rem;
+            }
+
+                .responsive-table td[data-th="Cliente"]::before {
+                    content: ""; /* sem label aqui, já é autoexplicativo */
+                    display: none;
+                }
+
+        .responsive-table .cell-primary .title {
+            font-size: 1rem;
+        }
+
+        .responsive-table .cell-primary .sub {
+            font-size: .8rem;
+        }
+
+        /* Ações: botões quebram linha e alinham à direita */
+        .responsive-table td[data-th="Ações"] {
+            flex-wrap: wrap;
+            gap: .4rem;
+        }
+
+            .responsive-table td[data-th="Ações"]::before {
+                content: "Ações";
+                margin-right: auto; /* empurra label para esquerda */
+            }
+
+            .responsive-table td[data-th="Ações"] .btn-group {
+                width: 100%;
+                display: flex;
+                flex-wrap: wrap;
+                gap: .4rem;
+                justify-content: flex-end;
+            }
+
+            .responsive-table td[data-th="Ações"] form {
+                display: inline-block;
+            }
+
+        /* Badge/status ocupa a direita sem quebrar layout */
+        .responsive-table td[data-th="Status"] .badge {
+            margin-left: auto;
+        }
+
+    /* Tira o hover zebrado do Bootstrap no mobile */
+    .orders-admin .table-striped tbody tr:nth-of-type(odd) {
+        background: transparent;
+    }
+
+    /* Evita que o bottom-nav cubra os últimos cards */
+    .orders-admin .table-container {
+        padding-bottom: calc(var(--mbn-height, 68px) + 16px);
+    }
+}
+.badge {
+    display: inline-block;
+    padding: .35em .65em;
+    font-size: .75em;
+    font-weight: 700;
+    line-height: 1;
+    color: black;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: .25rem;
 }

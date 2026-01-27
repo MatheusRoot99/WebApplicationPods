@@ -155,3 +155,19 @@ if (typeof window.updateCartBadges !== 'function') {
     }, true);
 })();
 
+
+  // Atualiza o badge do carrinho a partir do endpoint Count
+    async function refreshCartBadge() {
+    try {
+      const r = await fetch('/Carrinho/Count', {cache: 'no-store' });
+    const {count} = await r.json();
+    const badge = document.querySelector('[data-cart-badge]');
+    if (!badge) return;
+      badge.textContent = count > 0 ? count : '';
+      badge.classList.toggle('show', count > 0);
+      // se você usa 'hidden' em vez de classe:
+      // badge.hidden = !(count > 0);
+    } catch (e) { /* silencia */}
+  }
+
+

@@ -2,6 +2,7 @@
 @model IEnumerable<ProdutoModel>
 
 @{
+    Layout = "_Layout";
     ViewData["Title"] = "Catálogo de Pods Eletrônicos";
 }
 
@@ -25,31 +26,9 @@
         </div>
     </header>
 
-    <!-- Alertas -->
+    <!-- Flash messages -->
     <div class="container container-full-lg">
-        @if (TempData["MensagemSucesso"] != null)
-        {
-            <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm mb-3" role="alert">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-check-circle me-2 fs-5"></i>
-                    <div class="flex-grow-1">@* @TempData["MensagemSucesso"] *@</div>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-                </div>
-            </div>
-            { TempData.Remove("MensagemSucesso"); }
-        }
-
-        @if (TempData["MensagemErro"] != null)
-        {
-            <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm mb-3" role="alert">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-exclamation-circle me-2 fs-5"></i>
-                    <div class="flex-grow-1">@* @TempData["MensagemErro"] *@</div>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-                </div>
-            </div>
-            { TempData.Remove("MensagemErro"); }
-        }
+        @await Html.PartialAsync("_Flash")
     </div>
 
     <!-- CONTEÚDO (100% largura no desktop) -->

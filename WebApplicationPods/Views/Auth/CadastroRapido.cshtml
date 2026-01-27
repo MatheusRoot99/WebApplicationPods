@@ -1,5 +1,4 @@
 ﻿@model WebApplicationPods.Models.CadastroRapidoViewModel
-
 @{
     ViewData["Title"] = "Cadastro Rápido";
 }
@@ -7,64 +6,63 @@
 @section Styles {
     <link rel="stylesheet" href="~/css/cadastro.css" asp-append-version="true" />
     <style>
-        /* ====== Somente CORES da página (sem mudar layout) ====== */
         :root {
-            --brand-start: #6a11cb; /* roxo do site */
-            --brand-end: #2575fc; /* azul do site */
+            --brand-start: #6a11cb;
+            --brand-end: #2575fc;
             --brand-end-25: rgba(37,117,252,.25);
         }
 
-        /* Header do card com gradiente da marca */
-        .cadastro-card .card-header {
-            background: linear-gradient(135deg,var(--brand-start) 0%, var(--brand-end) 100%);
-            color: #fff;
+        /* Overlay para travar a tela sem desabilitar inputs */
+        .form-lock {
+            position: fixed;
+            inset: 0;
+            background: rgba(255,255,255,.35);
+            backdrop-filter: blur(1px);
+            pointer-events: auto;
+            z-index: 9999;
+            display: none;
         }
 
-        .cadastro-card .card-title {
-            color: #fff;
-        }
-
-        .cadastro-card .card-subtitle {
-            color: rgba(255,255,255,.9);
-        }
-
-        /* Título das seções */
-        .form-section .section-title {
-            color: #374151;
-        }
-
-        /* Botão primário com gradiente da marca */
-        .btn-primary {
-            background: linear-gradient(135deg,var(--brand-start) 0%, var(--brand-end) 100%);
-            border: 0;
-            color: #fff;
-            font-weight: 700;
-        }
-
-            .btn-primary:hover {
-                filter: brightness(1.03);
-                box-shadow: 0 10px 20px var(--brand-end-25);
+            .form-lock.show {
+                display: block;
             }
 
-        /* Foco dos inputs na cor da marca */
-        .form-control:focus {
-            border-color: var(--brand-end);
-            box-shadow: 0 0 0 .2rem var(--brand-end-25);
+        /* feedback visual de inválido */
+        .is-invalid {
+            border-color: #dc3545 !important;
         }
 
-        /* Checkbox com cor da marca (browsers modernos) */
-        .form-check-input {
-            accent-color: var(--brand-end);
+        .validation-message {
+            color: #dc3545;
+            font-size: .875rem;
+            min-height: 1em;
+            display: block;
         }
 
-        /* Links auxiliares na cor da marca */
-        .card-body a {
-            color: var(--brand-end);
+        /* spinner do CEP */
+        .input-with-feedback {
+            position: relative;
         }
 
-        /* Spinner do CEP (seu CSS atual usa .loading-spinner) */
-        .input-with-feedback .loading-spinner {
-            border-top-color: var(--brand-end) !important;
+        .loading-spinner {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid #e5e7eb;
+            border-top-color: var(--brand-end);
+            position: absolute;
+            right: .6rem;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0;
+            transition: opacity .2s ease;
+            animation: spin 1s linear infinite;
+        }
+
+        @@keyframes spin {
+            to {
+                transform: translateY(-50%) rotate(360deg);
+            }
         }
     </style>
 }
@@ -81,77 +79,86 @@
                 <input type="hidden" asp-for="Telefone" />
                 <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
 
-                <!-- Seção de Dados Pessoais -->
+                <!-- Dados Pessoais -->
+                <!-- Dados Pessoais -->
                 <fieldset class="form-section">
                     <legend class="section-title">Dados Pessoais</legend>
 
                     <div class="form-row">
-                        <div class="form-group">
+                        <div class="form-group col-8">
                             <label asp-for="Nome" class="form-label"></label>
-                            <input asp-for="Nome" class="form-control" required
-                                   placeholder="Digite seu nome completo" />
+                            <input asp-for="Nome" class="form-control" required placeholder="Digite seu nome completo" />
                             <span asp-validation-for="Nome" class="validation-message"></span>
                         </div>
 
-                        <div class="form-group">
+                        <div class="form-group col-4">
+                            <label asp-for="CPF" class="form-label"></label>
+                            <input asp-for="CPF" id="cpf" class="form-control" placeholder="000.000.000-00" />
+                            <span asp-validation-for="CPF" class="validation-message"></span>
+                        </div>
+
+                        <div class="form-group col-4">
+                            <label asp-for="DataNascimento" class="form-label"></label>
+                            <input asp-for="DataNascimento" id="dob" class="form-control" type="date" />
+                            <span asp-validation-for="DataNascimento" class="validation-message"></span>
+                        </div>
+
+                        <div class="form-group col-8">
                             <label asp-for="Email" class="form-label"></label>
-                            <input asp-for="Email" class="form-control" type="email" required
-                                   placeholder="exemplo@email.com" />
+                            <input asp-for="Email" class="form-control" type="email" required placeholder="exemplo@email.com" />
                             <span asp-validation-for="Email" class="validation-message"></span>
                         </div>
                     </div>
                 </fieldset>
 
-                <!-- Seção de Endereço -->
+                <!-- Endereço -->
                 <fieldset class="form-section">
                     <legend class="section-title">Endereço Principal</legend>
 
                     <div class="form-row">
-                        <div class="form-group cep-group">
+                        <div class="form-group col-3 cep-group">
                             <label asp-for="CEP" class="form-label"></label>
                             <div class="input-with-feedback">
-                                <input asp-for="CEP" id="cep" class="form-control" placeholder="00000-000" />
+                                <input asp-for="CEP" id="cep" class="form-control" placeholder="00000-000" inputmode="numeric" autocomplete="postal-code" />
                                 <div class="loading-spinner"></div>
                             </div>
                             <span asp-validation-for="CEP" class="validation-message"></span>
                             <small class="form-hint">Digite o CEP e aguarde o preenchimento automático</small>
                         </div>
-                    </div>
 
-                    <div class="form-row">
-                        <div class="form-group address-main">
+                        <div class="form-group col-7">
                             <label asp-for="Logradouro" class="form-label"></label>
                             <input asp-for="Logradouro" id="logradouro" class="form-control" placeholder="Rua, Avenida, etc." />
                             <span asp-validation-for="Logradouro" class="validation-message"></span>
                         </div>
 
-                        <div class="form-group address-number">
+                        <div class="form-group col-2">
                             <label asp-for="Numero" class="form-label"></label>
                             <input asp-for="Numero" id="numero" class="form-control" placeholder="Nº" />
                             <span asp-validation-for="Numero" class="validation-message"></span>
                         </div>
 
-                        <div class="form-group address-complement">
+                        <div class="form-group col-12">
                             <label asp-for="Complemento" class="form-label"></label>
-                            <input asp-for="Complemento" id="complemento" class="form-control" placeholder="Apto, Bloco, etc." />
+                            <input asp-for="Complemento" id="complemento" class="form-control" placeholder="etc." />
                             <span asp-validation-for="Complemento" class="validation-message"></span>
                         </div>
                     </div>
 
                     <div class="form-row">
-                        <div class="form-group neighborhood">
+                        <div class="form-group col-5">
                             <label asp-for="Bairro" class="form-label"></label>
                             <input asp-for="Bairro" id="bairro" class="form-control" placeholder="Seu bairro" />
                             <span asp-validation-for="Bairro" class="validation-message"></span>
                         </div>
 
-                        <div class="form-group city">
+                        <div class="form-group col-5">
                             <label asp-for="Cidade" class="form-label"></label>
                             <input asp-for="Cidade" id="cidade" class="form-control" placeholder="Sua cidade" />
                             <span asp-validation-for="Cidade" class="validation-message"></span>
                         </div>
 
-                        <div class="form-group state">
+                        <div class="form-group col-2">
                             <label asp-for="Estado" class="form-label"></label>
                             <input asp-for="Estado" id="estado" class="form-control" placeholder="UF" maxlength="2" />
                             <span asp-validation-for="Estado" class="validation-message"></span>
@@ -164,10 +171,26 @@
                     </div>
                 </fieldset>
 
+
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-check-circle"></i> Finalizar Cadastro
+                    <button id="btnSubmit"
+                            type="submit"
+                            class="btn btn-primary btn-submit"
+                            aria-live="polite"
+                            aria-busy="false"
+                            data-text-default="Finalizar Cadastro"
+                            data-text-loading="Enviando..."
+                            data-text-success="Pronto!">
+                        <i class="fas fa-check-circle btn-icon" aria-hidden="true"></i>
+                        <span class="btn-text">Finalizar Cadastro</span>
+                        <span class="btn-spinner" aria-hidden="true"></span>
                     </button>
+
+                    <a href="@(!string.IsNullOrEmpty(ViewBag.ReturnUrl) ? (string)ViewBag.ReturnUrl : Url.Action("Index", "Carrinho"))"
+                       class="btn btn-outline-secondary"
+                       onclick="if (history.length > 1) { history.back(); return false; }">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
                 </div>
             </form>
         </div>
@@ -175,16 +198,120 @@
 </div>
 
 @section Scripts {
-    <script src="~/js/cep.js" asp-append-version="true"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
-    <partial name="_ValidationScriptsPartial" />
-    <script>
-        $(function () {
-            $('#cep').inputmask('99999-999');
-            $('#estado').inputmask('AA', { placeholder: "SP", casing: 'upper' });
-        });
-    </script>
-    <script>
+    <!-- Inputmask core (sem jQuery) -->
+    <script src="https://cdn.jsdelivr.net/npm/inputmask@5.0.8/dist/inputmask.min.js"></script>
 
+    <!-- Script de CEP (único local de lógica de CEP) -->
+    <script src="~/js/cep.js" asp-append-version="true"></script>
+
+    <!-- Overlay -->
+    <div id="formLock" class="form-lock" aria-hidden="true"></div>
+
+    <!-- Submit seguro + máscaras de CPF/UF -->
+    <script>
+        (function () {
+          const form = document.querySelector('form.cadastro-form');
+          const btn  = document.getElementById('btnSubmit');
+          const lock = document.getElementById('formLock');
+          if (!form || !btn || !lock) return;
+
+          // Máscaras CPF/UF (CEP já é feito no cep.js)
+          try {
+            const uf = document.getElementById('estado');
+            if (window.Inputmask && uf) Inputmask('AA', { casing:'upper', placeholder:'UF' }).mask(uf);
+            const cpf = document.getElementById('cpf');
+            if (window.Inputmask && cpf) Inputmask('999.999.999-99', { showMaskOnHover:false, clearIncomplete:true }).mask(cpf);
+          } catch {}
+
+          // Validação visual (marca só errados)
+          const $all = (s, r) => Array.from((r||document).querySelectorAll(s));
+          const setTxt = (el, t) => { if (el) el.textContent = t; };
+
+          function clearClientErrors() {
+            $all('input, select, textarea', form).forEach(el => el.classList.remove('is-invalid'));
+          }
+          function applyClientErrors(invalidEls) {
+            invalidEls.forEach(el => {
+              el.classList.add('is-invalid');
+              const name = el.getAttribute('name');
+              const span = form.querySelector(`span[data-valmsg-for="${name}"]`);
+              if (span) setTxt(span, el.validationMessage || 'Campo inválido');
+            });
+          }
+
+          let submitted = false;
+          const setBtnState = (state) => {
+            btn.classList.toggle('is-loading', state === 'loading');
+            btn.classList.toggle('is-success', state === 'success');
+            btn.setAttribute('aria-busy', state === 'loading' ? 'true' : 'false');
+            const txt = btn.querySelector('.btn-text');
+            if (!txt) return;
+            if (state === 'loading')      txt.textContent = btn.dataset.textLoading  || 'Enviando...';
+            else if (state === 'success') txt.textContent = btn.dataset.textSuccess  || 'Pronto!';
+            else                          txt.textContent = btn.dataset.textDefault  || 'Finalizar Cadastro';
+          };
+
+          form.addEventListener('submit', function (e) {
+            if (submitted) { e.preventDefault(); return false; }
+            if (!form.checkValidity()) {
+              e.preventDefault();
+              clearClientErrors();
+              const invalidEls = $all('input, select, textarea', form).filter(el => el.willValidate && !el.checkValidity());
+              applyClientErrors(invalidEls);
+              invalidEls[0]?.scrollIntoView({ behavior:'smooth', block:'center' });
+              invalidEls[0]?.focus({ preventScroll:true });
+              return false;
+            }
+
+            submitted = true;
+            setBtnState('loading');
+            btn.disabled = true;
+            lock.classList.add('show');
+
+            // fallback: se não navegar, destrava em 8s
+            setTimeout(() => {
+              if (document.visibilityState === 'visible') {
+                submitted = false;
+                btn.disabled = false;
+                setBtnState('default');
+                lock.classList.remove('show');
+              }
+            }, 8000);
+          });
+
+          window.addEventListener('beforeunload', () => setBtnState('success'));
+        })();
     </script>
+    <script>
+        // Ajusta a altura para cobrir o viewport real (iOS/Android com teclado)
+        (function(){
+          function apply(){
+            var h = window.visualViewport ? visualViewport.height : window.innerHeight;
+            if (!h || h < 100) h = window.innerHeight;
+            document.documentElement.style.setProperty('--vhpx', h + 'px');
+            // se quiser usar: .cadastro-container{ min-height: var(--vhpx); }
+          }
+          apply();
+          addEventListener('resize', apply);
+          if (window.visualViewport){
+            visualViewport.addEventListener('resize', apply);
+            visualViewport.addEventListener('scroll', apply);
+          }
+        })();
+    </script>
+    <script>
+        (function(){
+          const isTouch = matchMedia('(pointer: coarse)').matches;
+          if (!isTouch) return;
+          document.addEventListener('focusin', (e) => {
+            if (!e.target.closest('.cadastro-card')) return;
+            if (!e.target.matches('input, textarea, select')) return;
+            setTimeout(() => {
+              try { e.target.scrollIntoView({ block:'center', inline:'nearest' }); } catch {}
+            }, 120);
+          });
+        })();
+    </script>
+
+    <partial name="_ValidationScriptsPartial" />
 }

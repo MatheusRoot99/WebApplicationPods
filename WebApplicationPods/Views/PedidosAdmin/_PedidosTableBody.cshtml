@@ -2,138 +2,132 @@
 @using WebApplicationPods.Models
 @model IEnumerable<PedidoModel>
 
-@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
-
 @{
     // Dicionário de transições permitido exposto pelo controller
-    // Tipo: IDictionary<string, string[]>
     var allowed = ViewBag.Allowed as IDictionary<string, string[]>;
     var pedidos = Model?.OrderByDescending(x => x.DataPedido) ?? Enumerable.Empty<PedidoModel>();
 }
 
-<div class="container my-3">
-    <h2 class="mb-3">Pedidos</h2>
+@foreach (var p in pedidos)
+{
+    var statusAtual = p.Status ?? string.Empty;
 
-    <div class="table-responsive">
-        <table class="table table-striped align-middle">
-            <thead class="table-dark">
-                <tr>
-                    <th>Cliente</th>
-                    <th>Data</th>
-                    <th>Total</th>
-                    <th>Método</th>
-                    <th>Status</th>
-                    <th class="text-end">Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var p in pedidos)
-                {
-                    var statusAtual = p.Status ?? string.Empty;
+    // Próximos estados possíveis conforme o mapa
+    var proximas = Array.Empty<string>();
+    if (allowed != null && allowed.TryGetValue(statusAtual, out var arr) && arr != null)
+        proximas = arr;
 
-                    // Próximos estados possíveis conforme o mapa
-                    var proximas = Array.Empty<string>();
-                    if (allowed != null && allowed.TryGetValue(statusAtual, out var arr) && arr != null)
+    // Pagamento PIX manual pendente
+    var pagamentoPixManualPendente = p.Pagamentos?
+        .OrderByDescending(pg => pg.Id)
+        .FirstOrDefault(pg =>
+            pg.Metodo == PaymentMethod.Pix &&
+            string.Equals(pg.Provider, "PixManual", StringComparison.OrdinalIgnoreCase) &&
+            pg.Status == PaymentStatus.Pending);
+
+    // Dinheiro / Cartão de Débito (na entrega)
+    var metodo = (p.MetodoPagamento ?? string.Empty).ToLowerInvariant();
+    var isDinheiroOuDebito = metodo == "dinheiro" || metodo == "cartão de débito" || metodo == "cartao de debito";
+    var podeAprovarNaEntrega =
+        isDinheiroOuDebito &&
+        string.Equals(p.Status, "Aguardando Pagamento (Entrega)", StringComparison.OrdinalIgnoreCase);
+
+    <tr data-id="@p.Id">
+        <td data-th="Cliente">
+            <div class="cell-primary">
+                <div class="title">@((p.Cliente?.Nome) ?? "—")</div>
+                <div class="sub">@($"#{p.Id} • {p.PedidoItens?.Count ?? 0} itens")</div>
+            </div>
+        </td>
+
+        <td data-th="Data">@p.DataPedido.ToString("dd/MM HH:mm")</td>
+        <td data-th="Total">@p.ValorTotal.ToString("C")</td>
+        <td data-th="Pagamento">@((p.MetodoPagamento ?? "—"))</td>
+        <td data-th="Status">
+            <span class="badge badge-state" data-state="@statusAtual">@statusAtual</span>
+        </td>
+
+        <td data-th="Ações" class="text-end">
+            <!-- Grupo de ações: todos com class .js-inline-action para AJAX -->
+            @if (proximas.Any())
+            {
+                <div class="btn-group btn-group-sm" role="group" aria-label="Ações do pedido">
+                    @foreach (var prox in proximas)
                     {
-                        proximas = arr;
+                        var lowered = (prox ?? string.Empty).ToLowerInvariant();
+                        var label = prox;
+                        var css = "btn btn-outline-secondary btn-sm";
+
+                        if (lowered.Contains("pago")) { label = "Aprovar"; css = "btn btn-success btn-sm"; }
+                        else if (lowered.Contains("prepara")) { label = "Iniciar"; css = "btn btn-primary btn-sm"; }
+                        else if (lowered.Contains("pronto")) { label = "Pronto"; css = "btn btn-warning btn-sm"; }
+                        else if (lowered.Contains("saiu") && lowered.Contains("entrega")) { label = "Saiu p/ Entrega"; css = "btn btn-secondary btn-sm"; }
+                        else if (lowered.Contains("entregue")) { label = "Entregue"; css = "btn btn-dark btn-sm"; }
+                        else if (lowered.Contains("cancel")) { label = "Cancelar"; css = "btn btn-danger btn-sm"; }
+
+                        <form class="d-inline js-inline-action"
+                              data-action="status"
+                              data-success="Status atualizado!"
+                              data-confirm="@((lowered.Contains("cancel")) ? "Confirmar cancelamento do pedido?" : "")"
+                              action="@Url.Action("AtualizarStatus", "PedidosAdmin")"
+                              method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@p.Id" />
+                            <input type="hidden" name="status" value="@prox" />
+                            <button type="submit" class="@css">@label</button>
+                        </form>
                     }
+                </div>
+            }
 
-                    // Procura um pagamento PIX manual pendente deste pedido (se existir)
-                    var pagamentoPixManualPendente = p.Pagamentos?
-                    .OrderByDescending(pg => pg.Id)
-                    .FirstOrDefault(pg =>
-                    pg.Metodo == PaymentMethod.Pix &&
-                    string.Equals(pg.Provider, "PixManual", StringComparison.OrdinalIgnoreCase) &&
-                    pg.Status == PaymentStatus.Pending);
+            @* PIX manual pendente: botão para confirmar recebimento *@
+            @if (pagamentoPixManualPendente != null)
+            {
+                <form class="d-inline js-inline-action"
+                      data-action="confirmar-pix"
+                      data-success="PIX confirmado e estoque baixado!"
+                      action="@Url.Action("ConfirmarPixManual", "Pagamento")"
+                      method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="pagamentoId" value="@pagamentoPixManualPendente.Id" />
+                    <button type="submit" class="btn btn-success btn-sm" title="Marcar PIX como recebido e baixar estoque">
+                        Confirmar PIX recebido
+                    </button>
+                </form>
+            }
 
-                    // Dinheiro / Cartão de Débito (na entrega)
-                    var metodo = (p.MetodoPagamento ?? string.Empty).ToLowerInvariant();
-                    var isDinheiroOuDebito =
-                    metodo == "dinheiro" ||
-                    metodo == "cartão de débito" ||
-                    metodo == "cartao de debito";
+            @* Dinheiro / Débito na entrega: aprovar e baixar estoque *@
+            @if (podeAprovarNaEntrega)
+            {
+                <form class="d-inline js-inline-action"
+                      data-action="aprovar-entrega"
+                      data-success="Pagamento aprovado na entrega e estoque baixado!"
+                      action="@Url.Action("AprovarPagamentoEntrega", "Pagamento")"
+                      method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="pedidoId" value="@p.Id" />
+                    <button type="submit" class="btn btn-success btn-sm">
+                        Aprovar pagamento &amp; baixar estoque
+                    </button>
+                </form>
+            }
 
-                    // Mostra o botão de aprovar quando estiver aguardando pagamento na entrega
-                    var podeAprovarNaEntrega =
-                    isDinheiroOuDebito &&
-                    string.Equals(p.Status, "Aguardando Pagamento (Entrega)", StringComparison.OrdinalIgnoreCase);
-
-                    <tr data-id="@p.Id">
-                        <td>@(p.Cliente?.Nome ?? "—")</td>
-                        <td>@p.DataPedido.ToString("dd/MM HH:mm")</td>
-                        <td>@p.ValorTotal.ToString("C")</td>
-                        <td>@(p.MetodoPagamento ?? "—")</td>
-                        <td>
-                            <span class="badge bg-info">@statusAtual</span>
-                        </td>
-                        <td class="text-end">
-                            @* Botões de transição de status *@
-                            @if (proximas.Any())
-                            {
-                                <form asp-controller="PedidosAdmin" asp-action="AtualizarStatus" method="post" class="d-inline">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="id" value="@p.Id" />
-                                    <div class="btn-group btn-group-sm" role="group" aria-label="Ações do pedido">
-                                        @foreach (var prox in proximas)
-                                        {
-                                            var lowered = (prox ?? string.Empty).ToLowerInvariant();
-
-                                            var label = prox;
-                                            var css = "btn btn-outline-secondary";
-
-                                            if (lowered.Contains("pago")) { label = "Aprovar"; css = "btn btn-success"; }
-                                            else if (lowered.Contains("prepara")) { label = "Iniciar"; css = "btn btn-primary"; }
-                                            else if (lowered.Contains("pronto")) { label = "Pronto"; css = "btn btn-warning"; }
-                                            else if (lowered.Contains("saiu") && lowered.Contains("entrega")) { label = "Saiu p/ Entrega"; css = "btn btn-secondary"; }
-                                            else if (lowered.Contains("entregue")) { label = "Entregue"; css = "btn btn-dark"; }
-                                            else if (lowered.Contains("cancel")) { label = "Cancelar"; css = "btn btn-danger"; }
-
-                                            <button type="submit" name="status" value="@prox" class="@css">@label</button>
-                                        }
-                                    </div>
-                                </form>
-                            }
-
-                            @* PIX manual pendente: botão para confirmar recebimento *@
-                            @if (pagamentoPixManualPendente != null)
-                            {
-                                <form asp-controller="Pagamento" asp-action="ConfirmarPixManual" method="post" class="d-inline">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="pagamentoId" value="@pagamentoPixManualPendente.Id" />
-                                    <button type="submit" class="btn btn-success btn-sm" title="Marcar pagamento PIX como recebido e baixar estoque">
-                                        Confirmar PIX recebido
-                                    </button>
-                                </form>
-                            }
-
-                            @* Dinheiro / Débito na entrega: aprovar e baixar estoque *@
-                            @if (podeAprovarNaEntrega)
-                            {
-                                <form asp-controller="Pagamento" asp-action="AprovarPagamentoEntrega" method="post" class="d-inline">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="pedidoId" value="@p.Id" />
-                                    <button type="submit" class="btn btn-success btn-sm" title="Aprovar e baixar estoque">
-                                        Aprovar pagamento na entrega &amp; baixar estoque
-                                    </button>
-                                </form>
-                            }
-
-                            @* Botão de exclusão só aparece para cancelados *@
-                            @if (string.Equals(p.Status, "Cancelado", StringComparison.OrdinalIgnoreCase))
-                            {
-                                <form asp-controller="PedidosAdmin" asp-action="Excluir" method="post" class="d-inline"
-                                      onsubmit="return confirm('Excluir este pedido?');">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="id" value="@p.Id" />
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Excluir">
-                                        <i class="bi bi-trash"></i> Excluir
-                                    </button>
-                                </form>
-                            }
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-</div>
+            @* Botão de exclusão só aparece para cancelados *@
+            @if (string.Equals(p.Status, "Cancelado", StringComparison.OrdinalIgnoreCase))
+            {
+                <form class="d-inline js-inline-action"
+                      data-action="excluir"
+                      data-success="Pedido excluído."
+                      data-confirm="Excluir este pedido?"
+                      action="@Url.Action("Excluir", "PedidosAdmin")"
+                      method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@p.Id" />
+                    <button type="submit" class="btn btn-sm btn-excluir">
+                        <i class="bi bi-trash"></i> Excluir
+                    </button>
+                </form>
+            }
+        </td>
+    </tr>
+}

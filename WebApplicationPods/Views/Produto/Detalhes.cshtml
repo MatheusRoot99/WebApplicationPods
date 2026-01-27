@@ -1,40 +1,75 @@
 ﻿@using System.Globalization
 @model WebApplicationPods.Models.ProdutoDetalhesViewModel
 @{
+    Layout = "_Layout";
     ViewData["Title"] = Model?.Produto?.Nome ?? "Produto";
 
     var temPromocao = Model?.Produto?.PrecoPromocional.HasValue == true && Model.Produto.PrecoPromocional!.Value < Model.Produto.Preco;
     var precoBase = temPromocao ? Model!.Produto!.PrecoPromocional!.Value : Model!.Produto!.Preco;
+
+    var precoAvista = Math.Round(precoBase * 0.90m, 2);
     var totalSabores = Model?.SaboresDisponiveis?.Count ?? 0;
     var totalSaboresComEstoque = Model?.SaboresDisponiveis?.Count(s => s.Quantidade > 0) ?? 0;
 }
 
+<!-- CSS específico desta página -->
 <link rel="stylesheet" href="~/css/produto-detalhes.css" asp-append-version="true" />
 
-<!-- 👇 Passa a rota para o JS via data-attribute -->
+@section Styles {
+    <style>
+        /* ===== respiro APENAS nesta página para conviver com o BottomNav ===== */
+        .produto-detalhes-container {
+            padding-bottom: calc(var(--mbn-height) + env(safe-area-inset-bottom) + 16px) !important;
+        }
+
+        /* desktop não precisa do respiro extra */
+        @@media (min-width: 992px) {
+            .produto-detalhes-container
+
+        {
+            padding-bottom: 2rem !important;
+        }
+
+        }
+
+        /* a CTA “gruda” acima do BottomNav no mobile */
+        @@media (max-width: 991.98px) {
+            .sticky-cta
+
+        {
+            position: sticky;
+            bottom: calc(var(--mbn-height) + env(safe-area-inset-bottom));
+            z-index: 5; /* acima do conteúdo, abaixo do BottomNav */
+        }
+
+        }
+    </style>
+}
+
+<!-- dados para JS -->
 <div id="product-data"
      data-stock="@Model.Produto.Estoque"
      data-is-out-of-stock="@(Model.Produto.Estoque <= 0 ? "true" : "false")"
      data-resumo-url="@Url.Action("Resumo", "Carrinho")"
      hidden></div>
 
-<div class="produto-detalhes-container" itemscope itemtype="https://schema.org/Product">
+<!-- wrapper principal marcado como page-content -->
+<div class="produto-detalhes-container page-content" itemscope itemtype="https://schema.org/Product">
+
+    <!-- voltar -->
     <div class="navigation-header d-flex align-items-center gap-2 flex-wrap">
         <a href="javascript:history.back()" class="btn-voltar btn btn-light d-inline-flex align-items-center">
             <i class="fas fa-arrow-left me-2" aria-hidden="true"></i><span>Voltar</span>
         </a>
     </div>
 
+    <!-- título + rating -->
     <header class="product-header">
         <h1 class="product-title" itemprop="name">@Model.Produto.Nome</h1>
-
         <div class="product-rating" aria-label="Avaliação média 4,8 de 5">
             <div class="stars" aria-hidden="true">
-                <i class="fas fa-star"></i>
-                <i class="fas fa-star"></i>
-                <i class="fas fa-star"></i>
-                <i class="fas fa-star"></i>
-                <i class="fas fa-star-half-alt"></i>
+                <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                <i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
             </div>
             <span class="rating-text">
                 <span itemprop="aggregateRating" itemscope itemtype="https://schema.org/AggregateRating">
@@ -45,7 +80,9 @@
         </div>
     </header>
 
+    <!-- grid principal -->
     <div class="produto-main-content">
+        <!-- coluna imagem -->
         <div class="produto-image-column">
             <div class="product-image-container">
                 @if (!string.IsNullOrEmpty(Model!.Produto!.ImagemUrl))
@@ -66,11 +103,12 @@
 
                 <ul class="product-badges" aria-label="Diferenciais do produto">
                     <li class="badge-item"><i class="fas fa-truck" aria-hidden="true"></i><span>Entrega Rápida</span></li>
-                    <li class="badge-item"><i class="fas fa-credit-card" aria-hidden="true"></i><span>Pagamento Seguro</span></li>
+                    <li class="badge-item"><i class="fas fa-shield-alt" aria-hidden="true"></i><span>Pagamento Seguro</span></li>
                 </ul>
             </div>
         </div>
 
+        <!-- coluna info -->
         <div class="produto-info-column">
             @if (Model.Produto.Estoque <= 0)
             {
@@ -81,37 +119,49 @@
                 <span class="stock-badge promotion" aria-live="polite">PROMOÇÃO</span>
             }
 
+            <!-- preço & pagamento -->
             <section class="price-section" aria-label="Informações de preço" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
                 <meta itemprop="priceCurrency" content="BRL" />
                 <meta itemprop="price" content="@precoBase.ToString(CultureInfo.InvariantCulture)" />
                 <link itemprop="availability" href="https://schema.org/@(Model.Produto.Estoque > 0 ? "InStock" : "OutOfStock")" />
-                @if (temPromocao)
-                {
-                    <div class="price-wrapper">
-                        <span class="original-price">@Model.Produto.Preco.ToString("C")</span>
-                        <span class="current-price">@precoBase.ToString("C")</span>
-                        <span class="discount-badge">@((int)(100 - (precoBase * 100 / Model.Produto.Preco)))% OFF</span>
-                    </div>
-                }
-                else
-                {
-                    <span class="current-price">@precoBase.ToString("C")</span>
-                }
 
-                <div class="payment-info">
-                    <div class="payment-option">
-                        <i class="fas fa-credit-card" aria-hidden="true"></i>
-                        <span>em até 5x de @((precoBase / 5m).ToString("C")) sem juros</span>
+                <div class="price-card">
+                    <div class="price-left">
+                        @if (temPromocao)
+                        {
+                            <div class="price-wrapper">
+                                <span class="original-price">@Model.Produto.Preco.ToString("C")</span>
+                                <span class="current-price">@precoBase.ToString("C")</span>
+                                <span class="discount-badge">@((int)(100 - (precoBase * 100 / Model.Produto.Preco)))% OFF</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="current-price">@precoBase.ToString("C")</span>
+                        }
+
+                        <div class="pix-price-line"><!-- reservado --></div>
                     </div>
-                    <div class="payment-option">
-                        <i class="fas fa-barcode" aria-hidden="true"></i>
-                        <span>ou @((precoBase * 0.9m).ToString("C")) à vista (10% OFF)</span>
+
+                    <div class="stock-chip @(Model.Produto.Estoque > 0 ? "in" : "out")">
+                        <i class="fas @(Model.Produto.Estoque > 0 ? "fa-check-circle" : "fa-times-circle")"></i>
+                        @(Model.Produto.Estoque > 0 ? "Em estoque" : "Sem estoque")
                     </div>
+                </div>
+
+                <div class="pay-options" role="group" aria-label="Opções de pagamento">
+                    <div class="pay-chip"><i class="fas fa-credit-card" aria-hidden="true"></i><div><div class="chip-title">Cartão</div><div class="chip-sub">1x à vista</div></div></div>
+                    <div class="pay-chip"><i class="fas fa-qrcode" aria-hidden="true"></i><div><div class="chip-title">Pix</div><div class="chip-sub">à vista • @precoBase.ToString("C")</div></div></div>
+                    <div class="pay-chip"><i class="fas fa-money-bill-wave" aria-hidden="true"></i><div><div class="chip-title">Dinheiro</div><div class="chip-sub">@precoBase.ToString("C")</div></div></div>
                 </div>
             </section>
 
+            <!-- sabores -->
             <section class="flavors-section" aria-labelledby="titulo-sabores">
-                <h3 id="titulo-sabores" class="section-title">Escolha o sabor <small class="muted">(@totalSaboresComEstoque de @totalSabores disponíveis)</small>:</h3>
+                <h3 id="titulo-sabores" class="section-title">
+                    Escolha o sabor
+                    <small class="muted">(@totalSaboresComEstoque de @totalSabores disponíveis)</small>
+                </h3>
 
                 <fieldset class="flavors-fieldset" role="radiogroup" aria-describedby="estoque-info">
                     <legend class="sr-only">Sabores</legend>
@@ -123,9 +173,17 @@
                         {
                             var saborId = $"flavor-{index++}";
                             var parts = (sabor.Sabor ?? string.Empty).Split(new[] { " - " }, StringSplitOptions.None);
-                            <div class="flavor-card">
-                                <input type="radio" name="flavor" id="@saborId" value="@sabor.Sabor" class="flavor-radio"
-                                       data-estoque="@sabor.Quantidade" @(sabor.Quantidade <= 0 ? "disabled" : null) required />
+                            var disabled = sabor.Quantidade <= 0;
+
+                            <div class="flavor-card @(disabled ? "is-disabled" : "")">
+                                <input type="radio"
+                                       name="flavor"
+                                       id="@saborId"
+                                       value="@sabor.Sabor"
+                                       class="flavor-radio"
+                                       data-estoque="@sabor.Quantidade"
+                                       @(disabled ? "disabled" : null)
+                                       required />
                                 <label for="@saborId" class="flavor-label" title="@sabor.Sabor">
                                     @if (parts.Length > 1)
                                     {
@@ -136,7 +194,7 @@
                                     {
                                         <span class="flavor-name-en">@sabor.Sabor</span>
                                     }
-                                    @if (sabor.Quantidade <= 0)
+                                    @if (disabled)
                                     {
                                         <span class="flavor-badge out">Esgotado</span>
                                     }
@@ -157,13 +215,14 @@
                 }
             </section>
 
+            <!-- ações -->
             <div class="action-buttons">
                 <div class="quantity-selector mb-3">
-                    <label for="quantity">Quantidade:</label>
+                    <label for="quantity">Quantidade</label>
                     <div class="quantity-control">
-                        <button type="button" class="quantity-btn minus" aria-label="Diminuir quantidade">-</button>
+                        <button type="button" class="quantity-btn minus" aria-label="Diminuir">-</button>
                         <input type="number" id="quantity" name="quantity" value="1" min="1" max="@Model.Produto.Estoque" class="quantity-input" inputmode="numeric" pattern="[0-9]*">
-                        <button type="button" class="quantity-btn plus" aria-label="Aumentar quantidade">+</button>
+                        <button type="button" class="quantity-btn plus" aria-label="Aumentar">+</button>
                     </div>
                 </div>
 
@@ -175,13 +234,13 @@
                     <input type="hidden" name="observacoes" id="observacoesProduto" value="">
 
                     <button type="submit" class="btn-add-to-cart @(Model.Produto.Estoque <= 0 ? "disabled" : "")"
-                            @(Model.Produto.Estoque <= 0 ? "disabled" : null) aria-disabled="@(Model.Produto.Estoque <= 0)">
+                            @(Model.Produto.Estoque <= 0 ? "disabled" : null)
+                            aria-disabled="@(Model.Produto.Estoque <= 0)">
                         <i class="fas fa-shopping-cart" aria-hidden="true"></i>
                         @(Model.Produto.Estoque <= 0 ? "ESGOTADO" : "ADICIONAR AO CARRINHO")
                     </button>
                 </form>
 
-                <!-- Comprar agora via AJAX (o JS redireciona para Carrinho/Resumo depois de adicionar) -->
                 <button type="button"
                         class="btn-buy-now mt-2 @(Model.Produto.Estoque <= 0 ? "disabled" : "")"
                         @(Model.Produto.Estoque <= 0 ? "disabled" : null)
@@ -192,6 +251,7 @@
         </div>
     </div>
 
+    <!-- abas -->
     <section class="product-details-tabs" aria-label="Detalhes do produto">
         <div class="tabs-header" role="tablist">
             <button class="tab-button active" role="tab" aria-selected="true" aria-controls="tab-description" id="tabbtn-description" data-tab="description">Descrição</button>
@@ -204,7 +264,7 @@
                 <h3>Descrição do Produto</h3>
                 <p itemprop="description">@Model.Produto.Descricao</p>
 
-                <h4>Características:</h4>
+                <h4>Características</h4>
                 <ul class="features-list">
                     <li><strong>@Model.Produto.Puffs puffs</strong> - Duração prolongada</li>
                     <li><strong>@Model.Produto.CapacidadeBateria mAh</strong> - Bateria de alta capacidade</li>
@@ -232,7 +292,8 @@
                     <div class="rating-overview">
                         <div class="average-rating">4.8</div>
                         <div class="stars" aria-hidden="true">
-                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
                         </div>
                         <p>Baseado em 42 avaliações</p>
                     </div>
@@ -241,7 +302,8 @@
                             <div class="review-header">
                                 <h4>Ótimo produto!</h4>
                                 <div class="stars" aria-hidden="true">
-                                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i><i class="fas fa-star"></i>
                                 </div>
                             </div>
                             <p class="review-text">"Comprei o sabor Melancia Ice e adorei! Duração excelente e sabor muito bom."</p>
@@ -251,7 +313,8 @@
                             <div class="review-header">
                                 <h4>Recomendo</h4>
                                 <div class="stars" aria-hidden="true">
-                                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i><i class="fas fa-star"></i>
                                 </div>
                             </div>
                             <p class="review-text">"Já é meu segundo pod dessa marca. O sabor de Menta Ice é refrescante e dura bastante."</p>
@@ -265,92 +328,104 @@
     </section>
 
     @if (Model.ProdutosRelacionados != null && Model.ProdutosRelacionados.Any())
-{
-    <section class="related-products-section" aria-label="Produtos relacionados">
-        <h2 class="section-title">Você também pode gostar:</h2>
+    {
+        <section class="related-products-section" aria-label="Produtos relacionados">
+            <h2 class="section-title">Você também pode gostar:</h2>
+            <div class="related-products-grid">
+                @foreach (var pr in Model.ProdutosRelacionados)
+                {
+                    var temPromo = pr.PrecoPromocional.HasValue && pr.PrecoPromocional.Value < pr.Preco;
+                    var precoAtual = temPromo ? pr.PrecoPromocional!.Value : pr.Preco;
 
-        <div class="related-products-grid">
-            @foreach (var pr in Model.ProdutosRelacionados)
-            {
-                var temPromo = pr.PrecoPromocional.HasValue && pr.PrecoPromocional.Value < pr.Preco;
-                var precoAtual = temPromo ? pr.PrecoPromocional!.Value : pr.Preco;
-
-                <article class="related-product-card" itemscope itemtype="https://schema.org/Product">
-                    <a asp-controller="Produto" asp-action="DetalhesProdutos" asp-route-id="@pr.Id"class="card-link"
-                       aria-label="Ver @pr.Nome"
-                       itemprop="url">
-                        <div class="product-image">
-                            @if (!string.IsNullOrEmpty(pr.ImagemUrl))
-                            {
-                                <img src="@pr.ImagemUrl" alt="@pr.Nome" loading="lazy" decoding="async" width="480" height="480" itemprop="image" />
-                            }
-                            else
-                            {
-                                <div class="image-placeholder"><i class="fas fa-image" aria-hidden="true"></i></div>
-                            }
-                            @if (temPromo)
-                            {
-                                <span class="ribbon">Promo</span>
-                            }
-                        </div>
-
-                        <div class="product-info">
-                            <h3 class="product-name" itemprop="name">@pr.Nome</h3>
-
-                            <div class="product-price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
-                                <meta itemprop="priceCurrency" content="BRL" />
-                                @if (temPromo)
+                    <article class="related-product-card" itemscope itemtype="https://schema.org/Product">
+                        <a asp-controller="Produto" asp-action="DetalhesProdutos" asp-route-id="@pr.Id" class="card-link" aria-label="Ver @pr.Nome" itemprop="url">
+                            <div class="product-image">
+                                @if (!string.IsNullOrEmpty(pr.ImagemUrl))
                                 {
-                                    <span class="old-price">@pr.Preco.ToString("C")</span>
-                                }
-                                <span class="price" itemprop="price">@precoAtual.ToString("C")</span>
-                            </div>
-
-                            <div class="mini-flags">
-                                @if (pr.Estoque <= 0)
-                                {
-                                    <span class="tag out">Esgotado</span>
+                                    <img src="@pr.ImagemUrl" alt="@pr.Nome" loading="lazy" decoding="async" width="480" height="480" itemprop="image" />
                                 }
                                 else
                                 {
-                                    <span class="tag in">Em estoque</span>
+                                    <div class="image-placeholder"><i class="fas fa-image" aria-hidden="true"></i></div>
+                                }
+                                @if (temPromo)
+                                {
+                                    <span class="ribbon">Promo</span>
                                 }
                             </div>
-                        </div>
-                        <span class="stretched"></span>
-                    </a>
-                </article>
-            }
-        </div>
-    </section>
-}
 
+                            <div class="product-info">
+                                <h3 class="product-name" itemprop="name">@pr.Nome</h3>
+                                <div class="product-price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+                                    <meta itemprop="priceCurrency" content="BRL" />
+                                    @if (temPromo)
+                                    {
+                                        <span class="old-price">@pr.Preco.ToString("C")</span>
+                                    }
+                                    <span class="price" itemprop="price">@precoAtual.ToString("C")</span>
+                                </div>
+                                <div class="mini-flags">
+                                    @if (pr.Estoque <= 0)
+                                    {
+                                        <span class="tag out">Esgotado</span>
+                                    }
+                                    else
+                                    {
 
-    <section class="faq-section" aria-label="Perguntas Frequentes">
-        <h2 class="section-title">Perguntas Frequentes</h2>
-        <div class="faq-accordion">
-            <div class="faq-item">
-                <button class="faq-question" type="button" aria-expanded="false">Quantos puffs dura este pod? <i class="fas fa-chevron-down" aria-hidden="true"></i></button>
-                <div class="faq-answer" hidden>
-                    <p>Este pod tem uma capacidade de aproximadamente @Model.Produto.Puffs puffs, variando conforme o uso.</p>
-                </div>
+                                        <span class="tag in">Em estoque</span>
+                                    }
+                                </div>
+                            </div>
+                            <span class="stretched"></span>
+                        </a>
+                    </article>
+                }
             </div>
-            <div class="faq-item">
-                <button class="faq-question" type="button" aria-expanded="false">Posso recarregar este pod? <i class="fas fa-chevron-down" aria-hidden="true"></i></button>
-                <div class="faq-answer" hidden>
-                    <p>Sim, este pod descartável possui entrada USB para recarga, aproveitando ao máximo os @Model.Produto.Puffs puffs.</p>
-                </div>
-            </div>
-            <div class="faq-item">
-                <button class="faq-question" type="button" aria-expanded="false">Qual o prazo de entrega? <i class="fas fa-chevron-down" aria-hidden="true"></i></button>
-                <div class="faq-answer" hidden>
-                    <p>De 3 a 7 dias úteis, dependendo da sua localização. Para a região Sudeste, normalmente 3 dias úteis.</p>
-                </div>
-            </div>
-        </div>
-    </section>
+        </section>
+    }
 </div>
 
+@* <!-- Sticky CTA (mobile) -->
+<div class="sticky-cta @(Model.Produto.Estoque <= 0 ? "disabled" : "")">
+    <div class="sticky-price">
+        <span class="sticky-price-main">@precoBase.ToString("C")</span>
+        @* <span class="sticky-price-sub">Pix: @precoAvista.ToString("C")</span> 
+    </div>
+    <button class="sticky-btn" @(Model.Produto.Estoque <= 0 ? "disabled" : null)
+            onclick="document.getElementById('addToCartForm')?.requestSubmit()">
+        <i class="fas fa-cart-plus"></i> Adicionar
+    </button>
+</div>
+ *@
 @section Scripts {
     <script src="~/js/Detalhe-form.js" asp-append-version="true"></script>
+
+    <script>
+        // quantidade -> hidden (fallback simples)
+        (function () {
+          const qtd = document.getElementById('quantity');
+          const qtdHidden = document.getElementById('quantidadeHidden');
+          const minus = document.querySelector('.quantity-btn.minus');
+          const plus  = document.querySelector('.quantity-btn.plus');
+          function sync(){ if(qtdHidden) qtdHidden.value = qtd.value; }
+          minus?.addEventListener('click',()=>{ qtd.stepDown(); sync(); });
+          plus?.addEventListener('click', ()=>{ qtd.stepUp();   sync(); });
+          qtd?.addEventListener('input', sync);
+        })();
+
+        // sabor -> hidden + info (fallback simples)
+        (function () {
+          const radios = document.querySelectorAll('.flavor-radio');
+          const hidden = document.getElementById('saborSelecionado');
+          const info   = document.getElementById('estoque-info');
+          const span   = document.getElementById('estoque-quantidade');
+          radios.forEach(r => {
+            r.addEventListener('change', (e) => {
+              if (hidden) hidden.value = e.target.value;
+              const est = e.target.getAttribute('data-estoque');
+              if (info && span) { span.textContent = est || '0'; info.hidden = false; }
+            });
+          });
+        })();
+    </script>
 }

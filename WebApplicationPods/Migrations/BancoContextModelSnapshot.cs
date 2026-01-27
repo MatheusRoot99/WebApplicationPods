@@ -360,7 +360,14 @@ namespace WebApplicationPods.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Cpf")
+                        .HasMaxLength(11)
+                        .HasColumnType("nvarchar(11)");
+
                     b.Property<DateTime>("DataCadastro")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataNascimento")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
@@ -378,6 +385,10 @@ namespace WebApplicationPods.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex(new[] { "Cpf" }, "IX_Clientes_CPF")
+                        .IsUnique()
+                        .HasFilter("[Cpf] IS NOT NULL");
 
                     b.ToTable("Clientes");
                 });
@@ -734,7 +745,25 @@ namespace WebApplicationPods.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<DateTime?>("DataAguardandoPagamento")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataCancelado")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataConcluido")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataInicioPreparo")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataPagamentoAprovado")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("DataPedido")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataSaiuParaEntregaOuRetirada")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("DeletedAt")

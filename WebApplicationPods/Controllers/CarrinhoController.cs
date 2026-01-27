@@ -1,17 +1,16 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
-using System.Linq;
 using WebApplicationPods.Enum;
+using WebApplicationPods.Hubs;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
-using WebApplicationPods.Repository.Repository;
 using WebApplicationPods.Services;
+using System.Linq;
 
 namespace WebApplicationPods.Controllers
 {
@@ -22,7 +21,8 @@ namespace WebApplicationPods.Controllers
         private readonly IClienteRepository _clienteRepository;
         private readonly IPedidoRepository _pedidoRepository;
         private readonly IClienteRememberService _remember;
-        private readonly ILojaConfigRepository _lojaRepo; // loja
+        private readonly ILojaConfigRepository _lojaRepo;
+        private readonly IHubContext<PedidosHub> _hub;
 
         public CarrinhoController(
             ICarrinhoRepository carrinhoRepository,
@@ -30,7 +30,8 @@ namespace WebApplicationPods.Controllers
             IClienteRepository clienteRepository,
             IPedidoRepository pedidoRepository,
             IClienteRememberService remember,
-            ILojaConfigRepository lojaRepo)
+            ILojaConfigRepository lojaRepo,
+            IHubContext<PedidosHub> hub)
         {
             _carrinhoRepository = carrinhoRepository;
             _produtoRepository = produtoRepository;
@@ -38,6 +39,7 @@ namespace WebApplicationPods.Controllers
             _pedidoRepository = pedidoRepository;
             _remember = remember;
             _lojaRepo = lojaRepo;
+            _hub = hub;
         }
 
         // =================== Helpers ===================
@@ -57,7 +59,7 @@ namespace WebApplicationPods.Controllers
             Response.Cookies.Append("last_order_token", token!, opts);
         }
 
-        private int ObterEstoqueDisponivel(ProdutoModel produto, string sabor)
+        private int ObterEstoqueDisponivel(ProdutoModel produto, string? sabor)
         {
             if (produto.SaboresQuantidadesList?.Any() == true && !string.IsNullOrWhiteSpace(sabor))
             {
@@ -66,21 +68,6 @@ namespace WebApplicationPods.Controllers
                 return sq?.Quantidade ?? 0;
             }
             return produto.Estoque;
-        }
-
-        private bool ValidarEstoqueAtualizacao(ProdutoModel produto, int quantidade, string sabor, out string mensagemErro)
-        {
-            mensagemErro = string.Empty;
-            var disponivel = ObterEstoqueDisponivel(produto, sabor);
-
-            if (quantidade > disponivel)
-            {
-                mensagemErro = string.IsNullOrWhiteSpace(sabor)
-                    ? $"Estoque insuficiente. Disponível: {disponivel}"
-                    : $"Estoque insuficiente para o sabor {sabor}. Disponível: {disponivel}";
-                return false;
-            }
-            return true;
         }
 
         private bool ValidarEstoqueAoAdicionar(ProdutoModel produto, int novaQtd, string sabor, out string mensagemErro)
@@ -106,7 +93,7 @@ namespace WebApplicationPods.Controllers
             return true;
         }
 
-        private PaymentMethod? MapearMetodoPagamento(string metodo)
+        private PaymentMethod? MapearMetodoPagamento(string? metodo)
         {
             if (string.IsNullOrWhiteSpace(metodo)) return null;
             metodo = metodo.Trim().ToLowerInvariant();
@@ -123,34 +110,45 @@ namespace WebApplicationPods.Controllers
 
         private decimal CalcularTaxaEntrega(EnderecoModel endereco) => 5m;
 
+        private static int Idade(DateTime nascimento)
+        {
+            var hoje = DateTime.Today;
+            var idade = hoje.Year - nascimento.Year;
+            if (nascimento.Date > hoje.AddYears(-idade)) idade--;
+            return idade;
+        }
+
+        private static bool CarrinhoRequerMaioridade(CarrinhoModel carrinho)
+            => carrinho.Itens.Any(i => i.Produto?.RequerMaioridade == true);
+
         // =================== Actions ===================
 
         public IActionResult Index()
-{
-    var carrinho = _carrinhoRepository.ObterCarrinho();
-
-    var populares = _produtoRepository
-        .ObterMaisPopulares(8)
-        .Select(p => new ProdutoResumoVM
         {
-            Id = p.Id,
-            Nome = p.Nome,
-            ImagemUrl = string.IsNullOrWhiteSpace(p.ImagemUrl)
-                ? "https://via.placeholder.com/600x600?text=%20"
-                : p.ImagemUrl,
-            Preco = p.Preco,
-            PrecoPromocional = p.PrecoPromocional
-        })
-        .ToList();
+            var carrinho = _carrinhoRepository.ObterCarrinho();
 
-    var vm = new CarrinhoPageViewModel
-    {
-        Carrinho = carrinho,
-        Populares = populares
-    };
+            var populares = _produtoRepository
+                .ObterMaisPopulares(8)
+                .Select(p => new ProdutoResumoVM
+                {
+                    Id = p.Id,
+                    Nome = p.Nome,
+                    ImagemUrl = string.IsNullOrWhiteSpace(p.ImagemUrl)
+                        ? "https://via.placeholder.com/600x600?text=%20"
+                        : p.ImagemUrl,
+                    Preco = p.Preco,
+                    PrecoPromocional = p.PrecoPromocional
+                })
+                .ToList();
 
-    return View(vm);
-}
+            var vm = new CarrinhoPageViewModel
+            {
+                Carrinho = carrinho,
+                Populares = populares
+            };
+
+            return View(vm);
+        }
 
         [HttpGet]
         public IActionResult GetCarrinhoPartial()
@@ -164,7 +162,7 @@ namespace WebApplicationPods.Controllers
             var carrinho = _carrinhoRepository.ObterCarrinho();
             if (carrinho == null || !carrinho.Itens.Any())
             {
-                TempData["Erro"] = "Seu carrinho está vazio";
+                TempData["Erro"] = "Seu carrinho está vazio.";
                 return RedirectToAction("Index");
             }
 
@@ -178,9 +176,19 @@ namespace WebApplicationPods.Controllers
             var cliente = _clienteRepository.ObterPorTelefone(telefone);
             if (cliente == null)
             {
-                TempData["Erro"] = "Cliente não encontrado";
+                TempData["Erro"] = "Cliente não encontrado.";
                 TempData["ReturnUrl"] = Url.Action(nameof(Resumo), "Carrinho");
                 return RedirectToAction("Login", "Auth");
+            }
+
+            // Cinturão 18+: se o carrinho tiver itens que exigem 18+, valide cadastro/idade
+            if (CarrinhoRequerMaioridade(carrinho))
+            {
+                if (!cliente.DataNascimento.HasValue || Idade(cliente.DataNascimento.Value) < 18)
+                {
+                    TempData["Erro"] = "Há itens que exigem idade mínima de 18 anos. Atualize seus dados para continuar.";
+                    return RedirectToAction("Editar", "Auth", new { returnUrl = Url.Action(nameof(Resumo), "Carrinho") });
+                }
             }
 
             var enderecos = _clienteRepository.ObterEnderecos(cliente.Id)?.ToList()
@@ -195,7 +203,7 @@ namespace WebApplicationPods.Controllers
                 (novoId.HasValue ? enderecos.FirstOrDefault(e => e.Id == novoId.Value) : null)
                 ?? enderecos.FirstOrDefault(e => e.Principal);
 
-            // 🔹 Envia a loja para a View (box de retirada)
+            // Envia a loja para a View (box de retirada)
             ViewBag.Loja = _lojaRepo.ObterDoLojistaAtual();
             var skipConfirm = string.Equals(Convert.ToString(TempData["SkipConfirm"]), "1", StringComparison.Ordinal);
             var vm = new ResumoPedidoViewModel
@@ -227,13 +235,27 @@ namespace WebApplicationPods.Controllers
             return RedirectToAction(nameof(Resumo));
         }
 
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Confirmacao(int id)
         {
             var pedido = _pedidoRepository.ObterPorId(id);
             if (pedido == null)
             {
-                TempData["Erro"] = "Pedido não encontrado!";
+                TempData["Erro"] = "Pedido não encontrado.";
                 return RedirectToAction("Index");
+            }
+
+            // Se o pedido já está "Pago", zera o carrinho desta sessão uma única vez
+            if (string.Equals(pedido.Status, "Pago", StringComparison.OrdinalIgnoreCase))
+            {
+                var flagKey = $"CartClearedForOrder_{id}";
+                var already = HttpContext.Session.GetString(flagKey);
+                if (!string.Equals(already, "1", StringComparison.Ordinal))
+                {
+                    _carrinhoRepository.LimparCarrinho();
+                    HttpContext.Session.SetString(flagKey, "1");
+                }
             }
 
             ViewBag.PedidoId = pedido.Id;
@@ -254,7 +276,7 @@ namespace WebApplicationPods.Controllers
                 if (produto == null)
                 {
                     if (isAjax) return Json(new { ok = false, error = "Produto não encontrado." });
-                    TempData["Erro"] = "Produto não encontrado!";
+                    TempData["Erro"] = "Produto não encontrado.";
                     return RedirectToAction("Index", "Home");
                 }
 
@@ -274,7 +296,7 @@ namespace WebApplicationPods.Controllers
 
                 if (isAjax) return Json(new { ok = true, count, nome = produto.Nome, buyNow });
 
-                TempData["Sucesso"] = $"adicionado ao carrinho!";
+                TempData["Sucesso"] = "Adicionado ao carrinho!";
                 return buyNow ? RedirectToAction("Resumo", "Carrinho")
                               : RedirectToAction("Index", "Home");
             }
@@ -313,8 +335,8 @@ namespace WebApplicationPods.Controllers
 
                 if (item == null)
                 {
-                    if (isAjax) return Json(new { ok = false, error = "Item não encontrado no carrinho!" });
-                    TempData["Erro"] = "Item não encontrado no carrinho!";
+                    if (isAjax) return Json(new { ok = false, error = "Item não encontrado no carrinho." });
+                    TempData["Erro"] = "Item não encontrado no carrinho.";
                     return RedirectToAction(nameof(Index));
                 }
 
@@ -326,22 +348,36 @@ namespace WebApplicationPods.Controllers
                 var produto = _produtoRepository.ObterPorId(produtoId);
                 if (produto == null)
                 {
-                    if (isAjax) return Json(new { ok = false, error = "Produto não encontrado!" });
-                    TempData["Erro"] = "Produto não encontrado!";
+                    if (isAjax) return Json(new { ok = false, error = "Produto não encontrado." });
+                    TempData["Erro"] = "Produto não encontrado.";
                     return RedirectToAction(nameof(Index));
                 }
 
                 produto.DeserializarSaboresQuantidades();
 
-                var maxPermitido = produto.Estoque;
-                if (!string.IsNullOrWhiteSpace(chaveSabor) &&
-                    produto.SaboresQuantidadesList?.Any() == true)
+                var maxPermitido = ObterEstoqueDisponivel(produto, chaveSabor);
+
+                // 🔒 Sem estoque: remover o item (não forçar 1)
+                if (maxPermitido < 1)
                 {
-                    var sq = produto.SaboresQuantidadesList
-                        .FirstOrDefault(s => string.Equals(s.Sabor, chaveSabor, StringComparison.OrdinalIgnoreCase));
-                    maxPermitido = sq?.Quantidade ?? produto.Estoque;
+                    carrinho.Itens.Remove(item);
+                    _carrinhoRepository.SalvarCarrinho(carrinho);
+
+                    var isEmptyNow = !carrinho.Itens.Any();
+                    var totalNow = carrinho.Total.ToString("C", CultureInfo.GetCultureInfo("pt-BR"));
+
+                    if (isAjax) return Json(new
+                    {
+                        ok = false,
+                        removed = true,
+                        isEmpty = isEmptyNow,
+                        total = totalNow,
+                        error = "Este item ficou sem estoque e foi removido do carrinho."
+                    });
+
+                    TempData["Erro"] = "Este item ficou sem estoque e foi removido do carrinho.";
+                    return RedirectToAction(nameof(Index));
                 }
-                if (maxPermitido < 1) maxPermitido = 1;
 
                 if (novaQtd < 1) novaQtd = 1;
                 if (novaQtd > maxPermitido)
@@ -388,8 +424,8 @@ namespace WebApplicationPods.Controllers
 
                 if (item == null)
                 {
-                    if (isAjax) return Json(new { ok = false, error = "Item não encontrado no carrinho!" });
-                    TempData["Erro"] = "Item não encontrado no carrinho!";
+                    if (isAjax) return Json(new { ok = false, error = "Item não encontrado no carrinho." });
+                    TempData["Erro"] = "Item não encontrado no carrinho.";
                     return RedirectToAction(nameof(Index));
                 }
 
@@ -403,7 +439,7 @@ namespace WebApplicationPods.Controllers
 
                 if (isAjax) return Json(new { ok = true, count, total, isEmpty, message = $"{nomeProduto} removido do carrinho." });
 
-                TempData["Sucesso"] = $"removido do carrinho";
+                TempData["Sucesso"] = $"{nomeProduto} removido do carrinho.";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
@@ -425,12 +461,12 @@ namespace WebApplicationPods.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Finalizar(ResumoPedidoViewModel model)
+        public async Task<IActionResult> Finalizar(ResumoPedidoViewModel model)
         {
             var carrinho = _carrinhoRepository.ObterCarrinho();
             if (carrinho == null || !carrinho.Itens.Any())
             {
-                TempData["Erro"] = "Seu carrinho está vazio";
+                TempData["Erro"] = "Seu carrinho está vazio.";
                 return RedirectToAction("Index");
             }
 
@@ -446,6 +482,55 @@ namespace WebApplicationPods.Controllers
             {
                 TempData["Erro"] = "Cliente não encontrado.";
                 return RedirectToAction("Login", "Auth");
+            }
+
+            // Cinturão 18+ na finalização
+            if (CarrinhoRequerMaioridade(carrinho))
+            {
+                if (!cliente.DataNascimento.HasValue || Idade(cliente.DataNascimento.Value) < 18)
+                {
+                    TempData["Erro"] = "Não foi possível finalizar: itens exigem 18+ e o cadastro não atende a essa exigência.";
+                    return RedirectToAction("Resumo");
+                }
+            }
+
+            // Revalidação de estoque item-a-item (pode ajustar quantidades ou remover)
+            bool houveAjuste = false;
+            foreach (var i in carrinho.Itens.ToList())
+            {
+                var produto = _produtoRepository.ObterPorId(i.Produto.Id);
+                if (produto == null)
+                {
+                    carrinho.Itens.Remove(i);
+                    houveAjuste = true;
+                    continue;
+                }
+                produto.DeserializarSaboresQuantidades();
+                var disponivel = ObterEstoqueDisponivel(produto, i.Sabor ?? string.Empty);
+
+                if (disponivel <= 0)
+                {
+                    carrinho.Itens.Remove(i);
+                    houveAjuste = true;
+                    continue;
+                }
+                if (i.Quantidade > disponivel)
+                {
+                    i.Quantidade = disponivel;
+                    houveAjuste = true;
+                }
+            }
+            _carrinhoRepository.SalvarCarrinho(carrinho);
+
+            if (!carrinho.Itens.Any())
+            {
+                TempData["Erro"] = "Seu carrinho ficou sem estoque disponível para todos os itens.";
+                return RedirectToAction(nameof(Index));
+            }
+            if (houveAjuste)
+            {
+                TempData["Erro"] = "Alguns itens foram ajustados conforme disponibilidade de estoque. Revise seu carrinho.";
+                return RedirectToAction(nameof(Resumo));
             }
 
             var metodo = MapearMetodoPagamento(model.MetodoPagamento);
@@ -484,14 +569,12 @@ namespace WebApplicationPods.Controllers
                 {
                     ProdutoId = i.Produto.Id,
                     Quantidade = i.Quantidade,
-                    // preço cheio do momento
                     PrecoOriginal = i.Produto.Preco,
-                    // preço efetivo (promocional se houver)
                     PrecoUnitario = i.Produto.EstaEmPromocao() && i.Produto.PrecoPromocional.HasValue
-                    ? i.Produto.PrecoPromocional.Value
-                    : i.Produto.Preco,
+                        ? i.Produto.PrecoPromocional.Value
+                        : i.Produto.Preco,
                     Observacoes = i.Observacoes,
-                    Sabor = i.Sabor,              // <- importante para baixa por sabor
+                    Sabor = i.Sabor,
                     EstoqueBaixado = false,
                     EstoqueBaixadoEm = null
                 }).ToList()
@@ -512,8 +595,20 @@ namespace WebApplicationPods.Controllers
 
             if (pagaNaEntrega)
             {
+                // Pagamento confirmado depois (manual)
                 pedido.Status = "Aguardando Pagamento (Entrega)";
                 _pedidoRepository.Adicionar(pedido);
+
+                // Broadcast para lojistas
+                await _hub.Clients.Group("lojistas").SendAsync("NewOrder", new
+                {
+                    id = pedido.Id,
+                    status = pedido.Status,
+                    total = pedido.ValorTotal,
+                    metodo = pedido.MetodoPagamento,
+                    data = pedido.DataPedido,
+                    cliente = new { id = cliente.Id, nome = cliente.Nome }
+                });
 
                 SetLastOrderCookie(pedido.RastreioToken);
                 _carrinhoRepository.LimparCarrinho();
@@ -524,8 +619,20 @@ namespace WebApplicationPods.Controllers
             }
             else
             {
+                // Fluxo online (PIX/Cartão). Notificação de “Pago” será emitida quando o status mudar.
                 pedido.Status = "Pendente";
                 _pedidoRepository.Adicionar(pedido);
+
+                // Broadcast para lojistas (pedido criado)
+                await _hub.Clients.Group("lojistas").SendAsync("NewOrder", new
+                {
+                    id = pedido.Id,
+                    status = pedido.Status,
+                    total = pedido.ValorTotal,
+                    metodo = pedido.MetodoPagamento,
+                    data = pedido.DataPedido,
+                    cliente = new { id = cliente.Id, nome = cliente.Nome }
+                });
 
                 SetLastOrderCookie(pedido.RastreioToken);
                 HttpContext.Session.Remove("ClienteConfirmado");
@@ -545,12 +652,12 @@ namespace WebApplicationPods.Controllers
                 endereco.ClienteId = ClienteId;
                 endereco.Estado = (endereco.Estado ?? "").Trim().ToUpper();
 
-                // Formatar CEP para o padrão 00000-000
+                // Formatar CEP 00000-000
                 var dig = new string((endereco.CEP ?? "").Where(char.IsDigit).ToArray());
                 if (dig.Length == 8)
                     endereco.CEP = $"{dig[..5]}-{dig[5..]}";
 
-                // Validar usando DataAnnotations do modelo
+                // Validar DataAnnotations
                 var validationContext = new ValidationContext(endereco, null, null);
                 var validationResults = new List<ValidationResult>();
                 bool isValid = Validator.TryValidateObject(endereco, validationContext, validationResults, true);
@@ -569,7 +676,7 @@ namespace WebApplicationPods.Controllers
                     return RedirectToAction(nameof(Resumo));
                 }
 
-                // Verificar se endereço já existe
+                // Verificar duplicidade básica
                 var enderecosExistentes = _clienteRepository.ObterEnderecos(ClienteId) ?? new List<EnderecoModel>();
                 var jaExiste = enderecosExistentes.Any(e =>
                     string.Equals((e.CEP ?? ""), endereco.CEP ?? "", StringComparison.OrdinalIgnoreCase) &&
@@ -586,10 +693,9 @@ namespace WebApplicationPods.Controllers
                 // Definir como principal se for o primeiro endereço OU se foi marcado como principal
                 endereco.Principal = !enderecosExistentes.Any() || endereco.Principal;
 
-                // CRÍTICO: Se estiver marcando como principal, garantir que apenas UM seja principal
+                // Garantir apenas um principal
                 if (endereco.Principal && enderecosExistentes.Any(e => e.Principal))
                 {
-                    // Remover o status de principal de todos os outros endereços do cliente
                     foreach (var outroEndereco in enderecosExistentes.Where(e => e.Principal))
                     {
                         outroEndereco.Principal = false;
@@ -606,68 +712,7 @@ namespace WebApplicationPods.Controllers
             }
             catch (Exception ex)
             {
-                TempData["Erro"] = $"Não foi possível salvar o endereço: {ex.Message}";
-                return RedirectToAction(nameof(Resumo));
-            }
-        }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public IActionResult AtualizarEndereco(int ClienteId, EnderecoModel endereco)
-        {
-            try
-            {
-                endereco.ClienteId = ClienteId;
-                endereco.Estado = (endereco.Estado ?? "").Trim().ToUpper();
-
-                // Formatar CEP para o padrão 00000-000
-                var dig = new string((endereco.CEP ?? "").Where(char.IsDigit).ToArray());
-                if (dig.Length == 8)
-                    endereco.CEP = $"{dig[..5]}-{dig[5..]}";
-
-                // Validar usando DataAnnotations do modelo
-                var validationContext = new ValidationContext(endereco, null, null);
-                var validationResults = new List<ValidationResult>();
-                bool isValid = Validator.TryValidateObject(endereco, validationContext, validationResults, true);
-
-                if (!isValid)
-                {
-                    TempData["Erro"] = "Verifique os campos do endereço: " +
-                                      string.Join(", ", validationResults.Select(v => v.ErrorMessage));
-                    return RedirectToAction(nameof(Resumo));
-                }
-
-                var cliente = _clienteRepository.ObterPorId(ClienteId);
-                if (cliente == null)
-                {
-                    TempData["Erro"] = "Cliente não encontrado.";
-                    return RedirectToAction(nameof(Resumo));
-                }
-
-                // CRÍTICO: Se estiver marcando como principal, garantir que apenas UM seja principal
-                if (endereco.Principal)
-                {
-                    // Remover o status de principal de todos os outros endereços do cliente
-                    var outrosEnderecos = _clienteRepository.ObterEnderecos(ClienteId)
-                        .Where(e => e.Id != endereco.Id && e.Principal)
-                        .ToList();
-
-                    foreach (var outroEndereco in outrosEnderecos)
-                    {
-                        outroEndereco.Principal = false;
-                        _clienteRepository.AtualizarEndereco(outroEndereco);
-                    }
-                }
-
-                var atualizado = _clienteRepository.AtualizarEndereco(endereco);
-
-                TempData["EnderecoNovoId"] = endereco.Id;
-                TempData["SkipConfirm"] = "1";
-                TempData["Sucesso"] = "Endereço atualizado com sucesso!";
-                return RedirectToAction(nameof(Resumo));
-            }
-            catch (Exception ex)
-            {
                 TempData["Erro"] = $"Não foi possível atualizar o endereço: {ex.Message}";
                 return RedirectToAction(nameof(Resumo));
             }

@@ -1,5 +1,6 @@
 ﻿@model WebApplicationPods.Models.ProdutoModel
 @{
+    Layout = "_Layout";
     ViewData["Title"] = "Editar Pod Eletrônico";
     var saboresDisponiveis = Model.TodosSabores ?? new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
     var ptBR = new System.Globalization.CultureInfo("pt-BR");
@@ -76,9 +77,10 @@
                             <table class="table table-sm align-middle mb-0 sabores-table">
                                 <thead class="table-light">
                                     <tr>
-                                        <th style="width:60%">Sabor</th>
-                                        <th style="width:25%">Quantidade</th>
-                                        <th class="text-end" style="width:15%">Ação</th>
+                                        <th style="width:45%">Sabor (lista)</th>
+                                        <th style="width:30%">Ou novo sabor (texto)</th>
+                                        <th style="width:15%">Quantidade</th>
+                                        <th class="text-end" style="width:10%">Ação</th>
                                     </tr>
                                 </thead>
                                 <tbody id="flavorsBody">
@@ -103,6 +105,10 @@
                                                 </select>
                                             </td>
                                             <td>
+                                                <input type="text" class="form-control novo-sabor-input" placeholder="Digite um novo sabor (opcional)" value="" />
+                                                <div class="form-text">Se preencher aqui, o texto digitado será usado.</div>
+                                            </td>
+                                            <td>
                                                 <input type="number" class="form-control qty-input" min="0" value="@sq.Quantidade" />
                                             </td>
                                             <td class="text-end">
@@ -118,10 +124,10 @@
 
                         <div class="d-flex gap-2 flex-wrap align-items-center">
                             <button type="button" class="btn btn-outline-primary btn-sm" id="addFlavor">
-                                <i class="fas fa-plus me-1"></i> Adicionar sabor
+                                <i class="fas fa-plus me-1"></i> Adicionar linha
                             </button>
                             <div class="ms-auto small text-muted">
-                                Total estoque: <span id="totalEstoque">0</span>
+                                Total estoque: <span id="totalEstoque">@((Model.SaboresQuantidadesList ?? new()).Sum(s => s.Quantidade))</span>
                             </div>
                         </div>
 
@@ -229,79 +235,8 @@
 
 @section Scripts {
     <script>
-        // ===== Lógica de sabores / estoque =====
-        function updateTotals() {
-            let total = 0;
-            document.querySelectorAll('#flavorsBody .qty-input').forEach(i => {
-                const n = parseInt(i.value || '0', 10);
-                if (!isNaN(n)) total += n;
-            });
-            document.getElementById('totalEstoque').textContent = total;
-            const estoqueEl = document.getElementById('Estoque');
-            if (estoqueEl) estoqueEl.value = total;
-        }
-
-        function addRow(sabor = '', qtd = 0) {
-            const saboresOptions = `@Html.Raw(string.Join("", (saboresDisponiveis.Select(o => $"<option value=\"{o.Value}\">{o.Text}</option>"))))`;
-            const tr = document.createElement('tr');
-            tr.className = 'flavor-row';
-            tr.innerHTML = `
-                <td>
-                    <select class="form-select sabor-select">
-                        <option value="">(Selecione)</option>
-                        ${saboresOptions}
-                    </select>
-                </td>
-                <td><input type="number" class="form-control qty-input" min="0" value="${qtd}"/></td>
-                <td class="text-end">
-                    <button type="button" class="btn btn-outline-danger btn-sm remove-row">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </td>`;
-            document.getElementById('flavorsBody').appendChild(tr);
-
-            if (sabor) tr.querySelector('.sabor-select').value = sabor;
-            tr.querySelector('.qty-input').addEventListener('input', updateTotals);
-            tr.querySelector('.remove-row').addEventListener('click', function () {
-                tr.remove(); updateTotals();
-            });
-            updateTotals();
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            document.querySelectorAll('#flavorsBody .qty-input').forEach(i => i.addEventListener('input', updateTotals));
-            document.querySelectorAll('#flavorsBody .remove-row').forEach(b => b.addEventListener('click', function () {
-                this.closest('tr').remove(); updateTotals();
-            }));
-            document.getElementById('addFlavor')?.addEventListener('click', function () { addRow('', 0); });
-            document.getElementById('produtoForm').addEventListener('submit', function () {
-                const hidden = document.getElementById('flavorsHiddenContainer'); hidden.innerHTML = '';
-                document.querySelectorAll('#flavorsBody tr').forEach(tr => {
-                    const sabor = tr.querySelector('.sabor-select')?.value || '';
-                    const qtd = parseInt(tr.querySelector('.qty-input')?.value || '0', 10);
-                    if (sabor && qtd > 0) {
-                        const inp = document.createElement('input');
-                        inp.type = 'hidden'; inp.name = 'SaboresQuantidadesList';
-                        inp.value = JSON.stringify({ sabor: sabor, quantidade: qtd });
-                        hidden.appendChild(inp);
-                    }
-                });
-                updateTotals();
-            });
-            updateTotals();
-        });
-
-        // Ajusta --mbn-height se tiver bottom-nav fixa
-        document.addEventListener('DOMContentLoaded', () => {
-            const nav = document.querySelector('.mobile-bottom-nav, .bottom-nav, .mbn, .navbar-fixed-bottom');
-            const root = document.documentElement;
-            function setMbnHeight(){
-                const h = nav ? nav.offsetHeight : 68;
-                root.style.setProperty('--mbn-height', h + 'px');
-            }
-            setMbnHeight();
-            window.addEventListener('resize', setMbnHeight);
-            if (nav && 'ResizeObserver' in window){ new ResizeObserver(setMbnHeight).observe(nav); }
-        });
+        // options do select pré-renderizadas
+        const SABORES_OPTIONS_HTML = `@Html.Raw(string.Join("", (saboresDisponiveis.Select(o => $"<option value=\"{o.Value}\">{o.Text}</option>"))))`;
     </script>
+    <script src="~/js/produtos-editar.js" asp-append-version="true"></script>
 }

@@ -1,0 +1,22 @@
+﻿/* Espaço para a barra fixa no mobile */
+@media (max-width: 767.98px) {
+    body.page-confirmacao {
+        padding-bottom: 96px; /* altura da barra + respiro */
+    }
+}
+
+/* Barra fixa do CTA no mobile (z-index alto e safe-area iOS) */
+.fixed-cta {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: env(safe-area-inset-bottom);
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    z-index: 1100; /* acima de navbars fixas comuns */
+}
+
+/* Opcional: esconder sua bottom-nav global nesta página */
+body.page-confirmacao .bottom-nav,
+body.page-confirmacao .mobile-bottom-nav {
+    display: none !important;
+}
