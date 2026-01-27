@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Globalization;
+using System.Linq;
 
 namespace WebApplicationPods.Models
 {
@@ -23,20 +24,26 @@ namespace WebApplicationPods.Models
     {
         public int Id { get; set; }
 
-        // se sua app tem multi-loja, guarde o Id do usuário lojista
-        [StringLength(128)]
-        public string? LojistaUserId { get; set; }
+        // ✅ FK do 1:1 com Loja
+        public int LojaId { get; set; }
+
+        // ✅ Navegação (FK será configurada via Fluent no BancoContext)
+        public LojaModel? Loja { get; set; }
+
+        // ✅ Lojista (Identity int)
+        public int? LojistaUserId { get; set; }
+        public ApplicationUser? Lojista { get; set; }
 
         // Identidade visual
         [Required, StringLength(120)]
         public string Nome { get; set; } = "Minha Loja";
 
         [StringLength(300)]
-        public string? LogoPath { get; set; } // ex: /img/loja/noemi.png
+        public string? LogoPath { get; set; }
 
         // Funcionamento
         [Required]
-        public TimeSpan HorarioAbertura { get; set; } = new(18, 0, 0); // 18:00
+        public TimeSpan HorarioAbertura { get; set; } = new(18, 0, 0);
 
         [Required]
         public TimeSpan HorarioFechamento { get; set; } = new(23, 59, 0);
@@ -44,11 +51,11 @@ namespace WebApplicationPods.Models
         [Required]
         public DiasSemanaFlags DiasAbertos { get; set; } = DiasSemanaFlags.Todos;
 
-        public bool Ativo { get; set; } = true;          // loja ativa
-        public bool ForcarFechado { get; set; } = false; // override manual
+        public bool Ativo { get; set; } = true;
+        public bool ForcarFechado { get; set; } = false;
 
         [StringLength(160)]
-        public string? MensagemStatus { get; set; }      // “voltamos às 19h” etc.
+        public string? MensagemStatus { get; set; }
 
         // ===== Endereço da LOJA (para retirada) =====
         [StringLength(120)] public string? Logradouro { get; set; }
@@ -56,18 +63,15 @@ namespace WebApplicationPods.Models
         [StringLength(120)] public string? Complemento { get; set; }
         [StringLength(120)] public string? Bairro { get; set; }
         [StringLength(120)] public string? Cidade { get; set; }
-        [StringLength(2)] public string? Estado { get; set; } // UF (ex: SP)
-        [StringLength(9)] public string? Cep { get; set; } // 00000-000
+        [StringLength(2)] public string? Estado { get; set; }
+        [StringLength(9)] public string? Cep { get; set; }
 
-        // Opcional: coordenadas do local da loja (prioridade máx. p/ Maps)
         public double? Latitude { get; set; }
         public double? Longitude { get; set; }
 
-        // Opcional: cole aqui a URL do Google Maps (Place/rotas) se já tiver
         [StringLength(500)]
         public string? MapsPlaceUrl { get; set; }
 
-        // Helpers prontos (não mapeados no banco)
         [NotMapped]
         public string EnderecoTexto =>
             MontarEnderecoTexto(Logradouro, Numero, Complemento, Bairro, Cidade, Estado, Cep);
@@ -78,7 +82,6 @@ namespace WebApplicationPods.Models
 
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-        // ================= Helpers estáticos =================
         public static string MontarEnderecoTexto(
             string? logradouro, string? numero, string? complemento,
             string? bairro, string? cidade, string? estado, string? cep)
@@ -96,7 +99,6 @@ namespace WebApplicationPods.Models
 
         public static string MontarMapsUrl(double? lat, double? lng, string? mapsPlaceUrl, string enderecoTexto)
         {
-            // 1) Se tiver lat/lng -> usa rotas por coordenadas
             if (lat.HasValue && lng.HasValue)
             {
                 var la = lat.Value.ToString(CultureInfo.InvariantCulture);
@@ -104,11 +106,9 @@ namespace WebApplicationPods.Models
                 return $"https://www.google.com/maps/dir/?api=1&destination={la},{lo}";
             }
 
-            // 2) Se lojista colou uma URL pronta do Google Maps
             if (!string.IsNullOrWhiteSpace(mapsPlaceUrl))
                 return mapsPlaceUrl!;
 
-            // 3) Fallback: monta URL de rotas usando o endereço texto
             var q = Uri.EscapeDataString(enderecoTexto ?? "");
             return $"https://www.google.com/maps/dir/?api=1&destination={q}";
         }

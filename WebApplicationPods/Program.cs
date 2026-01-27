@@ -176,6 +176,8 @@ builder.Services.AddScoped<IEstoqueService, EstoqueService>();
 builder.Services.AddScoped<ILojaConfigRepository, LojaConfigRepository>();
 builder.Services.AddDataProtection();
 builder.Services.AddSingleton<IClienteRememberService, ClienteRememberService>();
+builder.Services.AddScoped<ICurrentLojaService, CurrentLojaService>();
+
 
 // Seed (roles/usuário admin)
 builder.Services.AddHostedService<IdentitySeedHostedService>();
@@ -228,6 +230,8 @@ app.UseMiddleware<ClienteAutoLoginMiddleware>();
 // Auth/Authorization padrões do Identity (para Admin/Lojista etc.)
 app.UseAuthentication();
 app.UseAuthorization();
+// GARANTE LOJA CONTEXT + BLOQUEIOS
+app.UseMiddleware<WebApplicationPods.Middlewares.LojaContextMiddleware>();
 
 app.MapControllerRoute(
     name: "default",

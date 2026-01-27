@@ -39,6 +39,7 @@ namespace WebApplicationPods.Models
 
         [StringLength(500)]
         public string? Observacoes { get; set; }
+        public int LojaId { get; set; }
 
         public bool IsDeleted { get; set; }
         public DateTime? DeletedAt { get; set; }

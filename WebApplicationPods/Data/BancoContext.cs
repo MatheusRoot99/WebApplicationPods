@@ -1,39 +1,58 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using WebApplicationPods.Models;
+using WebApplicationPods.Services.Interface;
 
 namespace WebApplicationPods.Data
 {
-    // Contexto único: domínio + Identity<int>
     public class BancoContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>
     {
-        public BancoContext(DbContextOptions<BancoContext> options) : base(options)
+        private readonly int _lojaId;      // ✅ nunca null
+        private readonly bool _hasLoja;    // ✅ indica se tem loja
+        private readonly bool _designTime; // ✅ migrations
+
+        // ✅ Runtime (DI injeta ICurrentLojaService)
+        public BancoContext(DbContextOptions<BancoContext> options, ICurrentLojaService currentLoja)
+            : base(options)
         {
-            // Em DEV: crie se não existir (opcional)
-            // Database.EnsureCreated();
+            _designTime = false;
+            var loja = currentLoja?.LojaId;
+            _hasLoja = loja.HasValue;
+            _lojaId = loja ?? 0; // nunca null
         }
+
+        // ✅ Design-time (migrations / factory)
+        public BancoContext(DbContextOptions<BancoContext> options)
+            : base(options)
+        {
+            _designTime = true;
+            _hasLoja = false;
+            _lojaId = 0;
+        }
+
+        // ====== SaaS / Multi-loja ======
+        public DbSet<LojaModel> Lojas => Set<LojaModel>();
+        public DbSet<LojaConfig> LojaConfigs => Set<LojaConfig>();
 
         // ====== Suas entidades ======
         public DbSet<MerchantPaymentConfig> MerchantPaymentConfigs => Set<MerchantPaymentConfig>();
-        public DbSet<CategoriaModel> Categorias { get; set; }
-        public DbSet<ProdutoModel> Produtos { get; set; }
-        public DbSet<ClienteModel> Clientes { get; set; }
-        public DbSet<EnderecoModel> Enderecos { get; set; }
-        public DbSet<PedidoModel> Pedidos { get; set; }
-        public DbSet<PedidoItemModel> PedidoItens { get; set; }
-        public DbSet<UsuarioModel> Usuarios { get; set; }
-        public DbSet<CarrinhoModel> Carrinhos { get; set; }
-        public DbSet<PaymentModel> Pagamentos { get; set; }
-        public DbSet<LojaConfig> LojaConfigs { get; set; }
+        public DbSet<CategoriaModel> Categorias => Set<CategoriaModel>();
+        public DbSet<ProdutoModel> Produtos => Set<ProdutoModel>();
+        public DbSet<ProdutoAtributoModel> ProdutoAtributos => Set<ProdutoAtributoModel>();
+        public DbSet<ClienteModel> Clientes => Set<ClienteModel>();
+        public DbSet<EnderecoModel> Enderecos => Set<EnderecoModel>();
+        public DbSet<PedidoModel> Pedidos => Set<PedidoModel>();
+        public DbSet<PedidoItemModel> PedidoItens => Set<PedidoItemModel>();
+        public DbSet<UsuarioModel> Usuarios => Set<UsuarioModel>();
+        public DbSet<CarrinhoModel> Carrinhos => Set<CarrinhoModel>();
+        public DbSet<PaymentModel> Pagamentos => Set<PaymentModel>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // 1) Deixe o Identity se configurar
             base.OnModelCreating(modelBuilder);
 
-            // 2) Índices de ApplicationUser (filtrados para permitir múltiplos NULL)
+            // ===== Identity índices =====
             modelBuilder.Entity<ApplicationUser>()
                 .HasIndex(u => u.CPF)
                 .IsUnique()
@@ -44,70 +63,89 @@ namespace WebApplicationPods.Data
                 .IsUnique()
                 .HasFilter("[PhoneNumber] IS NOT NULL");
 
-            // Campos opcionais do ApplicationUser
-            modelBuilder.Entity<ApplicationUser>(b =>
+            // ===== LojaModel + LojaConfig (1:1) =====
+            modelBuilder.Entity<LojaModel>(b =>
             {
-                b.Property(u => u.Endereco).IsRequired(false);
-                b.Property(u => u.Complemento).IsRequired(false);
-                b.Property(u => u.Cidade).IsRequired(false);
-                b.Property(u => u.Estado).IsRequired(false);
-                b.Property(u => u.CEP).IsRequired(false);
+                b.ToTable("Lojas");
+                b.Property(x => x.Nome).HasMaxLength(120).IsRequired();
+                b.Property(x => x.Plano).HasMaxLength(30);
+
+                b.HasOne(x => x.Dono)
+                    .WithMany()
+                    .HasForeignKey(x => x.DonoUserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                b.HasOne(x => x.Config)
+                    .WithOne(c => c.Loja)
+                    .HasForeignKey<LojaConfig>(c => c.LojaId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // ====== Pedido / Payment ======
-            // Pedido -> Endereco (sem cascade delete). EnderecoId é opcional (retirada no local).
+            modelBuilder.Entity<LojaConfig>(b =>
+            {
+                b.ToTable("LojaConfigs");
+                b.HasIndex(x => x.LojaId).IsUnique();
+
+                b.HasOne(x => x.Lojista)
+                    .WithMany()
+                    .HasForeignKey(x => x.LojistaUserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ===== Categoria =====
+            modelBuilder.Entity<CategoriaModel>(b =>
+            {
+                b.ToTable("Categorias");
+                b.Property(x => x.Nome).HasMaxLength(50).IsRequired();
+                b.Property(x => x.Descricao).HasMaxLength(200);
+                b.HasIndex(x => new { x.LojaId, x.Nome }).IsUnique(false);
+            });
+
+            // ===== Produto =====
+            modelBuilder.Entity<ProdutoModel>(b =>
+            {
+                b.ToTable("Produtos");
+
+                b.Property(x => x.Nome).HasMaxLength(100).IsRequired();
+                b.Property(x => x.Marca).HasMaxLength(80);
+                b.Property(x => x.SKU).HasMaxLength(40);
+                b.Property(x => x.CodigoBarras).HasMaxLength(30);
+
+                b.HasIndex(x => new { x.LojaId, x.SKU }).IsUnique(false);
+                b.HasIndex(x => new { x.LojaId, x.CodigoBarras }).IsUnique(false);
+
+                b.HasMany(x => x.Atributos)
+                    .WithOne(a => a.Produto)
+                    .HasForeignKey(a => a.ProdutoId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<ProdutoAtributoModel>(b =>
+            {
+                b.ToTable("ProdutoAtributos");
+                b.Property(x => x.Chave).HasMaxLength(50).IsRequired();
+                b.Property(x => x.Valor).HasMaxLength(120).IsRequired();
+                b.HasIndex(x => new { x.ProdutoId, x.Chave });
+            });
+
+            // ===== Pedido / Payment =====
             modelBuilder.Entity<PedidoModel>()
                 .HasOne(p => p.Endereco)
                 .WithMany()
                 .HasForeignKey(p => p.EnderecoId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Payment -> Pedido (sem cascade delete)
             modelBuilder.Entity<PaymentModel>()
                 .HasOne(p => p.Pedido)
                 .WithMany(o => o.Pagamentos)
                 .HasForeignKey(p => p.PedidoId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Ajustes em Payment (colunas opcionais)
-            modelBuilder.Entity<PaymentModel>(e =>
-            {
-                e.Property(p => p.CardBrand).IsRequired(false);
-                e.Property(p => p.CardLast4).IsRequired(false);
-                e.Property(p => p.ClientSecretOrToken).IsRequired(false);
-                e.Property(p => p.PixQrBase64Png).IsRequired(false);
-                e.Property(p => p.FailureReason).IsRequired(false);
-            });
-
-            // MerchantPaymentConfig -> ApplicationUser
-            modelBuilder.Entity<MerchantPaymentConfig>(e =>
-            {
-                e.Property(p => p.Provider).HasMaxLength(100).IsRequired();
-                e.Property(p => p.ConfigJson).IsRequired();
-
-                e.HasIndex(p => new { p.UserId, p.Provider }).IsUnique();
-
-                e.HasOne<ApplicationUser>()
-                 .WithMany()
-                 .HasForeignKey(p => p.UserId)
-                 .OnDelete(DeleteBehavior.Cascade);
-            });
-
-            // Categoria (exemplo)
-            modelBuilder.Entity<CategoriaModel>(b =>
-            {
-                b.ToTable("Categorias");
-                b.Property(x => x.Nome).HasMaxLength(50).IsRequired();
-                b.Property(x => x.Descricao).HasMaxLength(200);
-            });
-
-            // ====== Endereco: índices e defaults ======
-            // Índice normal do FK (não único)
+            // ===== Endereco: índices e defaults =====
             modelBuilder.Entity<EnderecoModel>()
                 .HasIndex(e => e.ClienteId)
                 .HasDatabaseName("IX_Enderecos_ClienteId");
 
-            // Índice ÚNICO FILTRADO: no máximo 1 principal ATIVO por cliente
             modelBuilder.Entity<EnderecoModel>()
                 .HasIndex(e => e.ClienteId)
                 .HasFilter("[Principal] = 1 AND [Ativo] = 1")
@@ -120,9 +158,21 @@ namespace WebApplicationPods.Data
                 b.Property(e => e.Ativo).HasDefaultValue(true).IsRequired();
             });
 
-            // ====== Query Filters (soft delete) ======
+            // ===== Soft delete / ativos =====
             modelBuilder.Entity<PedidoModel>().HasQueryFilter(p => !p.IsDeleted);
             modelBuilder.Entity<EnderecoModel>().HasQueryFilter(e => e.Ativo);
+
+            // ===== MULTI-LOJA (FILTROS GLOBAIS) =====
+            // ✅ Migrations: libera
+            // ✅ Runtime: se NÃO tem loja => retorna vazio (sem crash e sem vazamento)
+            modelBuilder.Entity<ProdutoModel>()
+                .HasQueryFilter(x => _designTime || (_hasLoja && x.LojaId == _lojaId));
+
+            modelBuilder.Entity<CategoriaModel>()
+                .HasQueryFilter(x => _designTime || (_hasLoja && x.LojaId == _lojaId));
+
+            modelBuilder.Entity<PedidoModel>()
+                .HasQueryFilter(x => !x.IsDeleted && (_designTime || (_hasLoja && x.LojaId == _lojaId)));
         }
     }
 }

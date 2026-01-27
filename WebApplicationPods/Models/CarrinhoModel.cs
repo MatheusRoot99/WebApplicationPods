@@ -3,6 +3,8 @@
     public class CarrinhoModel
     {
         public int Id { get; set; }
+        public int LojaId { get; set; }
+
         public string ClienteTelefone { get; set; }
         public string SessionId { get; set; }
         public List<CarrinhoItemViewModel> Itens { get; set; } = new List<CarrinhoItemViewModel>();

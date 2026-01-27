@@ -7,6 +7,9 @@ namespace WebApplicationPods.Models
     {
         public int Id { get; set; }
 
+        // MULTI-LOJA
+        public int LojaId { get; set; }
+
         [Required(ErrorMessage = "O nome da categoria é obrigatório")]
         [StringLength(50, ErrorMessage = "O nome deve ter no máximo 50 caracteres")]
         [Display(Name = "Nome da Categoria")]

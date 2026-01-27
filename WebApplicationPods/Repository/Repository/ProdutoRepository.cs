@@ -104,7 +104,7 @@ namespace WebApplicationPods.Repository.Repository
 
             // Aplicar filtros
             if (!string.IsNullOrEmpty(filtros.Categoria))
-                query = query.Where(p => p.Categoria.Nome == filtros.Categoria);
+                query = query.Where(p => p.Categoria != null && p.Categoria.Nome == filtros.Categoria);
 
             if (!string.IsNullOrEmpty(filtros.Sabor))
                 query = query.Where(p => p.Sabor == filtros.Sabor);
@@ -144,7 +144,8 @@ namespace WebApplicationPods.Repository.Repository
         {
             return _context.Produtos
                 .Include(p => p.Categoria)
-                .Select(p => p.Categoria.Nome)
+                .Where(p => p.Categoria != null && !string.IsNullOrEmpty(p.Categoria.Nome))
+                .Select(p => p.Categoria!.Nome)
                 .Distinct()
                 .OrderBy(c => c)
                 .ToList();

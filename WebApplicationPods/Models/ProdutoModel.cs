@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Newtonsoft.Json;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -11,15 +10,28 @@ namespace WebApplicationPods.Models
     {
         public int Id { get; set; }
 
-        [Required(ErrorMessage = "O nome do produto é obrigatório")]
-        [StringLength(100, ErrorMessage = "O nome do produto deve ter no máximo 100 caracteres")]
-        public string Nome { get; set; }
+        // ===== MULTI-LOJA =====
+        public int LojaId { get; set; }
 
-        [StringLength(2000, ErrorMessage = "A descrição deve ter no máximo 500 caracteres")]
-        public string Descricao { get; set; }
+        // ===== Conveniência (genérico) =====
+        [Required(ErrorMessage = "O nome do produto é obrigatório")]
+        [StringLength(100)]
+        public string Nome { get; set; } = string.Empty;
+
+        [StringLength(2000)]
+        public string? Descricao { get; set; }
+
+        [StringLength(80)]
+        public string? Marca { get; set; }
+
+        [StringLength(40)]
+        public string? SKU { get; set; }
+
+        [StringLength(30)]
+        public string? CodigoBarras { get; set; }
 
         [Required(ErrorMessage = "O preço do produto é obrigatório")]
-        [Range(0.01, double.MaxValue, ErrorMessage = "O preço deve ser maior que zero")]
+        [Range(0.01, double.MaxValue)]
         [Column(TypeName = "decimal(18,2)")]
         public decimal Preco { get; set; }
 
@@ -29,7 +41,7 @@ namespace WebApplicationPods.Models
 
         [Display(Name = "URL da Imagem")]
         [ValidateNever]
-        public string ImagemUrl { get; set; }
+        public string? ImagemUrl { get; set; }
 
         [NotMapped]
         [Display(Name = "Imagem do Produto")]
@@ -42,19 +54,32 @@ namespace WebApplicationPods.Models
 
         [ForeignKey("CategoriaId")]
         [ValidateNever]
-        public virtual CategoriaModel Categoria { get; set; }
+        public virtual CategoriaModel Categoria { get; set; } = default!;
 
-        [Range(0, int.MaxValue, ErrorMessage = "O estoque não pode ser negativo")]
+        [Range(0, int.MaxValue)]
         public int Estoque { get; set; } = 0;
 
+        [Display(Name = "Data de Cadastro")]
+        public DateTime DataCadastro { get; set; } = DateTime.Now;
+
+        public bool EmPromocao { get; set; }
+        public bool MaisVendido { get; set; }
+        public bool Ativo { get; set; } = true;
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? Custo { get; set; }
+
+        [ValidateNever]
+        public virtual ICollection<PedidoItemModel> PedidoItens { get; set; } = new List<PedidoItemModel>();
+
+        // ===== Pods (legado) - mantém, mas não obriga no novo fluxo =====
         [Display(Name = "Sabor")]
         [StringLength(50)]
-        [ValidateNever]
         public string Sabor { get; set; } = string.Empty;
 
         [Display(Name = "Cor")]
         [StringLength(30)]
-        public string Cor { get; set; }
+        public string? Cor { get; set; }
 
         [Display(Name = "Avaliação")]
         [Range(0, 5)]
@@ -66,92 +91,43 @@ namespace WebApplicationPods.Models
         [Display(Name = "Bateria (mAh)")]
         public int CapacidadeBateria { get; set; }
 
-        [Display(Name = "Data de Cadastro")]
-        public DateTime DataCadastro { get; set; } = DateTime.Now;
-
-        [Display(Name = "Em Promoção?")]
-        public bool EmPromocao { get; set; }
-
-        [Display(Name = "Mais Vendido?")]
-        public bool MaisVendido { get; set; }
-
-        [Display(Name = "Ativo?")]
-        public bool Ativo { get; set; } = true;
-
-        [ValidateNever]
-        public virtual ICollection<PedidoItemModel> PedidoItens { get; set; }
-
-        // ======= Sabores com Quantidade =======
-
+        // ======= Sabores com Quantidade (agora OPCIONAL) =======
         [Display(Name = "Sabores e Quantidades")]
         [Column("SaboresQuantidades")]
-        [Required(ErrorMessage = "Adicione pelo menos um sabor com quantidade válida.")]
-        public string SaboresQuantidades { get; set; }
+        public string? SaboresQuantidades { get; set; }
 
         [NotMapped]
         [ValidateNever]
-        public List<SaborQuantidade> SaboresQuantidadesList { get; set; } = new List<SaborQuantidade>();
+        public List<SaborQuantidade> SaboresQuantidadesList { get; set; } = new();
 
         [NotMapped]
         [ValidateNever]
-        public List<SaborQuantidade> SaboresDisponiveis { get; set; } = new List<SaborQuantidade>();
+        public List<SelectListItem> TodosSabores { get; set; } = new();
 
-        [NotMapped]
-        [ValidateNever]
-        public List<string> SaboresSelecionados { get; set; } = new List<string>();
-
-        [NotMapped]
-        [ValidateNever]
-        public List<SelectListItem> TodosSabores { get; set; } = new List<SelectListItem>();
+        // ===== Atributos genéricos (conveniência) =====
+        public ICollection<ProdutoAtributoModel> Atributos { get; set; } = new List<ProdutoAtributoModel>();
 
         // ======= Métodos Auxiliares =======
-
         public bool EstaEmPromocao() => EmPromocao && PrecoPromocional.HasValue && PrecoPromocional < Preco;
-
-        public decimal PrecoAVista(decimal percentualDesconto = 0.1m)
-        {
-            var precoBase = EstaEmPromocao() ? PrecoPromocional.Value : Preco;
-            return precoBase * (1 - percentualDesconto);
-        }
-
-        public decimal ValorParcela(int numeroParcelas)
-        {
-            var precoBase = EstaEmPromocao() ? PrecoPromocional.Value : Preco;
-            return precoBase / numeroParcelas;
-        }
 
         public void SerializarSaboresQuantidades()
         {
             SaboresQuantidades = JsonConvert.SerializeObject(SaboresQuantidadesList ?? new List<SaborQuantidade>());
         }
 
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal? Custo { get; set; }
-
         public void DeserializarSaboresQuantidades()
         {
             try
             {
                 SaboresQuantidadesList = !string.IsNullOrEmpty(SaboresQuantidades)
-                    ? JsonConvert.DeserializeObject<List<SaborQuantidade>>(SaboresQuantidades)
-                    : new List<SaborQuantidade>();
+                    ? JsonConvert.DeserializeObject<List<SaborQuantidade>>(SaboresQuantidades) ?? new()
+                    : new();
             }
             catch
             {
-                SaboresQuantidadesList = new List<SaborQuantidade>();
+                SaboresQuantidadesList = new();
             }
         }
-
-        public bool ValidarSaboresQuantidades()
-        {
-            if (SaboresQuantidadesList == null || SaboresQuantidadesList.Count == 0)
-                return false;
-
-            return SaboresQuantidadesList.All(sq =>
-                !string.IsNullOrWhiteSpace(sq.Sabor) && sq.Quantidade > 0);
-        }
-
-        // ======= Classe Interna =======
 
         public class SaborQuantidade
         {
@@ -160,14 +136,6 @@ namespace WebApplicationPods.Models
 
             [JsonProperty("quantidade")]
             public int Quantidade { get; set; } = 0;
-
-            public SaborQuantidade() { }
-
-            public SaborQuantidade(string sabor, int quantidade)
-            {
-                Sabor = sabor;
-                Quantidade = quantidade;
-            }
         }
     }
 }

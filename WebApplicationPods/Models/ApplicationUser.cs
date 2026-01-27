@@ -18,5 +18,10 @@ namespace WebApplicationPods.Models
         public string? Cidade { get; set; }
         public string? Estado { get; set; }
         public string? CEP { get; set; }
+
+        // ===== MULTI-LOJA (SaaS) =====
+        // Admin Master: LojaId = null
+        // Lojista: LojaId = (Id da loja)
+        public int? LojaId { get; set; }
     }
 }
