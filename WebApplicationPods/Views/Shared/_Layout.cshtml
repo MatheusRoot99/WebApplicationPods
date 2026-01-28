@@ -4,10 +4,13 @@
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery
 @inject ILojaConfigService LojaSvc
 @{
-    var cfg = await LojaSvc.GetAsync();
+    var cfg = await LojaSvc.GetAsync(); // agora pode ser null (sem loja)
     var baseUrl = $"{Context.Request?.Scheme}://{Context.Request?.Host}";
     var headerVM = LojaSvc.BuildHeader(cfg, baseUrl, Url.Action("Perfil", "Loja"));
+
     ViewData["StoreHeader"] = headerVM;
+
+    // fallback quando não tem loja (www/localhost)
     var mobileBrand = headerVM?.Nome ?? "Pods Eletrônicos";
 }
 

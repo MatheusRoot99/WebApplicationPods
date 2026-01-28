@@ -6,11 +6,11 @@ namespace WebApplicationPods.Services.service
 {
     public class SubdomainTenantResolver : ITenantResolver
     {
-        private readonly IDbContextFactory<BancoContext> _factory;
+        private readonly TenantDbContext _db;
 
-        public SubdomainTenantResolver(IDbContextFactory<BancoContext> factory)
+        public SubdomainTenantResolver(TenantDbContext db)
         {
-            _factory = factory;
+            _db = db;
         }
 
         public async Task<int?> ResolveLojaIdAsync(HttpContext context)
@@ -23,8 +23,6 @@ namespace WebApplicationPods.Services.service
             if (host == "localhost" || host == "127.0.0.1" || host == "::1")
                 return null;
 
-            // Ex: noemi.seusite.com => ["noemi","seusite","com"]
-            // Ex: noemi.minhaempresa.com.br => ["noemi","minhaempresa","com","br"]
             var parts = host.Split('.', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length < 3)
                 return null;
@@ -37,11 +35,9 @@ namespace WebApplicationPods.Services.service
             if (sub is "www" or "admin" or "painel" or "api")
                 return null;
 
-            await using var db = await _factory.CreateDbContextAsync();
-
-            return await db.Lojas
+            return await _db.Lojas
                 .AsNoTracking()
-                .Where(l => l.Ativa && l.Subdominio.ToLower() == sub)
+                .Where(l => l.Ativa && l.Subdominio == sub)
                 .Select(l => (int?)l.Id)
                 .FirstOrDefaultAsync();
         }

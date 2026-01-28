@@ -1,5 +1,4 @@
-﻿// Program.cs
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -69,15 +68,19 @@ builder.Services.AddAntiforgery(o =>
     o.HeaderName = "RequestVerificationToken";
 });
 
-// ==================== Authorization (policies) ====================
+// ==================== Authorization ====================
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
 });
 
-// ==================== EF Core (SQL Server / Azure) ====================
-// ✅ MANTÉM SÓ O AddDbContext (SCOPED) — remove DbContextFactory pra não quebrar DI
+// ==================== EF Core ====================
+// ✅ DbContext principal (tudo do sistema + Identity + filtros multi-loja)
 builder.Services.AddDbContext<BancoContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DataBase")));
+
+// ✅ DbContext “neutro” (só pra resolver subdomínio sem filtro multi-loja)
+builder.Services.AddDbContext<TenantDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DataBase")));
 
 // ==================== Identity ====================
@@ -179,7 +182,7 @@ builder.Services.AddSignalR();
 
 var app = builder.Build();
 
-// ==================== DB Migrations (opcional em DEV) ====================
+// ==================== DB Migrations ====================
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<BancoContext>();
@@ -192,13 +195,6 @@ app.UseRequestLocalization(app.Services.GetRequiredService<IOptions<RequestLocal
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
-    app.Use(async (context, next) =>
-    {
-        context.Response.Headers["Cache-Control"] = "no-cache, no-store";
-        context.Response.Headers["Pragma"] = "no-cache";
-        context.Response.Headers["Expires"] = "-1";
-        await next();
-    });
 }
 else
 {
@@ -216,17 +212,17 @@ app.UseSession();
 // Auto-login por cookie (hidrata sessão do cliente)
 app.UseMiddleware<ClienteAutoLoginMiddleware>();
 
-// ✅ Auth vem ANTES do LojaContextMiddleware (porque ele usa UserManager + Roles)
+// ✅ Auth antes do LojaContextMiddleware (ele usa roles/UserManager)
 app.UseAuthentication();
 app.UseAuthorization();
 
-// ✅ Agora sim: garante Loja context / bloqueios / session
+// ✅ Resolve loja (subdomínio) e aplica regras (admin/lojista)
 app.UseMiddleware<LojaContextMiddleware>();
 
 // Endpoints
 app.MapControllers(); // APIs (CepController etc)
 
-app.MapControllerRoute( // MVC
+app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 

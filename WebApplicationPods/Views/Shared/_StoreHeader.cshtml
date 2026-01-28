@@ -1,26 +1,40 @@
 ﻿@using WebApplicationPods.Models
 @{
+    // tenta pegar do ViewData/ViewBag; se não tiver, deixa null e aplica fallback controlado
     var hdr = (StoreHeaderViewModel?)ViewData["StoreHeader"]
-              ?? (StoreHeaderViewModel?)ViewBag.StoreHeader
-              ?? new StoreHeaderViewModel();
-
-    // Texto horário
-    string textoHorario = hdr.FechaAs.HasValue
-        ? $"Aberto até {hdr.FechaAs.Value.Hours:D2}h{hdr.FechaAs.Value.Minutes:D2}"
-        : (hdr.AbertoAgora ? "Aberto agora" : "Fechado");
+              ?? (StoreHeaderViewModel?)ViewBag.StoreHeader;
 
     // URL absoluta para compartilhar
     var baseUrl = $"{Context.Request?.Scheme}://{Context.Request?.Host}";
-    string urlCompartilhar = hdr.UrlParaCompartilhar
-        ?? baseUrl + (Context.Request?.PathBase.HasValue == true ? Context.Request.PathBase.Value : "/");
+    var pathBase = (Context.Request?.PathBase.HasValue == true) ? Context.Request.PathBase.Value : "";
+    var defaultShareUrl = baseUrl + (string.IsNullOrWhiteSpace(pathBase) ? "/" : pathBase);
+
+    // Fallbacks quando não há loja (www/localhost)
+    var nome = !string.IsNullOrWhiteSpace(hdr?.Nome) ? hdr!.Nome : "Pods Eletrônicos";
+    var logoUrl = string.IsNullOrWhiteSpace(hdr?.LogoUrl) ? null : hdr!.LogoUrl;
+    var abertoAgora = hdr?.AbertoAgora ?? false;
+
+    // Texto horário
+    string textoHorario =
+        hdr?.FechaAs.HasValue == true
+            ? $"Aberto até {hdr!.FechaAs!.Value.Hours:D2}h{hdr.FechaAs.Value.Minutes:D2}"
+            : (abertoAgora ? "Aberto agora" : "Fechado");
+
+    string urlCompartilhar = !string.IsNullOrWhiteSpace(hdr?.UrlParaCompartilhar)
+        ? hdr!.UrlParaCompartilhar!
+        : defaultShareUrl;
+
+    var mensagem = hdr?.MensagemStatus;
+    var perfilUrl = hdr?.PerfilDaLojaUrl;
 }
+
 <div class="storebar">
     <div class="storebar-top">
         <div class="storebar-brand">
             <div class="storebar-logo">
-                @if (!string.IsNullOrWhiteSpace(hdr.LogoUrl))
+                @if (!string.IsNullOrWhiteSpace(logoUrl))
                 {
-                    <img src="@hdr.LogoUrl" alt="Logo do estabelecimento" />
+                    <img src="@logoUrl" alt="Logo do estabelecimento" />
                 }
                 else
                 {
@@ -29,12 +43,12 @@
                     </div>
                 }
             </div>
-            <div class="storebar-name">@hdr.Nome</div>
+            <div class="storebar-name">@nome</div>
         </div>
 
         <div class="storebar-actions">
             <button class="storebar-share" type="button"
-                    data-share-title="@hdr.Nome"
+                    data-share-title="@nome"
                     data-share-url="@urlCompartilhar">
                 <i class="fas fa-share-nodes" aria-hidden="true"></i>
                 <span class="visually-hidden">Compartilhar</span>
@@ -44,23 +58,23 @@
 
     <div class="storebar-bottom">
         <div class="storebar-meta">
-            <span class="badge-status @(hdr.AbertoAgora ? "open" : "closed")">
-                @(hdr.AbertoAgora ? "Aberto" : "Fechado")
+            <span class="badge-status @(abertoAgora ? "open" : "closed")">
+                @(abertoAgora ? "Aberto" : "Fechado")
             </span>
             <span class="dot">•</span>
             <span>@textoHorario</span>
 
             @* Mensagem opcional *@
-            @if (!string.IsNullOrWhiteSpace(hdr.MensagemStatus))
+            @if (!string.IsNullOrWhiteSpace(mensagem))
             {
                 <span class="dot">•</span>
-                <span>@hdr.MensagemStatus</span>
+                <span>@mensagem</span>
             }
         </div>
 
-        @if (!string.IsNullOrWhiteSpace(hdr.PerfilDaLojaUrl))
+        @if (!string.IsNullOrWhiteSpace(perfilUrl))
         {
-            <a href="@hdr.PerfilDaLojaUrl" class="storebar-link">Perfil da loja</a>
+            <a href="@perfilUrl" class="storebar-link">Perfil da loja</a>
         }
     </div>
 </div>
