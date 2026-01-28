@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using WebApplicationPods.Data;
 using WebApplicationPods.Models;
 using WebApplicationPods.Services.Interface;
-using WebApplicationPods.Services.service;
 
 namespace WebApplicationPods.Middlewares
 {
@@ -18,54 +17,70 @@ namespace WebApplicationPods.Middlewares
 
         public async Task Invoke(
             HttpContext context,
+            ITenantResolver tenantResolver,
+            ICurrentLojaService currentLoja,
             UserManager<ApplicationUser> userManager,
-            BancoContext db,
-            ICurrentLojaService currentLoja)
+            BancoContext db)
         {
+            // 1) Primeiro tenta resolver pelo subdomínio (fluxo público)
+            var lojaIdFromHost = await tenantResolver.ResolveLojaIdAsync(context);
+
+            if (lojaIdFromHost.HasValue)
+            {
+                currentLoja.SetLojaId(lojaIdFromHost.Value);
+                await _next(context);
+                return;
+            }
+
+            // 2) Sem subdomínio: se estiver autenticado, aplica regra por role
             if (context.User?.Identity?.IsAuthenticated == true)
             {
-                // Se não for Admin: garante LojaId na session
-                if (!context.User.IsInRole("Admin"))
+                // Admin pode navegar no "www" e escolher loja pela sessão (mais tarde faremos UI)
+                if (context.User.IsInRole("Admin"))
+                {
+                    var lojaId = currentLoja.LojaId;
+                    if (lojaId.HasValue)
+                    {
+                        var loja = await db.Lojas.AsNoTracking().FirstOrDefaultAsync(l => l.Id == lojaId.Value);
+                        if (loja is null || !loja.Ativa)
+                            currentLoja.ClearLoja();
+                    }
+
+                    await _next(context);
+                    return;
+                }
+
+                // Lojista: força LojaId pelo user.LoJaId (painel)
+                if (context.User.IsInRole("Lojista"))
                 {
                     var user = await userManager.GetUserAsync(context.User);
 
                     if (user?.LojaId is int lojaId)
                     {
-                        context.Session.SetInt32(CurrentLojaService.SessionKey, lojaId);
-
-                        // valida se loja existe e ativa
-                        var loja = await db.Lojas
-                            .FirstOrDefaultAsync(x => x.Id == lojaId);
-
+                        var loja = await db.Lojas.AsNoTracking().FirstOrDefaultAsync(l => l.Id == lojaId);
                         if (loja is null || !loja.Ativa)
                         {
                             context.Response.Redirect("/Conta/AcessoNegado");
                             return;
                         }
-                    }
-                    else
-                    {
-                        context.Response.Redirect("/Conta/AcessoNegado");
+
+                        currentLoja.SetLojaId(lojaId);
+                        await _next(context);
                         return;
                     }
-                }
-                else
-                {
-                    // Admin: se escolheu loja, valida se ativa
-                    var lojaId = context.Session.GetInt32(CurrentLojaService.SessionKey);
-                    if (lojaId.HasValue)
-                    {
-                        var loja = await db.Lojas
-                            .FirstOrDefaultAsync(x => x.Id == lojaId.Value);
 
-                        if (loja is null || !loja.Ativa)
-                        {
-                            currentLoja.ClearLoja();
-                        }
-                    }
+                    context.Response.Redirect("/Conta/AcessoNegado");
+                    return;
                 }
+
+                // Usuário final logado sem subdomínio: não tem loja definida
+                currentLoja.ClearLoja();
+                await _next(context);
+                return;
             }
 
+            // 3) Visitante sem subdomínio => sem loja (landing)
+            currentLoja.ClearLoja();
             await _next(context);
         }
     }

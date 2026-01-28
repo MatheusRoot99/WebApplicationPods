@@ -20,10 +20,16 @@ namespace WebApplicationPods.Controllers
 
         public IActionResult Index(FiltrosModel filtros)
         {
-            // Carrega dados da loja (pega a primeira/única config)
+            // Se estiver sem loja (sem subdomínio), LojaConfigs filtrado retorna null
             var loja = _context.LojaConfigs
                 .AsNoTracking()
                 .FirstOrDefault();
+
+            if (loja == null)
+            {
+                // Landing / página padrão quando acessar www/localhost sem subdomínio
+                return View("Landing"); // crie Views/Home/Landing.cshtml
+            }
 
             var viewModel = new ProdutoListagemViewModel
             {
@@ -31,12 +37,10 @@ namespace WebApplicationPods.Controllers
 
                 Filtros = new FiltrosModel
                 {
-                    // Opções dos dropdowns
                     CategoriasDisponiveis = _produtoRepository.ObterCategoriasDistintas(),
                     SaboresDisponiveis = _produtoRepository.ObterSaboresDistintos(),
                     CoresDisponiveis = _produtoRepository.ObterCoresDistintas(),
 
-                    // Seleções atuais
                     Categoria = filtros.Categoria,
                     Sabor = filtros.Sabor,
                     Cor = filtros.Cor,
@@ -48,12 +52,12 @@ namespace WebApplicationPods.Controllers
                     OrdenarPor = filtros.OrdenarPor
                 },
 
-                // <<< A loja vai no VM principal (não dentro de Filtros) >>>
-                Loja = loja   // ou NomeLoja = loja, se seu VM usar esse nome
+                Loja = loja
             };
 
             return View(viewModel);
         }
+
 
         public IActionResult Privacy() => View();
 

@@ -11,6 +11,10 @@ namespace WebApplicationPods.Models
         [Required, StringLength(120)]
         public string Nome { get; set; } = string.Empty;
 
+        // ✅ obrigatório e único
+        [Required, StringLength(60)]
+        public string Subdominio { get; set; } = string.Empty;
+
         public bool Ativa { get; set; } = true;
 
         public DateTime CriadaEm { get; set; } = DateTime.UtcNow;

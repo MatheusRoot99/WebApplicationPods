@@ -6,19 +6,19 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Globalization;
 using System.Text.Json.Serialization;
-using WebApplicationPods.Data;                 // BancoContext
-using WebApplicationPods.Infra;                // IdentitySeedHostedService
-using WebApplicationPods.Models;               // ApplicationUser
-using WebApplicationPods.Payments;             // IPaymentService, PaymentService, IPaymentGateway
-using WebApplicationPods.Payments.Gateways;    // MercadoPagoGateway, StripeGateway
-using WebApplicationPods.Payments.Options;     // PaymentsOptions
-using WebApplicationPods.Repositories;         // ICepService, CepService
-using WebApplicationPods.Repository.Interface; // Repositórios
+using WebApplicationPods.Data;
+using WebApplicationPods.Infra;
+using WebApplicationPods.Models;
+using WebApplicationPods.Payments;
+using WebApplicationPods.Payments.Gateways;
+using WebApplicationPods.Payments.Options;
+using WebApplicationPods.Repositories;
+using WebApplicationPods.Repository.Interface;
 using WebApplicationPods.Repository.Repository;
 using WebApplicationPods.Services;
-using WebApplicationPods.Services.Interface;   // IEmailSenderService, ICarrinhoService
+using WebApplicationPods.Services.Interface;
 using WebApplicationPods.Services.service;
-using WebApplicationPods.Middlewares;          // <<< Auto-login middleware
+using WebApplicationPods.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,28 +58,25 @@ builder.Services
         o.JsonSerializerOptions.WriteIndented = true;
     });
 
-
-// depois de AddControllersWithViews()
 builder.Services.AddAntiforgery(o =>
 {
     o.Cookie.Name = "Pods.AntiForgery";
     o.Cookie.HttpOnly = true;
     o.Cookie.SameSite = SameSiteMode.Lax;
-    // Em DEV, não force Secure, senão o cookie não vai em http://localhost
     o.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
         ? CookieSecurePolicy.SameAsRequest
         : CookieSecurePolicy.Always;
-
     o.HeaderName = "RequestVerificationToken";
 });
 
-// Política "Admin"
+// ==================== Authorization (policies) ====================
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
 });
 
 // ==================== EF Core (SQL Server / Azure) ====================
+// ✅ MANTÉM SÓ O AddDbContext (SCOPED) — remove DbContextFactory pra não quebrar DI
 builder.Services.AddDbContext<BancoContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DataBase")));
 
@@ -98,11 +95,10 @@ builder.Services
     .AddEntityFrameworkStores<BancoContext>()
     .AddDefaultTokenProviders();
 
-// ==================== Cookie de autenticação ====================
+// ==================== Cookie Auth ====================
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
-    // Em produção force HTTPS; em dev deixa conforme a requisição para não quebrar em http://localhost
     options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
         ? CookieSecurePolicy.SameAsRequest
         : CookieSecurePolicy.Always;
@@ -123,6 +119,9 @@ builder.Services.AddSession(options =>
     options.Cookie.Name = "SitePods.Session";
 });
 
+// ==================== HttpContext ====================
+builder.Services.AddHttpContextAccessor();
+
 // ==================== HTTP Client ViaCEP ====================
 builder.Services.AddHttpClient<ICepService, CepService>(client =>
 {
@@ -130,22 +129,17 @@ builder.Services.AddHttpClient<ICepService, CepService>(client =>
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
-// ==================== Pagamentos (Options + Gateways + Service) ====================
+// ==================== Pagamentos ====================
 builder.Services.Configure<PaymentsOptions>(builder.Configuration.GetSection("Payments"));
 
-// Mercado Pago
 builder.Services.AddHttpClient<MercadoPagoGateway>(http =>
 {
     http.BaseAddress = new Uri("https://api.mercadopago.com/");
 });
 
-// Stripe
 builder.Services.AddScoped<StripeGateway>();
-// Pix Manual  <<<<<<<<<<  ADICIONE ESTA LINHA
 builder.Services.AddScoped<PixManualGateway>();
 
-// Factory para escolher o gateway em runtime
-// Factory para escolher o gateway em runtime
 builder.Services.AddScoped<Func<string, IPaymentGateway>>(sp => provider =>
 {
     if (provider.Equals("MercadoPago", StringComparison.OrdinalIgnoreCase))
@@ -154,15 +148,14 @@ builder.Services.AddScoped<Func<string, IPaymentGateway>>(sp => provider =>
         return sp.GetRequiredService<StripeGateway>();
     if (provider.Equals("PixManual", StringComparison.OrdinalIgnoreCase))
         return sp.GetRequiredService<PixManualGateway>();
+
     throw new InvalidOperationException($"Provedor de pagamento não suportado: {provider}");
 });
 
-// Resolver de credenciais e serviço de pagamento
-builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IPaymentCredentialsResolver, PaymentCredentialsResolver>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 
-// ==================== Infra / Repositórios / Serviços ====================
+// ==================== Repositórios / Serviços ====================
 builder.Services.AddScoped<IProdutoRepository, ProdutoRepository>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<ICategoriaRepository, CategoriaRepository>();
@@ -174,27 +167,26 @@ builder.Services.AddScoped<IEmailSenderService, GmailEmailSenderService>();
 builder.Services.AddScoped<ILojaConfigService, LojaConfigService>();
 builder.Services.AddScoped<IEstoqueService, EstoqueService>();
 builder.Services.AddScoped<ILojaConfigRepository, LojaConfigRepository>();
+
 builder.Services.AddDataProtection();
 builder.Services.AddSingleton<IClienteRememberService, ClienteRememberService>();
+
 builder.Services.AddScoped<ICurrentLojaService, CurrentLojaService>();
+builder.Services.AddScoped<ITenantResolver, SubdomainTenantResolver>();
 
-
-// ====== Services ======
-//builder.Services.AddControllersWithViews();
-//builder.Services.AddSession();
 builder.Services.AddHostedService<IdentitySeedHostedService>();
-builder.Services.AddSignalR(); // ? apenas aqui, antes do Build
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
-// ====== DB Migrations ======
+// ==================== DB Migrations (opcional em DEV) ====================
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<BancoContext>();
     db.Database.Migrate();
 }
 
-// ====== Pipeline ======
+// ==================== Pipeline ====================
 app.UseRequestLocalization(app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>().Value);
 
 if (app.Environment.IsDevelopment())
@@ -219,29 +211,25 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-// Sessão antes dos controllers
 app.UseSession();
 
-// Auto-login por cookie (hidrata sessão)
+// Auto-login por cookie (hidrata sessão do cliente)
 app.UseMiddleware<ClienteAutoLoginMiddleware>();
 
+// ✅ Auth vem ANTES do LojaContextMiddleware (porque ele usa UserManager + Roles)
 app.UseAuthentication();
 app.UseAuthorization();
-// GARANTE LOJA CONTEXT + BLOQUEIOS
-app.UseMiddleware<WebApplicationPods.Middlewares.LojaContextMiddleware>();
 
-// ====== Endpoints ======
-// Rotas MVC padrão (views)
-app.MapControllerRoute(
+// ✅ Agora sim: garante Loja context / bloqueios / session
+app.UseMiddleware<LojaContextMiddleware>();
+
+// Endpoints
+app.MapControllers(); // APIs (CepController etc)
+
+app.MapControllerRoute( // MVC
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// 🔴 Necessário para controllers com [ApiController]/attribute routing (ex: CepController)
-app.MapControllers();
-
-// Hubs
 app.MapHub<WebApplicationPods.Hubs.PedidosHub>("/hubs/pedidos");
 
 app.Run();
-
-

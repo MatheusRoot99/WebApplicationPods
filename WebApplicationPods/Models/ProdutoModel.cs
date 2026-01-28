@@ -18,6 +18,9 @@ namespace WebApplicationPods.Models
         [StringLength(100)]
         public string Nome { get; set; } = string.Empty;
 
+        public bool RequerMaioridade { get; set; } = false;
+
+
         [StringLength(2000)]
         public string? Descricao { get; set; }
 
