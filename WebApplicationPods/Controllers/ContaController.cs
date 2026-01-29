@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApplicationPods.Models;
 using WebApplicationPods.Services.Interface;
-using WebApplicationPods.Utils;
 using WebApplicationPods.ViewModels;
 
 namespace WebApplicationPods.Controllers
@@ -15,9 +14,10 @@ namespace WebApplicationPods.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IEmailSenderService _emailSender;
 
-        public ContaController(SignInManager<ApplicationUser> signInManager,
-                               UserManager<ApplicationUser> userManager,
-                               IEmailSenderService emailSender)
+        public ContaController(
+            SignInManager<ApplicationUser> signInManager,
+            UserManager<ApplicationUser> userManager,
+            IEmailSenderService emailSender)
         {
             _signInManager = signInManager;
             _userManager = userManager;
@@ -25,45 +25,38 @@ namespace WebApplicationPods.Controllers
         }
 
         [HttpGet, AllowAnonymous]
-        public IActionResult Login(string returnUrl = null)
+        public IActionResult Login(string? returnUrl = null)
             => View(new LoginViewModel { ReturnUrl = returnUrl });
 
-        /////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-        // POST: /Conta/Login
         [HttpPost, AllowAnonymous]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Login(LoginViewModel vm, string returnUrl = null)
+        public async Task<IActionResult> Login(LoginViewModel vm, string? returnUrl = null)
         {
             ViewData["ReturnUrl"] = returnUrl;
             vm.ReturnUrl = returnUrl;
 
             if (!ModelState.IsValid)
-            {
                 return View(vm);
-            }
 
             try
             {
-                // Limpa a entrada (remove caracteres não numéricos)
-                var entradaLimpa = LimparDigitos(vm.TelefoneOuCpf);
+                var entradaOriginal = vm.TelefoneOuCpf?.Trim() ?? string.Empty;
+                var entradaDigitos = LimparDigitos(entradaOriginal);
+                var ehEmail = IsValidEmail(entradaOriginal);
 
-                if (string.IsNullOrEmpty(entradaLimpa))
+                if (string.IsNullOrWhiteSpace(entradaDigitos) && !ehEmail)
                 {
-                    ModelState.AddModelError(string.Empty, "CPF ou Telefone inválido.");
+                    ModelState.AddModelError(string.Empty, "CPF/Telefone/E-mail inválido.");
                     return View(vm);
                 }
 
-                // Busca o usuário por CPF, Telefone ou Email
-                var user = await EncontrarUsuarioPorCredencial(entradaLimpa, vm.TelefoneOuCpf);
-
+                var user = await EncontrarUsuarioPorCredencial(entradaDigitos, entradaOriginal);
                 if (user == null)
                 {
                     ModelState.AddModelError(string.Empty, "Usuário não encontrado.");
                     return View(vm);
                 }
 
-                // Tenta fazer login usando o UserName
                 var result = await _signInManager.PasswordSignInAsync(
                     user.UserName,
                     vm.Senha,
@@ -73,26 +66,26 @@ namespace WebApplicationPods.Controllers
 
                 if (result.Succeeded)
                 {
-                    TempData["MensagemErro"] = "Usuário {UserName} logou com sucesso.";
-
-                    if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
-                    {
+                    // ✅ se tiver returnUrl local, respeita
+                    if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
                         return Redirect(returnUrl);
-                    }
 
-                    // Redireciona baseado no role
                     var roles = await _userManager.GetRolesAsync(user);
-                    if (roles.Contains("Admin"))
-                        return RedirectToAction("Index", "Home");
-                    if (roles.Contains("Lojista"))
-                        return RedirectToAction("Index", "Home");
 
+                    // ✅ Admin sempre no subdomínio admin
+                    if (roles.Contains("Admin"))
+                        return Redirect(BuildSubdomainUrl("admin", "/Conta/Login"));
+
+                    // ✅ Lojista sempre no subdomínio painel
+                    if (roles.Contains("Lojista"))
+                        return Redirect(BuildSubdomainUrl("painel", "/Conta/Login"));
+
+                    // demais perfis (cliente logado etc.)
                     return RedirectToAction("Index", "Home");
                 }
 
                 if (result.IsLockedOut)
                 {
-                    TempData["MensagemErro"] = "Usuário {UserName} está bloqueado.";
                     ModelState.AddModelError(string.Empty, "Usuário temporariamente bloqueado. Tente novamente mais tarde.");
                     return View(vm);
                 }
@@ -100,49 +93,47 @@ namespace WebApplicationPods.Controllers
                 ModelState.AddModelError(string.Empty, "Senha inválida.");
                 return View(vm);
             }
-            catch (Exception ex)
+            catch
             {
-                TempData["MensagemErro"]="Erro durante o login para {TelefoneOuCpf}";
                 ModelState.AddModelError(string.Empty, "Ocorreu um erro durante o login. Tente novamente.");
                 return View(vm);
             }
         }
 
-        private async Task<ApplicationUser> EncontrarUsuarioPorCredencial(string entradaLimpa, string entradaOriginal)
+        private async Task<ApplicationUser?> EncontrarUsuarioPorCredencial(string entradaDigitos, string entradaOriginal)
         {
-            // Primeiro tenta por CPF (apenas dígitos)
-            var user = await _userManager.Users
-                .FirstOrDefaultAsync(u => u.CPF == entradaLimpa);
-
-            if (user != null) return user;
-
-            // Tenta por telefone (apenas dígitos)
-            user = await _userManager.Users
-                .FirstOrDefaultAsync(u => u.PhoneNumber == entradaLimpa);
-
-            if (user != null) return user;
-
-            // Tenta por email (formato original)
-            if (IsValidEmail(entradaOriginal))
+            // CPF
+            if (!string.IsNullOrWhiteSpace(entradaDigitos))
             {
-                user = await _userManager.Users
-                    .FirstOrDefaultAsync(u => u.Email == entradaOriginal);
+                var userCpf = await _userManager.Users.FirstOrDefaultAsync(u => u.CPF == entradaDigitos);
+                if (userCpf != null) return userCpf;
+
+                // Telefone
+                var userPhone = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == entradaDigitos);
+                if (userPhone != null) return userPhone;
             }
 
-            return user;
+            // Email (original)
+            if (IsValidEmail(entradaOriginal))
+            {
+                var userEmail = await _userManager.Users.FirstOrDefaultAsync(u => u.Email == entradaOriginal);
+                if (userEmail != null) return userEmail;
+            }
+
+            return null;
         }
 
-        private string LimparDigitos(string input)
+        private static string LimparDigitos(string input)
         {
-            if (string.IsNullOrEmpty(input))
-                return input;
+            if (string.IsNullOrWhiteSpace(input))
+                return string.Empty;
 
             return new string(input.Where(char.IsDigit).ToArray());
         }
 
-        private bool IsValidEmail(string email)
+        private static bool IsValidEmail(string email)
         {
-            if (string.IsNullOrEmpty(email))
+            if (string.IsNullOrWhiteSpace(email))
                 return false;
 
             try
@@ -156,6 +147,59 @@ namespace WebApplicationPods.Controllers
             }
         }
 
+        // ✅ monta URL do subdomínio mantendo scheme/porta
+        // Ex: https://loja-1.lvh.me:44321 -> https://admin.lvh.me:44321/Conta/Login
+        // Ex: https://localhost:44321       -> https://admin.lvh.me:44321/Conta/Login
+        private string BuildSubdomainUrl(string subdomain, string path)
+        {
+            var scheme = Request.Scheme;
+
+            var hostOnly = (Request.Host.Host ?? "localhost").Trim().ToLowerInvariant();
+            var port = Request.Host.Port;
+
+            var baseDomain = GetBaseDomain(hostOnly);
+
+            var finalHost = $"{subdomain}.{baseDomain}";
+            var finalPath = string.IsNullOrWhiteSpace(path) ? "/" : (path.StartsWith("/") ? path : "/" + path);
+
+            return port.HasValue
+                ? $"{scheme}://{finalHost}:{port.Value}{finalPath}"
+                : $"{scheme}://{finalHost}{finalPath}";
+        }
+
+        private static string GetBaseDomain(string host)
+        {
+            // Dev: se estiver em localhost/ip, força lvh.me
+            if (host is "localhost" or "127.0.0.1" or "::1")
+                return "lvh.me";
+
+            // lvh.me já é base
+            if (host == "lvh.me" || host.EndsWith(".lvh.me"))
+                return "lvh.me";
+
+            var parts = host.Split('.', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 2) return host;
+
+            // Heurística pro Brasil (ex: minhaempresa.com.br)
+            var last = parts[^1];
+            var secondLast = parts[^2];
+            var thirdLast = parts.Length >= 3 ? parts[^3] : null;
+
+            var brSecondLevel = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "com","net","org","gov","edu"
+            };
+
+            if (last.Equals("br", StringComparison.OrdinalIgnoreCase) &&
+                thirdLast != null &&
+                brSecondLevel.Contains(secondLast))
+            {
+                return $"{thirdLast}.{secondLast}.{last}";
+            }
+
+            // padrão: pega os 2 últimos
+            return $"{secondLast}.{last}";
+        }
 
         [HttpPost]
         public async Task<IActionResult> Logout()
@@ -178,12 +222,11 @@ namespace WebApplicationPods.Controllers
             if (!ModelState.IsValid) return View(vm);
 
             var user = await _userManager.FindByEmailAsync(vm.Email);
-            if (user == null) // Não revele que não existe
+            if (user == null)
                 return View("ForgotPasswordConfirmation");
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var link = Url.Action("ResetPassword", "Conta",
-                new { email = vm.Email, token }, Request.Scheme);
+            var link = Url.Action("ResetPassword", "Conta", new { email = vm.Email, token }, Request.Scheme);
 
             await _emailSender.SendAsync(vm.Email,
                 "Redefinição de Senha",
@@ -192,23 +235,19 @@ namespace WebApplicationPods.Controllers
             return View("ForgotPasswordConfirmation");
         }
 
-        // GET: /Conta/CheckAccount?input=...
         [HttpGet, AllowAnonymous]
         public async Task<IActionResult> CheckAccount(string input)
         {
             if (string.IsNullOrWhiteSpace(input))
                 return Json(new { exists = false });
 
-            // Mesmo critério do Login: CPF/Telefone (só dígitos) ou e-mail
-            var entradaLimpa = new string(input.Where(char.IsDigit).ToArray());
+            var entradaDigitos = new string(input.Where(char.IsDigit).ToArray());
 
             var user = await _userManager.Users.FirstOrDefaultAsync(u =>
-                   u.CPF == entradaLimpa
-                || u.PhoneNumber == entradaLimpa
+                   u.CPF == entradaDigitos
+                || u.PhoneNumber == entradaDigitos
                 || u.Email == input);
 
-            // Não exponho dados sensíveis; devolvo apenas sinal de existência
-            // e um "email" para pré-preencher (pode ser o próprio input)
             return Json(new { exists = user != null, email = user?.Email ?? input });
         }
 
@@ -223,6 +262,7 @@ namespace WebApplicationPods.Controllers
         public async Task<IActionResult> ResetPassword(ResetPasswordViewModel vm)
         {
             if (!ModelState.IsValid) return View(vm);
+
             var user = await _userManager.FindByEmailAsync(vm.Email);
             if (user == null) return RedirectToAction("ResetPasswordConfirmation");
 
@@ -230,20 +270,19 @@ namespace WebApplicationPods.Controllers
             if (result.Succeeded)
                 return RedirectToAction("ResetPasswordConfirmation");
 
-            foreach (var e in result.Errors) ModelState.AddModelError("", e.Description);
+            foreach (var e in result.Errors)
+                ModelState.AddModelError("", e.Description);
+
             return View(vm);
         }
 
         [HttpGet, AllowAnonymous]
-        public IActionResult ResetPasswordConfirmation()
-            => View();
-
+        public IActionResult ResetPasswordConfirmation() => View();
 
         [AllowAnonymous]
         public async Task<IActionResult> DebugUser()
         {
-            var user = await _userManager.Users
-                .FirstOrDefaultAsync(u => u.CPF == "02121225170");
+            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.CPF == "02121225170");
 
             if (user != null)
             {
@@ -256,6 +295,4 @@ namespace WebApplicationPods.Controllers
             return View();
         }
     }
-
-
 }

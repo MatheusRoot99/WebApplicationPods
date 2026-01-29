@@ -209,23 +209,33 @@ app.UseRouting();
 
 app.UseSession();
 
+// ✅ redireciona admin/painel se alguém acessar pelo host errado
+app.UseMiddleware<SubdomainPortalRedirectMiddleware>();
+
 // Auto-login por cookie (hidrata sessão do cliente)
 app.UseMiddleware<ClienteAutoLoginMiddleware>();
 
-// ✅ Auth antes do LojaContextMiddleware (ele usa roles/UserManager)
 app.UseAuthentication();
 app.UseAuthorization();
 
 // ✅ Resolve loja (subdomínio) e aplica regras (admin/lojista)
 app.UseMiddleware<LojaContextMiddleware>();
 
-// Endpoints
-app.MapControllers(); // APIs (CepController etc)
+// ===== Endpoints =====
+app.MapControllers(); // APIs (attribute routing)
 
+// ✅ Areas (Admin/Painel)
+app.MapControllerRoute(
+    name: "areas",
+    pattern: "{area:exists}/{controller=Dashboard}/{action=Index}/{id?}");
+
+// Site público
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
+// Hubs
 app.MapHub<WebApplicationPods.Hubs.PedidosHub>("/hubs/pedidos");
 
 app.Run();
+

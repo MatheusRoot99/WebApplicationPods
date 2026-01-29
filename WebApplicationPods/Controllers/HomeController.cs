@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
-using WebApplicationPods.Data;             // <= adicione
+using WebApplicationPods.Data;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
 
@@ -10,7 +10,7 @@ namespace WebApplicationPods.Controllers
     public class HomeController : Controller
     {
         private readonly IProdutoRepository _produtoRepository;
-        private readonly BancoContext _context;   // <= injeta o contexto
+        private readonly BancoContext _context;
 
         public HomeController(IProdutoRepository produtoRepository, BancoContext context)
         {
@@ -18,18 +18,20 @@ namespace WebApplicationPods.Controllers
             _context = context;
         }
 
+        public IActionResult Landing()
+        {
+            return View();
+        }
+
         public IActionResult Index(FiltrosModel filtros)
         {
-            // Se estiver sem loja (sem subdomínio), LojaConfigs filtrado retorna null
+            // Se estiver sem loja (sem subdomínio), o filtro global faz isso retornar null
             var loja = _context.LojaConfigs
                 .AsNoTracking()
                 .FirstOrDefault();
 
             if (loja == null)
-            {
-                // Landing / página padrão quando acessar www/localhost sem subdomínio
-                return View("Landing"); // crie Views/Home/Landing.cshtml
-            }
+                return RedirectToAction(nameof(Landing));
 
             var viewModel = new ProdutoListagemViewModel
             {
@@ -57,7 +59,6 @@ namespace WebApplicationPods.Controllers
 
             return View(viewModel);
         }
-
 
         public IActionResult Privacy() => View();
 

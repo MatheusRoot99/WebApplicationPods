@@ -234,7 +234,11 @@
                 </div>
             </nav>
 
-            @await Html.PartialAsync("_StoreHeader", headerVM)
+            @if (headerVM != null)
+            {
+                @await Html.PartialAsync("_StoreHeader", headerVM)
+            }
+
 
             <!-- ====== CONTEÚDO (wrapper com padding-bottom SCOPED) ====== -->
             <main id="page-content" class="page-content container-fluid pt-3">
