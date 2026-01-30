@@ -23,7 +23,7 @@
             {
                 context.Response.Redirect(sub == "admin"
                     ? "/Admin/Dashboard"
-                    : "/Painel/Dashboard");
+                    : "/PainelLojista/Dashboard");
                 return;
             }
 

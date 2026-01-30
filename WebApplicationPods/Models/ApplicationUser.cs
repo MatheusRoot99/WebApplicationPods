@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace WebApplicationPods.Models
 {
@@ -23,5 +24,8 @@ namespace WebApplicationPods.Models
         // Admin Master: LojaId = null
         // Lojista: LojaId = (Id da loja)
         public int? LojaId { get; set; }
+
+        [ForeignKey(nameof(LojaId))]
+        public LojaModel? Loja { get; set; }
     }
 }

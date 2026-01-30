@@ -50,16 +50,23 @@ namespace WebApplicationPods.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // ===== Identity índices =====
-            modelBuilder.Entity<ApplicationUser>()
-                .HasIndex(u => u.CPF)
-                .IsUnique()
-                .HasFilter("[CPF] IS NOT NULL");
+            // ===== Identity / ApplicationUser =====
+            modelBuilder.Entity<ApplicationUser>(b =>
+            {
+                b.HasIndex(u => u.CPF)
+                    .IsUnique()
+                    .HasFilter("[CPF] IS NOT NULL");
 
-            modelBuilder.Entity<ApplicationUser>()
-                .HasIndex(u => u.PhoneNumber)
-                .IsUnique()
-                .HasFilter("[PhoneNumber] IS NOT NULL");
+                b.HasIndex(u => u.PhoneNumber)
+                    .IsUnique()
+                    .HasFilter("[PhoneNumber] IS NOT NULL");
+
+                // FK opcional do usuário para a loja
+                b.HasOne(u => u.Loja)
+                    .WithMany()
+                    .HasForeignKey(u => u.LojaId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
 
             // ===== LojaModel =====
             modelBuilder.Entity<LojaModel>(b =>

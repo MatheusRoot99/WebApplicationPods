@@ -28,6 +28,7 @@ namespace WebApplicationPods.Controllers
         public IActionResult Login(string? returnUrl = null)
             => View(new LoginViewModel { ReturnUrl = returnUrl });
 
+        // POST: /Conta/Login
         [HttpPost, AllowAnonymous]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel vm, string? returnUrl = null)
@@ -66,21 +67,32 @@ namespace WebApplicationPods.Controllers
 
                 if (result.Succeeded)
                 {
-                    // ✅ se tiver returnUrl local, respeita
-                    if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
-                        return Redirect(returnUrl);
-
                     var roles = await _userManager.GetRolesAsync(user);
+                    var isAdmin = roles.Any(r => string.Equals(r, "Admin", StringComparison.OrdinalIgnoreCase));
+                    var isLojista = roles.Any(r => string.Equals(r, "Lojista", StringComparison.OrdinalIgnoreCase));
 
-                    // ✅ Admin sempre no subdomínio admin
-                    if (roles.Contains("Admin"))
-                        return Redirect(BuildSubdomainUrl("admin", "/Conta/Login"));
+                    // 1) Se tem returnUrl local, respeita (ajustando host se for admin/lojista)
+                    if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                    {
+                        if (isAdmin)
+                            return Redirect(BuildSubdomainUrl("admin", returnUrl));
 
-                    // ✅ Lojista sempre no subdomínio painel
-                    if (roles.Contains("Lojista"))
-                        return Redirect(BuildSubdomainUrl("painel", "/Conta/Login"));
+                        if (isLojista)
+                            return Redirect(BuildSubdomainUrl("painel", returnUrl));
 
-                    // demais perfis (cliente logado etc.)
+                        return Redirect(returnUrl);
+                    }
+
+                    // 2) Sem returnUrl: manda pro portal correto
+                    if (isAdmin)
+                        // 👉 já abre direto a listagem de lojistas
+                        return Redirect(BuildSubdomainUrl("admin", "/Admin/Lojistas"));
+
+                    if (isLojista)
+                        return Redirect(BuildSubdomainUrl("painel", "/Painel/Dashboard"));
+
+
+                    // 3) Cliente / outros
                     return RedirectToAction("Index", "Home");
                 }
 
@@ -100,20 +112,18 @@ namespace WebApplicationPods.Controllers
             }
         }
 
+
         private async Task<ApplicationUser?> EncontrarUsuarioPorCredencial(string entradaDigitos, string entradaOriginal)
         {
-            // CPF
             if (!string.IsNullOrWhiteSpace(entradaDigitos))
             {
                 var userCpf = await _userManager.Users.FirstOrDefaultAsync(u => u.CPF == entradaDigitos);
                 if (userCpf != null) return userCpf;
 
-                // Telefone
                 var userPhone = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == entradaDigitos);
                 if (userPhone != null) return userPhone;
             }
 
-            // Email (original)
             if (IsValidEmail(entradaOriginal))
             {
                 var userEmail = await _userManager.Users.FirstOrDefaultAsync(u => u.Email == entradaOriginal);
@@ -125,16 +135,13 @@ namespace WebApplicationPods.Controllers
 
         private static string LimparDigitos(string input)
         {
-            if (string.IsNullOrWhiteSpace(input))
-                return string.Empty;
-
+            if (string.IsNullOrWhiteSpace(input)) return string.Empty;
             return new string(input.Where(char.IsDigit).ToArray());
         }
 
         private static bool IsValidEmail(string email)
         {
-            if (string.IsNullOrWhiteSpace(email))
-                return false;
+            if (string.IsNullOrWhiteSpace(email)) return false;
 
             try
             {
@@ -147,9 +154,7 @@ namespace WebApplicationPods.Controllers
             }
         }
 
-        // ✅ monta URL do subdomínio mantendo scheme/porta
-        // Ex: https://loja-1.lvh.me:44321 -> https://admin.lvh.me:44321/Conta/Login
-        // Ex: https://localhost:44321       -> https://admin.lvh.me:44321/Conta/Login
+        // Ex: http://loja-1.lvh.me:44320 -> http://admin.lvh.me:44320/Admin/Dashboard
         private string BuildSubdomainUrl(string subdomain, string path)
         {
             var scheme = Request.Scheme;
@@ -169,8 +174,8 @@ namespace WebApplicationPods.Controllers
 
         private static string GetBaseDomain(string host)
         {
-            // Dev: se estiver em localhost/ip, força lvh.me
-            if (host is "localhost" or "127.0.0.1" or "::1")
+            // Dev: se estiver em localhost/ip/0.0.0.0, força lvh.me
+            if (host is "localhost" or "127.0.0.1" or "::1" or "0.0.0.0")
                 return "lvh.me";
 
             // lvh.me já é base
@@ -197,7 +202,7 @@ namespace WebApplicationPods.Controllers
                 return $"{thirdLast}.{secondLast}.{last}";
             }
 
-            // padrão: pega os 2 últimos
+            // padrão: 2 últimos
             return $"{secondLast}.{last}";
         }
 
@@ -217,6 +222,7 @@ namespace WebApplicationPods.Controllers
         public IActionResult ForgotPassword() => View(new ForgotPasswordViewModel());
 
         [HttpPost, AllowAnonymous]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel vm)
         {
             if (!ModelState.IsValid) return View(vm);
@@ -259,6 +265,7 @@ namespace WebApplicationPods.Controllers
             => View(new ResetPasswordViewModel { Email = email, Token = token });
 
         [HttpPost, AllowAnonymous]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> ResetPassword(ResetPasswordViewModel vm)
         {
             if (!ModelState.IsValid) return View(vm);

@@ -20,7 +20,7 @@ namespace WebApplicationPods.Middlewares
             ITenantResolver tenantResolver,
             ICurrentLojaService currentLoja,
             UserManager<ApplicationUser> userManager,
-            BancoContext db)
+            TenantDbContext tenantDb) // 👈 trocamos BancoContext por TenantDbContext
         {
             // 1) Primeiro tenta resolver pelo subdomínio (fluxo público)
             var lojaIdFromHost = await tenantResolver.ResolveLojaIdAsync(context);
@@ -41,7 +41,10 @@ namespace WebApplicationPods.Middlewares
                     var lojaId = currentLoja.LojaId;
                     if (lojaId.HasValue)
                     {
-                        var loja = await db.Lojas.AsNoTracking().FirstOrDefaultAsync(l => l.Id == lojaId.Value);
+                        var loja = await tenantDb.Lojas
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(l => l.Id == lojaId.Value);
+
                         if (loja is null || !loja.Ativa)
                             currentLoja.ClearLoja();
                     }
@@ -50,14 +53,17 @@ namespace WebApplicationPods.Middlewares
                     return;
                 }
 
-                // Lojista: força LojaId pelo user.LoJaId (painel)
+                // Lojista: força LojaId pelo user.LojaId (painel)
                 if (context.User.IsInRole("Lojista"))
                 {
                     var user = await userManager.GetUserAsync(context.User);
 
                     if (user?.LojaId is int lojaId)
                     {
-                        var loja = await db.Lojas.AsNoTracking().FirstOrDefaultAsync(l => l.Id == lojaId);
+                        var loja = await tenantDb.Lojas
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(l => l.Id == lojaId);
+
                         if (loja is null || !loja.Ativa)
                         {
                             context.Response.Redirect("/Conta/AcessoNegado");

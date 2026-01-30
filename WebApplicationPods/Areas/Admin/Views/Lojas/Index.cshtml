@@ -1,0 +1,104 @@
+﻿@model IEnumerable<WebApplicationPods.Models.LojaModel>
+
+@{
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+    ViewData["Title"] = "Lojas";
+}
+
+<div class="admin-page-header">
+    <h1>Lojas</h1>
+    <p>Gerencie as lojas da plataforma</p>
+</div>
+
+<div class="mb-3">
+    <a asp-area="Admin"
+       asp-controller="Lojas"
+       asp-action="Create"
+       class="btn btn-primary">
+        <i class="fa fa-plus"></i> Nova loja
+    </a>
+</div>
+
+@if (TempData["Sucesso"] != null)
+{
+    <div class="alert alert-success">@TempData["Sucesso"]</div>
+}
+@if (TempData["Erro"] != null)
+{
+    <div class="alert alert-danger">@TempData["Erro"]</div>
+}
+
+<div class="card admin-card p-3">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Subdomínio</th>
+                <th>Link público</th>
+                <th>Plano</th>
+                <th>Dono / Lojista</th>
+                <th>Ativa</th>
+                <th>Criada em</th>
+                <th style="width: 130px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var loja in Model)
+            {
+                <tr>
+                    <td>@loja.Nome</td>
+                    <td>@loja.Subdominio</td>
+                    <td>
+                        <a href="@loja.PublicUrl" target="_blank">
+                            @loja.PublicUrl
+                        </a>
+                    </td>
+                    <td>@(string.IsNullOrWhiteSpace(loja.Plano) ? "-" : loja.Plano)</td>
+                    <td>
+                        @if (loja.Dono != null)
+                        {
+                            @loja.Dono.Nome
+                        }
+                        else
+                        {
+                            <span class="text-muted">Sem dono</span>
+                        }
+                    </td>
+                    <td>
+                        @if (loja.Ativa)
+                        {
+                            <span class="badge bg-success">Ativa</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Inativa</span>
+                        }
+                    </td>
+                    <td>@loja.CriadaEm.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                    <td>
+                        <a asp-area="Admin"
+                           asp-controller="Lojas"
+                           asp-action="Edit"
+                           asp-route-id="@loja.Id"
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fa fa-edit"></i>
+                        </a>
+
+                        <form asp-area="Admin"
+                              asp-controller="Lojas"
+                              asp-action="Delete"
+                              asp-route-id="@loja.Id"
+                              method="post"
+                              class="d-inline"
+                              onsubmit="return confirm('Confirma excluir esta loja? Esta ação não pode ser desfeita?');">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

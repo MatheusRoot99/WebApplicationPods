@@ -1,0 +1,103 @@
+﻿@model WebApplicationPods.ViewModels.LojaFormViewModel
+
+@{
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+    ViewData["Title"] = "Nova loja";
+}
+
+<div class="admin-page-header">
+    <h1>Nova loja</h1>
+    <p>Cadastro de uma nova loja / lojista</p>
+</div>
+
+<div class="card admin-card p-3">
+    <form asp-action="Create" method="post">
+        @Html.AntiForgeryToken()
+
+        <div class="mb-3">
+            <label asp-for="Nome" class="form-label"></label>
+            <input asp-for="Nome" class="form-control" />
+            <span asp-validation-for="Nome" class="text-danger"></span>
+        </div>
+
+        <div class="mb-1">
+            <label asp-for="Subdominio" class="form-label"></label>
+            <input asp-for="Subdominio" class="form-control" id="Subdominio" />
+            <small class="text-muted d-block">
+                Use apenas letras minúsculas, números e hífen. Ex: <strong>minha-loja</strong>.
+            </small>
+            <small class="text-muted d-block">
+                Seu link será:
+                <strong id="preview-link">https://subdominio.podseletronicos.com</strong>
+            </small>
+            <span asp-validation-for="Subdominio" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Plano" class="form-label"></label>
+            <input asp-for="Plano" class="form-control" />
+            <span asp-validation-for="Plano" class="text-danger"></span>
+        </div>
+
+        <div class="form-check mb-3">
+            <input asp-for="Ativa" class="form-check-input" />
+            <label asp-for="Ativa" class="form-check-label"></label>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="DonoUserId" class="form-label"></label>
+            <select asp-for="DonoUserId" asp-items="Model.Lojistas" class="form-select">
+                <option value="">-- Nenhum (definir depois) --</option>
+            </select>
+            <span asp-validation-for="DonoUserId" class="text-danger"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            <i class="fa fa-save"></i> Salvar
+        </button>
+        <a asp-action="Index" class="btn btn-link">Voltar</a>
+    </form>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        (function () {
+            const input = document.getElementById("Subdominio");
+            const preview = document.getElementById("preview-link");
+            const baseDomain = "podseletronicos.com"; // <<< manter igual ao LojaModel.PublicUrl
+
+            function updatePreview(value) {
+                if (!preview) return;
+
+                if (!value) {
+                    preview.textContent = `https://subdominio.${baseDomain}`;
+                    return;
+                }
+
+                let s = value.toLowerCase().trim();
+
+                // remove acentos
+                s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+                // espaços -> hífen
+                s = s.replace(/\s+/g, "-");
+
+                // remove caracteres inválidos
+                s = s.replace(/[^a-z0-9-]/g, "");
+
+                preview.textContent = `https://${s || "subdominio"}.${baseDomain}`;
+            }
+
+            if (input) {
+                updatePreview(input.value);
+                input.addEventListener("input", function () {
+                    updatePreview(this.value);
+                });
+            }
+        })();
+    </script>
+}

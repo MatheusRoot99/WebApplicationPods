@@ -6,22 +6,24 @@ using WebApplicationPods.Models;
 using WebApplicationPods.Utils;
 using WebApplicationPods.ViewModels;
 
-namespace WebApplicationPods.Controllers
+namespace WebApplicationPods.Areas.Admin.Controllers
 {
+    [Area("Admin")]
     [Authorize(Roles = "Admin")] // Somente ADMIN gerencia lojistas
     public class LojistasController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole<int>> _roleManager;
 
-        public LojistasController(UserManager<ApplicationUser> userManager,
-                                  RoleManager<IdentityRole<int>> roleManager)
+        public LojistasController(
+            UserManager<ApplicationUser> userManager,
+            RoleManager<IdentityRole<int>> roleManager)
         {
             _userManager = userManager;
             _roleManager = roleManager;
         }
 
-        // GET: Lojistas
+        // GET: /Admin/Lojistas
         public async Task<IActionResult> Index()
         {
             var users = await _userManager.Users.ToListAsync();
@@ -37,10 +39,10 @@ namespace WebApplicationPods.Controllers
             return View(lojistas);
         }
 
-        // GET: Lojistas/Create
+        // GET: /Admin/Lojistas/Create
         public IActionResult Create() => View(new LojistaCreateViewModel());
 
-        // POST: Lojistas/Create
+        // POST: /Admin/Lojistas/Create
         [HttpPost]
         public async Task<IActionResult> Create(LojistaCreateViewModel vm)
         {
@@ -71,7 +73,7 @@ namespace WebApplicationPods.Controllers
 
             var user = new ApplicationUser
             {
-                UserName = cpf, // pode usar CPF como username
+                UserName = cpf,
                 CPF = cpf,
                 PhoneNumber = phone,
                 Email = vm.Email,
@@ -94,7 +96,7 @@ namespace WebApplicationPods.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // GET: Lojistas/Edit/5
+        // GET: /Admin/Lojistas/Edit/5
         public async Task<IActionResult> Edit(int id)
         {
             var u = await _userManager.Users.FirstOrDefaultAsync(x => x.Id == id);
@@ -111,7 +113,7 @@ namespace WebApplicationPods.Controllers
             return View(vm);
         }
 
-        // POST: Lojistas/Edit/5
+        // POST: /Admin/Lojistas/Edit/5
         [HttpPost]
         public async Task<IActionResult> Edit(LojistaEditViewModel vm)
         {
@@ -129,7 +131,6 @@ namespace WebApplicationPods.Controllers
                 return View(vm);
             }
 
-            // Garantir unicidade (exceto o próprio)
             if (await _userManager.Users.AnyAsync(x => x.Id != vm.Id && x.CPF == cpf))
             {
                 ModelState.AddModelError(nameof(vm.CPF), "CPF já cadastrado.");
@@ -158,7 +159,7 @@ namespace WebApplicationPods.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // POST: Lojistas/ResetSenha/5
+        // POST: /Admin/Lojistas/ResetSenha/5
         [HttpPost]
         public async Task<IActionResult> ResetSenha(int id, string novaSenha)
         {
@@ -179,7 +180,7 @@ namespace WebApplicationPods.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // POST: Lojistas/Delete/5 (opcional)
+        // POST: /Admin/Lojistas/Delete/5
         [HttpPost]
         public async Task<IActionResult> Delete(int id)
         {

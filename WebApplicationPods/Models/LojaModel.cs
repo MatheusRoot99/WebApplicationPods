@@ -28,5 +28,21 @@ namespace WebApplicationPods.Models
         public ApplicationUser? Dono { get; set; }
 
         public LojaConfig? Config { get; set; }
+
+        // =========================
+        // LINK PÚBLICO DA LOJA
+        // =========================
+        // Ajuste o domínio base conforme sua infra:
+        // ex: "podseletronicos.com" ou "localhost:5001"
+        [NotMapped]
+        public string PublicUrl
+        {
+            get
+            {
+                var baseDomain = "podseletronicos.com"; // TODO: mover para config (appsettings)
+                // se quiser https, troque o esquema conforme ambiente
+                return $"https://{Subdominio}.{baseDomain}";
+            }
+        }
     }
 }
