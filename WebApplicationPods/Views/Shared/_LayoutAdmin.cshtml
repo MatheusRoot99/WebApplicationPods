@@ -64,7 +64,6 @@
                     </a>
                 </li>
 
-                <!-- Lojas -->
                 <li>
                     <a asp-area="Admin"
                        asp-controller="Lojas"
@@ -101,8 +100,17 @@
         <!-- MAIN -->
         <div class="admin-main">
             <header class="admin-topbar">
-                <div class="admin-topbar-title">
-                    @ViewData["Title"]
+                <div class="d-flex w-100 align-items-center justify-content-between gap-3 flex-wrap">
+                    <div class="admin-topbar-title">
+                        @ViewData["Title"]
+                    </div>
+
+                    @if (isAdmin)
+                    {
+                        <div>
+                            @await Component.InvokeAsync("AdminLojaPicker")
+                        </div>
+                    }
                 </div>
             </header>
 

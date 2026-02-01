@@ -1,4 +1,5 @@
 ﻿@model IEnumerable<WebApplicationPods.Models.LojaModel>
+@inject WebApplicationPods.Services.Interface.IStoreUrlBuilder StoreUrlBuilder
 
 @{
     Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
@@ -45,12 +46,14 @@
         <tbody>
             @foreach (var loja in Model)
             {
+                var publicUrl = StoreUrlBuilder.BuildPublicStoreUrl(loja.Subdominio);
+
                 <tr>
                     <td>@loja.Nome</td>
                     <td>@loja.Subdominio</td>
                     <td>
-                        <a href="@loja.PublicUrl" target="_blank">
-                            @loja.PublicUrl
+                        <a href="@publicUrl" target="_blank" rel="noopener">
+                            @publicUrl
                         </a>
                     </td>
                     <td>@(string.IsNullOrWhiteSpace(loja.Plano) ? "-" : loja.Plano)</td>

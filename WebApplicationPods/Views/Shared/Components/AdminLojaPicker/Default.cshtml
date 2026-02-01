@@ -1,0 +1,22 @@
+﻿@model WebApplicationPods.ViewModels.AdminLojaPickerViewModel
+
+<form asp-area="Admin" asp-controller="Lojas" asp-action="SetCurrent" method="post" class="d-flex align-items-center gap-2">
+    @Html.AntiForgeryToken()
+
+    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+
+    <label class="text-muted small mb-0" for="admin-loja-picker">Loja:</label>
+
+    <select id="admin-loja-picker" name="lojaId" class="form-select form-select-sm" style="max-width: 260px;" onchange="this.form.submit()">
+        <option value="">-- Nenhuma (sem contexto) --</option>
+        @foreach (var item in Model.Lojas)
+        {
+            <option value="@item.Value" selected="@(item.Selected ? "selected" : null)">@item.Text</option>
+        }
+    </select>
+
+    @if (Model.CurrentLojaId.HasValue)
+    {
+        <span class="badge bg-primary">ID: @Model.CurrentLojaId</span>
+    }
+</form>

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using WebApplicationPods.Data;
 using WebApplicationPods.Models;
+using WebApplicationPods.Services.Interface;
 using WebApplicationPods.ViewModels;
 
 namespace WebApplicationPods.Areas.Admin.Controllers
@@ -15,13 +16,16 @@ namespace WebApplicationPods.Areas.Admin.Controllers
     {
         private readonly BancoContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ICurrentLojaService _currentLoja;
 
         public LojasController(
             BancoContext context,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            ICurrentLojaService currentLoja)
         {
             _context = context;
             _userManager = userManager;
+            _currentLoja = currentLoja;
         }
 
         // GET: /Admin/Lojas
@@ -48,6 +52,22 @@ namespace WebApplicationPods.Areas.Admin.Controllers
 
             return View(vm);
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult SetCurrent(int? lojaId, string? returnUrl = null)
+        {
+            if (lojaId.HasValue && lojaId.Value > 0)
+                _currentLoja.SetLojaId(lojaId.Value);
+            else
+                _currentLoja.ClearLoja();
+
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                return Redirect(returnUrl);
+
+            return RedirectToAction("Index", "Dashboard", new { area = "Admin" });
+        }
+
 
         // POST: /Admin/Lojas/Create
         [HttpPost]
@@ -253,15 +273,23 @@ namespace WebApplicationPods.Areas.Admin.Controllers
         {
             sub = (sub ?? "").Trim().ToLowerInvariant();
 
-            // básico: troca espaços por hífen e remove caracteres estranhos
-            sub = sub.Replace(" ", "-");
+            sub = sub.Normalize(System.Text.NormalizationForm.FormD);
+            var sb = new System.Text.StringBuilder(sub.Length);
+            foreach (var ch in sub)
+            {
+                var uc = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(ch);
+                if (uc != System.Globalization.UnicodeCategory.NonSpacingMark)
+                    sb.Append(ch);
+            }
+            sub = sb.ToString().Normalize(System.Text.NormalizationForm.FormC);
 
-            var chars = sub.Where(c =>
-                (c >= 'a' && c <= 'z') ||
-                (c >= '0' && c <= '9') ||
-                c == '-');
+            sub = System.Text.RegularExpressions.Regex.Replace(sub, @"\s+", "-");
+            sub = System.Text.RegularExpressions.Regex.Replace(sub, @"[^a-z0-9-]", "");
+            sub = System.Text.RegularExpressions.Regex.Replace(sub, @"-{2,}", "-");
+            sub = sub.Trim('-');
 
-            return string.Join("", chars);
+            return sub;
         }
+
     }
 }

@@ -122,8 +122,9 @@ builder.Services.AddSession(options =>
     options.Cookie.Name = "SitePods.Session";
 });
 
-// ==================== HttpContext ====================
+// ==================== HttpContext + StoreUrlBuilder ====================
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<WebApplicationPods.Services.Interface.IStoreUrlBuilder, WebApplicationPods.Services.service.StoreUrlBuilder>();
 
 // ==================== HTTP Client ViaCEP ====================
 builder.Services.AddHttpClient<ICepService, CepService>(client =>
@@ -208,8 +209,10 @@ app.UseStaticFiles();
 app.UseRouting();
 
 app.UseSession();
+
 // força combinação host x role
 app.UseMiddleware<RoleSubdomainEnforcerMiddleware>();
+
 // ✅ redireciona admin/painel se alguém acessar pelo host errado
 app.UseMiddleware<SubdomainPortalRedirectMiddleware>();
 
@@ -239,4 +242,3 @@ app.MapControllerRoute(
 app.MapHub<WebApplicationPods.Hubs.PedidosHub>("/hubs/pedidos");
 
 app.Run();
-
