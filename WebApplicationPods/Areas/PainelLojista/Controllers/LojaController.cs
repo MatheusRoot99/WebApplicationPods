@@ -7,6 +7,7 @@ using WebApplicationPods.Services;
 
 namespace WebApplicationPods.Controllers
 {
+    [Area("PainelLojista")]
     [Authorize(Roles = "Lojista,Admin")]
     public class LojaController : Controller
     {

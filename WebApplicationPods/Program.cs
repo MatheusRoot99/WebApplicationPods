@@ -208,7 +208,8 @@ app.UseStaticFiles();
 app.UseRouting();
 
 app.UseSession();
-
+// força combinação host x role
+app.UseMiddleware<RoleSubdomainEnforcerMiddleware>();
 // ✅ redireciona admin/painel se alguém acessar pelo host errado
 app.UseMiddleware<SubdomainPortalRedirectMiddleware>();
 

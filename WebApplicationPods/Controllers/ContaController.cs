@@ -89,7 +89,9 @@ namespace WebApplicationPods.Controllers
                         return Redirect(BuildSubdomainUrl("admin", "/Admin/Lojistas"));
 
                     if (isLojista)
-                        return Redirect(BuildSubdomainUrl("painel", "/Painel/Dashboard"));
+                        return Redirect(BuildSubdomainUrl("painel", "/PainelLojista/Dashboard/Index"));
+                    // ou "/PainelLojista/Dashboard/Index", se preferir
+
 
 
                     // 3) Cliente / outros

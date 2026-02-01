@@ -3,8 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
+using WebApplicationPods.Services.Interface;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -22,17 +21,20 @@ namespace WebApplicationPods.Controllers
         private readonly ICategoriaRepository _categoriaRepository;
         private readonly IWebHostEnvironment _hostEnvironment;
         private readonly BancoContext _context;
+        private readonly ICurrentLojaService _currentLoja;
 
         public ProdutoController(
             IProdutoRepository produtoRepository,
             ICategoriaRepository categoriaRepository,
             IWebHostEnvironment hostEnvironment,
-            BancoContext context)
+            BancoContext context,
+            ICurrentLojaService currentLoja)
         {
             _produtoRepository = produtoRepository;
             _categoriaRepository = categoriaRepository;
             _hostEnvironment = hostEnvironment;
             _context = context;
+            _currentLoja = currentLoja;
         }
 
         // ===== Helpers de Flash (padroniza chaves e origem) =====
@@ -242,7 +244,11 @@ namespace WebApplicationPods.Controllers
                 // 6) Persistência
                 if (ModelState.IsValid)
                 {
-                    // Imagem (opcional) — agora com nome curto + suporte a .webp
+                    // 🔹 Loja atual (multi-loja)
+                    var lojaId = GetLojaIdOrFail();
+                    produto.LojaId = lojaId;
+
+                    // Imagem (opcional)
                     if (produto.ImagemUpload != null && produto.ImagemUpload.Length > 0)
                     {
                         var file = produto.ImagemUpload;
@@ -259,7 +265,7 @@ namespace WebApplicationPods.Controllers
                         var pastaUploads = Path.Combine(_hostEnvironment.WebRootPath, "imagens/produtos");
                         Directory.CreateDirectory(pastaUploads);
 
-                        var fileName = MakeShortFileName(produto.Nome, extLower); // << curto!
+                        var fileName = MakeShortFileName(produto.Nome, extLower);
                         var caminhoArquivo = Path.Combine(pastaUploads, fileName);
 
                         using (var fs = new FileStream(caminhoArquivo, FileMode.Create))
@@ -272,6 +278,7 @@ namespace WebApplicationPods.Controllers
                     FlashOk("Produto cadastrado com sucesso!");
                     return RedirectToAction(nameof(Index));
                 }
+
             }
             catch (Exception ex)
             {
@@ -626,6 +633,14 @@ namespace WebApplicationPods.Controllers
             return result
                 .OrderBy(s => s.Text.Replace(" (do produto)", ""), StringComparer.OrdinalIgnoreCase)
                 .ToList();
+        }
+
+        private int GetLojaIdOrFail()
+        {
+            if (!_currentLoja.HasLoja || !_currentLoja.LojaId.HasValue)
+                throw new InvalidOperationException("Loja atual não definida. Verifique o middleware multi-loja.");
+
+            return _currentLoja.LojaId.Value;
         }
     }
 }

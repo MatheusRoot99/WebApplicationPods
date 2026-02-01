@@ -1,5 +1,196 @@
 ﻿@{
-    ViewData["Title"] = "Lojista";
+    ViewData["Title"] = "Painel do Lojista";
+    var userName = User?.Identity?.Name ?? "Lojista";
 }
-<h2>Admin Dashboard</h2>
-<p>Portal admin OK.</p>
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/painel-lojista-dashboard.css" asp-append-version="true" />
+}
+
+<div class="container-fluid lojista-dashboard py-3 py-md-4">
+
+    <!-- Cabeçalho -->
+    <div class="ld-header mb-4">
+        <div class="ld-header-main">
+            <h1 class="ld-title">
+                <i class="fa-solid fa-store me-2"></i>
+                Painel do Lojista
+            </h1>
+            <p class="ld-subtitle">
+                Olá, @userName. Gerencie produtos, pedidos e configurações da sua loja pelo menu ao lado.
+            </p>
+        </div>
+        <div class="ld-header-tag">
+            <span class="ld-chip ld-chip-online">
+                <i class="fa-solid fa-circle me-1"></i>
+                Loja conectada
+            </span>
+        </div>
+    </div>
+
+    <!-- Cards de resumo -->
+    <div class="row g-3 g-md-4 mb-4">
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="ld-stat-card ld-stat-primary">
+                <div class="ld-stat-header">
+                    <span class="ld-stat-label">Pedidos hoje</span>
+                    <i class="fa-solid fa-receipt ld-stat-icon"></i>
+                </div>
+                <div class="ld-stat-value">0</div>
+                <div class="ld-stat-footer">Assim que os pedidos entrarem, eles aparecem aqui.</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="ld-stat-card ld-stat-success">
+                <div class="ld-stat-header">
+                    <span class="ld-stat-label">Faturamento (últimos 7 dias)</span>
+                    <i class="fa-solid fa-coins ld-stat-icon"></i>
+                </div>
+                <div class="ld-stat-value">R$ 0,00</div>
+                <div class="ld-stat-footer">Integraremos com os pedidos em seguida.</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="ld-stat-card ld-stat-warning">
+                <div class="ld-stat-header">
+                    <span class="ld-stat-label">Produtos ativos</span>
+                    <i class="fa-solid fa-box-open ld-stat-icon"></i>
+                </div>
+                <div class="ld-stat-value">0</div>
+                <div class="ld-stat-footer">Use “Gerenciar Produtos” no menu para cadastrar.</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="ld-stat-card ld-stat-info">
+                <div class="ld-stat-header">
+                    <span class="ld-stat-label">Status da loja</span>
+                    <i class="fa-solid fa-signal ld-stat-icon"></i>
+                </div>
+                <div class="ld-stat-value ld-badge-status">
+                    <span class="ld-dot"></span> Em operação
+                </div>
+                <div class="ld-stat-footer">
+                    Configure horários e mensagem em <strong>Configurações da Loja</strong>.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Colunas principais -->
+    <div class="row g-3 g-md-4">
+        <!-- Atalhos rápidos -->
+        <div class="col-12 col-lg-6">
+            <div class="ld-card">
+                <div class="ld-card-header">
+                    <h2 class="ld-card-title">
+                        <i class="fa-solid fa-bolt-lightning me-2"></i>
+                        Atalhos rápidos
+                    </h2>
+                    <p class="ld-card-subtitle">
+                        Acesso direto às telas mais usadas no dia a dia.
+                    </p>
+                </div>
+                <div class="ld-card-body">
+                    <div class="ld-quick-links">
+                        <a asp-controller="Pedido" asp-action="Index" class="ld-quick-link">
+                            <div class="ld-quick-icon">
+                                <i class="fa-solid fa-receipt"></i>
+                            </div>
+                            <div>
+                                <div class="ld-quick-title">Pedidos</div>
+                                <div class="ld-quick-text">Visualizar e acompanhar pedidos em tempo real.</div>
+                            </div>
+                        </a>
+
+                        <a asp-controller="Produto" asp-action="Index" class="ld-quick-link">
+                            <div class="ld-quick-icon">
+                                <i class="fa-solid fa-boxes-stacked"></i>
+                            </div>
+                            <div>
+                                <div class="ld-quick-title">Gerenciar Produtos</div>
+                                <div class="ld-quick-text">Cadastrar, editar e controlar estoque.</div>
+                            </div>
+                        </a>
+
+                        <a asp-controller="Categoria" asp-action="Index" class="ld-quick-link">
+                            <div class="ld-quick-icon">
+                                <i class="fa-solid fa-tags"></i>
+                            </div>
+                            <div>
+                                <div class="ld-quick-title">Categorias</div>
+                                <div class="ld-quick-text">Organizar seus produtos por categoria.</div>
+                            </div>
+                        </a>
+
+                        <a asp-controller="Loja" asp-action="Editar" class="ld-quick-link">
+                            <div class="ld-quick-icon">
+                                <i class="fa-solid fa-gear"></i>
+                            </div>
+                            <div>
+                                <div class="ld-quick-title">Configurações da Loja</div>
+                                <div class="ld-quick-text">Horário de funcionamento, endereço e status.</div>
+                            </div>
+                        </a>
+
+                        <a asp-controller="ConfiguracaoPagamento" asp-action="Index" class="ld-quick-link">
+                            <div class="ld-quick-icon">
+                                <i class="fa-solid fa-credit-card"></i>
+                            </div>
+                            <div>
+                                <div class="ld-quick-title">Configurações de Pagamento</div>
+                                <div class="ld-quick-text">Credenciais e métodos de pagamento disponíveis.</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status da operação -->
+        <div class="col-12 col-lg-6">
+            <div class="ld-card">
+                <div class="ld-card-header">
+                    <h2 class="ld-card-title">
+                        <i class="fa-solid fa-chart-line me-2"></i>
+                        Status da operação
+                    </h2>
+                    <p class="ld-card-subtitle">
+                        Resumo rápido da situação da sua loja.
+                    </p>
+                </div>
+                <div class="ld-card-body">
+                    <ul class="ld-status-list">
+                        <li>
+                            <span class="ld-status-dot ld-ok"></span>
+                            Integração de pedidos ativa
+                            <small>Os pedidos da sua loja aparecerão normalmente aqui.</small>
+                        </li>
+                        <li>
+                            <span class="ld-status-dot ld-ok"></span>
+                            Pagamentos configurados
+                            <small>Verifique as credenciais na tela de “Configurações de Pagamento”.</small>
+                        </li>
+                        <li>
+                            <span class="ld-status-dot ld-warn"></span>
+                            Produtos cadastrados
+                            <small>Se ainda não cadastrou produtos, comece por “Gerenciar Produtos”.</small>
+                        </li>
+                        <li>
+                            <span class="ld-status-dot ld-info"></span>
+                            Horário de funcionamento
+                            <small>Ajuste horários e mensagem personalizada em “Configurações da Loja”.</small>
+                        </li>
+                    </ul>
+
+                    <div class="ld-tip">
+                        <i class="fa-solid fa-lightbulb me-2"></i>
+                        <span>Dica: mantenha estoque, horários e pagamentos sempre atualizados para evitar perda de vendas.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

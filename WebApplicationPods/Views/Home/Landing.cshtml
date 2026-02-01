@@ -1,21 +1,131 @@
 ﻿@{
-    ViewData["Title"] = "Bem-vindo";
+    ViewData["Title"] = "Plataforma multi-loja";
 }
 
-<div class="container py-5">
-    <h1 class="mb-3">Bem-vindo 👋</h1>
-    <p class="text-muted">
-        Você acessou o endereço principal. Para abrir uma loja, use o subdomínio.
-    </p>
+@section Styles {
+    <link rel="stylesheet" href="~/css/landing.css" asp-append-version="true" />
+}
 
-    <div class="alert alert-info mt-4">
-        Exemplo: <strong>http://loja-1.lvh.me:PORTA/</strong>
+<div class="landing-wrapper container py-4 py-md-5">
+
+    <div class="row g-4 align-items-center">
+        <!-- HERO -->
+        <div class="col-12 col-lg-6">
+            <div class="hero-badge mb-3">
+                <span class="hero-pill">
+                    <i class="fa-solid fa-cloud-arrow-up me-1"></i>
+                    SaaS de conveniência multi-loja
+                </span>
+            </div>
+
+            <h1 class="hero-title mb-3">
+                Centralize suas lojas em um único painel.
+            </h1>
+
+            <p class="hero-subtitle mb-4">
+                Cada lojista com seu próprio subdomínio, catálogo, pedidos e configurações.
+                Você administra tudo em um painel único.
+            </p>
+
+            <div class="hero-actions mb-4">
+                <a href="/Conta/Login" class="btn btn-primary btn-lg me-2 mb-2">
+                    <i class="fa-solid fa-right-to-bracket me-2"></i>
+                    Entrar no painel
+                </a>
+                <a href="#como-funciona" class="btn btn-outline-secondary btn-lg mb-2">
+                    <i class="fa-solid fa-circle-question me-2"></i>
+                    Como funciona
+                </a>
+            </div>
+
+            <div class="hero-hint small text-muted">
+                Exemplo de loja:
+                <code>https://sualoja.seudominio.com</code>
+                <br />
+                Em desenvolvimento: <strong>lojas ilimitadas</strong>, faturamento unificado e muito mais.
+            </div>
+        </div>
+
+        <!-- CARD DIREITA -->
+        <div class="col-12 col-lg-6">
+            <div class="hero-card shadow-sm">
+                <div class="hero-card-header">
+                    <span class="hero-card-icon">
+                        <i class="fa-solid fa-diagram-project"></i>
+                    </span>
+                    <div>
+                        <h2 class="hero-card-title">Como os subdomínios funcionam?</h2>
+                        <p class="hero-card-subtitle">
+                            O endereço define automaticamente qual loja o cliente está acessando.
+                        </p>
+                    </div>
+                </div>
+
+                <ul class="hero-steps list-unstyled mb-3">
+                    <li>
+                        <span class="step-badge">1</span>
+                        <div>
+                            <strong>Admin cria a loja</strong>
+                            <small>Ex.: subdomínio <code>lojateste</code> cadastrado no painel admin.</small>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="step-badge">2</span>
+                        <div>
+                            <strong>Vincula um lojista</strong>
+                            <small>O usuário recebe acesso ao painel “Lojista” daquela loja.</small>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="step-badge">3</span>
+                        <div>
+                            <strong>Clientes acessam pelo link</strong>
+                            <small>
+                                Ex.: <code>https://lojateste.seudominio.com</code> – o sistema resolve a loja automaticamente.
+                            </small>
+                        </div>
+                    </li>
+                </ul>
+
+                <div class="hero-card-footer">
+                    <i class="fa-solid fa-lightbulb me-2"></i>
+                    <span>
+                        Em ambiente de desenvolvimento você pode usar domínios como
+                        <code>lojateste.lvh.me:PORTA</code>.
+                    </span>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <hr class="my-4" />
-
-    <p class="mb-2"><strong>Atalhos:</strong></p>
-    <ul>
-        <li><a href="/Conta/Login">Login</a></li>
-    </ul>
+    <!-- BLOCO "como funciona" -->
+    <div id="como-funciona" class="row g-3 mt-4 mt-md-5">
+        <div class="col-12 col-md-4">
+            <div class="landing-feature">
+                <div class="landing-feature-icon">
+                    <i class="fa-solid fa-user-shield"></i>
+                </div>
+                <h3>Admin central</h3>
+                <p>Crie lojas, defina planos, gerencie lojistas e acompanhe o uso da plataforma.</p>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="landing-feature">
+                <div class="landing-feature-icon">
+                    <i class="fa-solid fa-store"></i>
+                </div>
+                <h3>Painel do lojista</h3>
+                <p>Cada lojista gerencia produtos, estoque, pedidos e configurações da própria loja.</p>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="landing-feature">
+                <div class="landing-feature-icon">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                </div>
+                <h3>Experiência do cliente</h3>
+                <p>O cliente acessa o subdomínio da loja e já cai no catálogo correto, sem confusão.</p>
+            </div>
+        </div>
+    </div>
 </div>
