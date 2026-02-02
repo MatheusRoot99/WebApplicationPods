@@ -5,277 +5,32 @@
     ViewData["HideChrome"] = true;
     ViewData["BodyClass"] = "auth-page";
 
-    // Links rápidos (DEV) para facilitar teste com lvh.me:porta atual
     var scheme = Context.Request.Scheme;
     var port = Context.Request.Host.Port;
     var portPart = port.HasValue ? $":{port.Value}" : "";
-    var adminUrl = $"{scheme}://admin.lvh.me{portPart}/";
-    var painelUrl = $"{scheme}://painel.lvh.me{portPart}/";
+    var adminUrl = $"{scheme}://admin.lvh.me{portPart}/Conta/Login";
+    var painelUrl = $"{scheme}://painel.lvh.me{portPart}/Conta/Login";
     var lojaUrl = $"{scheme}://loja-1.lvh.me{portPart}/";
 }
 
 @section Styles {
-    <style>
-        :root {
-            --brand-start: #6a11cb;
-            --brand-end: #2575fc;
-            --bg: #0b1220;
-            --card: #0f172a;
-            --muted: #94a3b8;
-            --line: rgba(148,163,184,.20);
-        }
-
-        body {
-            background: radial-gradient(1200px 600px at 15% 10%, rgba(106,17,203,.28), transparent 60%), radial-gradient(1200px 600px at 85% 20%, rgba(37,117,252,.22), transparent 55%), var(--bg);
-        }
-
-        .auth-shell {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            padding: 2rem 1rem;
-        }
-
-        .auth-wrap {
-            width: min(1100px, 100%);
-            margin: 0 auto;
-        }
-
-        .auth-grid {
-            display: grid;
-            grid-template-columns: 1.2fr 1fr;
-            gap: 1.25rem;
-            align-items: stretch;
-        }
-
-        @@media (max-width: 991.98px) {
-            .auth-grid
-
-        {
-            grid-template-columns: 1fr;
-        }
-
-        }
-
-        .auth-left {
-            border: 1px solid var(--line);
-            border-radius: 18px;
-            padding: 1.5rem;
-            background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-            box-shadow: 0 18px 60px rgba(0,0,0,.35);
-            color: #e5e7eb;
-            overflow: hidden;
-            position: relative;
-        }
-
-            .auth-left:before {
-                content: "";
-                position: absolute;
-                inset: -2px;
-                background: radial-gradient(500px 220px at 20% 10%, rgba(106,17,203,.35), transparent 60%), radial-gradient(520px 240px at 80% 15%, rgba(37,117,252,.30), transparent 60%);
-                pointer-events: none;
-                filter: blur(0px);
-            }
-
-            .auth-left > * {
-                position: relative;
-            }
-
-        .brand-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: .5rem;
-            padding: .35rem .75rem;
-            border-radius: 999px;
-            background: rgba(255,255,255,.06);
-            border: 1px solid var(--line);
-            font-size: .85rem;
-            color: #e5e7eb;
-        }
-
-        .auth-title {
-            font-size: clamp(1.8rem, 2vw + 1rem, 2.4rem);
-            font-weight: 800;
-            line-height: 1.05;
-            margin: .9rem 0 .6rem;
-            letter-spacing: -.02em;
-        }
-
-        .auth-sub {
-            color: var(--muted);
-            max-width: 52ch;
-            margin-bottom: 1.1rem;
-        }
-
-        .benefits {
-            margin: 0;
-            padding: 0;
-            list-style: none;
-            display: grid;
-            gap: .65rem;
-        }
-
-            .benefits li {
-                display: flex;
-                gap: .65rem;
-                align-items: flex-start;
-                padding: .65rem .75rem;
-                border-radius: 14px;
-                background: rgba(255,255,255,.04);
-                border: 1px solid var(--line);
-            }
-
-            .benefits i {
-                width: 34px;
-                height: 34px;
-                display: inline-grid;
-                place-items: center;
-                border-radius: 12px;
-                background: linear-gradient(135deg, var(--brand-start), var(--brand-end));
-                color: white;
-                flex-shrink: 0;
-                margin-top: 2px;
-            }
-
-            .benefits strong {
-                display: block;
-                font-weight: 800;
-            }
-
-            .benefits small {
-                display: block;
-                color: var(--muted);
-                line-height: 1.2;
-            }
-
-        .dev-links {
-            margin-top: 1.1rem;
-            padding-top: .9rem;
-            border-top: 1px dashed var(--line);
-            display: flex;
-            flex-wrap: wrap;
-            gap: .5rem;
-        }
-
-            .dev-links a {
-                text-decoration: none;
-                color: #e5e7eb;
-                border: 1px solid var(--line);
-                background: rgba(255,255,255,.04);
-                padding: .45rem .7rem;
-                border-radius: 999px;
-                font-size: .85rem;
-            }
-
-                .dev-links a:hover {
-                    background: rgba(255,255,255,.08);
-                }
-
-        .login-card {
-            border: 1px solid var(--line);
-            border-radius: 18px;
-            overflow: hidden;
-            background: rgba(255,255,255,.06);
-            box-shadow: 0 18px 60px rgba(0,0,0,.35);
-            backdrop-filter: blur(10px);
-        }
-
-        .login-head {
-            padding: 1rem 1.25rem;
-            color: #fff;
-            background: linear-gradient(135deg, rgba(106,17,203,.95), rgba(37,117,252,.95));
-            display: flex;
-            align-items: center;
-            gap: .6rem;
-        }
-
-        .login-body {
-            padding: 1.25rem;
-            color: #e5e7eb;
-        }
-
-        .form-label {
-            color: #e5e7eb;
-        }
-
-        .input-group-text {
-            background: rgba(255,255,255,.06);
-            border-color: var(--line);
-            color: #e5e7eb;
-        }
-
-        .form-control {
-            background: rgba(255,255,255,.06);
-            border-color: var(--line);
-            color: #e5e7eb;
-        }
-
-            .form-control::placeholder {
-                color: rgba(148,163,184,.8);
-            }
-
-            .form-control:focus {
-                border-color: rgba(37,117,252,.85);
-                box-shadow: 0 0 0 .2rem rgba(37,117,252,.25);
-                background: rgba(255,255,255,.08);
-                color: #fff;
-            }
-
-        .btn-brand {
-            background: linear-gradient(135deg,var(--brand-start), var(--brand-end));
-            border: 0;
-            color: #fff;
-            font-weight: 800;
-            letter-spacing: .2px;
-            box-shadow: 0 10px 20px rgba(37,117,252,.25);
-        }
-
-            .btn-brand:hover {
-                filter: brightness(1.03);
-            }
-
-        .login-links a {
-            color: #c7d2fe;
-            text-decoration: none;
-        }
-
-            .login-links a:hover {
-                text-decoration: underline;
-            }
-
-        .muted-link.disabled {
-            pointer-events: none;
-            opacity: .55;
-            text-decoration: none !important;
-        }
-
-        .alert {
-            border-color: rgba(248,113,113,.35);
-            background: rgba(248,113,113,.12);
-            color: #fecaca;
-        }
-
-        .small-note {
-            color: var(--muted);
-        }
-    </style>
+    <link rel="stylesheet" href="~/css/auth.css" asp-append-version="true" />
 }
 
 <div class="auth-shell">
     <div class="auth-wrap">
         <div class="auth-grid">
 
-            <!-- COLUNA ESQUERDA (informações) -->
             <aside class="auth-left">
                 <div class="brand-pill">
                     <i class="fa-solid fa-cloud-arrow-up"></i>
                     <span>Plataforma multi-loja</span>
                 </div>
 
-                <div class="auth-title">Acesse seu painel com segurança.</div>
+                <div class="auth-title">Acesse seu painel.</div>
                 <div class="auth-sub">
-                    Use seu <strong>CPF, telefone ou e-mail</strong>.
-                    O sistema identifica seu perfil e direciona automaticamente para <strong>Admin</strong> ou <strong>Lojista</strong>.
+                    Entre com <strong>CPF, telefone ou e-mail</strong>.
+                    O sistema identifica seu perfil e direciona para <strong>Admin</strong> ou <strong>Lojista</strong>.
                 </div>
 
                 <ul class="benefits">
@@ -297,30 +52,33 @@
                         <i class="fa-solid fa-link"></i>
                         <div>
                             <strong>Subdomínios por loja</strong>
-                            <small>Cada loja tem seu endereço e contexto automaticamente resolvido.</small>
+                            <small>Cada loja possui contexto automático pelo endereço.</small>
                         </div>
                     </li>
                 </ul>
 
-                @* Links rápidos para DEV (ajuda MUITO no teste) *@
                 <div class="dev-links">
-                    <a href="http://admin.lvh.me:44320/Conta/Login"><i class="fa-solid fa-user-shield me-1"></i> Admin Portal</a>
-                    <a href="http://painel.lvh.me:44320/Conta/Login"><i class="fa-solid fa-store me-1"></i> Painel Lojista</a>
-                    <a href="http://loja-1.lvh.me:44320/" target="_blank" rel="noopener"><i class="fa-solid fa-cart-shopping me-1"></i> Loja Exemplo</a>
+                    <a href="@adminUrl"><i class="fa-solid fa-user-shield me-1"></i> Admin</a>
+                    <a href="@painelUrl"><i class="fa-solid fa-store me-1"></i> Lojista</a>
+                    <a href="@lojaUrl" target="_blank" rel="noopener"><i class="fa-solid fa-cart-shopping me-1"></i> Loja</a>
                 </div>
 
-                <div class="small-note mt-3" style="color: #60a5fa; background: rgba(96,165,250,0.1); padding: 0.5rem; border-radius: 8px;">
+                <div class="hint">
                     <i class="fa-solid fa-info-circle me-1"></i>
-                    <strong>Importante:</strong> Acesse sempre via <code>admin.lvh.me:44320</code> ou <code>painel.lvh.me:44320</code>.
-                    O <code>localhost</code> será automaticamente redirecionado.
+                    Use <code>admin.lvh.me</code> ou <code>painel.lvh.me</code> no desenvolvimento.
                 </div>
             </aside>
 
-            <!-- COLUNA DIREITA (form) -->
             <section class="login-card">
                 <div class="login-head">
-                    <i class="fa-solid fa-right-to-bracket"></i>
-                    <h2 class="h5 mb-0">Entrar</h2>
+                    <div class="title">
+                        <i class="fa-solid fa-right-to-bracket"></i>
+                        <h2 class="h5 mb-0">Entrar</h2>
+                    </div>
+
+                    <button type="button" class="theme-toggle" id="themeToggle" aria-label="Alternar tema" title="Alternar tema">
+                        <i class="fa-solid fa-moon" id="themeIcon"></i>
+                    </button>
                 </div>
 
                 <div class="login-body">
@@ -328,8 +86,7 @@
                         @Html.AntiForgeryToken()
                         <input type="hidden" asp-for="ReturnUrl" />
 
-                        @* Melhor feedback *@
-                        <div asp-validation-summary="ModelOnly" class="alert mb-3"></div>
+                        <div asp-validation-summary="ModelOnly" class="alert-validation mb-3"></div>
 
                         <div class="mb-3">
                             <label asp-for="TelefoneOuCpf" class="form-label">Telefone, CPF ou e-mail</label>
@@ -356,7 +113,7 @@
                             <span asp-validation-for="Senha" class="text-danger"></span>
                         </div>
 
-                        <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-3 login-links">
                             <div class="form-check">
                                 <input class="form-check-input" asp-for="LembrarMe" id="lembrar" />
                                 <label class="form-check-label" for="lembrar">Lembrar-me</label>
@@ -372,7 +129,7 @@
                         </div>
 
                         <button type="submit" class="btn btn-brand w-100 py-2">
-                            Entrar no painel
+                            Entrar
                         </button>
 
                         <div class="small-note mt-3">
@@ -388,6 +145,40 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        (function () {
+          const root = document.documentElement;
+          const btn = document.getElementById('themeToggle');
+          const icon = document.getElementById('themeIcon');
+
+          function apply(theme) {
+            if (!theme) root.removeAttribute('data-theme');
+            else root.setAttribute('data-theme', theme);
+
+            const isDark =
+              (root.getAttribute('data-theme') === 'dark') ||
+              (!root.getAttribute('data-theme') && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+            if (icon) icon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+            if (btn) btn.title = isDark ? 'Mudar para claro' : 'Mudar para escuro';
+          }
+
+          const saved = localStorage.getItem('auth_theme'); // 'dark' | 'light' | null
+          if (saved === 'dark' || saved === 'light') apply(saved);
+          else apply(null);
+
+          if (btn) {
+            btn.addEventListener('click', () => {
+              const current = root.getAttribute('data-theme');
+              const next = current === 'dark' ? 'light' : 'dark';
+              localStorage.setItem('auth_theme', next);
+              apply(next);
+            });
+          }
+        })();
+    </script>
+
     <script>
         (function(){
           const input = document.getElementById('login-credential');
