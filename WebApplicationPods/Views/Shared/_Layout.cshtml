@@ -3,8 +3,17 @@
 @using WebApplicationPods.Services
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery
 @inject ILojaConfigService LojaSvc
+
 @{
-    var cfg = await LojaSvc.GetAsync(); // agora pode ser null (sem loja)
+    // ===== Flags pra controlar o "chrome" (sidebar/nav) por página =====
+    // Use isso no Login/Landing:
+    // ViewData["HideChrome"] = true;
+    // ViewData["BodyClass"] = "auth-page"; (ou "landing-page")
+    var hideChrome = (ViewData["HideChrome"] as bool?) ?? false;
+    var bodyClass = (ViewData["BodyClass"] as string) ?? "";
+
+    // ===== Header da loja (pode ser null quando não tem loja - www/localhost) =====
+    var cfg = await LojaSvc.GetAsync();
     var baseUrl = $"{Context.Request?.Scheme}://{Context.Request?.Host}";
     var headerVM = LojaSvc.BuildHeader(cfg, baseUrl, Url.Action("Perfil", "Loja"));
 
@@ -32,16 +41,15 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/sidebar.css" asp-append-version="true" />
 
+    @* IMPORTANTE: permite @section Styles nas views *@
     @await RenderSectionAsync("Styles", required: false)
 
     <style>
         :root {
-            /* altura do bottom nav e deslocamento por teclado (conteúdo) */
             --mbn-height: 70px;
             --kb-shift: 0px;
         }
 
-        /* iOS não deve auto-zoomar */
         html {
             -webkit-text-size-adjust: 100%;
         }
@@ -50,7 +58,7 @@
             height: 100%;
         }
 
-        /* Banner para habilitar som (fica no BODY) */
+        /* Banner para habilitar som */
         #rt-audio-banner {
             position: fixed;
             right: 16px;
@@ -72,204 +80,190 @@
                 opacity: .9;
             }
 
-        /* ====== SCOPED padding para o conteúdo ======
-                   Só quando existir bottom-nav na página */
+        /* Só quando existir bottom-nav na página */
         .has-bottom-nav .page-content {
             padding-bottom: calc(var(--mbn-height) + var(--kb-shift) + env(safe-area-inset-bottom) + 12px);
         }
     </style>
 </head>
 
-<body>
-    <!-- Token antiforgery fallback -->
+<body class="@bodyClass">
+    <!-- Token antiforgery fallback (pra JS/fetch) -->
     <input type="hidden" id="__RequestVerificationToken"
            name="__RequestVerificationToken"
            value="@antiforgery.GetAndStoreTokens(Context).RequestToken" />
 
-    <div class="d-flex" id="wrapper">
-        @await Html.PartialAsync("_Sidebar")
+    @* ====== MODO LIMPO (Login/Landing) ====== *@
+    @if (hideChrome)
+    {
+        <main class="container py-4">
+            @RenderBody()
+        </main>
+    }
+    else
+    {
+        <div class="d-flex" id="wrapper">
+            @await Html.PartialAsync("_Sidebar")
 
-        <div id="page-content-wrapper">
-            <!-- Topbar -->
-            <nav class="navbar navbar-dark bg-dark border-bottom">
-                <div class="container-fluid">
+            <div id="page-content-wrapper">
+                <!-- Topbar -->
+                <nav class="navbar navbar-dark bg-dark border-bottom">
+                    <div class="container-fluid">
 
-                    <!-- ===== MOBILE TOOLBAR (até lg) ===== -->
-                    <div class="mobile-toolbar d-lg-none w-100">
-                        <button class="icon-btn"
-                                type="button"
-                                data-bs-toggle="offcanvas"
-                                data-bs-target="#mobileMenu"
-                                aria-controls="mobileMenu"
-                                aria-label="Abrir menu">
-                            <i class="fas fa-bars"></i>
-                        </button>
+                        <!-- ===== MOBILE TOOLBAR (até lg) ===== -->
+                        <div class="mobile-toolbar d-lg-none w-100">
+                            <button class="icon-btn"
+                                    type="button"
+                                    data-bs-toggle="offcanvas"
+                                    data-bs-target="#mobileMenu"
+                                    aria-controls="mobileMenu"
+                                    aria-label="Abrir menu">
+                                <i class="fas fa-bars"></i>
+                            </button>
 
-                        <div class="mobile-brand text-truncate">@mobileBrand</div>
+                            <div class="mobile-brand text-truncate">@mobileBrand</div>
 
-                        <div class="toolbar-actions">
-                            @* Carrinho (cliente) *@
-                            @if (!User.IsInRole("Admin") && !User.IsInRole("Lojista"))
-                            {
-                                <a class="icon-btn position-relative" asp-controller="Carrinho" asp-action="Index" aria-label="Carrinho">
-                                    <i class="fas fa-shopping-cart"></i>
-                                    <span id="cart-badge-mobile-top"
-                                          class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle visually-hidden js-cart-badge">
-                                        @await Component.InvokeAsync("CarrinhoResumo")
-                                        <span class="visually-hidden">itens no carrinho</span>
-                                    </span>
-                                </a>
-                            }
+                            <div class="toolbar-actions">
+                                @* Carrinho (cliente) *@
+                                @if (!User.IsInRole("Admin") && !User.IsInRole("Lojista"))
+                                {
+                                    <a class="icon-btn position-relative" asp-controller="Carrinho" asp-action="Index" aria-label="Carrinho">
+                                        <i class="fas fa-shopping-cart"></i>
+                                        <span id="cart-badge-mobile-top"
+                                              class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle visually-hidden js-cart-badge">
+                                            @await Component.InvokeAsync("CarrinhoResumo")
+                                            <span class="visually-hidden">itens no carrinho</span>
+                                        </span>
+                                    </a>
+                                }
 
-                            @* Notificações *@
-                            @if (User.Identity?.IsAuthenticated == true)
-                            {
+                                @* Notificações *@
+                                @if (User.Identity?.IsAuthenticated == true)
+                                {
+                                    <div class="dropdown">
+                                        <button class="icon-btn position-relative" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notificações">
+                                            <i class="fas fa-bell"></i>
+                                            <span id="notif-badge" class="badge bg-danger ms-1 visually-hidden">0</span>
+                                        </button>
+                                        @await Component.InvokeAsync("Notifications")
+                                    </div>
+                                }
+
+                                @* Conta *@
                                 <div class="dropdown">
-                                    <button class="icon-btn position-relative" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notificações">
-                                        <i class="fas fa-bell"></i>
-                                        <span id="notif-badge" class="badge bg-danger ms-1 visually-hidden">0</span>
+                                    <button class="icon-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Conta">
+                                        <i class="fas fa-user-circle"></i>
                                     </button>
-                                    @await Component.InvokeAsync("Notifications")
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        @if (User.Identity?.IsAuthenticated != true)
+                                        {
+                                            <li><a class="dropdown-item" asp-controller="Conta" asp-action="Login"><i class="fas fa-sign-in-alt me-2"></i>Login</a></li>
+                                        }
+                                        else
+                                        {
+                                            <li><a class="dropdown-item" asp-controller="Cliente" asp-action="Perfil"><i class="fas fa-user me-2"></i>Perfil</a></li>
+                                            <li>
+                                                <form asp-controller="Conta" asp-action="Logout" method="post" class="px-3">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-link p-0"><i class="fas fa-sign-out-alt me-2"></i>Sair</button>
+                                                </form>
+                                            </li>
+                                        }
+                                    </ul>
                                 </div>
-                            }
-
-                            @* Conta *@
-                            <div class="dropdown">
-                                <button class="icon-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Conta">
-                                    <i class="fas fa-user-circle"></i>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    @if (User.Identity?.IsAuthenticated != true)
-                                    {
-                                        <li><a class="dropdown-item" asp-controller="Conta" asp-action="Login"><i class="fas fa-sign-in-alt me-2"></i>Login</a></li>
-                                    }
-                                    else
-                                    {
-                                        <li><a class="dropdown-item" asp-controller="Cliente" asp-action="Perfil"><i class="fas fa-user me-2"></i>Perfil</a></li>
-                                        <li>
-                                            <form asp-controller="Conta" asp-action="Logout" method="post" class="px-3">
-                                                @Html.AntiForgeryToken()
-                                                <button type="submit" class="btn btn-link p-0"><i class="fas fa-sign-out-alt me-2"></i>Sair</button>
-                                            </form>
-                                        </li>
-                                    }
-                                </ul>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- ===== DESKTOP NAV (lg+) ===== -->
-                    <div class="d-none d-lg-flex align-items-center w-100">
-                        <div class="d-flex align-items-center">
-                            <nav aria-label="breadcrumb" class="ms-1">
-                                <ol class="breadcrumb mb-0">
-                                    <li class="breadcrumb-item">
-                                        <a asp-controller="Home" asp-action="Index" class="text-decoration-none">
-                                            <i class="fas fa-home text-white"></i>
-                                        </a>
-                                    </li>
-                                    @if (!string.Equals(ViewContext.RouteData.Values["controller"]?.ToString(), "Home", StringComparison.OrdinalIgnoreCase))
-                                    {
+                        <!-- ===== DESKTOP NAV (lg+) ===== -->
+                        <div class="d-none d-lg-flex align-items-center w-100">
+                            <div class="d-flex align-items-center">
+                                <nav aria-label="breadcrumb" class="ms-1">
+                                    <ol class="breadcrumb mb-0">
                                         <li class="breadcrumb-item">
-                                            <a asp-controller="@ViewContext.RouteData.Values["controller"]" asp-action="Index" class="text-decoration-none text-white-50">
-                                                @ViewContext.RouteData.Values["controller"]
+                                            <a asp-controller="Home" asp-action="Index" class="text-decoration-none">
+                                                <i class="fas fa-home text-white"></i>
                                             </a>
                                         </li>
-                                    }
-                                </ol>
-                            </nav>
-                        </div>
-
-                        <div class="ms-auto d-flex align-items-center gap-2">
-                            @if (!User.IsInRole("Admin") && !User.IsInRole("Lojista"))
-                            {
-                                <a class="nav-link cart-link text-white" asp-controller="Carrinho" asp-action="Index">
-                                    <span class="position-relative d-inline-flex align-items-center">
-                                        <i class="fas fa-shopping-cart fs-5"></i>
-                                        <span id="cart-badge"
-                                              class="badge rounded-pill bg-danger position-absolute translate-middle visually-hidden js-cart-badge"
-                                              style="top:-10%; left:90%;">
-                                            @await Component.InvokeAsync("CarrinhoResumo")
-                                        </span>
-                                    </span>
-                                </a>
-                            }
-
-                            @if (User.Identity?.IsAuthenticated == true)
-                            {
-                                <div class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="dropdown">
-                                        <i class="fas fa-bell"></i>
-                                    </a>
-                                    @await Component.InvokeAsync("Notifications")
-                                </div>
-                            }
-
-                            <div class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle text-white d-flex align-items-center" href="#" data-bs-toggle="dropdown">
-                                    <i class="fas fa-user-circle me-1"></i>
-                                    <span>@(User.Identity?.IsAuthenticated == true ? User.Identity!.Name : "Conta")</span>
-                                </a>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    @if (User.Identity?.IsAuthenticated != true)
-                                    {
-                                        <li><a class="dropdown-item" asp-controller="Conta" asp-action="Login"><i class="fas fa-sign-in-alt me-2"></i>Login</a></li>
-                                    }
-                                    else
-                                    {
-                                        <li><a class="dropdown-item" asp-controller="Cliente" asp-action="Perfil"><i class="fas fa-user me-2"></i>Perfil</a></li>
-                                        <li>
-                                            <form asp-controller="Conta" asp-action="Logout" method="post" class="px-3">
-                                                @Html.AntiForgeryToken()
-                                                <button type="submit" class="btn btn-link p-0"><i class="fas fa-sign-out-alt me-2"></i>Sair</button>
-                                            </form>
-                                        </li>
-                                    }
-                                </ul>
+                                        @if (!string.Equals(ViewContext.RouteData.Values["controller"]?.ToString(), "Home", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <li class="breadcrumb-item">
+                                                <a asp-controller="@ViewContext.RouteData.Values["controller"]" asp-action="Index" class="text-decoration-none text-white-50">
+                                                    @ViewContext.RouteData.Values["controller"]
+                                                </a>
+                                            </li>
+                                        }
+                                    </ol>
+                                </nav>
                             </div>
+
+                            <div class="ms-auto d-flex align-items-center gap-2">
+                                @if (!User.IsInRole("Admin") && !User.IsInRole("Lojista"))
+                                {
+                                    <a class="nav-link cart-link text-white" asp-controller="Carrinho" asp-action="Index">
+                                        <span class="position-relative d-inline-flex align-items-center">
+                                            <i class="fas fa-shopping-cart fs-5"></i>
+                                            <span id="cart-badge"
+                                                  class="badge rounded-pill bg-danger position-absolute translate-middle visually-hidden js-cart-badge"
+                                                  style="top:-10%; left:90%;">
+                                                @await Component.InvokeAsync("CarrinhoResumo")
+                                            </span>
+                                        </span>
+                                    </a>
+                                }
+
+                                @if (User.Identity?.IsAuthenticated == true)
+                                {
+                                    <div class="nav-item dropdown">
+                                        <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="dropdown">
+                                            <i class="fas fa-bell"></i>
+                                        </a>
+                                        @await Component.InvokeAsync("Notifications")
+                                    </div>
+                                }
+
+                                <div class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle text-white d-flex align-items-center" href="#" data-bs-toggle="dropdown">
+                                        <i class="fas fa-user-circle me-1"></i>
+                                        <span>@(User.Identity?.IsAuthenticated == true ? User.Identity!.Name : "Conta")</span>
+                                    </a>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        @if (User.Identity?.IsAuthenticated != true)
+                                        {
+                                            <li><a class="dropdown-item" asp-controller="Conta" asp-action="Login"><i class="fas fa-sign-in-alt me-2"></i>Login</a></li>
+                                        }
+                                        else
+                                        {
+                                            <li><a class="dropdown-item" asp-controller="Cliente" asp-action="Perfil"><i class="fas fa-user me-2"></i>Perfil</a></li>
+                                            <li>
+                                                <form asp-controller="Conta" asp-action="Logout" method="post" class="px-3">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-link p-0"><i class="fas fa-sign-out-alt me-2"></i>Sair</button>
+                                                </form>
+                                            </li>
+                                        }
+                                    </ul>
+                                </div>
+                            </div>
+
                         </div>
 
                     </div>
+                </nav>
 
-                </div>
-            </nav>
+                @if (headerVM != null)
+                {
+                    @await Html.PartialAsync("_StoreHeader", headerVM)
+                }
 
-            @if (headerVM != null)
-            {
-                @await Html.PartialAsync("_StoreHeader", headerVM)
-            }
-
-
-            <!-- ====== CONTEÚDO (wrapper com padding-bottom SCOPED) ====== -->
-            <main id="page-content" class="page-content container-fluid pt-3">
-                @RenderBody()
-            </main>
-
-            <script>
-                // Se a página não tiver .page-content, marca o primeiro wrapper típico como .page-content
-                (function () {
-                  if (document.querySelector('.page-content')) return; // já tem
-                  const candidates = [
-                    '#page-content-wrapper > .container-fluid',
-                    '#page-content-wrapper > .container',
-                    '.container-fluid',
-                    '.container',
-                    '.produto-detalhes-container',
-                    '.auth-shell',
-                    '.cadastro-container',
-                    'main'
-                  ];
-                  for (const sel of candidates) {
-                    const el = document.querySelector(sel);
-                    if (el) { el.classList.add('page-content'); break; }
-                  }
-                })();
-            </script>
+                <main id="page-content" class="page-content container-fluid pt-3">
+                    @RenderBody()
+                </main>
+            </div>
         </div>
-    </div>
 
-    @await Html.PartialAsync("_OffcanvasMenu")
-    @await Html.PartialAsync("_BottomNav")
+        @await Html.PartialAsync("_OffcanvasMenu")
+        @await Html.PartialAsync("_BottomNav")
+    }
 
     <!-- Toast -->
     <div class="position-fixed top-0 end-0 p-3" style="z-index:1080">
@@ -290,7 +284,6 @@
             ×
         </button>
     </div>
-
 
     <!-- Scripts base -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -475,8 +468,8 @@
               console.log('[RT] bootstrap…');
               if (!window.signalR) { console.warn('[RT] SignalR não encontrado.'); return; }
 
-              const OPT_OUT_KEY = 'rt_audio_opt_out';            // preferências
-              const SESSION_UNLOCK_KEY = 'rt_audio_unlocked';    // por aba
+              const OPT_OUT_KEY = 'rt_audio_opt_out';
+              const SESSION_UNLOCK_KEY = 'rt_audio_unlocked';
 
               let audioUnlocked = sessionStorage.getItem(SESSION_UNLOCK_KEY) === '1';
               let pendingDings = 0;
@@ -487,16 +480,15 @@
               const banner = document.getElementById('rt-audio-banner');
               const showBanner = () => {
                 if (!banner) return;
-                if (localStorage.getItem(OPT_OUT_KEY) === '1') return; // respeita “não mostrar de novo”
+                if (localStorage.getItem(OPT_OUT_KEY) === '1') return;
                 banner.style.display = 'flex';
               };
               const hideBanner = () => { if (banner) banner.style.display = 'none'; };
 
-              // tenta liberar áudio silenciosamente em interações do usuário
               async function tryUnlockAudio(source) {
                 if (audioUnlocked) return true;
                 try {
-                  await ding.play();        // alguns browsers liberam com 1ª interação
+                  await ding.play();
                   ding.pause(); ding.currentTime = 0;
                   audioUnlocked = true;
                   sessionStorage.setItem(SESSION_UNLOCK_KEY, '1');
@@ -504,7 +496,6 @@
                   if (pendingDings > 0) { pendingDings = 0; ding.currentTime = 0; await ding.play().catch(()=>{}); }
                   return true;
                 } catch {
-                  // não libera aqui; só mostra o banner quando realmente precisar tocar
                   return false;
                 }
               }
@@ -513,11 +504,8 @@
                 window.addEventListener(ev, () => tryUnlockAudio(ev), { once: true })
               );
 
-              // botões do banner (opcional: clique no próprio banner = tentar liberar)
               if (banner) {
                 banner.addEventListener('click', () => tryUnlockAudio('banner'));
-                // suporte “não mostrar de novo” via botão X se você quiser:
-                // <div id="rt-audio-banner"><button id="rt-audio-never" ...>×</button> Ativar som...</div>
                 const never = document.getElementById('rt-audio-never');
                 if (never) never.addEventListener('click', (e) => {
                   e.stopPropagation();
@@ -526,7 +514,6 @@
                 });
               }
 
-              // notificações do sistema (opcional)
               if ('Notification' in window && Notification.permission === 'default') {
                 Notification.requestPermission().catch(()=>{});
               }
@@ -559,7 +546,6 @@
                 .build();
 
               connection.on('NewOrder', async payload => {
-                // tenta tocar; se não conseguir (autoplay), só então mostra o banner
                 let played = false;
                 if (document.visibilityState === 'visible') {
                   try { ding.currentTime = 0; await ding.play(); played = true; }
@@ -567,7 +553,6 @@
                 }
                 if (!played) {
                   pendingDings++;
-                  // só mostra banner quando realmente há algo pra tocar e o usuário não optou por esconder
                   showBanner();
                 }
 
@@ -577,17 +562,13 @@
               });
 
               connection.start()
-                .then(() => {
-                  console.log('[RT] SignalR conectado');
-                  // ⚠️ não chama showBanner() aqui: não queremos mostrar no load.
-                  // o banner só aparece se chegar notificação e o áudio não puder tocar.
-                })
+                .then(() => console.log('[RT] SignalR conectado'))
                 .catch(err => console.error('[RT] Erro ao conectar SignalR:', err));
             })();
         </script>
-
     }
 
+    @* IMPORTANTE: permite @section Scripts nas views *@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

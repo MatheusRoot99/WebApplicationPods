@@ -1,12 +1,17 @@
-﻿@* Bottom Navigation (mobile-only) *@
+﻿@using WebApplicationPods.Infra
+@* Bottom Navigation (mobile-only) *@
 <link rel="stylesheet" href="~/css/_BottomNav.css" asp-append-version="true" />
 
 @{
     var c = ViewContext.RouteData.Values["controller"]?.ToString();
     var a = ViewContext.RouteData.Values["action"]?.ToString();
-    Func<string, string, string> IsActive = (ctrl, act) =>
+    var area = ViewContext.RouteData.Values["area"]?.ToString();
+
+    Func<string, string, string?, string> IsActive = (ctrl, act, ar) =>
         (string.Equals(c, ctrl, StringComparison.OrdinalIgnoreCase) &&
-        (act == null || string.Equals(a, act, StringComparison.OrdinalIgnoreCase))) ? "active" : "";
+         (act == null || string.Equals(a, act, StringComparison.OrdinalIgnoreCase)) &&
+         (string.Equals(area ?? "", ar ?? "", StringComparison.OrdinalIgnoreCase)))
+        ? "active" : "";
 
     var isAuth = User.Identity?.IsAuthenticated == true;
     var isAdmin = User.IsInRole("Admin");
@@ -15,38 +20,46 @@
 
 <nav class="mobile-bottom-nav d-lg-none" aria-label="Navegação inferior">
     <!-- Início -->
-    <a class="mbn-item @IsActive("Home", "Index")"
+    <a class="mbn-item @IsActive("Home", "Index", null)"
        asp-controller="Home" asp-action="Index" aria-label="Início">
         <i class="fa-solid fa-house"></i>
         <span class="mbn-label">Início</span>
     </a>
 
     <!-- Pedidos -->
-    <a class="mbn-item @IsActive("Pedido", "Ultimo")"
-       asp-controller="Pedido" asp-action="Ultimo" aria-label="Pedidos">
-        <i class="fa-solid fa-list"></i>
-        <span class="mbn-label">Pedidos</span>
-    </a>
+    @if (isLojista)
+    {
+        <a class="mbn-item @IsActive("PedidosAdmin", "Index", AppAreas.Lojista)"
+           asp-area="@AppAreas.Lojista"
+           asp-controller="PedidosAdmin"
+           asp-action="Index"
+           aria-label="Pedidos">
+            <i class="fa-solid fa-list"></i>
+            <span class="mbn-label">Pedidos</span>
+        </a>
+    }
+    else
+    {
+        <a class="mbn-item @IsActive("Pedido", "Ultimo", null)"
+           asp-controller="Pedido" asp-action="Ultimo" aria-label="Pedidos">
+            <i class="fa-solid fa-list"></i>
+            <span class="mbn-label">Pedidos</span>
+        </a>
+    }
 
-    <!-- Carrinho -->
-    <a class="mbn-item @IsActive("Carrinho", "Index")"
+    <!-- Carrinho (cliente) -->
+    <a class="mbn-item @IsActive("Carrinho", "Index", null)"
        asp-controller="Carrinho" asp-action="Index" aria-label="Carrinho">
         <i class="fa-solid fa-cart-shopping"></i>
-
-        <!-- badge numérico (já existia) -->
         <span id="cart-badge-mobile-bottom" class="mbn-badge js-cart-badge">0</span>
-
-        <!-- dot persistente -->
         <span id="cart-new-dot" class="mbn-dot visually-hidden"></span>
-
         <span class="mbn-label">Carrinho</span>
     </a>
 
     <!-- Perfil/Entrar -->
-    @* REMOVIDO: Perfil/Entrar na nav mobile *@
     @if (isAuth && !isAdmin && !isLojista)
     {
-        <a class="mbn-item mbn-item--auth @IsActive("Cliente", "Perfil")"
+        <a class="mbn-item mbn-item--auth @IsActive("Cliente", "Perfil", null)"
            asp-controller="Cliente" asp-action="Perfil" aria-label="Perfil">
             <i class="fa-solid fa-user"></i>
             <span class="mbn-label">Perfil</span>
@@ -54,7 +67,7 @@
     }
     else
     {
-        <a class="mbn-item mbn-item--auth @IsActive("Conta", "Login")"
+        <a class="mbn-item mbn-item--auth @IsActive("Conta", "Login", null)"
            asp-controller="Conta" asp-action="Login" aria-label="Entrar">
             <i class="fa-solid fa-user"></i>
             <span class="mbn-label">Entrar</span>

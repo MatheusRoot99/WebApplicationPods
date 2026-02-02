@@ -1,6 +1,7 @@
 ﻿@using WebApplicationPods.Models
 @model PedidoModel
 @{
+    Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Acompanhar pedido";
 
     var ultimos = ViewBag.Ultimos as IEnumerable<PedidoModel> ?? Enumerable.Empty<PedidoModel>();

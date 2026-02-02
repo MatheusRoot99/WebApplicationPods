@@ -1,6 +1,7 @@
 ﻿@using Newtonsoft.Json
 @model WebApplicationPods.Models.ProdutoModel
 @{
+    Layout = "~/Views/Shared/_Layout.cshtml";
     Layout = "_Layout";
     ViewData["Title"] = "Cadastrar Novo Pod";
     var categorias = ViewBag.Categorias as SelectList ?? new SelectList(new List<SelectListItem>());

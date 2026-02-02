@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Text.Json.Serialization;
 using WebApplicationPods.Data;
 using WebApplicationPods.Infra;
+using WebApplicationPods.Middlewares;
 using WebApplicationPods.Models;
 using WebApplicationPods.Payments;
 using WebApplicationPods.Payments.Gateways;
@@ -17,7 +18,6 @@ using WebApplicationPods.Repository.Repository;
 using WebApplicationPods.Services;
 using WebApplicationPods.Services.Interface;
 using WebApplicationPods.Services.service;
-using WebApplicationPods.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -75,11 +75,9 @@ builder.Services.AddAuthorization(options =>
 });
 
 // ==================== EF Core ====================
-// ✅ DbContext principal (tudo do sistema + Identity + filtros multi-loja)
 builder.Services.AddDbContext<BancoContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DataBase")));
 
-// ✅ DbContext “neutro” (só pra resolver subdomínio sem filtro multi-loja)
 builder.Services.AddDbContext<TenantDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DataBase")));
 
@@ -94,6 +92,11 @@ builder.Services
         options.Password.RequireUppercase = false;
         options.User.RequireUniqueEmail = false;
         options.SignIn.RequireConfirmedAccount = false;
+
+        // ✅ Configurações de lockout
+        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+        options.Lockout.MaxFailedAccessAttempts = 5;
+        options.Lockout.AllowedForNewUsers = true;
     })
     .AddEntityFrameworkStores<BancoContext>()
     .AddDefaultTokenProviders();
@@ -102,6 +105,14 @@ builder.Services
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
+    options.Cookie.Name = "Pods.Auth";
+
+    if (builder.Environment.IsDevelopment())
+    {
+        options.Cookie.Domain = ".lvh.me";
+        options.Cookie.SameSite = SameSiteMode.Lax;
+    }
+
     options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
         ? CookieSecurePolicy.SameAsRequest
         : CookieSecurePolicy.Always;
@@ -110,6 +121,24 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.AccessDeniedPath = "/Conta/AcessoNegado";
     options.ExpireTimeSpan = TimeSpan.FromHours(2);
     options.SlidingExpiration = true;
+    options.ReturnUrlParameter = "ReturnUrl";
+
+    // ✅ IMPORTANTE: Configura eventos do cookie
+    options.Events = new Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationEvents
+    {
+        OnRedirectToLogin = context =>
+        {
+            // Se a requisição já é para login, não redireciona novamente
+            if (context.Request.Path.StartsWithSegments("/Conta/Login"))
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return Task.CompletedTask;
+            }
+
+            context.Response.Redirect(context.RedirectUri);
+            return Task.CompletedTask;
+        }
+    };
 });
 
 // ==================== Sessão ====================
@@ -120,6 +149,12 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
     options.Cookie.Name = "SitePods.Session";
+
+    if (builder.Environment.IsDevelopment())
+    {
+        options.Cookie.Domain = ".lvh.me";
+        options.Cookie.SameSite = SameSiteMode.Lax;
+    }
 });
 
 // ==================== HttpContext + StoreUrlBuilder ====================
@@ -190,7 +225,7 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 }
 
-// ==================== Pipeline ====================
+// ==================== Pipeline CORRIGIDO ====================
 app.UseRequestLocalization(app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>().Value);
 
 if (app.Environment.IsDevelopment())
@@ -209,36 +244,30 @@ app.UseStaticFiles();
 app.UseRouting();
 
 app.UseSession();
-
-// força combinação host x role
-app.UseMiddleware<RoleSubdomainEnforcerMiddleware>();
-
-// ✅ redireciona admin/painel se alguém acessar pelo host errado
-app.UseMiddleware<SubdomainPortalRedirectMiddleware>();
-
-// Auto-login por cookie (hidrata sessão do cliente)
 app.UseMiddleware<ClienteAutoLoginMiddleware>();
-
 app.UseAuthentication();
 app.UseAuthorization();
-
-// ✅ Resolve loja (subdomínio) e aplica regras (admin/lojista)
 app.UseMiddleware<LojaContextMiddleware>();
+app.UseMiddleware<RoleSubdomainEnforcerMiddleware>();
+
+// ✅ PortalEntryRedirectMiddleware DEVE vir por último para redirecionar localhost
+app.UseMiddleware<PortalEntryRedirectMiddleware>();
 
 // ===== Endpoints =====
-app.MapControllers(); // APIs (attribute routing)
+app.MapControllers();
 
-// ✅ Areas (Admin/Painel)
 app.MapControllerRoute(
     name: "areas",
     pattern: "{area:exists}/{controller=Dashboard}/{action=Index}/{id?}");
 
-// Site público
+app.MapControllerRoute(
+    name: "painel_prefix",
+    pattern: "PainelLojista/{controller=Dashboard}/{action=Index}/{id?}");
+
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// Hubs
 app.MapHub<WebApplicationPods.Hubs.PedidosHub>("/hubs/pedidos");
 
 app.Run();

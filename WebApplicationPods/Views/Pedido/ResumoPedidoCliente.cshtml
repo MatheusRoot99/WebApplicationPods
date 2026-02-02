@@ -1,5 +1,6 @@
 ﻿@model WebApplicationPods.Models.PedidoModel
 @{
+    Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Resumo do pedido";
     var subtotal = Model?.PedidoItens?.Sum(i => i.PrecoUnitario * i.Quantidade) ?? 0m;
     var total = subtotal + (Model?.TaxaEntrega ?? 0m);
