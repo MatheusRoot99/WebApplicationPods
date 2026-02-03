@@ -1,4 +1,5 @@
-﻿@{
+﻿@model WebApplicationPods.ViewModels.AdminDashboardViewModel
+@{
     Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
     ViewData["Title"] = "Dashboard Administrativo";
 }
@@ -8,7 +9,7 @@
     <p>Visão geral da plataforma</p>
 </div>
 
-<!-- Cards de topo: Lojas, Usuários, Receita -->
+<!-- Cards de topo -->
 <div class="row g-3 mb-3">
     <div class="col-xl-4 col-lg-6">
         <div class="card admin-card admin-stat-card">
@@ -18,8 +19,8 @@
                     <i class="fa-solid fa-store"></i>
                 </div>
             </div>
-            <div class="admin-stat-value">2</div>
-            <div class="admin-stat-caption">+2 este mês</div>
+            <div class="admin-stat-value">@Model.LojasAtivas</div>
+            <div class="admin-stat-caption">+@Model.LojasCriadasMes este mês</div>
         </div>
     </div>
 
@@ -31,7 +32,7 @@
                     <i class="fa-solid fa-users"></i>
                 </div>
             </div>
-            <div class="admin-stat-value">5</div>
+            <div class="admin-stat-value">@Model.LojistasAtivos</div>
             <div class="admin-stat-caption">contas ativas</div>
         </div>
     </div>
@@ -39,81 +40,57 @@
     <div class="col-xl-4 col-lg-6">
         <div class="card admin-card admin-stat-card">
             <div class="admin-stat-header">
-                <span class="admin-stat-label">Receita total</span>
+                <span class="admin-stat-label">Receita (placeholder)</span>
                 <div class="admin-stat-icon orange">
                     <i class="fa-solid fa-coins"></i>
                 </div>
             </div>
-            <div class="admin-stat-value">R$ 0,00</div>
-            <div class="admin-stat-caption">+0% vs mês anterior</div>
+            <div class="admin-stat-value">@Model.ReceitaTotal.ToString("C")</div>
+            <div class="admin-stat-caption">mês atual: @Model.ReceitaMesAtual.ToString("C")</div>
         </div>
     </div>
 </div>
 
-<!-- Lojas recentes (full width) -->
+<!-- Lojas recentes -->
 <div class="row g-3 mb-3">
     <div class="col-12">
         <div class="card admin-card p-3">
             <div class="admin-section-title">Lojas recentes</div>
-            <div class="admin-section-subtitle">Últimas lojas criadas / acessadas</div>
+            <div class="admin-section-subtitle">Últimas lojas criadas</div>
 
-            <div class="admin-list">
-                <div class="item">
-                    <div class="item-main">
-                        <div class="admin-list-avatar">C</div>
-                        <div>
-                            <div class="admin-list-title">ConveniShop Centro</div>
-                            <div class="admin-list-sub">João Silva</div>
-                        </div>
-                    </div>
-                    <span class="badge-status active">Ativa</span>
-                </div>
+            @if (Model.LojasRecentes != null && Model.LojasRecentes.Any())
+            {
+                <div class="admin-list">
+                    @foreach (var loja in Model.LojasRecentes)
+                    {
+                        <div class="item">
+                            <div class="item-main">
+                                <div class="admin-list-avatar">@loja.Nome.Substring(0, 1).ToUpper()</div>
+                                <div>
+                                    <div class="admin-list-title">@loja.Nome</div>
+                                    <div class="admin-list-sub">
+                                        @(string.IsNullOrWhiteSpace(loja.DonoNome) ? "Sem dono" : loja.DonoNome)
+                                        • @loja.CriadaEm.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                    </div>
+                                </div>
+                            </div>
 
-                <div class="item">
-                    <div class="item-main">
-                        <div class="admin-list-avatar">S</div>
-                        <div>
-                            <div class="admin-list-title">ConveniShop Shopping</div>
-                            <div class="admin-list-sub">Maria Santos</div>
+                            @if (loja.Ativa)
+                            {
+                                <span class="badge-status active">Ativa</span>
+                            }
+                            else
+                            {
+                                <span class="badge-status">Inativa</span>
+                            }
                         </div>
-                    </div>
-                    <span class="badge-status active">Ativa</span>
+                    }
                 </div>
-            </div>
+            }
+            else
+            {
+                <div class="text-muted">Nenhuma loja encontrada.</div>
+            }
         </div>
     </div>
 </div>
-
-<!-- Produtos por categoria (pode virar "Resumo da plataforma" depois) -->
-@* <div class="card admin-card p-3">
-    <div class="admin-section-title">Produtos por categoria</div>
-    <div class="admin-section-subtitle">Resumo geral das categorias de produtos</div>
-
-    <div class="admin-category-pills">
-        <div class="admin-category-pill">
-            <div class="admin-category-pill-icon">💨</div>
-            <div class="admin-category-pill-count">2</div>
-            <div class="admin-category-pill-label">Pods</div>
-        </div>
-        <div class="admin-category-pill">
-            <div class="admin-category-pill-icon">🥤</div>
-            <div class="admin-category-pill-count">2</div>
-            <div class="admin-category-pill-label">Bebidas</div>
-        </div>
-        <div class="admin-category-pill">
-            <div class="admin-category-pill-icon">⚡</div>
-            <div class="admin-category-pill-count">2</div>
-            <div class="admin-category-pill-label">Energéticos</div>
-        </div>
-        <div class="admin-category-pill">
-            <div class="admin-category-pill-icon">🍿</div>
-            <div class="admin-category-pill-count">2</div>
-            <div class="admin-category-pill-label">Salgadinhos</div>
-        </div>
-        <div class="admin-category-pill">
-            <div class="admin-category-pill-icon">🍫</div>
-            <div class="admin-category-pill-count">2</div>
-            <div class="admin-category-pill-label">Chocolates</div>
-        </div>
-    </div>
-</div> *@

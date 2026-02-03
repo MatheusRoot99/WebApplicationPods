@@ -1,0 +1,40 @@
+﻿/* Admin > Lojas (Create/Edit) */
+
+.form-hint {
+    font-size: .85rem;
+    color: #64748b;
+}
+
+.form-preview {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .9rem;
+    margin-top: .35rem;
+}
+
+    .form-preview strong {
+        background: #f1f5f9;
+        border: 1px solid #e5e7eb;
+        padding: .25rem .5rem;
+        border-radius: .55rem;
+    }
+
+.admin-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+@media (max-width: 991.98px) {
+    .admin-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.admin-form-actions {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    margin-top: .75rem;
+}

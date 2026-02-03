@@ -1,0 +1,72 @@
+﻿/* Admin > Lojas (Index) */
+
+.admin-page-header h1 {
+    margin-bottom: .15rem;
+}
+
+.table thead th {
+    font-size: .85rem;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    color: #64748b;
+    border-bottom: 1px solid #e5e7eb !important;
+}
+
+.table td, .table th {
+    vertical-align: middle;
+}
+
+.admin-link {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+    .admin-link code {
+        font-weight: 700;
+        background: #f1f5f9;
+        padding: .15rem .4rem;
+        border-radius: .4rem;
+    }
+
+.badge-soft {
+    padding: .35rem .55rem;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: .75rem;
+    border: 1px solid transparent;
+}
+
+    .badge-soft.green {
+        background: #ecfdf5;
+        color: #047857;
+        border-color: #a7f3d0;
+    }
+
+    .badge-soft.gray {
+        background: #f3f4f6;
+        color: #374151;
+        border-color: #e5e7eb;
+    }
+
+.admin-actions {
+    display: inline-flex;
+    gap: .35rem;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+    .admin-actions .btn {
+        border-radius: .55rem;
+    }
+
+.admin-table-wrap {
+    overflow: auto;
+    border-radius: 14px;
+}
+
+    .admin-table-wrap table {
+        min-width: 980px;
+    }

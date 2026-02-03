@@ -6,16 +6,17 @@
     ViewData["Title"] = "Lojas";
 }
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/admin/lojas-index.css" asp-append-version="true" />
+}
+
 <div class="admin-page-header">
     <h1>Lojas</h1>
     <p>Gerencie as lojas da plataforma</p>
 </div>
 
 <div class="mb-3">
-    <a asp-area="Admin"
-       asp-controller="Lojas"
-       asp-action="Create"
-       class="btn btn-primary">
+    <a asp-area="Admin" asp-controller="Lojas" asp-action="Create" class="btn btn-primary">
         <i class="fa fa-plus"></i> Nova loja
     </a>
 </div>
@@ -29,18 +30,18 @@
     <div class="alert alert-danger">@TempData["Erro"]</div>
 }
 
-<div class="card admin-card p-3">
-    <table class="table table-striped align-middle">
+<div class="card admin-card p-3 admin-table-wrap">
+    <table class="table table-striped align-middle mb-0">
         <thead>
             <tr>
                 <th>Nome</th>
                 <th>Subdomínio</th>
-                <th>Link público</th>
+                <th>Link público (cliente)</th>
                 <th>Plano</th>
                 <th>Dono / Lojista</th>
-                <th>Ativa</th>
+                <th>Status</th>
                 <th>Criada em</th>
-                <th style="width: 130px;"></th>
+                <th style="width: 140px; text-align:right;"></th>
             </tr>
         </thead>
         <tbody>
@@ -50,55 +51,44 @@
 
                 <tr>
                     <td>@loja.Nome</td>
-                    <td>@loja.Subdominio</td>
+                    <td><code>@loja.Subdominio</code></td>
                     <td>
-                        <a href="@publicUrl" target="_blank" rel="noopener">
-                            @publicUrl
+                        <a class="admin-link" href="@publicUrl" target="_blank" rel="noopener">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            <span>@publicUrl</span>
                         </a>
                     </td>
                     <td>@(string.IsNullOrWhiteSpace(loja.Plano) ? "-" : loja.Plano)</td>
                     <td>
-                        @if (loja.Dono != null)
-                        {
-                            @loja.Dono.Nome
-                        }
-                        else
-                        {
-                            <span class="text-muted">Sem dono</span>
-                        }
+                        @(loja.Dono != null ? loja.Dono.Nome : "Sem dono")
                     </td>
                     <td>
                         @if (loja.Ativa)
                         {
-                            <span class="badge bg-success">Ativa</span>
+                            <span class="badge-soft green">Ativa</span>
                         }
                         else
                         {
-                            <span class="badge bg-secondary">Inativa</span>
+                            <span class="badge-soft gray">Inativa</span>
                         }
                     </td>
                     <td>@loja.CriadaEm.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                    <td>
-                        <a asp-area="Admin"
-                           asp-controller="Lojas"
-                           asp-action="Edit"
-                           asp-route-id="@loja.Id"
-                           class="btn btn-sm btn-outline-primary">
-                            <i class="fa fa-edit"></i>
-                        </a>
+                    <td style="text-align:right;">
+                        <div class="admin-actions">
+                            <a asp-area="Admin" asp-controller="Lojas" asp-action="Edit" asp-route-id="@loja.Id"
+                               class="btn btn-sm btn-outline-primary" title="Editar">
+                                <i class="fa fa-edit"></i>
+                            </a>
 
-                        <form asp-area="Admin"
-                              asp-controller="Lojas"
-                              asp-action="Delete"
-                              asp-route-id="@loja.Id"
-                              method="post"
-                              class="d-inline"
-                              onsubmit="return confirm('Confirma excluir esta loja? Esta ação não pode ser desfeita?');">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                <i class="fa fa-trash"></i>
-                            </button>
-                        </form>
+                            <form asp-area="Admin" asp-controller="Lojas" asp-action="Delete" asp-route-id="@loja.Id"
+                                  method="post" class="d-inline"
+                                  onsubmit="return confirm('Confirma excluir esta loja? Esta ação não pode ser desfeita?');">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
             }
