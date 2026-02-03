@@ -1,61 +1,55 @@
 ﻿@model WebApplicationPods.ViewModels.LojistaCreateViewModel
 
 @{
-    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
     ViewData["Title"] = "Novo lojista";
 }
 
-@section Styles {
-    <link rel="stylesheet" href="~/css/admin/lojistas-form.css" asp-append-version="true" />
-}
+<h2 class="mb-3">Novo lojista</h2>
 
-<div class="admin-page-header">
-    <h1>Novo lojista</h1>
-    <p>Criar um usuário lojista</p>
-</div>
+<form asp-area="Admin"
+      asp-controller="Lojistas"
+      asp-action="Create"
+      method="post">
+    @Html.AntiForgeryToken()
 
-<div class="card admin-card p-3">
-    <form asp-area="Admin" asp-controller="Lojistas" asp-action="Create" method="post">
-        @Html.AntiForgeryToken()
+    <div class="mb-3">
+        <label asp-for="Nome" class="form-label"></label>
+        <input asp-for="Nome" class="form-control" />
+        <span asp-validation-for="Nome" class="text-danger"></span>
+    </div>
 
-        <div class="admin-form-grid">
-            <div class="mb-3">
-                <label asp-for="Nome" class="form-label"></label>
-                <input asp-for="Nome" class="form-control" />
-                <span asp-validation-for="Nome" class="text-danger"></span>
-            </div>
+    <div class="mb-3">
+        <label asp-for="CPF" class="form-label"></label>
+        <input asp-for="CPF" class="form-control" />
+        <span asp-validation-for="CPF" class="text-danger"></span>
+    </div>
 
-            <div class="mb-3">
-                <label asp-for="CPF" class="form-label"></label>
-                <input asp-for="CPF" class="form-control" />
-                <span asp-validation-for="CPF" class="text-danger"></span>
-            </div>
+    <div class="mb-3">
+        <label asp-for="PhoneNumber" class="form-label"></label>
+        <input asp-for="PhoneNumber" class="form-control" />
+        <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+    </div>
 
-            <div class="mb-3">
-                <label asp-for="PhoneNumber" class="form-label"></label>
-                <input asp-for="PhoneNumber" class="form-control" />
-                <span asp-validation-for="PhoneNumber" class="text-danger"></span>
-            </div>
+    <div class="mb-3">
+        <label asp-for="Email" class="form-label"></label>
+        <input asp-for="Email" class="form-control" />
+        <span asp-validation-for="Email" class="text-danger"></span>
+    </div>
 
-            <div class="mb-3">
-                <label asp-for="Email" class="form-label"></label>
-                <input asp-for="Email" class="form-control" />
-                <span asp-validation-for="Email" class="text-danger"></span>
-            </div>
-        </div>
+    <div class="mb-3">
+        <label asp-for="Password" class="form-label"></label>
+        <input asp-for="Password" class="form-control" type="password" />
+        <span asp-validation-for="Password" class="text-danger"></span>
+    </div>
 
-        <div class="mb-3">
-            <label asp-for="Password" class="form-label"></label>
-            <input asp-for="Password" class="form-control" type="password" />
-            <span asp-validation-for="Password" class="text-danger"></span>
-        </div>
-
-        <div class="admin-form-actions">
-            <button type="submit" class="btn btn-primary">Salvar</button>
-            <a asp-area="Admin" asp-controller="Lojistas" asp-action="Index" class="btn btn-link">Voltar</a>
-        </div>
-    </form>
-</div>
+    <button type="submit" class="btn btn-primary">Salvar</button>
+    <a asp-area="Admin"
+       asp-controller="Lojistas"
+       asp-action="Index"
+       class="btn btn-link">
+        Voltar
+    </a>
+</form>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

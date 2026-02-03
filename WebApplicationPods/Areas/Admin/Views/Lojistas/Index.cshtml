@@ -2,24 +2,19 @@
 @model IEnumerable<ApplicationUser>
 
 @{
-    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
     ViewData["Title"] = "Lojistas";
 }
 
-@section Styles {
-    <link rel="stylesheet" href="~/css/admin/lojistas-index.css" asp-append-version="true" />
-}
+<h2 class="mb-3">Lojistas</h2>
 
-<div class="admin-page-header">
-    <h1>Lojistas</h1>
-    <p>Gerencie os usuários lojistas</p>
-</div>
-
-<div class="mb-3">
-    <a asp-area="Admin" asp-controller="Lojistas" asp-action="Create" class="btn btn-primary">
+<p>
+    <a asp-area="Admin"
+       asp-controller="Lojistas"
+       asp-action="Create"
+       class="btn btn-primary">
         + Novo lojista
     </a>
-</div>
+</p>
 
 @if (TempData["Sucesso"] is string okMsg)
 {
@@ -30,49 +25,66 @@
     <div class="alert alert-danger">@errMsg</div>
 }
 
-<div class="card admin-card p-3 admin-table-wrap">
-    <table class="table table-striped table-bordered table-sm align-middle mb-0">
-        <thead class="table-light">
+<table class="table table-striped table-bordered table-sm align-middle">
+    <thead class="table-light">
+        <tr>
+            <th>Nome</th>
+            <th>CPF</th>
+            <th>Telefone</th>
+            <th>E-mail</th>
+            <th style="width: 260px;">Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var u in Model)
+        {
             <tr>
-                <th>Nome</th>
-                <th>CPF</th>
-                <th>Telefone</th>
-                <th>E-mail</th>
-                <th style="width: 320px;">Ações</th>
+                <td>@u.Nome</td>
+                <td>@u.CPF</td>
+                <td>@u.PhoneNumber</td>
+                <td>@u.Email</td>
+                <td>
+                    <div class="d-flex flex-wrap gap-1">
+                        <a asp-area="Admin"
+                           asp-controller="Lojistas"
+                           asp-action="Edit"
+                           asp-route-id="@u.Id"
+                           class="btn btn-sm btn-secondary">
+                            Editar
+                        </a>
+
+                        <!-- Reset de senha -->
+                        <form asp-area="Admin"
+                              asp-controller="Lojistas"
+                              asp-action="ResetSenha"
+                              method="post"
+                              class="d-flex align-items-center gap-1">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@u.Id" />
+                            <input type="password"
+                                   name="novaSenha"
+                                   class="form-control form-control-sm"
+                                   placeholder="Nova senha" />
+                            <button type="submit" class="btn btn-sm btn-warning">
+                                Resetar
+                            </button>
+                        </form>
+
+                        <!-- Delete -->
+                        <form asp-area="Admin"
+                              asp-controller="Lojistas"
+                              asp-action="Delete"
+                              method="post"
+                              onsubmit="return confirm('Remover este lojista?');">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@u.Id" />
+                            <button type="submit" class="btn btn-sm btn-danger">
+                                Excluir
+                            </button>
+                        </form>
+                    </div>
+                </td>
             </tr>
-        </thead>
-        <tbody>
-            @foreach (var u in Model)
-            {
-                <tr>
-                    <td>@u.Nome</td>
-                    <td>@u.CPF</td>
-                    <td>@u.PhoneNumber</td>
-                    <td>@u.Email</td>
-                    <td>
-                        <div class="admin-actions-stack">
-                            <a asp-area="Admin" asp-controller="Lojistas" asp-action="Edit" asp-route-id="@u.Id"
-                               class="btn btn-sm btn-outline-primary">
-                                Editar
-                            </a>
-
-                            <form asp-area="Admin" asp-controller="Lojistas" asp-action="ResetSenha" method="post" class="reset-inline">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="id" value="@u.Id" />
-                                <input type="password" name="novaSenha" class="form-control form-control-sm" placeholder="Nova senha" />
-                                <button type="submit" class="btn btn-sm btn-warning">Reset</button>
-                            </form>
-
-                            <form asp-area="Admin" asp-controller="Lojistas" asp-action="Delete" method="post"
-                                  onsubmit="return confirm('Remover este lojista?');">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="id" value="@u.Id" />
-                                <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-</div>
+        }
+    </tbody>
+</table>

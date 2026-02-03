@@ -1,35 +1,9 @@
-﻿@{
-    var host = (Context.Request.Host.Host ?? "").Trim().ToLowerInvariant();
-    var port = Context.Request.Host.Port;
-    var scheme = Context.Request.Scheme;
-
-    bool isAdminHost = host.StartsWith("admin.");
-    bool isPainelHost = host.StartsWith("painel.");
-    bool isLojaHost = host.StartsWith("loja-") || host.StartsWith("loja.");
-
+﻿@using WebApplicationPods.Infra
+@* Sidebar (Desktop) *@
+@{
     var isAuth = User.Identity?.IsAuthenticated == true;
-    var isAdmin = isAuth && User.IsInRole("Admin");
-    var isLojista = isAuth && User.IsInRole("Lojista");
-
-    // ✅ CORREÇÃO: Mostrar menu de lojista se o usuário for lojista, independente do host
-    var showAdminMenu = isAdminHost && isAdmin;
-    var showPainelMenu = isLojista; // <-- Alterado: remove a restrição do host
-    var showClienteMenu = !isAdminHost && !isPainelHost; // <-- Alterado: baseado apenas no host
-
-    // baseDomain para montar links de portal
-    string GetBaseDomain(string h)
-    {
-        if (h == "lvh.me" || h.EndsWith(".lvh.me")) return "lvh.me";
-        var parts = h.Split('.', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length < 2) return h;
-        return $"{parts[^2]}.{parts[^1]}";
-    }
-
-    var baseDomain = GetBaseDomain(host);
-    var portPart = port.HasValue ? $":{port.Value}" : "";
-
-    var adminPortalUrl = $"{scheme}://admin.{baseDomain}{portPart}/";
-    var painelPortalUrl = $"{scheme}://painel.{baseDomain}{portPart}/";
+    var isAdmin = User.IsInRole("Admin");
+    var isLojista = User.IsInRole("Lojista");
 }
 
 <div class="bg-dark border-right d-none d-lg-block" id="sidebar-wrapper">
@@ -39,130 +13,107 @@
 
     <div class="list-group list-group-flush">
 
-        <!-- NAVEGAÇÃO (sempre) -->
+        <!-- NAVEGAÇÃO -->
         <div class="sidebar-section">
             <div class="sidebar-section-title">NAVEGAÇÃO</div>
-
-            @* Em loja/site: Home do catálogo | em painel/admin: pode manter Home também *@
             <a asp-controller="Home" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
-                <i class="fas fa-home me-2"></i> Home
+                <i class="fas fa-tachometer-alt me-2"></i> Home
             </a>
         </div>
 
-        <!-- CLIENTE (loja pública / site) -->
-        @if (showClienteMenu)
+        <!-- CLIENTE -->
+        @if (!isAdmin && !isLojista)
         {
             <div class="sidebar-section">
                 <div class="sidebar-section-title">CLIENTE</div>
-
                 <a asp-controller="Carrinho" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
                     <i class="fas fa-shopping-cart me-2"></i> Carrinho
-                </a>
-
-                <a asp-controller="Pedido" asp-action="Ultimo" class="list-group-item list-group-item-action bg-dark text-white">
-                    <i class="fas fa-clipboard-list me-2"></i> Pedidos
                 </a>
             </div>
         }
 
-        <!-- PAINEL LOJISTA (mostra sempre que usuário for lojista) -->
-        @if (showPainelMenu)
+        <!-- LOJISTA -->
+        @if (isLojista)
         {
             <div class="sidebar-section">
                 <div class="sidebar-section-title">LOJISTA</div>
 
-                <a asp-controller="PedidosAdmin" asp-action="Relatorio" class="list-group-item list-group-item-action bg-dark text-white">
+                <a asp-area="@AppAreas.Lojista" asp-controller="PedidosAdmin" asp-action="Relatorio"
+                   class="list-group-item list-group-item-action bg-dark text-white">
                     <i class="fas fa-chart-line me-2"></i> Relatórios
                 </a>
 
-                <a asp-controller="Estoque" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
+                <a asp-area="@AppAreas.Lojista" asp-controller="Estoque" asp-action="Index"
+                   class="list-group-item list-group-item-action bg-dark text-white">
                     <i class="fas fa-boxes me-2"></i> Estoque
                 </a>
 
-                <a asp-controller="PedidosAdmin" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
+                <a asp-area="@AppAreas.Lojista" asp-controller="PedidosAdmin" asp-action="Index"
+                   class="list-group-item list-group-item-action bg-dark text-white">
                     <i class="fas fa-clipboard-list me-2"></i> Pedidos
                 </a>
 
-                <a asp-controller="Categoria" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
+                <a asp-area="@AppAreas.Lojista" asp-controller="Categoria" asp-action="Index"
+                   class="list-group-item list-group-item-action bg-dark text-white">
                     <i class="fas fa-tags me-2"></i> Categorias
                 </a>
 
-                <a asp-controller="Produto" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
-                    <i class="fas fa-box-open me-2"></i> Produtos
-                </a>
-
-                <a asp-controller="PaymentConfig" asp-action="Edit" asp-route-provider="Stripe"
+                <a asp-area="@AppAreas.Lojista" asp-controller="Produto" asp-action="Index"
                    class="list-group-item list-group-item-action bg-dark text-white">
-                    <i class="fas fa-credit-card me-2"></i> Pagamentos
+                    <i class="fas fa-box-open me-2"></i> Gerenciar Produtos
                 </a>
 
-                <a asp-controller="Loja" asp-action="Editar" class="list-group-item list-group-item-action bg-dark text-white">
-                    <i class="fas fa-store me-2"></i> Configurações da loja
+                <a asp-area="@AppAreas.Lojista" asp-controller="PaymentConfig" asp-action="Edit" asp-route-provider="Stripe"
+                   class="list-group-item list-group-item-action bg-dark text-white">
+                    <i class="fas fa-credit-card me-2"></i> Configurações de Pagamento
+                </a>
+
+                <a asp-area="@AppAreas.Lojista" asp-controller="Loja" asp-action="Editar"
+                   class="list-group-item list-group-item-action bg-dark text-white">
+                    <i class="fas fa-store me-2"></i> Configurações da Loja
                 </a>
             </div>
         }
 
-        <!-- ADMIN (somente quando está no host admin.* e role Admin) -->
-        @if (showAdminMenu)
+        <!-- ADMIN -->
+        @if (isAdmin)
         {
             <div class="sidebar-section">
                 <div class="sidebar-section-title">ADMIN</div>
 
-                <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index"
+                <a asp-area="@AppAreas.Admin" asp-controller="Dashboard" asp-action="Index"
                    class="list-group-item list-group-item-action bg-dark text-white">
                     <i class="fas fa-gauge me-2"></i> Dashboard
                 </a>
 
-                <a asp-area="Admin" asp-controller="Lojas" asp-action="Index"
+                <a asp-area="@AppAreas.Admin" asp-controller="Lojas" asp-action="Index"
                    class="list-group-item list-group-item-action bg-dark text-white">
                     <i class="fas fa-store me-2"></i> Lojas
                 </a>
 
-                <a asp-area="Admin" asp-controller="Lojistas" asp-action="Index"
+                <a asp-area="@AppAreas.Admin" asp-controller="Lojistas" asp-action="Index"
                    class="list-group-item list-group-item-action bg-dark text-white">
                     <i class="fas fa-users me-2"></i> Usuários (Lojistas)
                 </a>
             </div>
         }
 
-        <!-- ATALHOS DE PORTAL (aparecem na loja pública quando logado) -->
-       @*  @if (showClienteMenu && isAuth)
-        {
-            <div class="sidebar-section">
-                <div class="sidebar-section-title">ATALHOS</div>
-
-                @if (isLojista)
-                {
-                    <a href="@painelPortalUrl" class="list-group-item list-group-item-action bg-dark text-white">
-                        <i class="fas fa-store me-2"></i> Ir para o Painel
-                    </a>
-                }
-
-                @if (isAdmin)
-                {
-                    <a href="@adminPortalUrl" class="list-group-item list-group-item-action bg-dark text-white">
-                        <i class="fas fa-user-shield me-2"></i> Ir para o Admin
-                    </a>
-                }
-            </div>
-        } *@
-
         <!-- USUÁRIO -->
-         @* <div class="sidebar-section">
-            <div class="sidebar-section-title">USUÁRIO</div> 
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">USUÁRIO</div>
 
             @if (isAuth)
             {
-                 <a asp-controller="Cliente" asp-action="Perfil" class="list-group-item list-group-item-action bg-dark text-white">
+                <a asp-controller="Cliente" asp-action="Perfil" class="list-group-item list-group-item-action bg-dark text-white">
                     <i class="fas fa-user-circle me-2"></i> Perfil
-                </a> 
+                </a>
 
-                 <form asp-area="" asp-controller="Conta" asp-action="Logout" method="post" class="list-group-item bg-dark">
+                <form asp-area="" asp-controller="Conta" asp-action="Logout" method="post" class="list-group-item bg-dark">
                     @Html.AntiForgeryToken()
                     <button type="submit" class="btn btn-link text-white p-0">
                         <i class="fas fa-sign-out-alt me-2"></i> Sair
                     </button>
-                </form> 
+                </form>
             }
             else
             {
@@ -170,7 +121,7 @@
                     <i class="fas fa-sign-in-alt me-2"></i> Login
                 </a>
             }
-        </div> *@
+        </div>
 
     </div>
 </div>

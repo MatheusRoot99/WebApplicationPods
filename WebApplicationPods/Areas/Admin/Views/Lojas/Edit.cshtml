@@ -5,10 +5,6 @@
     ViewData["Title"] = "Editar loja";
 }
 
-@section Styles {
-    <link rel="stylesheet" href="~/css/admin/lojas-form.css" asp-append-version="true" />
-}
-
 <div class="admin-page-header">
     <h1>Editar loja</h1>
     <p>Atualizar dados da loja</p>
@@ -19,63 +15,61 @@
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="Id" />
 
-        <div class="admin-form-grid">
-            <div class="mb-3">
-                <label asp-for="Nome" class="form-label"></label>
-                <input asp-for="Nome" class="form-control" />
-                <span asp-validation-for="Nome" class="text-danger"></span>
-            </div>
-
-            <div class="mb-3">
-                <label asp-for="Plano" class="form-label"></label>
-                <input asp-for="Plano" class="form-control" />
-                <span asp-validation-for="Plano" class="text-danger"></span>
-            </div>
+        <div class="mb-3">
+            <label asp-for="Nome" class="form-label"></label>
+            <input asp-for="Nome" class="form-control" />
+            <span asp-validation-for="Nome" class="text-danger"></span>
         </div>
 
-        <div class="mb-2">
+        <div class="mb-1">
             <label asp-for="Subdominio" class="form-label"></label>
             <input asp-for="Subdominio" class="form-control" id="Subdominio" />
-            <div class="form-hint">Use apenas letras minúsculas, números e hífen.</div>
-            <div class="form-preview">
+            <small class="text-muted d-block">
+                Use apenas letras minúsculas, números e hífen.
+            </small>
+            <small class="text-muted d-block">
                 Seu link será:
                 <strong id="preview-link">https://subdominio.podseletronicos.com</strong>
-            </div>
+            </small>
             <span asp-validation-for="Subdominio" class="text-danger"></span>
         </div>
 
-        <div class="admin-form-grid">
-            <div class="form-check mb-3 mt-2">
-                <input asp-for="Ativa" class="form-check-input" />
-                <label asp-for="Ativa" class="form-check-label"></label>
-            </div>
-
-            <div class="mb-3">
-                <label asp-for="DonoUserId" class="form-label"></label>
-                <select asp-for="DonoUserId" asp-items="Model.Lojistas" class="form-select">
-                    <option value="">-- Nenhum (definir depois) --</option>
-                </select>
-                <span asp-validation-for="DonoUserId" class="text-danger"></span>
-            </div>
+        <div class="mb-3">
+            <label asp-for="Plano" class="form-label"></label>
+            <input asp-for="Plano" class="form-control" />
+            <span asp-validation-for="Plano" class="text-danger"></span>
         </div>
 
-        <div class="admin-form-actions">
-            <button type="submit" class="btn btn-primary">
-                <i class="fa fa-save"></i> Salvar
-            </button>
-            <a asp-action="Index" class="btn btn-link">Voltar</a>
+        <div class="form-check mb-3">
+            <input asp-for="Ativa" class="form-check-input" />
+            <label asp-for="Ativa" class="form-check-label"></label>
         </div>
+
+        <div class="mb-3">
+            <label asp-for="DonoUserId" class="form-label"></label>
+            <select asp-for="DonoUserId" asp-items="Model.Lojistas" class="form-select">
+                <option value="">-- Nenhum (definir depois) --</option>
+            </select>
+            <span asp-validation-for="DonoUserId" class="text-danger"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            <i class="fa fa-save"></i> Salvar
+        </button>
+        <a asp-action="Index" class="btn btn-link">Voltar</a>
     </form>
 </div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
 
     <script>
         (function () {
             const input = document.getElementById("Subdominio");
             const preview = document.getElementById("preview-link");
-            const baseDomain = "podseletronicos.com";
+            const baseDomain = "podseletronicos.com"; // <<< manter igual ao LojaModel.PublicUrl
 
             function updatePreview(value) {
                 if (!preview) return;
