@@ -105,8 +105,8 @@ namespace WebApplicationPods.Data
                     .HasForeignKey(x => x.LojistaUserId)
                     .OnDelete(DeleteBehavior.SetNull);
 
-                // ✅ (opcional mas recomendado) multi-loja na config
-                b.HasQueryFilter(x => _designTime || (_hasLoja && x.LojaId == _lojaId));
+                // ✅ CORRIGIDO: se NÃO tem loja definida, NÃO filtra (admin/landing)
+                b.HasQueryFilter(x => _designTime || (!_hasLoja || x.LojaId == _lojaId));
             });
 
             // ===== Categoria =====
@@ -117,7 +117,8 @@ namespace WebApplicationPods.Data
                 b.Property(x => x.Descricao).HasMaxLength(200);
                 b.HasIndex(x => new { x.LojaId, x.Nome }).IsUnique(false);
 
-                b.HasQueryFilter(x => _designTime || (_hasLoja && x.LojaId == _lojaId));
+                // ✅ CORRIGIDO
+                b.HasQueryFilter(x => _designTime || (!_hasLoja || x.LojaId == _lojaId));
             });
 
             // ===== Produto =====
@@ -138,7 +139,8 @@ namespace WebApplicationPods.Data
                     .HasForeignKey(a => a.ProdutoId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                b.HasQueryFilter(x => _designTime || (_hasLoja && x.LojaId == _lojaId));
+                // ✅ CORRIGIDO
+                b.HasQueryFilter(x => _designTime || (!_hasLoja || x.LojaId == _lojaId));
             });
 
             modelBuilder.Entity<ProdutoAtributoModel>(b =>
@@ -185,7 +187,7 @@ namespace WebApplicationPods.Data
             modelBuilder.Entity<PedidoModel>()
                 .HasQueryFilter(x =>
                     !x.IsDeleted &&
-                    (_designTime || (_hasLoja && x.LojaId == _lojaId)));
+                    (_designTime || (!_hasLoja || x.LojaId == _lojaId)));
         }
     }
 }

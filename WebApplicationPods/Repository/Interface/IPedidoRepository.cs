@@ -13,22 +13,18 @@ namespace WebApplicationPods.Repository.Interface
         decimal ObterTotalVendasHoje();
         PedidoModel? ObterPorToken(string token);
 
-        // Listagens para a tela Admin
-        IEnumerable<PedidoModel> ObterAbertos();   // Pago / Em Preparação / Pronto / Saiu p/ Entrega / Aguardando Confirmação (Dinheiro)
-        IEnumerable<PedidoModel> ObterDoDia();     // somente pedidos de hoje
+        IEnumerable<PedidoModel> ObterAbertos();
+        IEnumerable<PedidoModel> ObterDoDia();
 
-        // Relatórios
         ResumoVendas ObterResumo(DateTime inicio, DateTime fim);
         IEnumerable<SerieDia> ObterSeriePorDia(DateTime inicio, DateTime fim);
         IEnumerable<MetodoPagamentoResumo> ObterMetodosPagamentoResumo(DateTime inicio, DateTime fim);
         IEnumerable<TopClienteResumo> ObterTopClientes(DateTime inicio, DateTime fim, int take = 5);
 
-        // Busca avançada (admin)
         IEnumerable<PedidoModel> Buscar(AdminOrdersFilterDTO f);
 
-        // Soft delete & manutenção
-        void ExcluirLogico(int id, string? usuario = null); // soft delete
-        int PurgaCanceladosAntigos(int dias = 30);          // limpeza hard delete de cancelados antigos
-        void Restaurar(int id);                              // desfaz o soft delete
+        void ExcluirLogico(int id, string? usuario = null);
+        int PurgaCanceladosAntigos(int dias = 30);
+        void Restaurar(int id);
     }
 }

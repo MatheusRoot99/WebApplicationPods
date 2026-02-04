@@ -1,4 +1,4 @@
-﻿
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.SqlClient;
@@ -10,7 +10,7 @@ using WebApplicationPods.Hubs;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
 using WebApplicationPods.Services;
-using System.Linq;
+using WebApplicationPods.Services.Interface;
 
 namespace WebApplicationPods.Controllers
 {
@@ -23,6 +23,7 @@ namespace WebApplicationPods.Controllers
         private readonly IClienteRememberService _remember;
         private readonly ILojaConfigRepository _lojaRepo;
         private readonly IHubContext<PedidosHub> _hub;
+        private readonly ICurrentLojaService _currentLoja;
 
         public CarrinhoController(
             ICarrinhoRepository carrinhoRepository,
@@ -31,7 +32,8 @@ namespace WebApplicationPods.Controllers
             IPedidoRepository pedidoRepository,
             IClienteRememberService remember,
             ILojaConfigRepository lojaRepo,
-            IHubContext<PedidosHub> hub)
+            IHubContext<PedidosHub> hub,
+            ICurrentLojaService currentLoja)
         {
             _carrinhoRepository = carrinhoRepository;
             _produtoRepository = produtoRepository;
@@ -40,9 +42,15 @@ namespace WebApplicationPods.Controllers
             _remember = remember;
             _lojaRepo = lojaRepo;
             _hub = hub;
+            _currentLoja = currentLoja;
         }
 
-        // =================== Helpers ===================
+        private int GetLojaIdOrFail()
+        {
+            if (_currentLoja?.LojaId is not int lojaId || lojaId <= 0)
+                throw new InvalidOperationException("Loja atual não definida. Verifique o middleware multi-loja.");
+            return lojaId;
+        }
 
         private void SetLastOrderCookie(string? token)
         {
@@ -181,7 +189,6 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction("Login", "Auth");
             }
 
-            // Cinturão 18+: se o carrinho tiver itens que exigem 18+, valide cadastro/idade
             if (CarrinhoRequerMaioridade(carrinho))
             {
                 if (!cliente.DataNascimento.HasValue || Idade(cliente.DataNascimento.Value) < 18)
@@ -203,8 +210,8 @@ namespace WebApplicationPods.Controllers
                 (novoId.HasValue ? enderecos.FirstOrDefault(e => e.Id == novoId.Value) : null)
                 ?? enderecos.FirstOrDefault(e => e.Principal);
 
-            // Envia a loja para a View (box de retirada)
             ViewBag.Loja = _lojaRepo.ObterDoLojistaAtual();
+
             var skipConfirm = string.Equals(Convert.ToString(TempData["SkipConfirm"]), "1", StringComparison.Ordinal);
             var vm = new ResumoPedidoViewModel
             {
@@ -215,7 +222,7 @@ namespace WebApplicationPods.Controllers
                 EnderecoEntrega = enderecoSelecionado,
                 Observacoes = "",
                 RetiradaNoLocal = false,
-                PrecisaConfirmar = !skipConfirm, // só confirma se NÃO vier de add/edit
+                PrecisaConfirmar = !skipConfirm,
                 ReturnUrl = Url.Action(nameof(Resumo), "Carrinho")
             };
 
@@ -228,8 +235,7 @@ namespace WebApplicationPods.Controllers
         {
             HttpContext.Session.SetString("ClienteConfirmado", "1");
 
-            if (string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest",
-                StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase))
                 return Ok();
 
             return RedirectToAction(nameof(Resumo));
@@ -246,7 +252,6 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction("Index");
             }
 
-            // Se o pedido já está "Pago", zera o carrinho desta sessão uma única vez
             if (string.Equals(pedido.Status, "Pago", StringComparison.OrdinalIgnoreCase))
             {
                 var flagKey = $"CartClearedForOrder_{id}";
@@ -265,13 +270,14 @@ namespace WebApplicationPods.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult AdicionarItem(int produtoId, int quantidade, string? sabor = null,
-                                           string? observacoes = null, bool buyNow = false)
+                                          string? observacoes = null, bool buyNow = false)
         {
             bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest",
                              StringComparison.OrdinalIgnoreCase);
 
             try
             {
+                // produto já vem filtrado pela loja no banco (QueryFilter)
                 var produto = _produtoRepository.ObterPorId(produtoId);
                 if (produto == null)
                 {
@@ -297,8 +303,7 @@ namespace WebApplicationPods.Controllers
                 if (isAjax) return Json(new { ok = true, count, nome = produto.Nome, buyNow });
 
                 TempData["Sucesso"] = "Adicionado ao carrinho!";
-                return buyNow ? RedirectToAction("Resumo", "Carrinho")
-                              : RedirectToAction("Index", "Home");
+                return buyNow ? RedirectToAction("Resumo", "Carrinho") : RedirectToAction("Index", "Home");
             }
             catch
             {
@@ -341,8 +346,8 @@ namespace WebApplicationPods.Controllers
                 }
 
                 var novaQtd = item.Quantidade;
-                if (string.Equals(op, "inc", StringComparison.OrdinalIgnoreCase)) novaQtd = item.Quantidade + 1;
-                else if (string.Equals(op, "dec", StringComparison.OrdinalIgnoreCase)) novaQtd = item.Quantidade - 1;
+                if (string.Equals(op, "inc", StringComparison.OrdinalIgnoreCase)) novaQtd++;
+                else if (string.Equals(op, "dec", StringComparison.OrdinalIgnoreCase)) novaQtd--;
                 else if (quantidade.HasValue) novaQtd = quantidade.Value;
 
                 var produto = _produtoRepository.ObterPorId(produtoId);
@@ -354,10 +359,8 @@ namespace WebApplicationPods.Controllers
                 }
 
                 produto.DeserializarSaboresQuantidades();
-
                 var maxPermitido = ObterEstoqueDisponivel(produto, chaveSabor);
 
-                // 🔒 Sem estoque: remover o item (não forçar 1)
                 if (maxPermitido < 1)
                 {
                     carrinho.Itens.Remove(item);
@@ -457,8 +460,6 @@ namespace WebApplicationPods.Controllers
             return Json(new { total = carrinho.Total.ToString("C", CultureInfo.GetCultureInfo("pt-BR")) });
         }
 
-        // =================== Finalização ===================
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Finalizar(ResumoPedidoViewModel model)
@@ -484,7 +485,6 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction("Login", "Auth");
             }
 
-            // Cinturão 18+ na finalização
             if (CarrinhoRequerMaioridade(carrinho))
             {
                 if (!cliente.DataNascimento.HasValue || Idade(cliente.DataNascimento.Value) < 18)
@@ -494,7 +494,7 @@ namespace WebApplicationPods.Controllers
                 }
             }
 
-            // Revalidação de estoque item-a-item (pode ajustar quantidades ou remover)
+            // Revalida estoque
             bool houveAjuste = false;
             foreach (var i in carrinho.Itens.ToList())
             {
@@ -505,6 +505,7 @@ namespace WebApplicationPods.Controllers
                     houveAjuste = true;
                     continue;
                 }
+
                 produto.DeserializarSaboresQuantidades();
                 var disponivel = ObterEstoqueDisponivel(produto, i.Sabor ?? string.Empty);
 
@@ -514,6 +515,7 @@ namespace WebApplicationPods.Controllers
                     houveAjuste = true;
                     continue;
                 }
+
                 if (i.Quantidade > disponivel)
                 {
                     i.Quantidade = disponivel;
@@ -553,8 +555,11 @@ namespace WebApplicationPods.Controllers
                 }
             }
 
+            var lojaId = GetLojaIdOrFail();
+
             var pedido = new PedidoModel
             {
+                LojaId = lojaId,
                 ClienteId = cliente.Id,
                 EnderecoId = model.RetiradaNoLocal ? (int?)null : enderecoSelecionado!.Id,
                 DataPedido = DateTime.Now,
@@ -595,11 +600,9 @@ namespace WebApplicationPods.Controllers
 
             if (pagaNaEntrega)
             {
-                // Pagamento confirmado depois (manual)
                 pedido.Status = "Aguardando Pagamento (Entrega)";
                 _pedidoRepository.Adicionar(pedido);
 
-                // Broadcast para lojistas
                 await _hub.Clients.Group("lojistas").SendAsync("NewOrder", new
                 {
                     id = pedido.Id,
@@ -619,11 +622,9 @@ namespace WebApplicationPods.Controllers
             }
             else
             {
-                // Fluxo online (PIX/Cartão). Notificação de “Pago” será emitida quando o status mudar.
                 pedido.Status = "Pendente";
                 _pedidoRepository.Adicionar(pedido);
 
-                // Broadcast para lojistas (pedido criado)
                 await _hub.Clients.Group("lojistas").SendAsync("NewOrder", new
                 {
                     id = pedido.Id,
@@ -641,8 +642,6 @@ namespace WebApplicationPods.Controllers
             }
         }
 
-        // =================== Endereço ===================
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult AdicionarEndereco(int ClienteId, [Bind(Prefix = "EnderecoNovo")] EnderecoModel endereco)
@@ -652,12 +651,10 @@ namespace WebApplicationPods.Controllers
                 endereco.ClienteId = ClienteId;
                 endereco.Estado = (endereco.Estado ?? "").Trim().ToUpper();
 
-                // Formatar CEP 00000-000
                 var dig = new string((endereco.CEP ?? "").Where(char.IsDigit).ToArray());
                 if (dig.Length == 8)
                     endereco.CEP = $"{dig[..5]}-{dig[5..]}";
 
-                // Validar DataAnnotations
                 var validationContext = new ValidationContext(endereco, null, null);
                 var validationResults = new List<ValidationResult>();
                 bool isValid = Validator.TryValidateObject(endereco, validationContext, validationResults, true);
@@ -676,7 +673,6 @@ namespace WebApplicationPods.Controllers
                     return RedirectToAction(nameof(Resumo));
                 }
 
-                // Verificar duplicidade básica
                 var enderecosExistentes = _clienteRepository.ObterEnderecos(ClienteId) ?? new List<EnderecoModel>();
                 var jaExiste = enderecosExistentes.Any(e =>
                     string.Equals((e.CEP ?? ""), endereco.CEP ?? "", StringComparison.OrdinalIgnoreCase) &&
@@ -690,16 +686,14 @@ namespace WebApplicationPods.Controllers
                     return RedirectToAction(nameof(Resumo));
                 }
 
-                // Definir como principal se for o primeiro endereço OU se foi marcado como principal
                 endereco.Principal = !enderecosExistentes.Any() || endereco.Principal;
 
-                // Garantir apenas um principal
                 if (endereco.Principal && enderecosExistentes.Any(e => e.Principal))
                 {
-                    foreach (var outroEndereco in enderecosExistentes.Where(e => e.Principal))
+                    foreach (var outro in enderecosExistentes.Where(e => e.Principal))
                     {
-                        outroEndereco.Principal = false;
-                        _clienteRepository.AtualizarEndereco(outroEndereco);
+                        outro.Principal = false;
+                        _clienteRepository.AtualizarEndereco(outro);
                     }
                 }
 
@@ -712,7 +706,6 @@ namespace WebApplicationPods.Controllers
             }
             catch (Exception ex)
             {
-
                 TempData["Erro"] = $"Não foi possível atualizar o endereço: {ex.Message}";
                 return RedirectToAction(nameof(Resumo));
             }
@@ -727,19 +720,17 @@ namespace WebApplicationPods.Controllers
                 var novoId = _clienteRepository.RemoverEndereco(ClienteId, id);
 
                 if (novoId.HasValue)
-                    TempData["EnderecoNovoId"] = novoId.Value; // pré-selecionar no GET
+                    TempData["EnderecoNovoId"] = novoId.Value;
 
                 TempData["SkipConfirm"] = "1";
                 TempData["Sucesso"] = "Endereço excluído com sucesso!";
             }
             catch (InvalidOperationException ex)
             {
-                // mensagem amigável quando há pedidos vinculando o endereço
                 TempData["Erro"] = ex.Message;
             }
             catch (DbUpdateException ex) when (ex.InnerException is SqlException sql && sql.Number == 547)
             {
-                // fallback: se cair direto na violação de FK
                 TempData["Erro"] = "Este endereço está vinculado a pedidos e não pode ser excluído.";
             }
             catch (Exception ex)
@@ -749,6 +740,5 @@ namespace WebApplicationPods.Controllers
 
             return RedirectToAction(nameof(Resumo));
         }
-
     }
 }

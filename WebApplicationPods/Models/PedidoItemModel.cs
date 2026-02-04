@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace WebApplicationPods.Models
@@ -20,24 +19,19 @@ namespace WebApplicationPods.Models
 
         [Display(Name = "Preço Unitário")]
         [Range(0.01, double.MaxValue, ErrorMessage = "O preço unitário deve ser maior que zero")]
-        public decimal PrecoUnitario { get; set; }   // preço efetivamente cobrado (promocional se houver)
+        public decimal PrecoUnitario { get; set; }
 
-        /// <summary>Preço cheio (sem promoção) no momento da compra.</summary>
         public decimal? PrecoOriginal { get; set; }
 
-        /// <summary>Observações do item (ex.: sem gelo).</summary>
         [StringLength(500, ErrorMessage = "As observações devem ter no máximo 500 caracteres")]
         public string? Observacoes { get; set; }
 
-        /// <summary>Sabor selecionado (se aplicável). Usado para dar baixa por sabor.</summary>
         [StringLength(200)]
         public string? Sabor { get; set; }
 
-        /// <summary>Controle para evitar baixa dupla.</summary>
         public bool EstoqueBaixado { get; set; } = false;
         public DateTime? EstoqueBaixadoEm { get; set; }
 
-        // Relacionamentos
         [ForeignKey(nameof(PedidoId))]
         public PedidoModel Pedido { get; set; } = null!;
 

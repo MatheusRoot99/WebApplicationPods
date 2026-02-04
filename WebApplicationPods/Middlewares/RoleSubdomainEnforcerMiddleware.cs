@@ -19,7 +19,7 @@ namespace WebApplicationPods.Middlewares
         {
             var path = (context.Request.Path.Value ?? "").ToLowerInvariant();
 
-            // ✅ sempre permite rotas de conta e páginas estáticas
+            // ✅ Sempre permite rotas de conta e rotas técnicas
             if (path.StartsWith("/conta") ||
                 path.StartsWith("/home") ||
                 path.StartsWith("/hubs") ||
@@ -34,7 +34,7 @@ namespace WebApplicationPods.Middlewares
                 return;
             }
 
-            // evita custo em arquivos estáticos
+            // ✅ Evita custo em arquivos estáticos
             if (HttpMethods.IsGet(context.Request.Method) && Path.HasExtension(context.Request.Path))
             {
                 await _next(context);
@@ -53,14 +53,14 @@ namespace WebApplicationPods.Middlewares
             bool isAdmin = isAuth && user.IsInRole("Admin");
             bool isLojista = isAuth && user.IsInRole("Lojista");
 
-            // Se não está autenticado, deixa passar (será tratado pelo auth do ASP.NET)
+            // Se não está autenticado, deixa passar (Auth do ASP.NET resolve)
             if (!isAuth)
             {
                 await _next(context);
                 return;
             }
 
-            // Se está autenticado mas não está em admin./painel., deixa passar
+            // Se não está em admin/painel (ex: loja-*.dominio), deixa passar
             if (!isAdminHost && !isPainelHost)
             {
                 await _next(context);
@@ -74,32 +74,24 @@ namespace WebApplicationPods.Middlewares
                     ? $"{scheme}://{sub}.{baseDomain}:{port.Value}{targetPath}"
                     : $"{scheme}://{sub}.{baseDomain}{targetPath}";
 
-            // ✅ Admin logado tentando acessar painel.*
-            if (isAdmin && !isLojista && isPainelHost)
+            // ✅ ADMIN logado em painel.* -> sempre manda para admin.*
+            // (independente do path, porque o host está errado para o role)
+            if (isAdmin && isPainelHost)
             {
-                // Se está tentando acessar algo específico do lojista, redireciona para admin
-                if (path.StartsWith("/painellojista") || path.StartsWith("/painel"))
-                {
-                    context.Response.Redirect(MakeUrl("admin", "/Admin/Dashboard"));
-                    return;
-                }
+                context.Response.Redirect(MakeUrl("admin", "/Admin/Dashboard"));
+                return;
             }
 
-            // ✅ Lojista logado tentando acessar admin.*
-            if (isLojista && !isAdmin && isAdminHost)
+            // ✅ LOJISTA logado em admin.* -> sempre manda para painel.*
+            if (isLojista && isAdminHost)
             {
-                // Se está tentando acessar admin area, redireciona para painel
-                if (path.StartsWith("/admin") || path.StartsWith("/administracao"))
-                {
-                    context.Response.Redirect(MakeUrl("painel", "/PainelLojista/Dashboard"));
-                    return;
-                }
+                context.Response.Redirect(MakeUrl("painel", "/PainelLojista/Dashboard"));
+                return;
             }
 
-            // ✅ Usuário autenticado sem role tentando acessar admin/painel
-            if (isAuth && !isAdmin && !isLojista && (isAdminHost || isPainelHost))
+            // ✅ Usuário autenticado SEM role (não Admin e não Lojista) tentando acessar admin/painel
+            if (!isAdmin && !isLojista && (isAdminHost || isPainelHost))
             {
-                // Usuário comum não pode acessar admin/painel
                 context.Response.Redirect("/Conta/AcessoNegado");
                 return;
             }

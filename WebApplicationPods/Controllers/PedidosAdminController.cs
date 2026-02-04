@@ -1,17 +1,13 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using WebApplicationPods.Hubs;
 using WebApplicationPods.Repository.Interface;
 using static WebApplicationPods.DTO.ReportsDTO;
 
 namespace WebApplicationPods.Controllers
 {
-    [Authorize(Roles = "Lojista")]
+    [Authorize(Roles = "Lojista,Admin")]
     public class PedidosAdminController : Controller
     {
         private readonly IPedidoRepository _pedidos;
@@ -23,24 +19,23 @@ namespace WebApplicationPods.Controllers
             _hub = hub;
         }
 
-        // Fluxo permitido (status atual -> próximos possíveis)
         private static readonly Dictionary<string, string[]> AllowedTransitions =
             new(StringComparer.OrdinalIgnoreCase)
             {
-                ["Pendente"] = new[] { "Cancelado" }, // se quiser permitir "Pago" aqui, adicione
+                ["Pendente"] = new[] { "Cancelado" },
+
                 ["Aguardando Pagamento"] = new[] { "Pago", "Cancelado" },
                 ["Aguardando Pagamento (Entrega)"] = new[] { "Pago", "Cancelado" },
-
                 ["Aguardando Confirmação (Dinheiro)"] = new[] { "Pago", "Cancelado" },
+
                 ["Pago"] = new[] { "Em Preparação", "Cancelado" },
                 ["Em Preparação"] = new[] { "Pronto", "Cancelado" },
                 ["Pronto"] = new[] { "Saiu p/ Entrega", "Cancelado" },
                 ["Saiu p/ Entrega"] = new[] { "Entregue", "Cancelado" },
+
                 ["Pagamento Falhou"] = new[] { "Cancelado" }
-                // "Entregue" e "Cancelado" -> finais
             };
 
-        // GET /PedidosAdmin?filtro=abertos|dia
         [HttpGet]
         public IActionResult Index(string? filtro = "abertos")
         {
@@ -49,11 +44,10 @@ namespace WebApplicationPods.Controllers
                 : _pedidos.ObterAbertos();
 
             ViewBag.Filtro = filtro;
-            ViewBag.Allowed = AllowedTransitions; // <-- expõe para a view/partial
+            ViewBag.Allowed = AllowedTransitions;
             return View(lista);
         }
 
-        // GET /PedidosAdmin/Table?filtro=abertos|dia   (usado no live refresh)
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Table(string? filtro = "abertos")
@@ -66,7 +60,6 @@ namespace WebApplicationPods.Controllers
             return PartialView("_PedidosTableBody", lista);
         }
 
-        // POST /PedidosAdmin/AtualizarStatus
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AtualizarStatus(int id, string status)
@@ -82,6 +75,7 @@ namespace WebApplicationPods.Controllers
             }
 
             var atual = pedido.Status ?? string.Empty;
+
             if (!AllowedTransitions.TryGetValue(atual, out var nexts) ||
                 !nexts.Contains(status, StringComparer.OrdinalIgnoreCase))
             {
@@ -101,11 +95,6 @@ namespace WebApplicationPods.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-
-        // ============ RELATÓRIO ============
-
-        // GET /PedidosAdmin/Relatorio?modo=dia&data=2025-08-26
-        // GET /PedidosAdmin/Relatorio?modo=mes&ano=2025&mes=8
         [HttpGet]
         public IActionResult Relatorio(string? modo = "dia", DateTime? data = null, int? ano = null, int? mes = null)
         {
@@ -143,7 +132,6 @@ namespace WebApplicationPods.Controllers
             return View(vm);
         }
 
-
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Excluir(int id)
         {
@@ -176,6 +164,4 @@ namespace WebApplicationPods.Controllers
             return RedirectToAction(nameof(Index));
         }
     }
-
-
 }

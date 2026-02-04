@@ -10,7 +10,6 @@ namespace WebApplicationPods.Models
         [Required(ErrorMessage = "O ID do cliente é obrigatório")]
         public int ClienteId { get; set; }
 
-        // FK opcional (nula quando "Retirada no local")
         public int? EnderecoId { get; set; }
 
         [Display(Name = "Data do Pedido")]
@@ -39,6 +38,8 @@ namespace WebApplicationPods.Models
 
         [StringLength(500)]
         public string? Observacoes { get; set; }
+
+        // ✅ MULTI-LOJA (obrigatório!)
         public int LojaId { get; set; }
 
         public bool IsDeleted { get; set; }
@@ -48,7 +49,6 @@ namespace WebApplicationPods.Models
         [StringLength(64)]
         public string? RastreioToken { get; set; } = Guid.NewGuid().ToString("N");
 
-        // ===== Retirada no local / dados da loja =====
         public bool RetiradaNoLocal { get; set; } = false;
 
         [StringLength(120)]
@@ -60,18 +60,15 @@ namespace WebApplicationPods.Models
         [StringLength(500)]
         public string? LojaMapsUrl { get; set; }
 
-        // ===== Timestamps por etapa =====
-        // 0 - Pendente
-        public DateTime? DataAguardandoPagamento { get; set; }      // 1
-        public DateTime? DataPagamentoAprovado { get; set; }        // 2
-        public DateTime? DataInicioPreparo { get; set; }            // 3
-        public DateTime? DataSaiuParaEntregaOuRetirada { get; set; }// 4
-        public DateTime? DataConcluido { get; set; }                // 5
-        public DateTime? DataCancelado { get; set; }                // cancelado
+        public DateTime? DataAguardandoPagamento { get; set; }
+        public DateTime? DataPagamentoAprovado { get; set; }
+        public DateTime? DataInicioPreparo { get; set; }
+        public DateTime? DataSaiuParaEntregaOuRetirada { get; set; }
+        public DateTime? DataConcluido { get; set; }
+        public DateTime? DataCancelado { get; set; }
 
-        // ===== Relacionamentos =====
         [ForeignKey(nameof(ClienteId))]
-        public ClienteModel Cliente { get; set; }
+        public ClienteModel Cliente { get; set; } = null!;
 
         [ForeignKey(nameof(EnderecoId))]
         public EnderecoModel? Endereco { get; set; }

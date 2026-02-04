@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using WebApplicationPods.Models;
@@ -27,22 +28,36 @@ namespace WebApplicationPods.Controllers
             _emailSender = emailSender;
         }
 
+        // =========================
+        // LOGIN
+        // =========================
         [HttpGet, AllowAnonymous]
         public IActionResult Login(string? returnUrl = null)
         {
-            // ✅ Se está em localhost, não faz nada - o middleware já redirecionou
-            var host = Request.Host.Host?.ToLowerInvariant() ?? "";
-            if (host == "localhost" || host == "127.0.0.1")
-            {
-                // Deixa o middleware fazer o redirecionamento
-                ViewData["ReturnUrl"] = returnUrl;
-                return View(new LoginViewModel { ReturnUrl = returnUrl });
-            }
-
             // Se já está autenticado, redireciona para página apropriada
             if (User.Identity?.IsAuthenticated == true)
-            {
                 return RedirectToAppropriatePage();
+
+            // Se veio returnUrl apontando para área "do outro portal",
+            // já joga para o subdomínio correto mantendo o returnUrl.
+            if (!string.IsNullOrWhiteSpace(returnUrl))
+            {
+                var host = (Request.Host.Host ?? "").ToLowerInvariant();
+
+                // Tentando acessar Admin mas está no painel.*
+                if (returnUrl.StartsWith("/Admin", StringComparison.OrdinalIgnoreCase) &&
+                    host.StartsWith("painel."))
+                {
+                    return Redirect(BuildSubdomainUrl("admin", returnUrl));
+                }
+
+                // Tentando acessar PainelLojista mas está no admin.*
+                if ((returnUrl.StartsWith("/PainelLojista", StringComparison.OrdinalIgnoreCase) ||
+                     returnUrl.StartsWith("/painel", StringComparison.OrdinalIgnoreCase)) &&
+                    host.StartsWith("admin."))
+                {
+                    return Redirect(BuildSubdomainUrl("painel", returnUrl));
+                }
             }
 
             ViewData["ReturnUrl"] = returnUrl;
@@ -86,37 +101,70 @@ namespace WebApplicationPods.Controllers
                     lockoutOnFailure: true
                 );
 
-                if (result.Succeeded)
+                if (!result.Succeeded)
                 {
-                    // ✅ Atualiza o cookie de autenticação
-                    await _signInManager.RefreshSignInAsync(user);
-
-                    var roles = await _userManager.GetRolesAsync(user);
-                    var isAdmin = roles.Any(r => string.Equals(r, "Admin", StringComparison.OrdinalIgnoreCase));
-                    var isLojista = roles.Any(r => string.Equals(r, "Lojista", StringComparison.OrdinalIgnoreCase));
-
-                    // Se tiver returnUrl permitido, respeita
-                    if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                    if (result.IsLockedOut)
                     {
-                        var normalizedReturnUrl = NormalizeReturnUrlByRole(returnUrl, isAdmin, isLojista);
-                        if (!string.IsNullOrWhiteSpace(normalizedReturnUrl))
-                        {
-                            return RedirectToSubdomainWithRole(isAdmin, isLojista, normalizedReturnUrl);
-                        }
+                        ModelState.AddModelError(string.Empty, "Usuário temporariamente bloqueado. Tente novamente mais tarde.");
+                        return View(vm);
                     }
 
-                    // Sem returnUrl válido: redireciona para o portal correto
-                    return RedirectToSubdomainWithRole(isAdmin, isLojista);
-                }
-
-                if (result.IsLockedOut)
-                {
-                    ModelState.AddModelError(string.Empty, "Usuário temporariamente bloqueado. Tente novamente mais tarde.");
+                    ModelState.AddModelError(string.Empty, "Senha inválida.");
                     return View(vm);
                 }
 
-                ModelState.AddModelError(string.Empty, "Senha inválida.");
-                return View(vm);
+                // ✅ Obtém roles do usuário
+                var roles = await _userManager.GetRolesAsync(user);
+                var isAdmin = roles.Any(r => string.Equals(r, "Admin", StringComparison.OrdinalIgnoreCase));
+                var isLojista = roles.Any(r => string.Equals(r, "Lojista", StringComparison.OrdinalIgnoreCase));
+
+                // ✅ Bloqueia login se não tiver perfil (evita logar e cair em AcessoNegado)
+                if (!isAdmin && !isLojista)
+                {
+                    await _signInManager.SignOutAsync();
+                    HttpContext.Session.Clear();
+
+                    ModelState.AddModelError(string.Empty, "Seu usuário está sem perfil de acesso (Admin/Lojista). Fale com o administrador.");
+                    return View(vm);
+                }
+
+                var currentHost = (Request.Host.Host ?? "").ToLowerInvariant();
+                var isAdminHost = currentHost.StartsWith("admin.");
+                var isPainelHost = currentHost.StartsWith("painel.");
+
+                // ✅ Admin logando no painel.*
+                if (isAdmin && isPainelHost)
+                {
+                    var targetUrl = BuildSubdomainUrl("admin", FixReturnUrlForRole(returnUrl, isAdmin: true, isLojista: false) ?? "/Admin/Lojistas");
+                    return Redirect(targetUrl);
+                }
+
+                // ✅ Lojista logando no admin.*
+                if (isLojista && isAdminHost)
+                {
+                    var targetUrl = BuildSubdomainUrl("painel", FixReturnUrlForRole(returnUrl, isAdmin: false, isLojista: true) ?? "/PainelLojista/Dashboard");
+                    return Redirect(targetUrl);
+                }
+
+                // ✅ Se não está em admin.* nem painel.*, manda para portal correto baseado na role
+                if (!isAdminHost && !isPainelHost)
+                {
+                    if (isAdmin)
+                        return Redirect(BuildSubdomainUrl("admin", FixReturnUrlForRole(returnUrl, isAdmin: true, isLojista: false) ?? "/Admin/Lojistas"));
+
+                    return Redirect(BuildSubdomainUrl("painel", FixReturnUrlForRole(returnUrl, isAdmin: false, isLojista: true) ?? "/PainelLojista/Dashboard"));
+                }
+
+                // ✅ Está no host correto: respeita returnUrl se for local e compatível
+                if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                {
+                    if (IsReturnUrlCompatibleWithRole(returnUrl, isAdmin, isLojista))
+                        return Redirect(returnUrl);
+                }
+
+                // ✅ fallback padrão
+                if (isAdmin) return Redirect("/Admin/Lojistas");
+                return Redirect("/PainelLojista/Dashboard");
             }
             catch (Exception ex)
             {
@@ -126,24 +174,42 @@ namespace WebApplicationPods.Controllers
             }
         }
 
-        private IActionResult RedirectToSubdomainWithRole(bool isAdmin, bool isLojista, string? path = null)
+        private static string? FixReturnUrlForRole(string? returnUrl, bool isAdmin, bool isLojista)
         {
-            var targetPath = path ?? GetDefaultPathForRole(isAdmin, isLojista);
+            if (string.IsNullOrWhiteSpace(returnUrl)) return null;
+            if (!returnUrl.StartsWith("/", StringComparison.Ordinal)) return null;
 
             if (isAdmin)
-                return Redirect(BuildSubdomainUrl("admin", targetPath));
+            {
+                // Admin só deve cair em /Admin/*
+                if (returnUrl.StartsWith("/Admin", StringComparison.OrdinalIgnoreCase))
+                    return returnUrl;
+                return null;
+            }
 
             if (isLojista)
-                return Redirect(BuildSubdomainUrl("painel", targetPath));
+            {
+                // Lojista só deve cair em /PainelLojista/*
+                if (returnUrl.StartsWith("/PainelLojista", StringComparison.OrdinalIgnoreCase) ||
+                    returnUrl.StartsWith("/painel", StringComparison.OrdinalIgnoreCase))
+                    return returnUrl;
 
-            return Redirect(targetPath);
+                return null;
+            }
+
+            return null;
         }
 
-        private string GetDefaultPathForRole(bool isAdmin, bool isLojista)
+        private static bool IsReturnUrlCompatibleWithRole(string returnUrl, bool isAdmin, bool isLojista)
         {
-            if (isAdmin) return "/Admin/Lojistas";
-            if (isLojista) return "/PainelLojista/Dashboard";
-            return "/Home/Index";
+            if (isAdmin && returnUrl.StartsWith("/Admin", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (isLojista && (returnUrl.StartsWith("/PainelLojista", StringComparison.OrdinalIgnoreCase) ||
+                              returnUrl.StartsWith("/painel", StringComparison.OrdinalIgnoreCase)))
+                return true;
+
+            return false;
         }
 
         private IActionResult RedirectToAppropriatePage()
@@ -151,122 +217,27 @@ namespace WebApplicationPods.Controllers
             var isAdmin = User.IsInRole("Admin");
             var isLojista = User.IsInRole("Lojista");
 
-            if (isAdmin)
+            var currentHost = (Request.Host.Host ?? "").ToLowerInvariant();
+            var isAdminHost = currentHost.StartsWith("admin.");
+            var isPainelHost = currentHost.StartsWith("painel.");
+
+            // Garante que está no host certo
+            if (isAdmin && !isAdminHost)
                 return Redirect(BuildSubdomainUrl("admin", "/Admin/Lojistas"));
 
-            if (isLojista)
+            if (isLojista && !isPainelHost)
                 return Redirect(BuildSubdomainUrl("painel", "/PainelLojista/Dashboard"));
+
+            // ✅ Rotas corretas (PainelLojista é prefixo/area)
+            if (isAdmin) return Redirect("/Admin/Lojistas");
+            if (isLojista) return Redirect("/PainelLojista/Dashboard");
 
             return RedirectToAction("Index", "Home");
         }
 
-        private static string? NormalizeReturnUrlByRole(string? returnUrl, bool isAdmin, bool isLojista)
-        {
-            if (string.IsNullOrWhiteSpace(returnUrl)) return null;
-
-            var u = returnUrl.Trim();
-            if (!u.StartsWith("/")) return null;
-
-            if (isAdmin && (u.StartsWith("/PainelLojista", StringComparison.OrdinalIgnoreCase) ||
-                           u.StartsWith("/painel", StringComparison.OrdinalIgnoreCase)))
-                return null;
-
-            if (isLojista && u.StartsWith("/Admin", StringComparison.OrdinalIgnoreCase))
-                return null;
-
-            return u;
-        }
-
-        private async Task<ApplicationUser?> EncontrarUsuarioPorCredencial(string entradaDigitos, string entradaOriginal)
-        {
-            if (!string.IsNullOrWhiteSpace(entradaDigitos) && entradaDigitos.Length == 11)
-            {
-                var userCpf = await _userManager.Users.FirstOrDefaultAsync(u => u.CPF == entradaDigitos);
-                if (userCpf != null) return userCpf;
-            }
-
-            if (!string.IsNullOrWhiteSpace(entradaDigitos) && entradaDigitos.Length >= 10)
-            {
-                var userPhone = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == entradaDigitos);
-                if (userPhone != null) return userPhone;
-            }
-
-            if (IsValidEmail(entradaOriginal))
-            {
-                var userEmail = await _userManager.Users.FirstOrDefaultAsync(u =>
-                    u.Email != null && u.Email.Equals(entradaOriginal, StringComparison.OrdinalIgnoreCase));
-                if (userEmail != null) return userEmail;
-            }
-
-            return await _userManager.FindByNameAsync(entradaOriginal);
-        }
-
-        private static string LimparDigitos(string input)
-        {
-            if (string.IsNullOrWhiteSpace(input)) return string.Empty;
-            return new string(input.Where(char.IsDigit).ToArray());
-        }
-
-        private static bool IsValidEmail(string email)
-        {
-            if (string.IsNullOrWhiteSpace(email)) return false;
-
-            try
-            {
-                var addr = new System.Net.Mail.MailAddress(email);
-                return addr.Address == email;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private string BuildSubdomainUrl(string subdomain, string path)
-        {
-            var scheme = Request.Scheme;
-            var hostOnly = (Request.Host.Host ?? "localhost").Trim().ToLowerInvariant();
-            var port = Request.Host.Port;
-
-            var baseDomain = GetBaseDomain(hostOnly);
-            var finalHost = $"{subdomain}.{baseDomain}";
-            var finalPath = string.IsNullOrWhiteSpace(path) ? "/" : (path.StartsWith("/") ? path : "/" + path);
-
-            return port.HasValue
-                ? $"{scheme}://{finalHost}:{port.Value}{finalPath}"
-                : $"{scheme}://{finalHost}{finalPath}";
-        }
-
-        private static string GetBaseDomain(string host)
-        {
-            if (host is "localhost" or "127.0.0.1" or "::1" or "0.0.0.0")
-                return "lvh.me";
-
-            if (host == "lvh.me" || host.EndsWith(".lvh.me"))
-                return "lvh.me";
-
-            var parts = host.Split('.', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length < 2) return host;
-
-            var last = parts[^1];
-            var secondLast = parts[^2];
-            var thirdLast = parts.Length >= 3 ? parts[^3] : null;
-
-            var brSecondLevel = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            {
-                "com","net","org","gov","edu"
-            };
-
-            if (last.Equals("br", StringComparison.OrdinalIgnoreCase) &&
-                thirdLast != null &&
-                brSecondLevel.Contains(secondLast))
-            {
-                return $"{thirdLast}.{secondLast}.{last}";
-            }
-
-            return $"{secondLast}.{last}";
-        }
-
+        // =========================
+        // LOGOUT
+        // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
@@ -274,11 +245,13 @@ namespace WebApplicationPods.Controllers
             await _signInManager.SignOutAsync();
             HttpContext.Session.Clear();
 
+            // Limpa cookies
             Response.Cookies.Delete("Pods.Auth");
             Response.Cookies.Delete("Pods.AntiForgery");
             Response.Cookies.Delete("SitePods.Session");
 
-            if (Request.Host.Host?.Contains("lvh.me") == true)
+            // Remove também para domínio compartilhado no dev
+            if ((Request.Host.Host ?? "").Contains("lvh.me", StringComparison.OrdinalIgnoreCase))
             {
                 Response.Cookies.Delete("Pods.Auth", new CookieOptions { Domain = ".lvh.me", Path = "/" });
                 Response.Cookies.Delete("Pods.AntiForgery", new CookieOptions { Domain = ".lvh.me", Path = "/" });
@@ -288,6 +261,9 @@ namespace WebApplicationPods.Controllers
             return RedirectToAction("Login", "Conta");
         }
 
+        // =========================
+        // ACESSO NEGADO + RECUPERAÇÃO
+        // =========================
         [HttpGet, AllowAnonymous]
         public IActionResult AcessoNegado() => View();
 
@@ -359,20 +335,98 @@ namespace WebApplicationPods.Controllers
         [HttpGet, AllowAnonymous]
         public IActionResult ResetPasswordConfirmation() => View();
 
-        [AllowAnonymous]
-        public async Task<IActionResult> DebugUser()
+        // =========================
+        // HELPERS
+        // =========================
+        private async Task<ApplicationUser?> EncontrarUsuarioPorCredencial(string entradaDigitos, string entradaOriginal)
         {
-            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.CPF == "02121225170");
-
-            if (user != null)
+            if (!string.IsNullOrWhiteSpace(entradaDigitos) && entradaDigitos.Length == 11)
             {
-                ViewData["UserName"] = user.UserName;
-                ViewData["Email"] = user.Email;
-                ViewData["CPF"] = user.CPF;
-                ViewData["Phone"] = user.PhoneNumber;
+                var userCpf = await _userManager.Users.FirstOrDefaultAsync(u => u.CPF == entradaDigitos);
+                if (userCpf != null) return userCpf;
             }
 
-            return View();
+            if (!string.IsNullOrWhiteSpace(entradaDigitos) && entradaDigitos.Length >= 10)
+            {
+                var userPhone = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == entradaDigitos);
+                if (userPhone != null) return userPhone;
+            }
+
+            if (IsValidEmail(entradaOriginal))
+            {
+                var userEmail = await _userManager.Users.FirstOrDefaultAsync(u =>
+                    u.Email != null && u.Email.Equals(entradaOriginal, StringComparison.OrdinalIgnoreCase));
+                if (userEmail != null) return userEmail;
+            }
+
+            return await _userManager.FindByNameAsync(entradaOriginal);
+        }
+
+        private static string LimparDigitos(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return string.Empty;
+            return new string(input.Where(char.IsDigit).ToArray());
+        }
+
+        private static bool IsValidEmail(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email)) return false;
+
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(email);
+                return addr.Address == email;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private string BuildSubdomainUrl(string subdomain, string path)
+        {
+            var scheme = Request.Scheme;
+            var hostOnly = (Request.Host.Host ?? "localhost").Trim().ToLowerInvariant();
+            var port = Request.Host.Port;
+
+            var baseDomain = ExtractBaseDomain(hostOnly);
+
+            var finalHost = $"{subdomain}.{baseDomain}";
+            var finalPath = string.IsNullOrWhiteSpace(path) ? "/" : (path.StartsWith("/") ? path : "/" + path);
+
+            return port.HasValue
+                ? $"{scheme}://{finalHost}:{port.Value}{finalPath}"
+                : $"{scheme}://{finalHost}{finalPath}";
+        }
+
+        private static string ExtractBaseDomain(string host)
+        {
+            if (host is "localhost" or "127.0.0.1" or "::1" or "0.0.0.0")
+                return "lvh.me";
+
+            if (host == "lvh.me" || host.EndsWith(".lvh.me"))
+                return "lvh.me";
+
+            var parts = host.Split('.', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 2) return host;
+
+            var last = parts[^1];
+            var secondLast = parts[^2];
+            var thirdLast = parts.Length >= 3 ? parts[^3] : null;
+
+            var brSecondLevel = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "com","net","org","gov","edu"
+            };
+
+            if (last.Equals("br", StringComparison.OrdinalIgnoreCase) &&
+                thirdLast != null &&
+                brSecondLevel.Contains(secondLast))
+            {
+                return $"{thirdLast}.{secondLast}.{last}";
+            }
+
+            return $"{secondLast}.{last}";
         }
     }
 }

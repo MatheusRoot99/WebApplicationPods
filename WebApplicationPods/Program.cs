@@ -93,7 +93,6 @@ builder.Services
         options.User.RequireUniqueEmail = false;
         options.SignIn.RequireConfirmedAccount = false;
 
-        // ✅ Configurações de lockout
         options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
         options.Lockout.MaxFailedAccessAttempts = 5;
         options.Lockout.AllowedForNewUsers = true;
@@ -109,6 +108,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 
     if (builder.Environment.IsDevelopment())
     {
+        // ✅ permite cookie entre admin/painel/loja-*.lvh.me
         options.Cookie.Domain = ".lvh.me";
         options.Cookie.SameSite = SameSiteMode.Lax;
     }
@@ -123,22 +123,50 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
     options.ReturnUrlParameter = "ReturnUrl";
 
-    // ✅ IMPORTANTE: Configura eventos do cookie
+    // ✅ CORRIGIDO: não quebrar página de login / acesso negado
     options.Events = new Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationEvents
     {
-        OnRedirectToLogin = context =>
+        OnRedirectToLogin = ctx =>
         {
-            // Se a requisição já é para login, não redireciona novamente
-            if (context.Request.Path.StartsWithSegments("/Conta/Login"))
+            if (IsApiOrAjax(ctx.Request))
             {
-                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 return Task.CompletedTask;
             }
 
-            context.Response.Redirect(context.RedirectUri);
+            ctx.Response.Redirect(ctx.RedirectUri);
+            return Task.CompletedTask;
+        },
+
+        OnRedirectToAccessDenied = ctx =>
+        {
+            if (IsApiOrAjax(ctx.Request))
+            {
+                ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return Task.CompletedTask;
+            }
+
+            ctx.Response.Redirect(ctx.RedirectUri);
             return Task.CompletedTask;
         }
     };
+
+    static bool IsApiOrAjax(HttpRequest req)
+    {
+        if (req.Headers.TryGetValue("X-Requested-With", out var v) &&
+            string.Equals(v.ToString(), "XMLHttpRequest", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var accept = req.Headers.Accept.ToString();
+        if (!string.IsNullOrWhiteSpace(accept) &&
+            accept.Contains("application/json", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (req.Path.StartsWithSegments("/api"))
+            return true;
+
+        return false;
+    }
 });
 
 // ==================== Sessão ====================
@@ -225,7 +253,7 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 }
 
-// ==================== Pipeline CORRIGIDO ====================
+// ==================== Pipeline ====================
 app.UseRequestLocalization(app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>().Value);
 
 if (app.Environment.IsDevelopment())
@@ -245,13 +273,19 @@ app.UseRouting();
 
 app.UseSession();
 app.UseMiddleware<ClienteAutoLoginMiddleware>();
+
 app.UseAuthentication();
-app.UseAuthorization();
-app.UseMiddleware<LojaContextMiddleware>();
+
+// ✅ Redireciona entrada de portal ("/") depois de autenticar (pra usar ctx.User)
+app.UseMiddleware<PortalEntryRedirectMiddleware>();
+
+// ✅ Antes do Authorization: garante subdomínio correto por role
 app.UseMiddleware<RoleSubdomainEnforcerMiddleware>();
 
-// ✅ PortalEntryRedirectMiddleware DEVE vir por último para redirecionar localhost
-app.UseMiddleware<PortalEntryRedirectMiddleware>();
+// ✅ Resolve LojaId na sessão
+app.UseMiddleware<LojaContextMiddleware>();
+
+app.UseAuthorization();
 
 // ===== Endpoints =====
 app.MapControllers();

@@ -13,5 +13,8 @@ namespace WebApplicationPods.Repository.Interface
 
         /// <summary>Insere ou atualiza a config.</summary>
         LojaConfig Salvar(LojaConfig config);
+
+        LojaConfig? ObterPorLojaId(int lojaId);
+
     }
 }

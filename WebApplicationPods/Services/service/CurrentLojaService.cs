@@ -24,7 +24,7 @@ namespace WebApplicationPods.Services.service
             }
         }
 
-        public bool HasLoja => LojaId.HasValue;
+        public bool HasLoja => LojaId.HasValue && LojaId.Value > 0;
 
         public void SetLojaId(int lojaId)
         {

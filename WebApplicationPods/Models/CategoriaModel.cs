@@ -13,14 +13,13 @@ namespace WebApplicationPods.Models
         [Required(ErrorMessage = "O nome da categoria é obrigatório")]
         [StringLength(50, ErrorMessage = "O nome deve ter no máximo 50 caracteres")]
         [Display(Name = "Nome da Categoria")]
-        public string Nome { get; set; }
+        public string Nome { get; set; } = string.Empty;
 
         [StringLength(200, ErrorMessage = "A descrição deve ter no máximo 200 caracteres")]
         [Display(Name = "Descrição")]
-        public string Descricao { get; set; }
+        public string? Descricao { get; set; }
 
-        // Remova a validação automática da coleção de produtos
         [ValidateNever]
-        public ICollection<ProdutoModel> Produtos { get; set; }
+        public ICollection<ProdutoModel> Produtos { get; set; } = new List<ProdutoModel>();
     }
 }

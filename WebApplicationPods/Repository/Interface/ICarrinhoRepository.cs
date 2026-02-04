@@ -1,5 +1,4 @@
-﻿
-using WebApplicationPods.Models;
+﻿using WebApplicationPods.Models;
 
 namespace WebApplicationPods.Repository.Interface
 {
@@ -7,9 +6,11 @@ namespace WebApplicationPods.Repository.Interface
     {
         CarrinhoModel ObterCarrinho();
         void SalvarCarrinho(CarrinhoModel carrinho);
-        void AdicionarItem(ProdutoModel produto, int quantidade, string sabor = null, string observacoes = null);
-        void AtualizarItem(ProdutoModel produto, int quantidade, string sabor = null);
-        void RemoverItem(int produtoId, string sabor = null);
+
+        void AdicionarItem(ProdutoModel produto, int quantidade, string? sabor = null, string? observacoes = null);
+        void AtualizarItem(ProdutoModel produto, int quantidade, string? sabor = null);
+        void RemoverItem(int produtoId, string? sabor = null);
+
         void LimparCarrinho();
     }
 }

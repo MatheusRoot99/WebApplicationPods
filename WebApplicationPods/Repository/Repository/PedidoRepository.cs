@@ -5,6 +5,7 @@ using WebApplicationPods.Data;
 using WebApplicationPods.DTO;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
+using WebApplicationPods.Services.Interface;
 using static WebApplicationPods.DTO.ReportsDTO;
 
 namespace WebApplicationPods.Repository.Repository
@@ -12,28 +13,66 @@ namespace WebApplicationPods.Repository.Repository
     public class PedidoRepository : IPedidoRepository
     {
         private readonly BancoContext _context;
+        private readonly IHttpContextAccessor _http;
+        private readonly ICurrentLojaService _currentLoja;
 
-        private static readonly string[] StatusFinais = new[] { "Entregue", "Cancelado" };
-
-        // Visíveis na aba "Abertos"
         private static readonly string[] StatusVisiveisAbertos = new[]
         {
             "Aguardando Confirmação (Dinheiro)",
             "Pago",
             "Em Preparação",
             "Pronto",
-            "Saiu p/ Entrega"
+            "Saiu p/ Entrega",
+            "Aguardando Pagamento (Entrega)",
+            "Aguardando Pagamento"
         };
 
-        public PedidoRepository(BancoContext context)
+        public PedidoRepository(BancoContext context, IHttpContextAccessor http, ICurrentLojaService currentLoja)
         {
             _context = context;
+            _http = http;
+            _currentLoja = currentLoja;
         }
+
+        // ===================== Helpers =====================
+
+        private bool IsAdmin()
+        {
+            var user = _http.HttpContext?.User;
+            return user?.Identity?.IsAuthenticated == true && user.IsInRole("Admin");
+        }
+
+        private int? LojaIdContext()
+        {
+            if (IsAdmin()) return null;
+            if (_currentLoja?.LojaId is int lojaId && lojaId > 0) return lojaId;
+            return null;
+        }
+
+        private IQueryable<PedidoModel> BaseQuery()
+        {
+            var q = _context.Pedidos.AsQueryable();
+
+            var lojaId = LojaIdContext();
+            if (lojaId.HasValue)
+                q = q.Where(p => p.LojaId == lojaId.Value);
+
+            return q;
+        }
+
+        // Usada fora de GroupBy
+        private static readonly Expression<Func<PedidoModel, bool>> PagoExpr =
+            p => p.Status != null
+                 && p.Status != "Cancelado"
+                 && p.Status != "Pagamento Falhou";
+
+        // ===================== CRUD / Consultas =====================
 
         public PedidoModel ObterPorId(int id)
         {
-            // inclui relações essenciais para exibição detalhada
-            return _context.Pedidos
+            var q = BaseQuery();
+
+            return q
                 .Include(p => p.Cliente)
                 .Include(p => p.Endereco)
                 .Include(p => p.PedidoItens).ThenInclude(pi => pi.Produto)
@@ -43,12 +82,23 @@ namespace WebApplicationPods.Repository.Repository
 
         public IEnumerable<PedidoModel> ObterPorCliente(int clienteId)
         {
-            return _context.Pedidos
+            return BaseQuery()
                 .Where(p => p.ClienteId == clienteId && !p.IsDeleted)
                 .Include(p => p.PedidoItens).ThenInclude(pi => pi.Produto)
                 .OrderByDescending(p => p.DataPedido)
                 .AsNoTracking()
                 .ToList();
+        }
+
+        public PedidoModel? ObterPorToken(string token)
+        {
+            if (string.IsNullOrWhiteSpace(token)) return null;
+
+            return BaseQuery()
+                .Include(p => p.Cliente)
+                .Include(p => p.PedidoItens).ThenInclude(i => i.Produto)
+                .Include(p => p.Pagamentos)
+                .FirstOrDefault(p => p.RastreioToken == token && !p.IsDeleted);
         }
 
         public void Adicionar(PedidoModel pedido)
@@ -57,43 +107,44 @@ namespace WebApplicationPods.Repository.Repository
             if (pedido.PedidoItens == null || !pedido.PedidoItens.Any())
                 throw new ArgumentException("Pedido deve conter itens");
 
+            // 🔒 Cinturão: loja obrigatória
+            if (pedido.LojaId <= 0)
+                throw new ArgumentException("Pedido precisa de LojaId válido (multi-loja).");
+
             pedido.DataPedido = DateTime.Now;
 
-            // Gera um token se não vier preenchido
             if (string.IsNullOrWhiteSpace(pedido.RastreioToken))
             {
-                // 16 bytes => 32 chars hex (curto e legível)
                 pedido.RastreioToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
             }
 
             _context.Pedidos.Add(pedido);
-            _context.SaveChanges(); // Id e Token persistidos
-
-            // SUGESTÃO (fora do repo): emitir _hub.Clients.Group("lojistas").SendAsync("NewOrder", ...) aqui via service/controller
+            _context.SaveChanges();
         }
 
         public void AtualizarStatus(int pedidoId, string status)
         {
-            var pedido = _context.Pedidos.FirstOrDefault(p => p.Id == pedidoId);
+            if (string.IsNullOrWhiteSpace(status)) return;
+
+            // respeita loja quando for lojista
+            var pedido = BaseQuery().FirstOrDefault(p => p.Id == pedidoId);
             if (pedido == null) return;
 
             if (!string.Equals(pedido.Status, status, StringComparison.OrdinalIgnoreCase))
             {
                 pedido.Status = status;
                 _context.SaveChanges();
-
-                // SUGESTÃO (fora do repo):
-                // - Se virou "Pago": disparar notificação realtime pro painel
-                // - Se virou "Saiu p/ Entrega" ou "Pronto": idem
             }
         }
 
         public decimal ObterTotalVendasHoje()
         {
             var hoje = DateTime.Today;
-            return _context.Pedidos
+            var amanha = hoje.AddDays(1);
+
+            return BaseQuery()
                 .Where(p => !p.IsDeleted
-                            && p.DataPedido.Date == hoje
+                            && p.DataPedido >= hoje && p.DataPedido < amanha
                             && p.Status != "Cancelado"
                             && p.Status != "Pagamento Falhou")
                 .Sum(p => (decimal?)p.ValorTotal) ?? 0m;
@@ -101,7 +152,7 @@ namespace WebApplicationPods.Repository.Repository
 
         public IEnumerable<PedidoModel> ObterAbertos()
         {
-            return _context.Pedidos
+            return BaseQuery()
                 .Where(p => !p.IsDeleted && StatusVisiveisAbertos.Contains(p.Status))
                 .Include(p => p.Cliente)
                 .Include(p => p.PedidoItens)
@@ -116,7 +167,7 @@ namespace WebApplicationPods.Repository.Repository
             var hoje = DateTime.Today;
             var amanha = hoje.AddDays(1);
 
-            return _context.Pedidos
+            return BaseQuery()
                 .Where(p => !p.IsDeleted && p.DataPedido >= hoje && p.DataPedido < amanha)
                 .Include(p => p.Cliente)
                 .Include(p => p.PedidoItens)
@@ -128,21 +179,14 @@ namespace WebApplicationPods.Repository.Repository
 
         // ===================== Relatórios =====================
 
-        // Usada fora de GroupBy
-        private static readonly Expression<Func<PedidoModel, bool>> PagoExpr =
-            p => p.Status != null
-                 && p.Status != "Cancelado"
-                 && p.Status != "Pagamento Falhou";
-
         public ResumoVendas ObterResumo(DateTime inicio, DateTime fim)
         {
-            var q = _context.Pedidos
+            var q = BaseQuery()
                 .Where(p => !p.IsDeleted && p.DataPedido >= inicio && p.DataPedido < fim);
 
             var recebidos = q.Count();
             var pagos = q.Where(PagoExpr).Count();
-            var totalVendido = q.Where(PagoExpr)
-                                .Sum(p => (decimal?)p.ValorTotal) ?? 0m;
+            var totalVendido = q.Where(PagoExpr).Sum(p => (decimal?)p.ValorTotal) ?? 0m;
 
             return new ResumoVendas
             {
@@ -154,7 +198,7 @@ namespace WebApplicationPods.Repository.Repository
 
         public IEnumerable<SerieDia> ObterSeriePorDia(DateTime inicio, DateTime fim)
         {
-            return _context.Pedidos
+            return BaseQuery()
                 .Where(p => !p.IsDeleted && p.DataPedido >= inicio && p.DataPedido < fim)
                 .GroupBy(p => p.DataPedido.Date)
                 .Select(g => new SerieDia
@@ -174,7 +218,7 @@ namespace WebApplicationPods.Repository.Repository
 
         public IEnumerable<MetodoPagamentoResumo> ObterMetodosPagamentoResumo(DateTime inicio, DateTime fim)
         {
-            return _context.Pedidos
+            return BaseQuery()
                 .Where(p => !p.IsDeleted && p.DataPedido >= inicio && p.DataPedido < fim)
                 .GroupBy(p => p.MetodoPagamento ?? "Indefinido")
                 .Select(g => new MetodoPagamentoResumo
@@ -194,7 +238,7 @@ namespace WebApplicationPods.Repository.Repository
 
         public IEnumerable<TopClienteResumo> ObterTopClientes(DateTime inicio, DateTime fim, int take = 5)
         {
-            return _context.Pedidos
+            return BaseQuery()
                 .Where(p => !p.IsDeleted && p.DataPedido >= inicio && p.DataPedido < fim)
                 .Include(p => p.Cliente)
                 .GroupBy(p => new { p.ClienteId, Nome = p.Cliente!.Nome })
@@ -220,18 +264,15 @@ namespace WebApplicationPods.Repository.Repository
 
         public IEnumerable<PedidoModel> Buscar(AdminOrdersFilterDTO f)
         {
-            var q = _context.Pedidos
+            var q = BaseQuery()
                 .Where(p => !p.IsDeleted)
                 .Include(p => p.Cliente)
                 .Include(p => p.PedidoItens)
                 .Include(p => p.Pagamentos)
                 .AsQueryable();
 
-            if (f.From.HasValue)
-                q = q.Where(p => p.DataPedido >= f.From.Value);
-
-            if (f.To.HasValue)
-                q = q.Where(p => p.DataPedido < f.To.Value);
+            if (f.From.HasValue) q = q.Where(p => p.DataPedido >= f.From.Value);
+            if (f.To.HasValue) q = q.Where(p => p.DataPedido < f.To.Value);
 
             if (!string.IsNullOrWhiteSpace(f.Method))
             {
@@ -239,8 +280,7 @@ namespace WebApplicationPods.Repository.Repository
                 q = q.Where(p => (p.MetodoPagamento ?? "") == m);
             }
 
-            if (f.OnlyPaid)
-                q = q.Where(PagoExpr);
+            if (f.OnlyPaid) q = q.Where(PagoExpr);
 
             if (!string.IsNullOrWhiteSpace(f.Q))
             {
@@ -261,7 +301,7 @@ namespace WebApplicationPods.Repository.Repository
 
         public void ExcluirLogico(int id, string? usuario = null)
         {
-            var p = _context.Pedidos.FirstOrDefault(x => x.Id == id);
+            var p = BaseQuery().FirstOrDefault(x => x.Id == id);
             if (p == null) return;
 
             p.IsDeleted = true;
@@ -274,8 +314,14 @@ namespace WebApplicationPods.Repository.Repository
         {
             var limite = DateTime.UtcNow.AddDays(-dias);
 
-            var antigos = _context.Pedidos
-                .IgnoreQueryFilters() // para enxergar soft-deletados
+            // Purga não deve aplicar filtro de loja se Admin quiser limpar global,
+            // mas para Lojista, mantém loja.
+            var q = _context.Pedidos.IgnoreQueryFilters().AsQueryable();
+
+            var lojaId = LojaIdContext();
+            if (lojaId.HasValue) q = q.Where(p => p.LojaId == lojaId.Value);
+
+            var antigos = q
                 .Include(p => p.PedidoItens)
                 .Where(p => p.IsDeleted && (p.DeletedAt == null || p.DeletedAt < limite))
                 .ToList();
@@ -291,27 +337,18 @@ namespace WebApplicationPods.Repository.Repository
 
         public void Restaurar(int id)
         {
-            var p = _context.Pedidos
-                .IgnoreQueryFilters()
-                .FirstOrDefault(x => x.Id == id);
+            var q = _context.Pedidos.IgnoreQueryFilters().AsQueryable();
 
+            var lojaId = LojaIdContext();
+            if (lojaId.HasValue) q = q.Where(p => p.LojaId == lojaId.Value);
+
+            var p = q.FirstOrDefault(x => x.Id == id);
             if (p == null) return;
 
             p.IsDeleted = false;
             p.DeletedAt = null;
             p.DeletedBy = null;
             _context.SaveChanges();
-        }
-
-        // ===================== Utilidades =====================
-
-        public PedidoModel? ObterPorToken(string token)
-        {
-            return _context.Pedidos
-                .Include(p => p.Cliente)
-                .Include(p => p.PedidoItens).ThenInclude(i => i.Produto)
-                .Include(p => p.Pagamentos)
-                .FirstOrDefault(p => p.RastreioToken == token && !p.IsDeleted);
         }
     }
 }

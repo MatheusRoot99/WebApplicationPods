@@ -20,24 +20,32 @@ namespace WebApplicationPods.Middlewares
             ITenantResolver tenantResolver,
             ICurrentLojaService currentLoja,
             UserManager<ApplicationUser> userManager,
-            TenantDbContext tenantDb) // 👈 trocamos BancoContext por TenantDbContext
+            TenantDbContext tenantDb)
         {
-            // 1) Primeiro tenta resolver pelo subdomínio (fluxo público)
-            var lojaIdFromHost = await tenantResolver.ResolveLojaIdAsync(context);
+            var host = (context.Request.Host.Host ?? "").ToLowerInvariant();
+            var isAdminHost = host.StartsWith("admin.");
+            var isPainelHost = host.StartsWith("painel.");
 
-            if (lojaIdFromHost.HasValue)
+            // 1) Só resolve por subdomínio se NÃO for admin/painel (fluxo público loja-*)
+            if (!isAdminHost && !isPainelHost)
             {
-                currentLoja.SetLojaId(lojaIdFromHost.Value);
-                await _next(context);
-                return;
+                var lojaIdFromHost = await tenantResolver.ResolveLojaIdAsync(context);
+
+                if (lojaIdFromHost.HasValue)
+                {
+                    currentLoja.SetLojaId(lojaIdFromHost.Value);
+                    await _next(context);
+                    return;
+                }
             }
 
-            // 2) Sem subdomínio: se estiver autenticado, aplica regra por role
+            // 2) Sem subdomínio (ou em admin/painel): se estiver autenticado, aplica regra por role
             if (context.User?.Identity?.IsAuthenticated == true)
             {
-                // Admin pode navegar no "www" e escolher loja pela sessão (mais tarde faremos UI)
+                // Admin: pode ficar sem loja (ver tudo) OU usar seletor via sessão (futuro)
                 if (context.User.IsInRole("Admin"))
                 {
+                    // Se já tiver loja na sessão (seletor), valida se existe/ativa
                     var lojaId = currentLoja.LojaId;
                     if (lojaId.HasValue)
                     {
@@ -53,12 +61,12 @@ namespace WebApplicationPods.Middlewares
                     return;
                 }
 
-                // Lojista: força LojaId pelo user.LojaId (painel)
+                // Lojista: força LojaId pelo user.LojaId
                 if (context.User.IsInRole("Lojista"))
                 {
                     var user = await userManager.GetUserAsync(context.User);
 
-                    if (user?.LojaId is int lojaId)
+                    if (user?.LojaId is int lojaId && lojaId > 0)
                     {
                         var loja = await tenantDb.Lojas
                             .AsNoTracking()
@@ -66,6 +74,7 @@ namespace WebApplicationPods.Middlewares
 
                         if (loja is null || !loja.Ativa)
                         {
+                            currentLoja.ClearLoja();
                             context.Response.Redirect("/Conta/AcessoNegado");
                             return;
                         }
@@ -75,11 +84,12 @@ namespace WebApplicationPods.Middlewares
                         return;
                     }
 
+                    currentLoja.ClearLoja();
                     context.Response.Redirect("/Conta/AcessoNegado");
                     return;
                 }
 
-                // Usuário final logado sem subdomínio: não tem loja definida
+                // Usuário final logado sem subdomínio => sem loja definida
                 currentLoja.ClearLoja();
                 await _next(context);
                 return;

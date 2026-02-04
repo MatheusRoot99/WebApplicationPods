@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using WebApplicationPods.Data;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
 
@@ -9,23 +8,20 @@ namespace WebApplicationPods.Controllers
 {
     public class PedidoController : Controller
     {
-        private readonly BancoContext _context;
         private readonly IPedidoRepository _pedidoRepository;
 
-        public PedidoController(BancoContext context, IPedidoRepository pedidoRepository)
+        public PedidoController(IPedidoRepository pedidoRepository)
         {
             _pedidoRepository = pedidoRepository;
-            _context = context;
         }
 
         public IActionResult Index() => View();
 
-        // ===== Helpers =====
         private static bool CanViewPedido(PedidoModel p, ClaimsPrincipal user, string? token)
         {
             if (user?.Identity?.IsAuthenticated == true)
             {
-                if (user.IsInRole("Lojista")) return true;
+                if (user.IsInRole("Lojista") || user.IsInRole("Admin")) return true;
 
                 var cidStr = user.FindFirstValue("ClienteId");
                 if (int.TryParse(cidStr, out var cid) && cid == p.ClienteId) return true;
@@ -50,8 +46,6 @@ namespace WebApplicationPods.Controllers
             return 0;
         }
 
-        // ===== Views =====
-
         // GET /Pedido/Acompanhar/123?t=TOKEN
         [HttpGet]
         [AllowAnonymous]
@@ -66,17 +60,17 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction(nameof(Buscar));
             }
 
-            // Histórico (10 últimos do mesmo cliente)
-            IEnumerable<PedidoModel> ultimos = Enumerable.Empty<PedidoModel>();
-            var user = HttpContext.User;
+            IEnumerable<PedidoModel> ultimos = new[] { pedido };
 
+            var user = HttpContext.User;
             if (user?.Identity?.IsAuthenticated == true)
             {
-                if (user.IsInRole("Lojista"))
+                if (user.IsInRole("Lojista") || user.IsInRole("Admin"))
                 {
                     ultimos = _pedidoRepository.ObterPorCliente(pedido.ClienteId)
-                                               .OrderByDescending(x => x.DataPedido)
-                                               .Take(10).ToList();
+                        .OrderByDescending(x => x.DataPedido)
+                        .Take(10)
+                        .ToList();
                 }
                 else
                 {
@@ -84,27 +78,26 @@ namespace WebApplicationPods.Controllers
                     if (int.TryParse(cidStr, out var cid) && cid > 0)
                     {
                         ultimos = _pedidoRepository.ObterPorCliente(cid)
-                                                   .OrderByDescending(x => x.DataPedido)
-                                                   .Take(10).ToList();
+                            .OrderByDescending(x => x.DataPedido)
+                            .Take(10)
+                            .ToList();
                     }
-                    else ultimos = new[] { pedido };
                 }
             }
             else
             {
-                ultimos = new[] { pedido };
                 var cookieToken = Request.Cookies["last_order_token"];
                 if (!string.IsNullOrEmpty(cookieToken) &&
                     string.Equals(cookieToken, pedido.RastreioToken, StringComparison.Ordinal))
                 {
                     ultimos = _pedidoRepository.ObterPorCliente(pedido.ClienteId)
-                                               .OrderByDescending(x => x.DataPedido)
-                                               .Take(10).ToList();
+                        .OrderByDescending(x => x.DataPedido)
+                        .Take(10)
+                        .ToList();
                 }
             }
 
             ViewBag.Ultimos = ultimos;
-            // GARANTIR QUE ESTA LINHA EXISTA:
             ViewBag.StatusUrl = Url.Action("Status", "Pedido", new { id = pedido.Id, t = pedido.RastreioToken });
 
             return View(pedido);
@@ -156,14 +149,13 @@ namespace WebApplicationPods.Controllers
             });
         }
 
-        // Roteamento inteligente para último pedido
         [HttpGet]
         [AllowAnonymous]
         public IActionResult Ultimo()
         {
             var user = HttpContext.User;
 
-            if (user?.Identity?.IsAuthenticated == true && user.IsInRole("Lojista"))
+            if (user?.Identity?.IsAuthenticated == true && (user.IsInRole("Lojista") || user.IsInRole("Admin")))
                 return RedirectToAction("Index", "PedidosAdmin", new { filtro = "dia" });
 
             if (user?.Identity?.IsAuthenticated == true)
@@ -211,11 +203,13 @@ namespace WebApplicationPods.Controllers
                 TempData["Erro"] = "Pedido não encontrado.";
                 return View();
             }
+
             if (!CanViewPedido(pedido, HttpContext.User, token))
             {
                 TempData["Erro"] = "Token inválido ou sem permissão.";
                 return View();
             }
+
             return RedirectToAction(nameof(ResumoPedidoCliente), new { id = pedido.Id, t = token });
         }
     }
