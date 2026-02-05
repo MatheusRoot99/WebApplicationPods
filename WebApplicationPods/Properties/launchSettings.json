@@ -12,7 +12,7 @@
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
-      "launchUrl": "",
+      "launchUrl": "https://admin.lvh.me:44321",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
@@ -31,6 +31,32 @@
       "launchBrowser": true,
       "dotnetRunMessages": true,
       "applicationUrl": "https://0.0.0.0:44321;http://0.0.0.0:44320",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "Admin Portal": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "http://admin.lvh.me:44320",
+      "applicationUrl": "http://admin.lvh.me:44320",
+      "environmentVariables": { "ASPNETCORE_ENVIRONMENT": "Development" }
+    },
+    "Painel Portal": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "http://painel.lvh.me:44320",
+      "applicationUrl": "http://painel.lvh.me:44320",
+      "environmentVariables": { "ASPNETCORE_ENVIRONMENT": "Development" }
+    }
+
+  },
+    "Lojista Portal": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "https://painel.lvh.me:44321",
+      "applicationUrl": "https://painel.lvh.me:44321;http://painel.lvh.me:44320",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

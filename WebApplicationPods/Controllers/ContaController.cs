@@ -32,37 +32,39 @@ namespace WebApplicationPods.Controllers
         // LOGIN
         // =========================
         [HttpGet, AllowAnonymous]
-        public IActionResult Login(string? returnUrl = null)
+        public async Task<IActionResult> Login(string? returnUrl = null)
         {
-            // Se já está autenticado, redireciona para página apropriada
             if (User.Identity?.IsAuthenticated == true)
-                return RedirectToAppropriatePage();
-
-            // Se veio returnUrl apontando para área "do outro portal",
-            // já joga para o subdomínio correto mantendo o returnUrl.
-            if (!string.IsNullOrWhiteSpace(returnUrl))
             {
-                var host = (Request.Host.Host ?? "").ToLowerInvariant();
-
-                // Tentando acessar Admin mas está no painel.*
-                if (returnUrl.StartsWith("/Admin", StringComparison.OrdinalIgnoreCase) &&
-                    host.StartsWith("painel."))
+                // se autenticado mas sem role -> faz logout e mostra tela de login
+                var user = await _userManager.GetUserAsync(User);
+                if (user != null)
                 {
-                    return Redirect(BuildSubdomainUrl("admin", returnUrl));
+                    var roles = await _userManager.GetRolesAsync(user);
+                    var isAdmin = roles.Any(r => r.Equals("Admin", StringComparison.OrdinalIgnoreCase));
+                    var isLojista = roles.Any(r => r.Equals("Lojista", StringComparison.OrdinalIgnoreCase));
+
+                    if (!isAdmin && !isLojista)
+                    {
+                        await _signInManager.SignOutAsync();
+                        HttpContext.Session.Clear();
+                        Response.Cookies.Delete("Pods.Auth", new CookieOptions { Domain = ".lvh.me", Path = "/" });
+                        Response.Cookies.Delete("SitePods.Session", new CookieOptions { Domain = ".lvh.me", Path = "/" });
+
+                        TempData["Erro"] = "Sua sessão anterior não tem permissão para este portal. Faça login novamente.";
+                        ViewData["ReturnUrl"] = returnUrl;
+                        return View(new LoginViewModel { ReturnUrl = returnUrl });
+                    }
                 }
 
-                // Tentando acessar PainelLojista mas está no admin.*
-                if ((returnUrl.StartsWith("/PainelLojista", StringComparison.OrdinalIgnoreCase) ||
-                     returnUrl.StartsWith("/painel", StringComparison.OrdinalIgnoreCase)) &&
-                    host.StartsWith("admin."))
-                {
-                    return Redirect(BuildSubdomainUrl("painel", returnUrl));
-                }
+                return RedirectToAppropriatePage();
             }
 
+            // (resto do seu código permanece)
             ViewData["ReturnUrl"] = returnUrl;
             return View(new LoginViewModel { ReturnUrl = returnUrl });
         }
+
 
         [HttpPost, AllowAnonymous]
         [ValidateAntiForgeryToken]
@@ -245,21 +247,19 @@ namespace WebApplicationPods.Controllers
             await _signInManager.SignOutAsync();
             HttpContext.Session.Clear();
 
-            // Limpa cookies
+            // Deleta sem domain (host atual)
             Response.Cookies.Delete("Pods.Auth");
             Response.Cookies.Delete("Pods.AntiForgery");
             Response.Cookies.Delete("SitePods.Session");
 
-            // Remove também para domínio compartilhado no dev
-            if ((Request.Host.Host ?? "").Contains("lvh.me", StringComparison.OrdinalIgnoreCase))
-            {
-                Response.Cookies.Delete("Pods.Auth", new CookieOptions { Domain = ".lvh.me", Path = "/" });
-                Response.Cookies.Delete("Pods.AntiForgery", new CookieOptions { Domain = ".lvh.me", Path = "/" });
-                Response.Cookies.Delete("SitePods.Session", new CookieOptions { Domain = ".lvh.me", Path = "/" });
-            }
+            // Deleta com domain compartilhado
+            Response.Cookies.Delete("Pods.Auth", new CookieOptions { Domain = ".lvh.me", Path = "/" });
+            Response.Cookies.Delete("Pods.AntiForgery", new CookieOptions { Domain = ".lvh.me", Path = "/" });
+            Response.Cookies.Delete("SitePods.Session", new CookieOptions { Domain = ".lvh.me", Path = "/" });
 
             return RedirectToAction("Login", "Conta");
         }
+
 
         // =========================
         // ACESSO NEGADO + RECUPERAÇÃO

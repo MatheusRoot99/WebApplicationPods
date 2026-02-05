@@ -108,14 +108,15 @@ builder.Services.ConfigureApplicationCookie(options =>
 
     if (builder.Environment.IsDevelopment())
     {
-        // ✅ permite cookie entre admin/painel/loja-*.lvh.me
+        // ✅ cookie compartilhado entre admin/painel/loja-*.lvh.me
         options.Cookie.Domain = ".lvh.me";
         options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // dev
     }
-
-    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
-        ? CookieSecurePolicy.SameAsRequest
-        : CookieSecurePolicy.Always;
+    else
+    {
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    }
 
     options.LoginPath = "/Conta/Login";
     options.AccessDeniedPath = "/Conta/AcessoNegado";
@@ -123,7 +124,6 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
     options.ReturnUrlParameter = "ReturnUrl";
 
-    // ✅ CORRIGIDO: não quebrar página de login / acesso negado
     options.Events = new Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationEvents
     {
         OnRedirectToLogin = ctx =>
@@ -133,11 +133,9 @@ builder.Services.ConfigureApplicationCookie(options =>
                 ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 return Task.CompletedTask;
             }
-
             ctx.Response.Redirect(ctx.RedirectUri);
             return Task.CompletedTask;
         },
-
         OnRedirectToAccessDenied = ctx =>
         {
             if (IsApiOrAjax(ctx.Request))
@@ -145,7 +143,6 @@ builder.Services.ConfigureApplicationCookie(options =>
                 ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
                 return Task.CompletedTask;
             }
-
             ctx.Response.Redirect(ctx.RedirectUri);
             return Task.CompletedTask;
         }
@@ -182,6 +179,7 @@ builder.Services.AddSession(options =>
     {
         options.Cookie.Domain = ".lvh.me";
         options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     }
 });
 
@@ -264,9 +262,15 @@ else
 {
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
+    app.UseHttpsRedirection(); // ✅ só em PROD
 }
 
-app.UseHttpsRedirection();
+// ✅ em DEV não força HTTPS (evita ERR_SSL_PROTOCOL_ERROR)
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseStaticFiles();
 
 app.UseRouting();
@@ -276,11 +280,11 @@ app.UseMiddleware<ClienteAutoLoginMiddleware>();
 
 app.UseAuthentication();
 
-// ✅ Redireciona entrada de portal ("/") depois de autenticar (pra usar ctx.User)
-app.UseMiddleware<PortalEntryRedirectMiddleware>();
-
-// ✅ Antes do Authorization: garante subdomínio correto por role
+// ✅ PRIMEIRO: garante subdomínio correto por role
 app.UseMiddleware<RoleSubdomainEnforcerMiddleware>();
+
+// ✅ DEPOIS: redirect de entrada ("/") já com role/host certo
+app.UseMiddleware<PortalEntryRedirectMiddleware>();
 
 // ✅ Resolve LojaId na sessão
 app.UseMiddleware<LojaContextMiddleware>();

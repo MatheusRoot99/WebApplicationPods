@@ -22,15 +22,27 @@ namespace WebApplicationPods.Middlewares
             UserManager<ApplicationUser> userManager,
             TenantDbContext tenantDb)
         {
+            var path = (context.Request.Path.Value ?? "").ToLowerInvariant();
+
+            // ✅ IMPORTANTE: nunca redirecionar em rotas de Conta (evita loop /Conta/AcessoNegado)
+            // e nem em assets/SignalR
+            if (path.StartsWith("/conta") ||
+                path.StartsWith("/hubs") ||
+                path.StartsWith("/_blazor") ||
+                (HttpMethods.IsGet(context.Request.Method) && Path.HasExtension(context.Request.Path)))
+            {
+                await _next(context);
+                return;
+            }
+
             var host = (context.Request.Host.Host ?? "").ToLowerInvariant();
             var isAdminHost = host.StartsWith("admin.");
             var isPainelHost = host.StartsWith("painel.");
 
-            // 1) Só resolve por subdomínio se NÃO for admin/painel (fluxo público loja-*)
+            // 1) Público: resolve por subdomínio loja-*
             if (!isAdminHost && !isPainelHost)
             {
                 var lojaIdFromHost = await tenantResolver.ResolveLojaIdAsync(context);
-
                 if (lojaIdFromHost.HasValue)
                 {
                     currentLoja.SetLojaId(lojaIdFromHost.Value);
@@ -39,13 +51,12 @@ namespace WebApplicationPods.Middlewares
                 }
             }
 
-            // 2) Sem subdomínio (ou em admin/painel): se estiver autenticado, aplica regra por role
+            // 2) Admin/Painel: se autenticado, resolve por role
             if (context.User?.Identity?.IsAuthenticated == true)
             {
-                // Admin: pode ficar sem loja (ver tudo) OU usar seletor via sessão (futuro)
                 if (context.User.IsInRole("Admin"))
                 {
-                    // Se já tiver loja na sessão (seletor), valida se existe/ativa
+                    // Admin pode ficar sem loja. Se tiver LojaId setado, valida.
                     var lojaId = currentLoja.LojaId;
                     if (lojaId.HasValue)
                     {
@@ -61,7 +72,6 @@ namespace WebApplicationPods.Middlewares
                     return;
                 }
 
-                // Lojista: força LojaId pelo user.LojaId
                 if (context.User.IsInRole("Lojista"))
                 {
                     var user = await userManager.GetUserAsync(context.User);
@@ -75,6 +85,8 @@ namespace WebApplicationPods.Middlewares
                         if (loja is null || !loja.Ativa)
                         {
                             currentLoja.ClearLoja();
+
+                            // ✅ aqui pode redirecionar, porque /Conta já foi liberado acima
                             context.Response.Redirect("/Conta/AcessoNegado");
                             return;
                         }
@@ -89,13 +101,12 @@ namespace WebApplicationPods.Middlewares
                     return;
                 }
 
-                // Usuário final logado sem subdomínio => sem loja definida
                 currentLoja.ClearLoja();
                 await _next(context);
                 return;
             }
 
-            // 3) Visitante sem subdomínio => sem loja (landing)
+            // 3) Visitante sem subdomínio => sem loja
             currentLoja.ClearLoja();
             await _next(context);
         }

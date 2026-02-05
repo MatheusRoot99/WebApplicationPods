@@ -1,6 +1,4 @@
 ﻿using Microsoft.AspNetCore.Http;
-using System;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace WebApplicationPods.Middlewares
@@ -24,10 +22,8 @@ namespace WebApplicationPods.Middlewares
             {
                 var port = ctx.Request.Host.Port;
                 var scheme = ctx.Request.Scheme;
-                var returnUrl = ctx.Request.Query["ReturnUrl"].ToString();
                 var newHost = "admin.lvh.me";
 
-                // Constrói a nova URL mantendo path e query string
                 var newPath = string.IsNullOrEmpty(path) || path == "/"
                     ? "/Conta/Login"
                     : path;
@@ -42,7 +38,7 @@ namespace WebApplicationPods.Middlewares
                 return;
             }
 
-            // Só trata entrada "raiz" para outros hosts
+            // Só trata entrada "raiz"
             var isRoot = path == "/" || path == "";
             if (!isRoot)
             {
@@ -50,24 +46,22 @@ namespace WebApplicationPods.Middlewares
                 return;
             }
 
-            // loja-*.lvh.me => abre site da loja (catálogo)
+            // loja-*.lvh.me => catálogo
             if (host.StartsWith("loja-") || host.StartsWith("loja."))
             {
                 ctx.Response.Redirect("/Home/Index");
                 return;
             }
 
-            // admin.* e painel.* => sempre vai pro Login (sem Landing)
+            // admin.* e painel.* => Login ou Dashboard
             if (host.StartsWith("admin.") || host.StartsWith("painel."))
             {
-                // Se já estiver autenticado, manda pro portal correto
                 if (ctx.User?.Identity?.IsAuthenticated == true)
                 {
-                    if (host.StartsWith("admin."))
-                        ctx.Response.Redirect("/Admin/Dashboard");
-                    else
-                        ctx.Response.Redirect("/PainelLojista/Dashboard");
-
+                    // Depois do RoleSubdomainEnforcer, o host já está correto
+                    ctx.Response.Redirect(host.StartsWith("admin.")
+                        ? "/Admin/Dashboard"
+                        : "/PainelLojista/Dashboard");
                     return;
                 }
 
@@ -75,7 +69,7 @@ namespace WebApplicationPods.Middlewares
                 return;
             }
 
-            // Qualquer outro host (lvh.me, www etc) => Login direto
+            // qualquer outro host => Login
             ctx.Response.Redirect("/Conta/Login");
         }
     }

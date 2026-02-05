@@ -53,7 +53,7 @@ namespace WebApplicationPods.Middlewares
             bool isAdmin = isAuth && user.IsInRole("Admin");
             bool isLojista = isAuth && user.IsInRole("Lojista");
 
-            // Se não está autenticado, deixa passar (Auth do ASP.NET resolve)
+            // Se não está autenticado, deixa passar
             if (!isAuth)
             {
                 await _next(context);
@@ -74,25 +74,37 @@ namespace WebApplicationPods.Middlewares
                     ? $"{scheme}://{sub}.{baseDomain}:{port.Value}{targetPath}"
                     : $"{scheme}://{sub}.{baseDomain}{targetPath}";
 
-            // ✅ ADMIN logado em painel.* -> sempre manda para admin.*
-            // (independente do path, porque o host está errado para o role)
+            // ✅ ADMIN logado em painel.* -> manda para admin.*
             if (isAdmin && isPainelHost)
             {
                 context.Response.Redirect(MakeUrl("admin", "/Admin/Dashboard"));
                 return;
             }
 
-            // ✅ LOJISTA logado em admin.* -> sempre manda para painel.*
+            // ✅ LOJISTA logado em admin.* -> manda para painel.*
             if (isLojista && isAdminHost)
             {
                 context.Response.Redirect(MakeUrl("painel", "/PainelLojista/Dashboard"));
                 return;
             }
 
-            // ✅ Usuário autenticado SEM role (não Admin e não Lojista) tentando acessar admin/painel
+            // ✅ Autenticado, mas SEM role: desloga e manda pro login do portal atual
             if (!isAdmin && !isLojista && (isAdminHost || isPainelHost))
             {
-                context.Response.Redirect("/Conta/AcessoNegado");
+                // mata cookie Identity (local)
+                context.Response.Cookies.Delete("Pods.Auth");
+                context.Response.Cookies.Delete("Pods.AntiForgery");
+                context.Response.Cookies.Delete("SitePods.Session");
+
+                // mata cookie Identity (domínio compartilhado dev)
+                if (baseDomain == "lvh.me")
+                {
+                    context.Response.Cookies.Delete("Pods.Auth", new CookieOptions { Domain = ".lvh.me", Path = "/" });
+                    context.Response.Cookies.Delete("Pods.AntiForgery", new CookieOptions { Domain = ".lvh.me", Path = "/" });
+                    context.Response.Cookies.Delete("SitePods.Session", new CookieOptions { Domain = ".lvh.me", Path = "/" });
+                }
+
+                context.Response.Redirect("/Conta/Login");
                 return;
             }
 

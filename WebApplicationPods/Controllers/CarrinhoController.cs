@@ -45,6 +45,24 @@ namespace WebApplicationPods.Controllers
             _currentLoja = currentLoja;
         }
 
+        // =================== Guards / Helpers ===================
+
+        private bool IsAjax()
+            => string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+
+        private IActionResult? EnsureLojaOrRedirect()
+        {
+            if (_currentLoja?.HasLoja == true && _currentLoja.LojaId.GetValueOrDefault() > 0)
+                return null;
+
+            // AJAX: devolve JSON amigável
+            if (IsAjax())
+                return Json(new { ok = false, error = "Nenhuma loja selecionada. Acesse pelo subdomínio da loja (ex.: loja-1.lvh.me)." });
+
+            TempData["Erro"] = "Nenhuma loja selecionada. Acesse pelo subdomínio da loja (ex.: loja-1.lvh.me).";
+            return RedirectToAction("Index", "Home");
+        }
+
         private int GetLojaIdOrFail()
         {
             if (_currentLoja?.LojaId is not int lojaId || lojaId <= 0)
@@ -133,6 +151,9 @@ namespace WebApplicationPods.Controllers
 
         public IActionResult Index()
         {
+            var guard = EnsureLojaOrRedirect();
+            if (guard != null) return guard;
+
             var carrinho = _carrinhoRepository.ObterCarrinho();
 
             var populares = _produtoRepository
@@ -161,12 +182,18 @@ namespace WebApplicationPods.Controllers
         [HttpGet]
         public IActionResult GetCarrinhoPartial()
         {
+            var guard = EnsureLojaOrRedirect();
+            if (guard != null) return guard;
+
             var carrinho = _carrinhoRepository.ObterCarrinho();
             return PartialView("_CarrinhoTablePartial", carrinho);
         }
 
         public IActionResult Resumo()
         {
+            var guard = EnsureLojaOrRedirect();
+            if (guard != null) return guard;
+
             var carrinho = _carrinhoRepository.ObterCarrinho();
             if (carrinho == null || !carrinho.Itens.Any())
             {
@@ -210,7 +237,8 @@ namespace WebApplicationPods.Controllers
                 (novoId.HasValue ? enderecos.FirstOrDefault(e => e.Id == novoId.Value) : null)
                 ?? enderecos.FirstOrDefault(e => e.Principal);
 
-            ViewBag.Loja = _lojaRepo.ObterDoLojistaAtual();
+            // ✅ AQUI o correto é pegar a loja da sessão (loja pública), não "do lojista atual"
+            ViewBag.Loja = _lojaRepo.ObterPorLojaId(GetLojaIdOrFail());
 
             var skipConfirm = string.Equals(Convert.ToString(TempData["SkipConfirm"]), "1", StringComparison.Ordinal);
             var vm = new ResumoPedidoViewModel
@@ -235,8 +263,7 @@ namespace WebApplicationPods.Controllers
         {
             HttpContext.Session.SetString("ClienteConfirmado", "1");
 
-            if (string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase))
-                return Ok();
+            if (IsAjax()) return Ok();
 
             return RedirectToAction(nameof(Resumo));
         }
@@ -245,6 +272,9 @@ namespace WebApplicationPods.Controllers
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Confirmacao(int id)
         {
+            var guard = EnsureLojaOrRedirect();
+            if (guard != null) return guard;
+
             var pedido = _pedidoRepository.ObterPorId(id);
             if (pedido == null)
             {
@@ -272,16 +302,15 @@ namespace WebApplicationPods.Controllers
         public IActionResult AdicionarItem(int produtoId, int quantidade, string? sabor = null,
                                           string? observacoes = null, bool buyNow = false)
         {
-            bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest",
-                             StringComparison.OrdinalIgnoreCase);
+            var guard = EnsureLojaOrRedirect();
+            if (guard != null) return guard;
 
             try
             {
-                // produto já vem filtrado pela loja no banco (QueryFilter)
                 var produto = _produtoRepository.ObterPorId(produtoId);
                 if (produto == null)
                 {
-                    if (isAjax) return Json(new { ok = false, error = "Produto não encontrado." });
+                    if (IsAjax()) return Json(new { ok = false, error = "Produto não encontrado." });
                     TempData["Erro"] = "Produto não encontrado.";
                     return RedirectToAction("Index", "Home");
                 }
@@ -290,7 +319,7 @@ namespace WebApplicationPods.Controllers
 
                 if (!ValidarEstoqueAoAdicionar(produto, quantidade, sabor ?? string.Empty, out var mensagemErro))
                 {
-                    if (isAjax) return Json(new { ok = false, error = mensagemErro });
+                    if (IsAjax()) return Json(new { ok = false, error = mensagemErro });
                     TempData["Erro"] = mensagemErro;
                     return RedirectToAction("Detalhes", "Produto", new { id = produtoId });
                 }
@@ -300,14 +329,14 @@ namespace WebApplicationPods.Controllers
                 var carrinho = _carrinhoRepository.ObterCarrinho();
                 var count = carrinho?.Itens?.Sum(i => i.Quantidade) ?? 0;
 
-                if (isAjax) return Json(new { ok = true, count, nome = produto.Nome, buyNow });
+                if (IsAjax()) return Json(new { ok = true, count, nome = produto.Nome, buyNow });
 
                 TempData["Sucesso"] = "Adicionado ao carrinho!";
                 return buyNow ? RedirectToAction("Resumo", "Carrinho") : RedirectToAction("Index", "Home");
             }
-            catch
+            catch (Exception ex)
             {
-                if (isAjax) return Json(new { ok = false, error = "Erro ao adicionar ao carrinho." });
+                if (IsAjax()) return Json(new { ok = false, error = $"Erro ao adicionar ao carrinho: {ex.Message}" });
                 TempData["Erro"] = "Ocorreu um erro ao adicionar o produto ao carrinho.";
                 return RedirectToAction("Index", "Home");
             }
@@ -317,6 +346,9 @@ namespace WebApplicationPods.Controllers
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Count()
         {
+            var guard = EnsureLojaOrRedirect();
+            if (guard != null) return guard;
+
             var carrinho = _carrinhoRepository.ObterCarrinho();
             var count = carrinho?.Itens?.Sum(i => i.Quantidade) ?? 0;
             return Json(new { count });
@@ -326,8 +358,8 @@ namespace WebApplicationPods.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult AtualizarItem(int produtoId, int? quantidade, string? sabor, string? op)
         {
-            bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest",
-                             StringComparison.OrdinalIgnoreCase);
+            var guard = EnsureLojaOrRedirect();
+            if (guard != null) return guard;
 
             try
             {
@@ -340,7 +372,7 @@ namespace WebApplicationPods.Controllers
 
                 if (item == null)
                 {
-                    if (isAjax) return Json(new { ok = false, error = "Item não encontrado no carrinho." });
+                    if (IsAjax()) return Json(new { ok = false, error = "Item não encontrado no carrinho." });
                     TempData["Erro"] = "Item não encontrado no carrinho.";
                     return RedirectToAction(nameof(Index));
                 }
@@ -353,7 +385,7 @@ namespace WebApplicationPods.Controllers
                 var produto = _produtoRepository.ObterPorId(produtoId);
                 if (produto == null)
                 {
-                    if (isAjax) return Json(new { ok = false, error = "Produto não encontrado." });
+                    if (IsAjax()) return Json(new { ok = false, error = "Produto não encontrado." });
                     TempData["Erro"] = "Produto não encontrado.";
                     return RedirectToAction(nameof(Index));
                 }
@@ -369,7 +401,7 @@ namespace WebApplicationPods.Controllers
                     var isEmptyNow = !carrinho.Itens.Any();
                     var totalNow = carrinho.Total.ToString("C", CultureInfo.GetCultureInfo("pt-BR"));
 
-                    if (isAjax) return Json(new
+                    if (IsAjax()) return Json(new
                     {
                         ok = false,
                         removed = true,
@@ -386,7 +418,7 @@ namespace WebApplicationPods.Controllers
                 if (novaQtd > maxPermitido)
                 {
                     novaQtd = maxPermitido;
-                    if (isAjax) return Json(new { ok = false, error = $"Quantidade ajustada ao máximo disponível ({maxPermitido})." });
+                    if (IsAjax()) return Json(new { ok = false, error = $"Quantidade ajustada ao máximo disponível ({maxPermitido})." });
                     TempData["Erro"] = $"Quantidade ajustada ao máximo disponível ({maxPermitido}).";
                 }
 
@@ -396,14 +428,14 @@ namespace WebApplicationPods.Controllers
                 var count = carrinho.Itens.Sum(i => i.Quantidade);
                 var total = carrinho.Total.ToString("C", CultureInfo.GetCultureInfo("pt-BR"));
 
-                if (isAjax) return Json(new { ok = true, count, total, message = "Quantidade atualizada." });
+                if (IsAjax()) return Json(new { ok = true, count, total, message = "Quantidade atualizada." });
 
                 TempData["Sucesso"] ??= "Quantidade atualizada.";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
-                if (isAjax) return Json(new { ok = false, error = $"Erro ao atualizar item: {ex.Message}" });
+                if (IsAjax()) return Json(new { ok = false, error = $"Erro ao atualizar item: {ex.Message}" });
                 TempData["Erro"] = $"Erro ao atualizar item: {ex.Message}";
                 return RedirectToAction(nameof(Index));
             }
@@ -413,8 +445,8 @@ namespace WebApplicationPods.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult RemoverItem(int produtoId, string? sabor)
         {
-            bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest",
-                             StringComparison.OrdinalIgnoreCase);
+            var guard = EnsureLojaOrRedirect();
+            if (guard != null) return guard;
 
             try
             {
@@ -427,7 +459,7 @@ namespace WebApplicationPods.Controllers
 
                 if (item == null)
                 {
-                    if (isAjax) return Json(new { ok = false, error = "Item não encontrado no carrinho." });
+                    if (IsAjax()) return Json(new { ok = false, error = "Item não encontrado no carrinho." });
                     TempData["Erro"] = "Item não encontrado no carrinho.";
                     return RedirectToAction(nameof(Index));
                 }
@@ -440,14 +472,14 @@ namespace WebApplicationPods.Controllers
                 var nomeProduto = item.Produto.Nome;
                 var isEmpty = !carrinho.Itens.Any();
 
-                if (isAjax) return Json(new { ok = true, count, total, isEmpty, message = $"{nomeProduto} removido do carrinho." });
+                if (IsAjax()) return Json(new { ok = true, count, total, isEmpty, message = $"{nomeProduto} removido do carrinho." });
 
                 TempData["Sucesso"] = $"{nomeProduto} removido do carrinho.";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
-                if (isAjax) return Json(new { ok = false, error = $"Erro ao remover item: {ex.Message}" });
+                if (IsAjax()) return Json(new { ok = false, error = $"Erro ao remover item: {ex.Message}" });
                 TempData["Erro"] = $"Erro ao remover item: {ex.Message}";
                 return RedirectToAction(nameof(Index));
             }
@@ -456,6 +488,9 @@ namespace WebApplicationPods.Controllers
         [HttpGet]
         public IActionResult GetTotal()
         {
+            var guard = EnsureLojaOrRedirect();
+            if (guard != null) return guard;
+
             var carrinho = _carrinhoRepository.ObterCarrinho();
             return Json(new { total = carrinho.Total.ToString("C", CultureInfo.GetCultureInfo("pt-BR")) });
         }
@@ -464,6 +499,9 @@ namespace WebApplicationPods.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Finalizar(ResumoPedidoViewModel model)
         {
+            var guard = EnsureLojaOrRedirect();
+            if (guard != null) return guard;
+
             var carrinho = _carrinhoRepository.ObterCarrinho();
             if (carrinho == null || !carrinho.Itens.Any())
             {
@@ -494,7 +532,6 @@ namespace WebApplicationPods.Controllers
                 }
             }
 
-            // Revalida estoque
             bool houveAjuste = false;
             foreach (var i in carrinho.Itens.ToList())
             {
@@ -587,7 +624,7 @@ namespace WebApplicationPods.Controllers
 
             if (model.RetiradaNoLocal)
             {
-                var loja = _lojaRepo.ObterDoLojistaAtual();
+                var loja = _lojaRepo.ObterPorLojaId(lojaId);
                 if (loja != null)
                 {
                     pedido.LojaNome = loja.Nome;
@@ -620,32 +657,33 @@ namespace WebApplicationPods.Controllers
                 TempData["Sucesso"] = "Pedido realizado com sucesso! Pagamento na entrega.";
                 return RedirectToAction("Confirmacao", new { id = pedido.Id });
             }
-            else
+
+            pedido.Status = "Pendente";
+            _pedidoRepository.Adicionar(pedido);
+
+            await _hub.Clients.Group("lojistas").SendAsync("NewOrder", new
             {
-                pedido.Status = "Pendente";
-                _pedidoRepository.Adicionar(pedido);
+                id = pedido.Id,
+                status = pedido.Status,
+                total = pedido.ValorTotal,
+                metodo = pedido.MetodoPagamento,
+                data = pedido.DataPedido,
+                cliente = new { id = cliente.Id, nome = cliente.Nome }
+            });
 
-                await _hub.Clients.Group("lojistas").SendAsync("NewOrder", new
-                {
-                    id = pedido.Id,
-                    status = pedido.Status,
-                    total = pedido.ValorTotal,
-                    metodo = pedido.MetodoPagamento,
-                    data = pedido.DataPedido,
-                    cliente = new { id = cliente.Id, nome = cliente.Nome }
-                });
+            SetLastOrderCookie(pedido.RastreioToken);
+            HttpContext.Session.Remove("ClienteConfirmado");
 
-                SetLastOrderCookie(pedido.RastreioToken);
-                HttpContext.Session.Remove("ClienteConfirmado");
-
-                return RedirectToAction("Checkout", "Pagamento", new { pedidoId = pedido.Id });
-            }
+            return RedirectToAction("Checkout", "Pagamento", new { pedidoId = pedido.Id });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult AdicionarEndereco(int ClienteId, [Bind(Prefix = "EnderecoNovo")] EnderecoModel endereco)
         {
+            var guard = EnsureLojaOrRedirect();
+            if (guard != null) return guard;
+
             try
             {
                 endereco.ClienteId = ClienteId;
@@ -715,6 +753,9 @@ namespace WebApplicationPods.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult ExcluirEndereco(int ClienteId, int id)
         {
+            var guard = EnsureLojaOrRedirect();
+            if (guard != null) return guard;
+
             try
             {
                 var novoId = _clienteRepository.RemoverEndereco(ClienteId, id);
