@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace WebApplicationPods.Middlewares
@@ -17,17 +18,46 @@ namespace WebApplicationPods.Middlewares
             var path = (ctx.Request.Path.Value ?? "").ToLowerInvariant();
             var host = (ctx.Request.Host.Host ?? "").ToLowerInvariant();
 
-            // ✅ REDIRECIONA localhost para admin.lvh.me
+            // ✅ 1) BYPASS para estáticos e rotas técnicas
+            // (isso impede redirecionar /css/*.css, /js/*.js, imagens, etc.)
+            if (Path.HasExtension(path) ||
+                path.StartsWith("/css") ||
+                path.StartsWith("/js") ||
+                path.StartsWith("/lib") ||
+                path.StartsWith("/images") ||
+                path.StartsWith("/uploads") ||
+                path.StartsWith("/favicon") ||
+                path.StartsWith("/hubs") ||
+                path.StartsWith("/_blazor") ||
+                path.StartsWith("/conta") ||
+                path.StartsWith("/identity") ||
+                path.Contains("login") ||
+                path.Contains("logout") ||
+                path.Contains("forgotpassword") ||
+                path.Contains("resetpassword") ||
+                path.Contains("error"))
+            {
+                await _next(ctx);
+                return;
+            }
+
+            // ✅ 2) Só trata ENTRADA ("/")
+            var isRoot = path == "/" || path == "";
+            if (!isRoot)
+            {
+                await _next(ctx);
+                return;
+            }
+
+            // ✅ 3) Redireciona localhost APENAS na raiz (/)
+            // (não mexe em /css, /js, etc porque já bypassou acima)
             if (host == "localhost" || host == "127.0.0.1")
             {
                 var port = ctx.Request.Host.Port;
                 var scheme = ctx.Request.Scheme;
                 var newHost = "admin.lvh.me";
 
-                var newPath = string.IsNullOrEmpty(path) || path == "/"
-                    ? "/Conta/Login"
-                    : path;
-
+                var newPath = "/Conta/Login";
                 var queryString = ctx.Request.QueryString.HasValue ? ctx.Request.QueryString.Value : "";
 
                 var newUrl = port.HasValue
@@ -35,14 +65,6 @@ namespace WebApplicationPods.Middlewares
                     : $"{scheme}://{newHost}{newPath}{queryString}";
 
                 ctx.Response.Redirect(newUrl, permanent: false);
-                return;
-            }
-
-            // Só trata entrada "raiz"
-            var isRoot = path == "/" || path == "";
-            if (!isRoot)
-            {
-                await _next(ctx);
                 return;
             }
 
@@ -58,7 +80,6 @@ namespace WebApplicationPods.Middlewares
             {
                 if (ctx.User?.Identity?.IsAuthenticated == true)
                 {
-                    // Depois do RoleSubdomainEnforcer, o host já está correto
                     ctx.Response.Redirect(host.StartsWith("admin.")
                         ? "/Admin/Dashboard"
                         : "/PainelLojista/Dashboard");

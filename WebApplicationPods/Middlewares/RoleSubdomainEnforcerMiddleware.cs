@@ -19,11 +19,18 @@ namespace WebApplicationPods.Middlewares
         {
             var path = (context.Request.Path.Value ?? "").ToLowerInvariant();
 
-            // ✅ Sempre permite rotas de conta e rotas técnicas
-            if (path.StartsWith("/conta") ||
-                path.StartsWith("/home") ||
+            // ✅ BYPASS: estáticos e rotas técnicas/autenticação
+            if (Path.HasExtension(path) ||
+                path.StartsWith("/css") ||
+                path.StartsWith("/js") ||
+                path.StartsWith("/lib") ||
+                path.StartsWith("/images") ||
+                path.StartsWith("/uploads") ||
+                path.StartsWith("/favicon") ||
                 path.StartsWith("/hubs") ||
                 path.StartsWith("/_blazor") ||
+                path.StartsWith("/conta") ||
+                path.StartsWith("/identity") ||
                 path.Contains("login") ||
                 path.Contains("logout") ||
                 path.Contains("forgotpassword") ||
@@ -34,15 +41,8 @@ namespace WebApplicationPods.Middlewares
                 return;
             }
 
-            // ✅ Evita custo em arquivos estáticos
-            if (HttpMethods.IsGet(context.Request.Method) && Path.HasExtension(context.Request.Path))
-            {
-                await _next(context);
-                return;
-            }
-
             var user = context.User;
-            var host = context.Request.Host.Host?.Trim().ToLowerInvariant() ?? "";
+            var host = (context.Request.Host.Host ?? "").Trim().ToLowerInvariant();
             var port = context.Request.Host.Port;
             var scheme = context.Request.Scheme;
 
@@ -91,12 +91,10 @@ namespace WebApplicationPods.Middlewares
             // ✅ Autenticado, mas SEM role: desloga e manda pro login do portal atual
             if (!isAdmin && !isLojista && (isAdminHost || isPainelHost))
             {
-                // mata cookie Identity (local)
                 context.Response.Cookies.Delete("Pods.Auth");
                 context.Response.Cookies.Delete("Pods.AntiForgery");
                 context.Response.Cookies.Delete("SitePods.Session");
 
-                // mata cookie Identity (domínio compartilhado dev)
                 if (baseDomain == "lvh.me")
                 {
                     context.Response.Cookies.Delete("Pods.Auth", new CookieOptions { Domain = ".lvh.me", Path = "/" });

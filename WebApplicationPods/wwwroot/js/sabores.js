@@ -1,60 +1,47 @@
-﻿// Contador de sabores selecionados e feedback visual
-document.addEventListener('DOMContentLoaded', function () {
-    const container = document.querySelector('.produto-sabores-container');
-    if (!container) return;
+﻿// wwwroot/js/sabores.js
+// Contador de sabores selecionados e feedback visual (SEM jQuery, seguro em qualquer página)
+(function () {
+    'use strict';
 
-    // Cria o elemento do contador
-    const counter = document.createElement('div');
-    counter.className = 'sabores-counter small text-muted mt-2';
-    container.parentNode.insertBefore(counter, container.nextSibling);
+    document.addEventListener('DOMContentLoaded', function () {
+        const container = document.querySelector('.produto-sabores-container');
+        if (!container) return; // não existe na página? não faz nada
 
-    // Atualiza o contador e estilos
-    function updateSaboresCounter() {
-        const checkboxes = container.querySelectorAll('.produto-sabor-input');
-        const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-
-        // Atualiza o contador
-        counter.textContent = `${selectedCount} sabor(es) selecionado(s)`;
-        counter.style.color = selectedCount > 0 ? 'var(--bs-success)' : 'var(--bs-danger)';
-
-        // Adiciona classe ao container para feedback visual
-        container.classList.toggle('has-selection', selectedCount > 0);
-    }
-
-    // Configura os event listeners
-    container.addEventListener('change', function (e) {
-        if (e.target.classList.contains('produto-sabor-input')) {
-            // Atualiza o estilo do label
-            const label = e.target.nextElementSibling;
-            if (label && label.classList.contains('produto-sabor-label')) {
-                label.classList.toggle('active', e.target.checked);
-            }
-            updateSaboresCounter();
+        // garante que só cria 1 contador (se a página recarregar via partial/hot reload)
+        let counter = container.parentElement?.querySelector('.sabores-counter');
+        if (!counter) {
+            counter = document.createElement('div');
+            counter.className = 'sabores-counter small text-muted mt-2';
+            container.parentNode.insertBefore(counter, container.nextSibling);
         }
-    });
 
-    // Inicializa
-    updateSaboresCounter();
-});
+        function updateSaboresCounter() {
+            const checkboxes = container.querySelectorAll('.produto-sabor-input');
+            const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
 
-// Controle de sabores selecionados
-$(document).ready(function () {
-    // Atualiza visualização dos sabores selecionados
-    $('.produto-sabor-input').change(function () {
-        $(this).next('.produto-sabor-label').toggleClass('active', this.checked);
+            counter.textContent = `${selectedCount} sabor(es) selecionado(s)`;
+            counter.style.color = selectedCount > 0 ? 'var(--bs-success)' : 'var(--bs-danger)';
+
+            // feedback visual
+            container.classList.toggle('has-selection', selectedCount > 0);
+            container.classList.toggle('no-selection', selectedCount === 0);
+        }
+
+        // evento único no container (delegação)
+        container.addEventListener('change', function (e) {
+            const el = e.target;
+            if (!(el instanceof HTMLInputElement)) return;
+            if (!el.classList.contains('produto-sabor-input')) return;
+
+            const label = el.nextElementSibling;
+            if (label && label.classList.contains('produto-sabor-label')) {
+                label.classList.toggle('active', el.checked);
+            }
+
+            updateSaboresCounter();
+        });
+
+        // inicial
         updateSaboresCounter();
     });
-
-    // Contador de sabores selecionados
-    function updateSaboresCounter() {
-        const selectedCount = $('.produto-sabor-input:checked').length;
-        $('.sabores-counter').text(`${selectedCount} sabor(es) selecionado(s)`);
-
-        // Adiciona/remove classe de erro se nenhum selecionado
-        const container = $('.produto-sabores-container');
-        container.toggleClass('no-selection', selectedCount === 0);
-    }
-
-    // Inicializa
-    updateSaboresCounter();
-});
+})();

@@ -1,92 +1,102 @@
-﻿/* ===========================
-   THEME VARS (globais)
-   =========================== */
+﻿/*===========================
+Clean Modern (Light)
+Paleta global para esta página
+===========================
+
+body {
+    outline: 10px solid red !important;
+}
+
 :root {
-    --brand-start: #6a11cb; /* roxo */
-    --brand-end: #2575fc; /* azul  */
-    --brand-soft: #F2E9FF; /* roxo bem claro */
-    /* mapeia p/ compatibilidade */
-    --orange: var(--brand-start);
-    --orange-dark: var(--brand-end);
-    --orange-soft: var(--brand-soft);
-    --black: #000;
-    --gray-900: #1b1b1b;
-    --gray-700: #424242;
-    --gray-600: #757575;
-    --gray-300: #ececec;
-    --gray-100: #f6f7fb;
-    --white: #fff;
-    --primary: var(--orange);
-    --primary-dark: var(--orange-dark);
-    --primary-soft: var(--orange-soft);
-    --ring: rgba(37,117,252,.35);
-    /* layout com bottom-nav */
+     Brand (azul) 
+    --brand-500: #2F6BFF;
+    --brand-600: #2458E6;
+    --brand-50: #EEF4FF;
+     Action (verde – salvar/sucesso) 
+    --success-500: #22C55E;
+    --success-600: #16A34A;
+    --success-50: #ECFDF3;
+     Base 
+    --bg: #F6F8FC;
+    --card: #FFFFFF;
+    --text: #0F172A;  slate-900 
+    --muted: #64748B;  slate-500 
+    --border: #E6ECF5;
+     UI 
+    --shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+    --shadow-soft: 0 6px 18px rgba(15, 23, 42, 0.06);
+    --radius-lg: 18px;
+    --radius-md: 12px;
+    --radius-sm: 10px;
+    --ring-brand: rgba(47, 107, 255, .22);
+    --ring-success: rgba(34, 197, 94, .22);
+     layout bottom nav (se usar) 
     --mbn-h: 68px;
     --page-safe-bottom: calc(var(--mbn-h) + 16px);
 }
 
-/* ===========================
+ ===========================
    PAGE SCOPE
-   =========================== */
+   =========================== 
 #loja-settings {
-    /* leve fundo neutro com textura suave */
-    background-image: radial-gradient(1200px 600px at 0% -10%, rgba(106,17,203,.06), transparent 60%), radial-gradient(1000px 500px at 100% 0%, rgba(37,117,252,.06), transparent 60%);
-    border-radius: 14px;
+    background: radial-gradient(900px 420px at 8% -10%, rgba(47,107,255,.12), transparent 60%), radial-gradient(900px 420px at 100% 0%, rgba(34,197,94,.10), transparent 60%);
+    border-radius: var(--radius-lg);
 }
 
-    /* Cabeçalho */
+     Cabeçalho 
     #loja-settings .page-head {
         display: flex;
         align-items: center;
         gap: 1rem;
         padding: .25rem 0 1rem 0;
-        border-bottom: 1px dashed var(--gray-300);
+        border-bottom: 1px dashed var(--border);
     }
 
         #loja-settings .page-head .icon-wrap {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
             display: grid;
             place-items: center;
-            background: linear-gradient(135deg,var(--brand-soft),#fff);
-            border: 1px solid rgba(0,0,0,.04);
-            box-shadow: 0 6px 20px rgba(0,0,0,.06);
+            background: linear-gradient(135deg, var(--brand-50), #fff);
+            border: 1px solid rgba(15,23,42,.06);
+            box-shadow: var(--shadow-soft);
         }
 
             #loja-settings .page-head .icon-wrap i {
-                font-size: 1.1rem;
-                color: var(--primary);
+                font-size: 1.15rem;
+                color: var(--brand-600);
             }
 
         #loja-settings .page-head .title {
             margin: 0;
-            font-size: 1.4rem;
+            font-size: 1.45rem;
             font-weight: 800;
-            color: var(--gray-900);
+            color: var(--text);
+            letter-spacing: -0.01em;
         }
 
         #loja-settings .page-head .subtitle {
-            margin: .15rem 0 0 0;
-            color: var(--gray-600);
+            margin: .2rem 0 0 0;
+            color: var(--muted);
         }
 
 .brand-gradient {
-    background: linear-gradient(135deg, var(--brand-start), var(--brand-end));
+    background: linear-gradient(135deg, var(--brand-600), var(--success-500));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
 }
 
-/* Card principal */
+ Card principal 
 #loja-settings .main-card {
-    border: 0;
-    border-radius: 16px;
-    box-shadow: 0 10px 24px rgba(0,0,0,.06);
-    background: #fff;
+    border: 1px solid rgba(15,23,42,.06);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    background: var(--card);
 }
 
-/* Títulos de seção */
+ Seções 
 #loja-settings .section {
     margin-top: .25rem;
 }
@@ -94,57 +104,57 @@
 #loja-settings .section-title {
     display: flex;
     align-items: center;
-    gap: .5rem;
+    gap: .55rem;
     font-size: 1.05rem;
     font-weight: 800;
-    color: var(--gray-900);
-    margin: .25rem 0 0.75rem;
+    color: var(--text);
+    margin: .25rem 0 .85rem;
 }
 
     #loja-settings .section-title i {
-        color: var(--primary);
+        color: var(--brand-600);
     }
 
-/* Form: labels/inputs */
+ Labels / inputs 
 #loja-settings .form-label {
-    font-weight: 600;
-    color: var(--gray-700);
+    font-weight: 650;
+    color: #334155;  slate-700 
 }
 
 #loja-settings .form-control,
 #loja-settings .form-select {
-    border-radius: 10px;
-    border-color: var(--gray-300);
-    background: var(--white);
-    color: var(--gray-900);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text);
     transition: box-shadow .15s ease, border-color .15s ease, transform .02s ease;
 }
 
-    #loja-settings .form-control:focus,
-    #loja-settings .form-select:focus {
-        border-color: var(--primary);
-        box-shadow: 0 0 0 .2rem var(--ring);
+    #loja-settings .form-control::placeholder {
+        color: #94A3B8;  slate-400 
     }
 
-    #loja-settings .form-control:active {
-        transform: scale(.998);
+    #loja-settings .form-control:focus,
+    #loja-settings .form-select:focus {
+        border-color: rgba(47,107,255,.65);
+        box-shadow: 0 0 0 .22rem var(--ring-brand);
     }
 
 #loja-settings .form-text {
-    color: var(--gray-600);
-    font-size: .85rem;
+    color: var(--muted);
+    font-size: .86rem;
 }
 
-/* Checkboxes (Dias abertos) */
+ Checkboxes 
 #loja-settings .form-check-input {
-    width: 1.1rem;
-    height: 1.1rem;
-    border-color: var(--gray-300);
+    width: 1.08rem;
+    height: 1.08rem;
+    border-color: var(--border);
 }
 
     #loja-settings .form-check-input:checked {
-        background: linear-gradient(135deg,var(--primary),var(--primary-dark));
-        border-color: var(--primary-dark);
+        background: linear-gradient(135deg, var(--brand-600), var(--brand-500));
+        border-color: var(--brand-600);
     }
 
 #loja-settings .form-check-inline {
@@ -153,163 +163,130 @@
 }
 
 #loja-settings .form-check-label {
-    color: var(--gray-700);
+    color: #334155;
 }
 
-/* Botões */
+ Botões 
 #loja-settings .btn {
-    border-radius: 10px;
-    padding: .6rem 1rem;
-    font-weight: 700;
+    border-radius: var(--radius-sm);
+    padding: .62rem 1rem;
+    font-weight: 750;
+    letter-spacing: -0.01em;
 }
 
 #loja-settings .btn-success {
-    background: linear-gradient(135deg,var(--primary),var(--primary-dark));
+    background: linear-gradient(135deg, var(--success-500), var(--success-600));
     border: none;
     color: #fff;
 }
 
     #loja-settings .btn-success:hover {
-        filter: brightness(.95);
+        filter: brightness(.96);
     }
 
-#loja-settings .btn-outline-secondary {
-    border-color: var(--gray-300);
-    color: var(--gray-700);
-}
-
-    #loja-settings .btn-outline-secondary:hover {
-        background: var(--gray-100);
-        color: var(--gray-900);
-    }
-
-#loja-settings .btn-outline-danger {
-    border-color: #dc3545;
-    color: #dc3545;
-}
-
-    #loja-settings .btn-outline-danger:hover {
-        background: #dc3545;
-        color: #fff;
+    #loja-settings .btn-success:focus {
+        box-shadow: 0 0 0 .22rem var(--ring-success);
     }
 
 #loja-settings .btn-primary {
-    background: linear-gradient(135deg,var(--primary),var(--primary-dark));
+    background: linear-gradient(135deg, var(--brand-500), var(--brand-600));
     border: none;
     color: #fff;
 }
 
     #loja-settings .btn-primary:hover {
-        filter: brightness(.95);
+        filter: brightness(.96);
     }
 
-/* Alerts */
+#loja-settings .btn-outline-secondary {
+    border: 1px solid var(--border);
+    color: #334155;
+    background: #fff;
+}
+
+    #loja-settings .btn-outline-secondary:hover {
+        background: #F1F5F9;  slate-100 
+        color: var(--text);
+    }
+
+#loja-settings .btn-outline-danger {
+    border-color: #EF4444;
+    color: #EF4444;
+}
+
+    #loja-settings .btn-outline-danger:hover {
+        background: #EF4444;
+        color: #fff;
+    }
+
+ Alerts 
 #loja-settings .alert-success {
-    background: linear-gradient(135deg,var(--primary-soft),#ffffff);
-    border: 1px solid rgba(0,0,0,.05);
-    color: var(--gray-900);
-    border-left: 4px solid var(--primary);
+    background: linear-gradient(135deg, var(--success-50), #ffffff);
+    border: 1px solid rgba(34,197,94,.20);
+    color: var(--text);
+    border-left: 4px solid var(--success-500);
 }
 
 #loja-settings .alert-danger {
-    background: #fff2f2;
-    border: 1px solid #ffd3d3;
-    color: #b02a37;
-    border-left: 4px solid #b02a37;
+    background: #FFF1F2;
+    border: 1px solid rgba(239,68,68,.22);
+    color: #991B1B;
+    border-left: 4px solid #EF4444;
 }
 
-/* Logo preview */
+ Logo thumb 
 #loja-settings .logo-thumb {
     width: 48px;
     height: 48px;
     object-fit: cover;
     border-radius: 999px;
-    border: 1px solid rgba(0,0,0,.06);
-    box-shadow: 0 3px 10px rgba(0,0,0,.08);
+    border: 1px solid rgba(15,23,42,.08);
+    box-shadow: 0 4px 12px rgba(15,23,42,.10);
 }
 
-/* Maps bloco */
+ Maps bloco 
 #loja-settings .bg-light {
-    background: var(--gray-100) !important;
+    background: #F3F6FD !important;
 }
 
 #loja-settings .border {
-    border-color: var(--gray-300) !important;
+    border-color: var(--border) !important;
 }
 
 #loja-settings #enderecoPreview {
-    padding: .6rem .8rem;
+    padding: .65rem .85rem;
     background: #fff;
-    border: 1px dashed var(--gray-300);
-    border-radius: 10px;
-    color: var(--gray-900);
+    border: 1px dashed rgba(100,116,139,.35);
+    border-radius: var(--radius-sm);
+    color: var(--text);
 }
 
 #loja-settings #mapsUrlPreview {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
     background: #fff;
-    color: var(--gray-900);
+    color: var(--text);
 }
 
-#loja-settings #btnAbrirMaps {
-    display: inline-flex;
-    align-items: center;
-    gap: .5rem;
-    background: linear-gradient(135deg,var(--primary),var(--primary-dark));
-    border: none;
-    color: #fff;
-}
-
-    #loja-settings #btnAbrirMaps:hover {
-        filter: brightness(.95);
-    }
-
-#loja-settings #btnCopyMaps {
-    border-color: var(--gray-300);
-    color: var(--gray-700);
-}
-
-    #loja-settings #btnCopyMaps:hover {
-        background: var(--gray-100);
-        color: var(--gray-900);
-    }
-
-    #loja-settings #btnCopyMaps:active {
-        transform: translateY(1px);
-    }
-
-/* Separadores */
+ Separadores 
 #loja-settings hr {
-    border-color: var(--gray-300);
-    opacity: .6;
+    border-color: var(--border);
+    opacity: .7;
 }
 
-/* Validação */
+ Validação 
 #loja-settings .field-validation-error,
 #loja-settings span.text-danger {
-    font-size: .85rem;
-    color: #b02a37 !important;
+    font-size: .86rem;
+    color: #B91C1C !important;
 }
 
-/* Espaços responsivos do card */
-#loja-settings .card.p-3 {
-    padding: 1.25rem !important;
-}
-
-@media (min-width:768px) {
-    #loja-settings .card.p-3 {
-        padding: 1.6rem !important;
-        color: black;
-    }
-}
-
-/* Ações do formulário: empilhar no mobile */
+ Ações do formulário 
 #loja-settings .form-actions .btn {
     min-height: 44px;
 }
 
-/* Safe area p/ bottom-nav no mobile */
-@media (max-width:991.98px) {
+ Safe area p/ bottom-nav no mobile 
+@media (max-width: 991.98px) {
     #page-content-wrapper,
     #page-content-wrapper .container,
     #page-content-wrapper {
@@ -325,18 +302,10 @@
     }
 }
 
-/* Utilidades */
-#loja-settings .text-muted {
-    color: var(--gray-600) !important;
-}
-
-#loja-settings .small {
-    color: var(--gray-600);
-}
-
-/* Pequeno “lift” ao focar inputs (melhor UX em mobile) */
-@media (hover:none) {
+ Melhor UX no mobile 
+@media (hover: none) {
     #loja-settings .form-control:focus {
         transform: none;
     }
 }
+*/

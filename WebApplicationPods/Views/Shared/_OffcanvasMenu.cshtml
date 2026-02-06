@@ -20,7 +20,10 @@
             <!-- NAVEGAÇÃO (sempre) -->
             <div class="sidebar-section">
                 <div class="sidebar-section-title">NAVEGAÇÃO</div>
-                <a asp-controller="Home" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
+
+                <!-- FORÇA o site público -->
+                <a asp-area="" asp-controller="Home" asp-action="Index"
+                   class="list-group-item list-group-item-action bg-dark text-white">
                     <i class="fas fa-tachometer-alt me-2"></i> Home
                 </a>
             </div>
@@ -30,7 +33,10 @@
             {
                 <div class="sidebar-section">
                     <div class="sidebar-section-title">CLIENTE</div>
-                    <a asp-controller="Carrinho" asp-action="Index" class="list-group-item list-group-item-action bg-dark text-white">
+
+                    <!-- FORÇA o site público -->
+                    <a asp-area="" asp-controller="Carrinho" asp-action="Index"
+                       class="list-group-item list-group-item-action bg-dark text-white">
                         <i class="fas fa-shopping-cart me-2"></i> Carrinho
                     </a>
                 </div>
@@ -108,7 +114,9 @@
 
                 @if (isAuth)
                 {
-                    <a asp-controller="Cliente" asp-action="Perfil" class="list-group-item list-group-item-action bg-dark text-white">
+                    <!-- FORÇA o site público -->
+                    <a asp-area="" asp-controller="Cliente" asp-action="Perfil"
+                       class="list-group-item list-group-item-action bg-dark text-white">
                         <i class="fas fa-user-circle me-2"></i> Perfil
                     </a>
 
@@ -121,7 +129,9 @@
                 }
                 else
                 {
-                    <a asp-controller="Conta" asp-action="Login" class="list-group-item list-group-item-action bg-dark text-white">
+                    <!-- FORÇA o site público -->
+                    <a asp-area="" asp-controller="Conta" asp-action="Login"
+                       class="list-group-item list-group-item-action bg-dark text-white">
                         <i class="fas fa-sign-in-alt me-2"></i> Login
                     </a>
                 }

@@ -25,13 +25,9 @@ namespace WebApplicationPods.Controllers
 
         public IActionResult Index(FiltrosModel filtros)
         {
-            // Se estiver sem loja (sem subdomínio), o filtro global faz isso retornar null
             var loja = _context.LojaConfigs
                 .AsNoTracking()
-                .FirstOrDefault();
-
-            if (loja == null)
-                return RedirectToAction(nameof(Landing));
+                .FirstOrDefault(); // pode ser null
 
             var viewModel = new ProdutoListagemViewModel
             {
@@ -59,6 +55,7 @@ namespace WebApplicationPods.Controllers
 
             return View(viewModel);
         }
+
 
         public IActionResult Privacy() => View();
 
