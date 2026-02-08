@@ -45,6 +45,8 @@ namespace WebApplicationPods.Data
         public DbSet<UsuarioModel> Usuarios => Set<UsuarioModel>();
         public DbSet<CarrinhoModel> Carrinhos => Set<CarrinhoModel>();
         public DbSet<PaymentModel> Pagamentos => Set<PaymentModel>();
+        public DbSet<ProdutoVariacaoModel> ProdutoVariacoes { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -188,6 +190,13 @@ namespace WebApplicationPods.Data
                 .HasQueryFilter(x =>
                     !x.IsDeleted &&
                     (_designTime || (!_hasLoja || x.LojaId == _lojaId)));
+
+            modelBuilder.Entity<ProdutoVariacaoModel>()
+                .HasOne(v => v.Produto)
+                .WithMany(p => p.Variacoes)
+                .HasForeignKey(v => v.ProdutoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
         }
     }
 }

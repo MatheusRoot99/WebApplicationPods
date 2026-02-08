@@ -2,9 +2,8 @@
 @model IEnumerable<ProdutoModel>
 
 @{
-    Layout = "~/Views/Shared/_Layout.cshtml";
     Layout = "_Layout";
-    ViewData["Title"] = "Catálogo de Pods Eletrônicos";
+    ViewData["Title"] = "Catálogo de Produtos";
 }
 
 @section Styles {
@@ -18,7 +17,7 @@
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-center text-center text-md-start">
                 <div class="mb-3 mb-md-0">
                     <h1 class="display-6 text-white fw-bold mb-1">@ViewData["Title"]</h1>
-                    <p class="text-white-50 mb-0">Gerencie seu inventário de pods eletrônicos</p>
+                    <p class="text-white-50 mb-0">Gerencie seu inventário</p>
                 </div>
                 <a asp-action="Criar" class="btn btn-light btn-lg rounded-pill px-4 shadow-sm">
                     <i class="fas fa-plus-circle me-2"></i> Novo Produto
@@ -32,7 +31,7 @@
         @await Html.PartialAsync("_Flash")
     </div>
 
-    <!-- CONTEÚDO (100% largura no desktop) -->
+    <!-- CONTEÚDO -->
     <div id="pageRoot" class="container-fluid px-0 page-has-bottom-nav">
         @if (!Model.Any())
         {
@@ -55,11 +54,14 @@
                     </div>
                     <div class="col-lg-4 col-xl-6 text-lg-end text-center">
                         <button class="btn btn-outline-primary rounded-pill filter-btn active" data-filter="all">Todos</button>
+                        <button class="btn btn-outline-primary rounded-pill filter-btn" data-filter="in-stock">Em estoque</button>
+                        <button class="btn btn-outline-primary rounded-pill filter-btn" data-filter="low-stock">Baixo estoque</button>
+                        <button class="btn btn-outline-primary rounded-pill filter-btn" data-filter="active">Ativos</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Tabela Desktop (full width) -->
+            <!-- Tabela Desktop -->
             <div class="d-none d-lg-block">
                 <div class="container-fluid px-3 px-xl-4">
                     <div class="table-responsive rounded-3 shadow-sm">
@@ -72,8 +74,6 @@
                                     <th class="col-categoria">Categoria</th>
                                     <th class="col-estoque">Estoque</th>
                                     <th class="col-sabores">Sabores (estoque)</th>
-                                    <th class="col-puffs">Puffs</th>
-                                    <th class="col-bateria">Bateria</th>
                                     <th class="col-cadastro">Cadastro</th>
                                     <th class="col-ativo">Ativo</th>
                                     <th class="text-end pe-4 col-acoes">Ações</th>
@@ -83,18 +83,56 @@
                                 @foreach (var item in Model)
                                 {
                                     var statusClass = item.Ativo ? "" : "table-secondary opacity-75";
-                                    var estoqueClass = item.Estoque <= 5 ? "text-warning" : "text-dark";
+
+                                    // ===== VARIAÇÕES (se tiver, usa elas) =====
+                                    var variacoesAtivas = (item.Variacoes ?? new List<ProdutoVariacaoModel>())
+                                        .Where(v => v.Ativo)
+                                        .ToList();
+
+                                    var temVariacoes = variacoesAtivas.Any();
+
+                                    var estoqueTotal = temVariacoes
+                                        ? variacoesAtivas.Sum(v => v.Estoque)
+                                        : item.Estoque;
+
+                                    // preço base: menor preço das variações ativas; senão, do produto
+                                    var precoBase = temVariacoes
+                                        ? variacoesAtivas.Min(v => v.Preco)
+                                        : item.Preco;
+
+                                    // promo válida: menor promo < preço, nas variações; senão, do produto
+                                    decimal? promoValida = null;
+
+                                    if (temVariacoes)
+                                    {
+                                        var promos = variacoesAtivas
+                                            .Where(v => v.PrecoPromocional.HasValue && v.PrecoPromocional.Value > 0 && v.PrecoPromocional.Value < v.Preco)
+                                            .Select(v => v.PrecoPromocional!.Value)
+                                            .ToList();
+
+                                        if (promos.Any()) promoValida = promos.Min();
+                                    }
+                                    else if (item.PrecoPromocional.HasValue && item.PrecoPromocional.Value > 0 && item.PrecoPromocional.Value < item.Preco)
+                                    {
+                                        promoValida = item.PrecoPromocional.Value;
+                                    }
+
+                                    var estoqueClass = estoqueTotal <= 5 ? "text-warning" : "text-dark";
+
+                                    // sabores (legado pods)
                                     var sabores = (item.SaboresQuantidadesList ?? new List<ProdutoModel.SaborQuantidade>())
-                                    .Where(sq => sq.Quantidade >= 0)
-                                    .OrderByDescending(sq => sq.Quantidade)
-                                    .ToList();
+                                        .Where(sq => sq.Quantidade >= 0)
+                                        .OrderByDescending(sq => sq.Quantidade)
+                                        .ToList();
 
                                     var topChips = sabores.Take(4).ToList();
                                     var hiddenChips = sabores.Skip(4).ToList();
                                     var temMais = hiddenChips.Any();
                                     var popoverText = string.Join(", ", hiddenChips.Select(sq => $"{sq.Sabor} ({sq.Quantidade})"));
 
-                                    <tr class="@statusClass">
+                                    <tr class="@statusClass"
+                                        data-estoque="@estoqueTotal"
+                                        data-ativo="@(item.Ativo ? "1" : "0")">
                                         <!-- Produto -->
                                         <td class="ps-4">
                                             <div class="d-flex align-items-center">
@@ -113,28 +151,32 @@
                                                 <div class="text-truncate">
                                                     <div class="fw-bold">@item.Nome</div>
                                                     <small class="text-muted">ID: @item.Id</small>
+                                                    @if (temVariacoes)
+                                                    {
+                                                        <div class="small text-muted">Variações: @variacoesAtivas.Count</div>
+                                                    }
                                                 </div>
                                             </div>
                                         </td>
 
                                         <!-- Preço -->
                                         <td class="text-center">
-                                            @if (item.PrecoPromocional.HasValue && item.PrecoPromocional < item.Preco)
+                                            @if (promoValida.HasValue)
                                             {
-                                                <span class="price-old">@item.Preco.ToString("C")</span>
+                                                <span class="price-old">@precoBase.ToString("C")</span>
                                             }
                                             else
                                             {
-                                                <span class="price-normal">@item.Preco.ToString("C")</span>
+                                                <span class="price-normal">@precoBase.ToString("C")</span>
                                             }
                                         </td>
 
-                                        <!-- Promoção -->
+                                        <!-- Promo -->
                                         <td class="text-center">
-                                            @if (item.PrecoPromocional.HasValue && item.PrecoPromocional < item.Preco)
+                                            @if (promoValida.HasValue)
                                             {
-                                                var desconto = Math.Round((1 - (item.PrecoPromocional.Value / item.Preco)) * 100);
-                                                <span class="price-new">@item.PrecoPromocional.Value.ToString("C")</span>
+                                                var desconto = Math.Round((1 - (promoValida.Value / precoBase)) * 100);
+                                                <span class="price-new">@promoValida.Value.ToString("C")</span>
                                                 <span class="discount-badge">-@desconto%</span>
                                             }
                                             else
@@ -152,15 +194,14 @@
                                         <td class="text-center">
                                             <div class="d-flex flex-column align-items-center">
                                                 <div class="progress w-100" style="height: 10px;">
-                                                    <div class="progress-bar @(item.Estoque > 5 ? "bg-success" : "bg-warning")"
+                                                    <div class="progress-bar @(estoqueTotal > 5 ? "bg-success" : "bg-warning")"
                                                          role="progressbar"
-                                                         style="width: @(Math.Min(item.Estoque * 10, 100))%">
-                                                    </div>
+                                                         style="width: @(Math.Min(estoqueTotal * 10, 100))%"></div>
                                                 </div>
                                                 <div class="mt-1">
                                                     <span class="badge bg-light text-dark border">
                                                         <i class="fas fa-box me-1"></i>
-                                                        <span class="fw-bold @estoqueClass">@item.Estoque</span>
+                                                        <span class="fw-bold @estoqueClass estoque-valor">@estoqueTotal</span>
                                                     </span>
                                                 </div>
                                             </div>
@@ -199,8 +240,7 @@
                                             }
                                         </td>
 
-                                        <td class="text-center">@item.Puffs</td>
-                                        <td class="text-center">@item.CapacidadeBateria mAh</td>
+                                        <!-- Cadastro -->
                                         <td class="text-center">@item.DataCadastro.ToShortDateString()</td>
 
                                         <!-- Ativo -->
@@ -234,6 +274,36 @@
                 <div class="row row-cols-1 row-cols-md-2 g-4">
                     @foreach (var item in Model)
                     {
+                        var variacoesAtivasMob = (item.Variacoes ?? new List<ProdutoVariacaoModel>())
+                        .Where(v => v.Ativo)
+                        .ToList();
+
+                        var temVariacoesMob = variacoesAtivasMob.Any();
+
+                        var estoqueTotalMob = temVariacoesMob
+                        ? variacoesAtivasMob.Sum(v => v.Estoque)
+                        : item.Estoque;
+
+                        var precoBaseMob = temVariacoesMob
+                        ? variacoesAtivasMob.Min(v => v.Preco)
+                        : item.Preco;
+
+                        decimal? promoValidaMob = null;
+
+                        if (temVariacoesMob)
+                        {
+                            var promosMob = variacoesAtivasMob
+                            .Where(v => v.PrecoPromocional.HasValue && v.PrecoPromocional.Value > 0 && v.PrecoPromocional.Value < v.Preco)
+                            .Select(v => v.PrecoPromocional!.Value)
+                            .ToList();
+
+                            if (promosMob.Any()) promoValidaMob = promosMob.Min();
+                        }
+                        else if (item.PrecoPromocional.HasValue && item.PrecoPromocional.Value > 0 && item.PrecoPromocional.Value < item.Preco)
+                        {
+                            promoValidaMob = item.PrecoPromocional.Value;
+                        }
+
                         var saboresMob = (item.SaboresQuantidadesList ?? new List<ProdutoModel.SaborQuantidade>())
                         .Where(sq => sq.Quantidade >= 0)
                         .OrderByDescending(sq => sq.Quantidade)
@@ -242,7 +312,9 @@
                         .ToList();
 
                         <div class="col">
-                            <div class="card product-card h-100 shadow-sm">
+                            <div class="card product-card h-100 shadow-sm"
+                                 data-estoque="@estoqueTotalMob"
+                                 data-ativo="@(item.Ativo ? "1" : "0")">
                                 <div class="card-body">
                                     <div class="text-center mb-3">
                                         <div class="product-img-container mx-auto mb-2">
@@ -259,31 +331,43 @@
                                         </div>
                                         <h5 class="card-title fw-bold mb-1">@item.Nome</h5>
                                         <div class="small text-muted">ID: @item.Id</div>
+                                        @if (temVariacoesMob)
+                                        {
+                                            <div class="small text-muted">Variações: @variacoesAtivasMob.Count</div>
+                                        }
                                     </div>
 
                                     <div class="text-center mb-3">
-                                        @if (item.PrecoPromocional.HasValue && item.PrecoPromocional < item.Preco)
+                                        @if (promoValidaMob.HasValue)
                                         {
-                                            <div class="mb-1"><span class="price-old">@item.Preco.ToString("C")</span></div>
+                                            <div class="mb-1"><span class="price-old">@precoBaseMob.ToString("C")</span></div>
                                             <div>
-                                                <span class="price-new">@item.PrecoPromocional.Value.ToString("C")</span>
+                                                <span class="price-new">@promoValidaMob.Value.ToString("C")</span>
                                                 @{
-                                                    var desconto = Math.Round((1 - (item.PrecoPromocional.Value / item.Preco)) * 100);
+                                                    var descontoMob = Math.Round((1 - (promoValidaMob.Value / precoBaseMob)) * 100);
                                                 }
-                                                <span class="discount-badge">-@desconto%</span>
+                                                <span class="discount-badge">-@descontoMob%</span>
                                             </div>
                                         }
                                         else
                                         {
-                                            <div class="fw-bold text-primary fs-5">@item.Preco.ToString("C")</div>
+                                            <div class="fw-bold text-primary fs-5">@precoBaseMob.ToString("C")</div>
                                         }
                                     </div>
 
                                     <div class="row g-2">
-                                        <div class="col-6"><span class="text-muted small">Categoria</span><div>@item.Categoria?.Nome</div></div>
-                                        <div class="col-6"><span class="text-muted small">Estoque</span><div class="fw-bold">@item.Estoque</div></div>
-                                        <div class="col-6"><span class="text-muted small">Puffs</span><div>@item.Puffs</div></div>
-                                        <div class="col-6"><span class="text-muted small">Bateria</span><div>@item.CapacidadeBateria mAh</div></div>
+                                        <div class="col-6">
+                                            <span class="text-muted small">Categoria</span>
+                                            <div>@item.Categoria?.Nome</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <span class="text-muted small">Estoque</span>
+                                            <div class="fw-bold">@estoqueTotalMob</div>
+                                        </div>
+                                        <div class="col-12">
+                                            <span class="text-muted small">Cadastro</span>
+                                            <div>@item.DataCadastro.ToShortDateString()</div>
+                                        </div>
                                     </div>
 
                                     <div class="mt-3">
@@ -323,61 +407,74 @@
 
 @section Scripts {
     <script>
-        // Tooltips / Popovers
-        $(function () {
-          $('[data-bs-toggle="tooltip"]').tooltip();
-          $('[data-bs-toggle="popover"]').popover();
-        });
-
-        // Filtros e busca
-        $(document).ready(function () {
-          $('.filter-btn').click(function () {
-            $('.filter-btn').removeClass('active');
-            $(this).addClass('active');
-
-            const filter = $(this).data('filter');
-            $('tbody tr, .product-card').hide();
-
-            if (filter === 'all') {
-              $('tbody tr, .product-card').show();
-            } else if (filter === 'in-stock') {
-              $('tbody tr').filter(function () {
-                return parseInt($(this).find('td:eq(4) .badge .fw-bold').text() || '0') > 0
-              }).show();
-              $('.product-card').filter(function () {
-                return $(this).find('.fw-bold:contains("Estoque")').text().match(/\d+/)
-              }).show();
-            } else if (filter === 'low-stock') {
-              $('tbody tr').filter(function () {
-                return parseInt($(this).find('td:eq(4) .badge .fw-bold').text() || '0') <= 5
-              }).show();
-            } else if (filter === 'active') {
-              $('tbody tr').filter(function () { return !$(this).hasClass('table-secondary') }).show();
-            }
-          });
-
-          $('#searchInput').on('input', function () {
-            const t = $(this).val().toLowerCase();
-            $('tbody tr, .product-card').each(function () {
-              const txt = $(this).text().toLowerCase();
-              $(this).toggle(txt.includes(t));
+        // Popovers (Bootstrap 5) - sem jQuery
+        document.addEventListener('DOMContentLoaded', function () {
+            const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+            popoverTriggerList.map(function (el) {
+                return new bootstrap.Popover(el);
             });
-          });
-        });
 
-        // Define --mbn-height quando existir bottom-nav fixa
-        document.addEventListener('DOMContentLoaded', () => {
-          const nav = document.querySelector('.mobile-bottom-nav, .bottom-nav, .mbn, .navbar-fixed-bottom');
-          const root = document.documentElement;
-          function setMbnHeight(){
-            const h = nav ? nav.offsetHeight : 68;
-            root.style.setProperty('--mbn-height', h + 'px');
-          }
-          setMbnHeight();
-          window.addEventListener('resize', setMbnHeight);
-          if (nav && 'ResizeObserver' in window){
-            new ResizeObserver(setMbnHeight).observe(nav);
-          }
+            // Filtros e busca (desktop + mobile)
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            const searchInput = document.getElementById('searchInput');
+
+            function applyFilter(filter) {
+                const rows = document.querySelectorAll('tbody tr');
+                const cards = document.querySelectorAll('.product-card');
+
+                function shouldShow(el) {
+                    const estoque = parseInt(el.getAttribute('data-estoque') || '0', 10);
+                    const ativo = (el.getAttribute('data-ativo') || '0') === '1';
+
+                    if (filter === 'all') return true;
+                    if (filter === 'in-stock') return estoque > 0;
+                    if (filter === 'low-stock') return estoque <= 5;
+                    if (filter === 'active') return ativo;
+                    return true;
+                }
+
+                rows.forEach(r => r.style.display = shouldShow(r) ? '' : 'none');
+                cards.forEach(c => c.style.display = shouldShow(c) ? '' : 'none');
+            }
+
+            filterButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    filterButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    applyFilter(btn.getAttribute('data-filter'));
+                });
+            });
+
+            if (searchInput) {
+                searchInput.addEventListener('input', () => {
+                    const t = (searchInput.value || '').toLowerCase();
+                    const rows = document.querySelectorAll('tbody tr');
+                    const cards = document.querySelectorAll('.product-card');
+
+                    function match(el) {
+                        return (el.textContent || '').toLowerCase().includes(t);
+                    }
+
+                    rows.forEach(r => r.style.display = match(r) ? '' : 'none');
+                    cards.forEach(c => c.style.display = match(c) ? '' : 'none');
+                });
+            }
+
+            // Define --mbn-height quando existir bottom-nav fixa
+            const nav = document.querySelector('.mobile-bottom-nav, .bottom-nav, .mbn, .navbar-fixed-bottom');
+            const root = document.documentElement;
+
+            function setMbnHeight() {
+                const h = nav ? nav.offsetHeight : 68;
+                root.style.setProperty('--mbn-height', h + 'px');
+            }
+            setMbnHeight();
+            window.addEventListener('resize', setMbnHeight);
+
+            if (nav && 'ResizeObserver' in window) {
+                new ResizeObserver(setMbnHeight).observe(nav);
+            }
         });
     </script>
 }
+

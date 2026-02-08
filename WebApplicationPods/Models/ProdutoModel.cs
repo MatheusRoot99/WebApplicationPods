@@ -74,6 +74,8 @@ namespace WebApplicationPods.Models
 
         [ValidateNever]
         public virtual ICollection<PedidoItemModel> PedidoItens { get; set; } = new List<PedidoItemModel>();
+        [ValidateNever]
+        public ICollection<ProdutoVariacaoModel> Variacoes { get; set; } = new List<ProdutoVariacaoModel>();
 
         // ===== Pods (legado) - mantém, mas não obriga no novo fluxo =====
         [Display(Name = "Sabor")]

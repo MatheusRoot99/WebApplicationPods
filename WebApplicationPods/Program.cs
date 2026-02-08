@@ -21,6 +21,10 @@ using WebApplicationPods.Services.service;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ==================== FLAG: MODO LOCALHOST (MVP) ====================
+// Enquanto for MVP, deixa TRUE. Quando voltar multi-loja/subdomínio, muda pra FALSE.
+var MVP_LOCALHOST = builder.Environment.IsDevelopment();
+
 // ==================== Cultura global pt-BR ====================
 var ptBR = new CultureInfo("pt-BR");
 ptBR.NumberFormat.NumberDecimalSeparator = ",";
@@ -106,16 +110,18 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.Name = "Pods.Auth";
 
-    if (builder.Environment.IsDevelopment())
+    // ✅ LOCALHOST MVP: NÃO setar Domain (senão localhost quebra)
+    if (!MVP_LOCALHOST)
     {
-        // ✅ cookie compartilhado entre admin/painel/loja-*.lvh.me
+        // multi-subdomínio (quando você voltar)
         options.Cookie.Domain = ".lvh.me";
         options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // dev
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     }
     else
     {
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     }
 
     options.LoginPath = "/Conta/Login";
@@ -175,9 +181,15 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
     options.Cookie.Name = "SitePods.Session";
 
-    if (builder.Environment.IsDevelopment())
+    // ✅ LOCALHOST MVP: NÃO setar Domain
+    if (!MVP_LOCALHOST)
     {
         options.Cookie.Domain = ".lvh.me";
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    }
+    else
+    {
         options.Cookie.SameSite = SameSiteMode.Lax;
         options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     }
@@ -237,7 +249,7 @@ builder.Services.AddDataProtection();
 builder.Services.AddSingleton<IClienteRememberService, ClienteRememberService>();
 
 builder.Services.AddScoped<ICurrentLojaService, CurrentLojaService>();
-builder.Services.AddScoped<ITenantResolver, SubdomainTenantResolver>();
+builder.Services.AddScoped<ITenantResolver, SubdomainTenantResolver>(); // ok manter, mas amanhã a gente simplifica se necessário
 
 builder.Services.AddHostedService<IdentitySeedHostedService>();
 builder.Services.AddSignalR();
@@ -262,17 +274,10 @@ else
 {
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
-    app.UseHttpsRedirection(); // ✅ só em PROD
-}
-
-// ✅ em DEV não força HTTPS (evita ERR_SSL_PROTOCOL_ERROR)
-if (!app.Environment.IsDevelopment())
-{
     app.UseHttpsRedirection();
 }
 
 app.UseStaticFiles();
-
 app.UseRouting();
 
 app.UseSession();
@@ -280,11 +285,12 @@ app.UseMiddleware<ClienteAutoLoginMiddleware>();
 
 app.UseAuthentication();
 
-// ✅ PRIMEIRO: garante subdomínio correto por role
-app.UseMiddleware<RoleSubdomainEnforcerMiddleware>();
-
-// ✅ DEPOIS: redirect de entrada ("/") já com role/host certo
-app.UseMiddleware<PortalEntryRedirectMiddleware>();
+// ✅ LOCALHOST MVP: DESLIGA os redirects por subdomínio/role
+if (!MVP_LOCALHOST)
+{
+    app.UseMiddleware<RoleSubdomainEnforcerMiddleware>();
+    app.UseMiddleware<PortalEntryRedirectMiddleware>();
+}
 
 // ✅ Resolve LojaId na sessão
 app.UseMiddleware<LojaContextMiddleware>();
