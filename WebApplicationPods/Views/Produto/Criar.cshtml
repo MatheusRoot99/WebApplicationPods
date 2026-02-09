@@ -2,4 +2,13 @@
 @{
     ViewData["Title"] = "Novo Produto";
 }
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/produto-form.css" asp-append-version="true" />
+}
+
 <partial name="Form" model="Model" />
+
+@section Scripts {
+    <script src="~/js/produto-form.js" asp-append-version="true"></script>
+}

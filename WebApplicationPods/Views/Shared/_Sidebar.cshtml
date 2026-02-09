@@ -1,14 +1,32 @@
 ﻿@using WebApplicationPods.Infra
-@* Sidebar (Desktop) *@
+
 @{
     var isAuth = User.Identity?.IsAuthenticated == true;
     var isAdmin = User.IsInRole("Admin");
     var isLojista = User.IsInRole("Lojista");
+
+    string currentArea = (ViewContext.RouteData.Values["area"]?.ToString() ?? "");
+    string currentCtrl = (ViewContext.RouteData.Values["controller"]?.ToString() ?? "");
+
+    string Active(string area, string controller)
+    {
+        bool sameArea = string.Equals(currentArea ?? "", area ?? "", StringComparison.OrdinalIgnoreCase);
+        bool sameCtrl = string.Equals(currentCtrl ?? "", controller ?? "", StringComparison.OrdinalIgnoreCase);
+        return (sameArea && sameCtrl) ? "is-active" : "";
+    }
 }
 
-<div class="bg-dark border-right d-none d-lg-block" id="sidebar-wrapper">
-    <div class="sidebar-heading text-white py-4">
-        <i class="fas fa-smoking me-2"></i><span class="fw-bold">Pods Eletrônicos</span>
+ <div class="border-right d-none d-lg-block" id="sidebar-wrapper">
+    <div class="sidebar-heading">
+        <div class="sidebar-brand">
+            <div class="brand-badge">
+                <i class="fas fa-smoking text-white"></i>
+            </div>
+            <div class="d-flex flex-column">
+                <div class="brand-title">Pods Eletrônicos</div>
+                <div class="brand-subtitle">Painel</div>
+            </div>
+        </div>
     </div>
 
     <div class="list-group list-group-flush">
@@ -17,10 +35,9 @@
         <div class="sidebar-section">
             <div class="sidebar-section-title">NAVEGAÇÃO</div>
 
-            <!-- FORÇA o site público -->
             <a asp-area="" asp-controller="Home" asp-action="Index"
-               class="list-group-item list-group-item-action bg-dark text-white">
-                <i class="fas fa-tachometer-alt me-2"></i> Home
+               class="list-group-item list-group-item-action @Active("", "Home")">
+                <i class="fas fa-tachometer-alt"></i> Home
             </a>
         </div>
 
@@ -30,10 +47,9 @@
             <div class="sidebar-section">
                 <div class="sidebar-section-title">CLIENTE</div>
 
-                <!-- FORÇA o site público -->
                 <a asp-area="" asp-controller="Carrinho" asp-action="Index"
-                   class="list-group-item list-group-item-action bg-dark text-white">
-                    <i class="fas fa-shopping-cart me-2"></i> Carrinho
+                   class="list-group-item list-group-item-action @Active("", "Carrinho")">
+                    <i class="fas fa-shopping-cart"></i> Carrinho
                 </a>
             </div>
         }
@@ -44,45 +60,44 @@
             <div class="sidebar-section">
                 <div class="sidebar-section-title">LOJISTA</div>
 
-
                 <a asp-area="PainelLojista" asp-controller="Dashboard" asp-action="Index"
-                   class="list-group-item list-group-item-action bg-dark text-white">
-                    <i class="fas fa-gauge me-2"></i> Dashboard
+                   class="list-group-item list-group-item-action @Active("PainelLojista", "Dashboard")">
+                    <i class="fas fa-gauge"></i> Dashboard
                 </a>
 
                 <a asp-area="@AppAreas.Lojista" asp-controller="PedidosAdmin" asp-action="Relatorio"
-                   class="list-group-item list-group-item-action bg-dark text-white">
-                    <i class="fas fa-chart-line me-2"></i> Relatórios
+                   class="list-group-item list-group-item-action @Active(AppAreas.Lojista, "PedidosAdmin")">
+                    <i class="fas fa-chart-line"></i> Relatórios
                 </a>
 
                 <a asp-area="@AppAreas.Lojista" asp-controller="Estoque" asp-action="Index"
-                   class="list-group-item list-group-item-action bg-dark text-white">
-                    <i class="fas fa-boxes me-2"></i> Estoque
+                   class="list-group-item list-group-item-action @Active(AppAreas.Lojista, "Estoque")">
+                    <i class="fas fa-boxes"></i> Estoque
                 </a>
 
                 <a asp-area="@AppAreas.Lojista" asp-controller="PedidosAdmin" asp-action="Index"
-                   class="list-group-item list-group-item-action bg-dark text-white">
-                    <i class="fas fa-clipboard-list me-2"></i> Pedidos
+                   class="list-group-item list-group-item-action @Active(AppAreas.Lojista, "PedidosAdmin")">
+                    <i class="fas fa-clipboard-list"></i> Pedidos
                 </a>
 
                 <a asp-area="@AppAreas.Lojista" asp-controller="Categoria" asp-action="Index"
-                   class="list-group-item list-group-item-action bg-dark text-white">
-                    <i class="fas fa-tags me-2"></i> Categorias
+                   class="list-group-item list-group-item-action @Active(AppAreas.Lojista, "Categoria")">
+                    <i class="fas fa-tags"></i> Categorias
                 </a>
 
                 <a asp-area="@AppAreas.Lojista" asp-controller="Produto" asp-action="Index"
-                   class="list-group-item list-group-item-action bg-dark text-white">
-                    <i class="fas fa-box-open me-2"></i> Gerenciar Produtos
+                   class="list-group-item list-group-item-action @Active(AppAreas.Lojista, "Produto")">
+                    <i class="fas fa-box-open"></i> Gerenciar Produtos
                 </a>
 
                 <a asp-area="@AppAreas.Lojista" asp-controller="PaymentConfig" asp-action="Edit" asp-route-provider="Stripe"
-                   class="list-group-item list-group-item-action bg-dark text-white">
-                    <i class="fas fa-credit-card me-2"></i> Configurações de Pagamento
+                   class="list-group-item list-group-item-action @Active(AppAreas.Lojista, "PaymentConfig")">
+                    <i class="fas fa-credit-card"></i> Configurações de Pagamento
                 </a>
 
                 <a asp-area="@AppAreas.Lojista" asp-controller="Loja" asp-action="Editar"
-                   class="list-group-item list-group-item-action bg-dark text-white">
-                    <i class="fas fa-store me-2"></i> Configurações da Loja
+                   class="list-group-item list-group-item-action @Active(AppAreas.Lojista, "Loja")">
+                    <i class="fas fa-store"></i> Configurações da Loja
                 </a>
             </div>
         }
@@ -94,18 +109,18 @@
                 <div class="sidebar-section-title">ADMIN</div>
 
                 <a asp-area="@AppAreas.Admin" asp-controller="Dashboard" asp-action="Index"
-                   class="list-group-item list-group-item-action bg-dark text-white">
-                    <i class="fas fa-gauge me-2"></i> Dashboard
+                   class="list-group-item list-group-item-action @Active(AppAreas.Admin, "Dashboard")">
+                    <i class="fas fa-gauge"></i> Dashboard
                 </a>
 
                 <a asp-area="@AppAreas.Admin" asp-controller="Lojas" asp-action="Index"
-                   class="list-group-item list-group-item-action bg-dark text-white">
-                    <i class="fas fa-store me-2"></i> Lojas
+                   class="list-group-item list-group-item-action @Active(AppAreas.Admin, "Lojas")">
+                    <i class="fas fa-store"></i> Lojas
                 </a>
 
                 <a asp-area="@AppAreas.Admin" asp-controller="Lojistas" asp-action="Index"
-                   class="list-group-item list-group-item-action bg-dark text-white">
-                    <i class="fas fa-users me-2"></i> Usuários (Lojistas)
+                   class="list-group-item list-group-item-action @Active(AppAreas.Admin, "Lojistas")">
+                    <i class="fas fa-users"></i> Usuários (Lojistas)
                 </a>
             </div>
         }
@@ -116,25 +131,23 @@
 
             @if (isAuth)
             {
-                <!-- FORÇA o site público -->
                 <a asp-area="" asp-controller="Cliente" asp-action="Perfil"
-                   class="list-group-item list-group-item-action bg-dark text-white">
-                    <i class="fas fa-user-circle me-2"></i> Perfil
+                   class="list-group-item list-group-item-action @Active("", "Cliente")">
+                    <i class="fas fa-user-circle"></i> Perfil
                 </a>
 
-                <form asp-area="" asp-controller="Conta" asp-action="Logout" method="post" class="list-group-item bg-dark">
+                <form asp-area="" asp-controller="Conta" asp-action="Logout" method="post" class="list-group-item">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-link text-white p-0">
-                        <i class="fas fa-sign-out-alt me-2"></i> Sair
+                    <button type="submit" class="btn btn-link p-0">
+                        <i class="fas fa-sign-out-alt"></i> Sair
                     </button>
                 </form>
             }
             else
             {
-                <!-- FORÇA o site público -->
                 <a asp-area="" asp-controller="Conta" asp-action="Login"
-                   class="list-group-item list-group-item-action bg-dark text-white">
-                    <i class="fas fa-sign-in-alt me-2"></i> Login
+                   class="list-group-item list-group-item-action @Active("", "Conta")">
+                    <i class="fas fa-sign-in-alt"></i> Login
                 </a>
             }
         </div>

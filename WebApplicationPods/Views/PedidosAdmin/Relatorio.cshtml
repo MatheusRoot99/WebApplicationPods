@@ -22,7 +22,7 @@
     <link rel="stylesheet" href="~/css/reports.css" asp-append-version="true" />
 }
 
-<div class="container mt-4 page-pad">
+<div class="container py-3 page-pad">
     <div class="toolbar d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
         <h2>Relatório — @Model.PeriodoDescricao</h2>
 
@@ -165,62 +165,269 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         (function () {
-          // alterna campos do filtro
+          // ==============================
+          // Alterna campos do filtro (Dia/Mês)
+          // ==============================
           const sel = document.getElementById('selModo');
-          if (sel){
-            sel.addEventListener('change', function(){
+          if (sel) {
+            sel.addEventListener('change', function () {
               const isMes = this.value === 'mes';
-              document.getElementById('grpDia').style.display  = isMes ? 'none'  : 'block';
-              document.getElementById('grpMes').style.display  = isMes ? 'block' : 'none';
-              document.getElementById('grpMes2').style.display = isMes ? 'block' : 'none';
+              const grpDia = document.getElementById('grpDia');
+              const grpMes = document.getElementById('grpMes');
+              const grpMes2 = document.getElementById('grpMes2');
+
+              if (grpDia)  grpDia.style.display  = isMes ? 'none'  : 'block';
+              if (grpMes)  grpMes.style.display  = isMes ? 'block' : 'none';
+              if (grpMes2) grpMes2.style.display = isMes ? 'block' : 'none';
             });
           }
 
+          // ==============================
+          // Detecta tema (dark/light)
+          // - funciona com data-theme no html OU classe no body
+          // ==============================
+          function isDarkMode() {
+            const html = document.documentElement;
+            const body = document.body;
+            return (html && html.getAttribute('data-theme') === 'dark')
+                || (body && body.classList.contains('theme-dark'))
+                || (body && body.classList.contains('dark'))
+                || false;
+          }
+
+          // ==============================
+          // Lê tokens do CSS (site.css)
+          // ==============================
+          function cssVar(name, fallback) {
+            const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+            return v || fallback;
+          }
+
+          function buildTheme() {
+            const dark = isDarkMode();
+
+            const primary = cssVar('--primary', '#2575fc');
+            const text    = cssVar('--text', dark ? 'rgba(255,255,255,.88)' : 'rgba(17,24,39,.88)');
+            const muted   = cssVar('--muted', dark ? 'rgba(255,255,255,.65)' : 'rgba(17,24,39,.60)');
+
+            // grid/axis
+            const grid = dark ? 'rgba(255,255,255,.10)' : 'rgba(17,24,39,.10)';
+            const tick = muted;
+
+            // tooltip
+            const tooltipBg = dark ? 'rgba(17,24,39,.92)' : 'rgba(255,255,255,.96)';
+            const tooltipBorder = dark ? 'rgba(255,255,255,.10)' : 'rgba(17,24,39,.12)';
+            const tooltipTitle = dark ? 'rgba(255,255,255,.92)' : 'rgba(17,24,39,.92)';
+            const tooltipBody  = dark ? 'rgba(255,255,255,.80)' : 'rgba(17,24,39,.75)';
+
+            return { dark, primary, text, muted, grid, tick, tooltipBg, tooltipBorder, tooltipTitle, tooltipBody };
+          }
+
+          // ==============================
+          // Dados vindos do Razor
+          // ==============================
           const serie   = @Html.Raw(serieJson);
           const metodos = @Html.Raw(metodosJson);
 
-          // --- Série por dia ---
-          const labels = serie.map(x => x.dia);
-          const qtds   = serie.map(x => x.qtd);
+          // ==============================
+          // Helpers
+          // ==============================
+          function fmtBRL(n) {
+            try {
+              return (Number(n) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            } catch {
+              return 'R$ ' + (Number(n) || 0).toFixed(2);
+            }
+          }
+
+          function applyChartDefaults(theme) {
+            // defaults globais (Chart.js)
+            Chart.defaults.color = theme.tick;
+            Chart.defaults.font.family = 'system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+
+            Chart.defaults.plugins.legend.labels.color = theme.tick;
+
+            Chart.defaults.plugins.tooltip.backgroundColor = theme.tooltipBg;
+            Chart.defaults.plugins.tooltip.borderColor = theme.tooltipBorder;
+            Chart.defaults.plugins.tooltip.borderWidth = 1;
+            Chart.defaults.plugins.tooltip.titleColor = theme.tooltipTitle;
+            Chart.defaults.plugins.tooltip.bodyColor = theme.tooltipBody;
+            Chart.defaults.plugins.tooltip.displayColors = true;
+          }
+
+          function makeLineChart(ctx, theme, labels, qtds, totais) {
+            return new Chart(ctx, {
+              type: 'line',
+              data: {
+                labels,
+                datasets: [
+                  {
+                    label: 'Pedidos',
+                    data: qtds,
+                    yAxisID: 'y1',
+                    tension: 0.25,
+                    borderWidth: 2,
+                    pointRadius: 2,
+                    pointHoverRadius: 4
+                  },
+                  {
+                    label: 'Faturamento',
+                    data: totais,
+                    yAxisID: 'y2',
+                    tension: 0.25,
+                    borderWidth: 2,
+                    pointRadius: 2,
+                    pointHoverRadius: 4
+                  }
+                ]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                  legend: { position: 'top' },
+                  tooltip: {
+                    callbacks: {
+                      label: function (ctx) {
+                        const label = ctx.dataset.label || '';
+                        const v = ctx.parsed.y;
+
+                        if (label.toLowerCase().includes('fatur')) {
+                          return `${label}: ${fmtBRL(v)}`;
+                        }
+                        return `${label}: ${v}`;
+                      }
+                    }
+                  }
+                },
+                scales: {
+                  x: {
+                    ticks: { autoSkip: true, maxRotation: 0, minRotation: 0, color: theme.tick },
+                    grid: { color: theme.grid }
+                  },
+                  y1: {
+                    type: 'linear',
+                    position: 'left',
+                    title: { display: true, text: 'Qtd', color: theme.tick },
+                    ticks: { color: theme.tick, precision: 0 },
+                    grid: { color: theme.grid }
+                  },
+                  y2: {
+                    type: 'linear',
+                    position: 'right',
+                    title: { display: true, text: 'R$', color: theme.tick },
+                    ticks: {
+                      color: theme.tick,
+                      callback: (v) => fmtBRL(v)
+                    },
+                    grid: { drawOnChartArea: false, color: theme.grid }
+                  }
+                }
+              }
+            });
+          }
+
+          function makeBarChart(ctx, theme, labels, qtds) {
+            return new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels,
+                datasets: [
+                  {
+                    label: 'Pedidos',
+                    data: qtds,
+                    borderWidth: 1
+                  }
+                ]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: true },
+                  tooltip: {
+                    callbacks: {
+                      label: function (ctx) {
+                        return `${ctx.dataset.label}: ${ctx.parsed.y}`;
+                      }
+                    }
+                  }
+                },
+                scales: {
+                  x: {
+                    ticks: {
+                      color: theme.tick,
+                      autoSkip: true,
+                      maxRotation: 0,
+                      minRotation: 0,
+                      callback: (v) => {
+                        const t = labels[v] || '';
+                        return t.length > 14 ? (t.slice(0, 14) + '…') : t;
+                      }
+                    },
+                    grid: { color: theme.grid }
+                  },
+                  y: {
+                    ticks: { color: theme.tick, precision: 0 },
+                    grid: { color: theme.grid }
+                  }
+                }
+              }
+            });
+          }
+
+          // ==============================
+          // Render
+          // ==============================
+          let theme = buildTheme();
+          applyChartDefaults(theme);
+
+          const serieLabels = serie.map(x => x.dia);
+          const qtds = serie.map(x => x.qtd);
           const totais = serie.map(x => x.total);
 
-          new Chart(document.getElementById('chartSerie'), {
-            type:'line',
-            data:{ labels, datasets:[
-              { label:'Pedidos', data:qtds,    yAxisID:'y1', tension:.25 },
-              { label:'Faturamento', data:totais, yAxisID:'y2', tension:.25 }
-            ]},
-            options:{
-              responsive:true,
-              maintainAspectRatio:false,
-              interaction:{ mode:'index', intersect:false },
-              scales:{
-                x:{ ticks:{ autoSkip:true, maxRotation:0, minRotation:0 } },
-                y1:{ type:'linear', position:'left',  title:{display:true,text:'Qtd'} },
-                y2:{ type:'linear', position:'right', title:{display:true,text:'R$'}, grid:{ drawOnChartArea:false } }
-              },
-              plugins:{ legend:{ position:'top' } }
-            }
-          });
+          const metLabels = metodos.map(x => x.metodo);
+          const metQtds = metodos.map(x => x.qtd);
 
-          // --- Métodos de pagamento ---
-          const mLabels = metodos.map(x=>x.metodo);
-          const mQtds   = metodos.map(x=>x.qtd);
+          const elSerie = document.getElementById('chartSerie');
+          const elMet   = document.getElementById('chartMetodos');
 
-          new Chart(document.getElementById('chartMetodos'), {
-            type:'bar',
-            data:{ labels:mLabels, datasets:[{ label:'Pedidos', data:mQtds }] },
-            options:{
-              responsive:true,
-              maintainAspectRatio:false,
-              scales:{
-                x:{ ticks:{
-                  autoSkip:true, maxRotation:0, minRotation:0,
-                  callback:(v)=> (mLabels[v] && mLabels[v].length>14) ? mLabels[v].slice(0,14)+'…' : mLabels[v]
-                }}
-              }
-            }
+          let chartSerie = null;
+          let chartMet   = null;
+
+          if (elSerie) chartSerie = makeLineChart(elSerie, theme, serieLabels, qtds, totais);
+          if (elMet)   chartMet   = makeBarChart(elMet, theme, metLabels, metQtds);
+
+          // ==============================
+          // Se o usuário trocar o tema, refaz os charts
+          // (você pode disparar esse event quando alternar o modo)
+          // document.dispatchEvent(new Event('theme:changed'));
+          // ==============================
+          function rebuild() {
+            theme = buildTheme();
+            applyChartDefaults(theme);
+
+            if (chartSerie) { chartSerie.destroy(); chartSerie = null; }
+            if (chartMet)   { chartMet.destroy(); chartMet = null; }
+
+            if (elSerie) chartSerie = makeLineChart(elSerie, theme, serieLabels, qtds, totais);
+            if (elMet)   chartMet   = makeBarChart(elMet, theme, metLabels, metQtds);
+          }
+
+          document.addEventListener('theme:changed', rebuild);
+
+          // fallback: se você alterna tema apenas trocando atributo/classe
+          // isso captura mudanças via MutationObserver
+          const obs = new MutationObserver(() => {
+            // reconstrói se realmente mudou
+            const nowDark = isDarkMode();
+            if (nowDark !== theme.dark) rebuild();
           });
+          obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] });
+          if (document.body) obs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
         })();
     </script>
 }
+

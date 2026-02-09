@@ -6,6 +6,8 @@
 
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Pedidos";
+
     var filtro = (string)(ViewBag.Filtro ?? "abertos");
     var tableUrl = Url.Action("Table", "PedidosAdmin", new { filtro });
     var afToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
@@ -39,7 +41,8 @@
 
             <div class="input-group input-group-sm quick-search">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input id="qPedidos" type="search" class="form-control" placeholder="Buscar por cliente, método..." autocomplete="off" />
+                <input id="qPedidos" type="search" class="form-control"
+                       placeholder="Buscar por cliente, método, status..." autocomplete="off" />
             </div>
 
             <!-- Relatórios -->
@@ -62,7 +65,7 @@
         </div>
     </div>
 
-    <!-- Legenda de status (opcional) -->
+    <!-- Legenda de status -->
     <div class="status-legend mb-3">
         <span class="legend-item"><i class="dot dot-info"></i> Aguardando</span>
         <span class="legend-item"><i class="dot dot-primary"></i> Em Preparo</span>
@@ -91,7 +94,7 @@
         </table>
     </div>
 
-    <!-- Placeholder de carregamento (skeleton) -->
+    <!-- Skeleton -->
     <template id="row-skeleton">
         <tr class="row-skeleton">
             <td colspan="6">
@@ -110,7 +113,6 @@
 
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"
-            integrity="sha512-6r3o8q7yMn3x7b1n3S0tQk/3DBMuQ1E1xm1ANo1sIc9s2yQik3zYgqzZ8qXuqFj2F2f+tSgDjpFzWkOq8ESQ8A=="
             crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
     <script src="~/js/orders-admin.js" asp-append-version="true"></script>

@@ -1,27 +1,137 @@
-/* =========================
-   Paleta do site (variáveis)
-   ========================= */
+/* =========================================================
+   Pods Eletrônicos — Theme System (Light/Dark) + UI Kit
+   Bootstrap 5.1 friendly (sem depender de data-bs-theme)
+   ========================================================= */
+
+/* -----------------------------
+   1) TOKENS (tema padrão = light)
+   ----------------------------- */
 :root {
-    /* marca */
+    /* brand */
     --brand-start: #6a11cb;
     --brand-end: #2575fc;
     --primary: #2575fc;
     --primary-dark: #1e56d9;
-    /* base */
-    --dark: #111827;
-    --light: #ffffff;
-    --gray: #f5f5f7;
-    --text-dark: #111827;
-    --text-light: #6b7280;
-    /* util */
-    --primary-grad: linear-gradient(135deg,var(--brand-start),var(--brand-end));
-    --shadow-1: 0 4px 20px rgba(0,0,0,.08);
-    --shadow-2: 0 8px 30px rgba(0,0,0,.12);
-    --radius: 12px;
+    --primary-grad: linear-gradient(135deg, var(--brand-start), var(--brand-end));
+    /* radius/shadow */
+    --radius: 14px;
+    --radius-lg: 18px;
+    --shadow-1: 0 10px 28px rgba(0,0,0,.10);
+    --shadow-2: 0 18px 60px rgba(0,0,0,.16);
+    /* layout */
+    --sidebar-w: 15rem;
     --mbn-height: 68px;
+    --kb-shift: 0px;
+    /* LIGHT theme surfaces */
+    --bg: #f3f6fb;
+    --bg-elev: rgba(255,255,255,.92);
+    --bg-elev-2: #ffffff;
+    --text: #0f172a;
+    --muted: #6b7280;
+    --border: rgba(15, 23, 42, 0.10);
+    --ring: rgba(37,117,252,.35);
+    /* “hero” background (páginas tipo dashboard) */
+    --page-hero: radial-gradient(1000px 520px at 18% 0%, rgba(37,117,252,.22), transparent 60%), radial-gradient(900px 520px at 82% 8%, rgba(106,17,203,.20), transparent 55%), linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,0) 55%);
+    /* sidebar/topbar (LIGHT) */
+    --sidebar-bg: rgba(255,255,255,.85);
+    --sidebar-border: rgba(15, 23, 42, 0.10);
+    --sidebar-text: #1f2937;
+    --sidebar-muted: rgba(31,41,55,.60);
+    --sidebar-hover: rgba(2,6,23,.04);
+    --sidebar-active-bg: rgba(37,117,252,.10);
+    --sidebar-active-border: rgba(37,117,252,.55);
+    --topbar-bg: rgba(15,23,42,.92);
+    --topbar-text: #ffffff;
+    /* tables/forms */
+    --input-bg: rgba(255,255,255,.95);
+    --input-text: var(--text);
+    --input-border: rgba(15,23,42,.14);
+    --input-placeholder: rgba(107,114,128,.85);
+    --table-head: rgba(2,6,23,.04);
+    /* glass */
+    --glass: rgba(255,255,255,.70);
+    --glass-border: rgba(255,255,255,.45);
+    --glass-blur: blur(10px);
 }
 
-/* Bootstrap 5.1 – faz tudo usar sua paleta */
+/* -----------------------------
+   2) DARK theme overrides
+   ----------------------------- */
+html[data-theme="dark"] {
+    --bg: #0b1020;
+    --bg-elev: rgba(17,24,39,.78);
+    --bg-elev-2: rgba(17,24,39,.92);
+    --text: #e5e7eb;
+    --muted: rgba(229,231,235,.65);
+    --border: rgba(255,255,255,.10);
+    --ring: rgba(37,117,252,.35);
+    --page-hero: radial-gradient(980px 540px at 14% 0%, rgba(37,117,252,.25), transparent 62%), radial-gradient(820px 520px at 84% 8%, rgba(106,17,203,.24), transparent 55%), linear-gradient(180deg, rgba(0,0,0,.20), rgba(0,0,0,0) 65%);
+    --sidebar-bg: rgba(10,15,28,.78);
+    --sidebar-border: rgba(255,255,255,.10);
+    --sidebar-text: rgba(255,255,255,.88);
+    --sidebar-muted: rgba(255,255,255,.52);
+    --sidebar-hover: rgba(255,255,255,.05);
+    --sidebar-active-bg: rgba(37,117,252,.16);
+    --sidebar-active-border: rgba(37,117,252,.75);
+    --topbar-bg: rgba(10,15,28,.86);
+    --topbar-text: rgba(255,255,255,.92);
+    --input-bg: rgba(10,15,28,.70);
+    --input-text: rgba(255,255,255,.92);
+    --input-border: rgba(255,255,255,.12);
+    --input-placeholder: rgba(255,255,255,.45);
+    --table-head: rgba(255,255,255,.06);
+    --glass: rgba(17,24,39,.44);
+    --glass-border: rgba(255,255,255,.10);
+    --glass-blur: blur(12px);
+}
+
+/* =========================================================
+   3) Base / reset
+   ========================================================= */
+html {
+    -webkit-text-size-adjust: 100%;
+    height: 100%;
+}
+
+body {
+    min-height: 100vh;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    margin-bottom: 0; /* você usa bottom nav no mobile, então o padding é via .has-bottom-nav */
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+}
+
+a {
+    color: var(--primary);
+}
+
+    a:hover {
+        color: var(--primary-dark);
+    }
+
+/* anti-zoom iOS / consistência */
+input, select, textarea,
+label, .form-label,
+.input-group-text, .form-text,
+button, .btn, .btn * {
+    font-size: 16px;
+    line-height: 1.25;
+}
+
+/* =========================================================
+   4) Page background “pegada dashboard”
+   aplique na wrapper do main (já vou colocar no layout)
+   ========================================================= */
+.page-hero {
+    background: var(--page-hero);
+    border-radius: var(--radius-lg);
+    padding: 14px;
+}
+
+/* =========================================================
+   5) Bootstrap overrides (cores)
+   ========================================================= */
 .bg-primary {
     background-color: var(--primary) !important;
 }
@@ -55,357 +165,270 @@
         color: #fff !important;
     }
 
-.badge.bg-primary {
-    background-color: var(--primary) !important;
-}
-
-.link-primary {
-    color: var(--primary) !important;
-}
-
-a.link-primary:hover {
-    color: var(--primary-dark) !important;
-}
-
-
-
-
-/* =========================
-   Base + Bootstrap tweaks
-   ========================= */
-html {
-    font-size: 14px;
-    position: relative;
-    min-height: 100%;
-}
-
-@media (min-width:768px) {
-    html {
-        font-size: 16px;
-    }
-}
-
-body {
-    margin-bottom: 60px;
-    background-color: var(--gray);
-    color: var(--text-dark);
-}
-
-/* Foco usa a cor primária do tema */
+/* focus ring */
 .btn:focus,
 .btn:active:focus,
 .btn-link.nav-link:focus,
 .form-control:focus,
+.form-select:focus,
 .form-check-input:focus {
-    box-shadow: 0 0 0 .1rem #fff, 0 0 0 .25rem color-mix(in srgb, var(--primary) 80%, transparent);
-    border-color: var(--primary);
+    box-shadow: 0 0 0 .12rem rgba(255,255,255,.30), 0 0 0 .30rem var(--ring);
+    border-color: color-mix(in srgb, var(--primary) 65%, var(--border));
 }
 
-/* Cards */
+/* =========================================================
+   6) Cards — estilo “clean modern”
+   ========================================================= */
 .card {
-    border: none;
-    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075);
-    margin-bottom: 1.5rem;
-    background: var(--light);
+    border: 1px solid var(--border);
+    background: var(--bg-elev-2);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-1);
+}
+
+html[data-theme="dark"] .card {
+    background: rgba(17,24,39,.88);
 }
 
 .card-header {
-    background-color: #fff;
-    border-bottom: 1px solid rgba(0,0,0,.125);
-    font-weight: 600;
+    background: transparent;
+    border-bottom: 1px solid var(--border);
+    font-weight: 700;
+    color: var(--text);
 }
 
-/* Breadcrumb */
-.breadcrumb {
-    background-color: transparent;
-    padding: .5rem 0;
-    margin-bottom: 1rem;
+.card.shadow-sm {
+    box-shadow: var(--shadow-1) !important;
 }
 
-/* Imagens pequenas em tabelas */
-.table-img {
-    width: 50px;
-    height: 50px;
-    object-fit: cover;
-    border-radius: 4px;
+.border-0 {
+    border: 0 !important;
 }
 
-.img-placeholder {
-    width: 50px;
-    height: 50px;
-    background-color: #f8f9fa;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
+/* “glass card” opcional: use class="card card-glass" */
+.card-glass {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    box-shadow: var(--shadow-2);
 }
 
-/* Badge do carrinho (navbar desktop) */
-.nav-link .badge {
-    font-size: .65rem;
-    padding: .25em .4em;
-    min-width: 1.25rem;
-    height: 1.25rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+/* =========================================================
+   7) Forms — inputs bonitos no dark e light
+   ========================================================= */
+.form-control, .form-select, .input-group-text {
+    background: var(--input-bg);
+    color: var(--input-text);
+    border: 1px solid var(--input-border);
+    border-radius: 12px;
 }
 
-/* Sidebar */
-.sidebar-section {
-    margin-bottom: 1rem;
-}
-
-.sidebar-section-title {
-    color: #6c757d;
-    padding: .5rem 1rem;
-    font-size: .75rem;
-    text-transform: uppercase;
-    letter-spacing: .1em;
-}
-
-/* Offcanvas */
-.offcanvas-start {
-    width: 280px;
-}
-
-/* Ícones alinhados em dropdown */
-.dropdown-item i {
-    width: 20px;
-    text-align: center;
-    margin-right: 8px;
-}
-
-/* Preço (máscara RTL para digitação) */
-.preco-mask {
-    text-align: right;
-    direction: rtl;
-}
-
-/* =========================
-   Cores de componentes Bootstrap
-   ========================= */
-a {
-    color: var(--primary);
-}
-
-    a:hover {
-        color: var(--primary-dark);
+    .form-control::placeholder {
+        color: var(--input-placeholder);
     }
 
-.btn-primary {
-    background: var(--primary);
-    border-color: var(--primary);
+.form-select {
+    background-color: var(--input-bg);
 }
 
-    .btn-primary:hover {
-        background: var(--primary-dark);
-        border-color: var(--primary-dark);
-    }
-
-.btn-outline-primary {
-    color: var(--primary);
-    border-color: var(--primary);
+.form-check-input {
+    border-color: var(--input-border);
 }
 
-    .btn-outline-primary:hover {
-        color: #fff;
-        background: var(--primary);
+    .form-check-input:checked {
+        background-color: var(--primary);
         border-color: var(--primary);
     }
 
-/* Gradiente da marca p/ heros/headers/badges custom */
-.bg-brand-grad {
-    background: var(--primary-grad) !important;
+/* =========================================================
+   8) Tables
+   ========================================================= */
+.table {
+    color: var(--text);
 }
 
-.text-light-2 {
-    color: var(--text-light);
-}
-
-/* =========================
-   Navbar + Bottom nav mobile
-   ========================= */
-.navbar > .container,
-.navbar > .container-fluid,
-.navbar > .container-lg,
-.navbar > .container-md,
-.navbar > .container-sm,
-.navbar > .container-xl,
-.navbar > .container-xxl {
-    display: flex; /* corrige 'display: ;' inválido */
-    align-items: center;
-    justify-content: space-between;
-}
-
-/* Top navbar: link do carrinho e wrapper para o badge */
-.navbar .nav-link.cart-link {
-    display: inline-flex;
-    width: auto;
-    padding-left: .5rem;
-    padding-right: .5rem;
-    align-items: center;
-}
-
-.navbar .cart-wrap {
-    line-height: 1;
-    position: relative;
-    display: inline-flex;
-}
-
-    .navbar .cart-wrap .badge {
-        min-width: 1.25rem;
-        height: 1.25rem;
-        font-size: .65rem;
-        padding: .25em .4em;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
+    .table thead.table-light > tr > th,
+    .table thead > tr > th {
+        background: var(--table-head) !important;
+        color: var(--text) !important;
+        border-bottom: 1px solid var(--border);
     }
 
-/* Responsivo navbar */
+    .table tbody tr {
+        border-color: var(--border);
+    }
+
+.table-hover tbody tr:hover {
+    background: color-mix(in srgb, var(--primary) 6%, transparent);
+}
+
+/* =========================================================
+   9) Navbar / topbar
+   ========================================================= */
+.navbar.navbar-dark {
+    background: var(--topbar-bg) !important;
+    color: var(--topbar-text) !important;
+    border-bottom: 1px solid var(--border) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+/* theme toggle button */
+.theme-toggle {
+    border: 1px solid rgba(255,255,255,.16);
+    background: rgba(255,255,255,.06);
+    color: #fff;
+    border-radius: 12px;
+    height: 38px;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+    .theme-toggle:hover {
+        background: rgba(255,255,255,.10);
+    }
+
+/* =========================================================
+   10) Sidebar layout (usa seu markup atual, mas melhora MUITO)
+   ========================================================= */
+#wrapper {
+    overflow-x: hidden;
+}
+
+/* sidebar wrapper */
+#sidebar-wrapper {
+    width: var(--sidebar-w);
+    position: fixed;
+    z-index: 1030;
+    min-height: 100vh;
+    background: var(--sidebar-bg) !important;
+    border-right: 1px solid var(--sidebar-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 12px 0 40px rgba(0,0,0,.10);
+}
+
+    /* heading */
+    #sidebar-wrapper .sidebar-heading {
+        border-bottom: 1px solid var(--sidebar-border);
+        color: var(--sidebar-text) !important;
+    }
+
+    /* list items */
+    #sidebar-wrapper .list-group-item {
+        background: transparent !important;
+        color: var(--sidebar-text) !important;
+        border: none;
+        border-left: 3px solid transparent;
+        padding: .70rem 1.25rem;
+        border-radius: 12px;
+        margin: 2px 10px;
+        transition: background .15s ease, transform .12s ease, border-color .15s ease;
+    }
+
+        #sidebar-wrapper .list-group-item:hover {
+            background: var(--sidebar-hover) !important;
+        }
+
+        #sidebar-wrapper .list-group-item.active {
+            background: var(--sidebar-active-bg) !important;
+            border-left-color: var(--sidebar-active-border);
+        }
+
+    #sidebar-wrapper .sidebar-section-title {
+        color: var(--sidebar-muted);
+    }
+
+/* page wrapper */
+#page-content-wrapper {
+    min-width: 100vw;
+    margin-left: 0;
+    transition: margin 0.25s ease-out;
+}
+
+@media (min-width: 768px) {
+    #page-content-wrapper {
+        margin-left: var(--sidebar-w);
+        width: calc(100% - var(--sidebar-w));
+        min-width: 0;
+    }
+}
+
+/* toggled behavior (mantém seu JS) */
+#wrapper.toggled #sidebar-wrapper {
+    margin-left: -15rem;
+}
+
+#wrapper.toggled #page-content-wrapper {
+    margin-left: 0;
+    width: 100%;
+}
+
+/* =========================================================
+   11) Main content spacing / container look
+   ========================================================= */
+.page-content {
+    padding-bottom: 12px;
+}
+
+.has-bottom-nav .page-content {
+    padding-bottom: calc(var(--mbn-height) + var(--kb-shift) + env(safe-area-inset-bottom) + 12px);
+}
+
+/* deixa o “miolo” parecido com a referência (cards centralizados) */
+.app-shell {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* =========================================================
+   12) Mobile bottom nav (você já tinha; só harmonizei)
+   ========================================================= */
 @media (max-width:991.98px) {
     #sidebar-wrapper {
         display: none !important;
     }
-    /* esconde sidebar no mobile */
-    .navbar-collapse {
-        flex-grow: 0;
-    }
 
-    .navbar-nav {
-        flex-direction: row;
-        align-items: center;
-        gap: .5rem;
-    }
-
-        .navbar-nav .nav-item {
-            margin-left: 0;
-        }
-
-    .navbar .nav-link {
-        padding: .5rem;
-    }
-
-        .navbar .nav-link.cart-link {
-            padding-left: .25rem;
-            padding-right: .25rem;
-        }
-
-    /* espaço para a bottom nav não cobrir conteúdo */
     body {
         padding-bottom: 84px;
-        margin-bottom: 0;
     }
-}
 
-/* BOTTOM NAV MOBILE */
-@media (max-width:991.98px) {
     .mobile-bottom-nav {
         position: fixed;
         left: 0;
         right: 0;
         bottom: 0;
         height: 70px;
-        background: rgba(255,255,255,.97);
+        background: rgba(255,255,255,.92);
         border-top: 1px solid rgba(0,0,0,.08);
         display: flex;
         justify-content: space-around;
         align-items: center;
         padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
         z-index: 1080;
-        -webkit-backdrop-filter: blur(10px);
         backdrop-filter: blur(10px);
-        box-shadow: 0 -4px 20px rgba(0,0,0,.08);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 -8px 26px rgba(0,0,0,.10);
     }
 
-        .mobile-bottom-nav .mbn-item {
-            position: relative;
-            display: inline-flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            min-width: 56px;
-            color: #6c757d !important;
-            text-decoration: none !important;
-            transition: all .2s ease;
-            padding: 8px 12px;
-            border-radius: 12px;
-        }
-
-            .mobile-bottom-nav .mbn-item:hover {
-                color: #495057 !important;
-                background: rgba(0,0,0,.03);
-            }
-
-            .mobile-bottom-nav .mbn-item i {
-                font-size: 20px;
-                line-height: 1;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                width: 32px;
-                height: 32px;
-                border-radius: 50%;
-                transition: all .2s ease;
-            }
-
-            .mobile-bottom-nav .mbn-item.active {
-                color: #0d6efd !important;
-            }
-
-                .mobile-bottom-nav .mbn-item.active i {
-                    background: rgba(13,110,253,.12);
-                    color: #0d6efd;
-                }
-
-            .mobile-bottom-nav .mbn-item .mbn-label {
-                font-size: 11px;
-                line-height: 1;
-                font-weight: 500;
-            }
-
-        .mobile-bottom-nav .mbn-badge {
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            transform: translate(50%,-50%);
-            background: #dc3545;
-            color: #fff;
-            border-radius: 999px;
-            font-size: 10px;
-            line-height: 1;
-            padding: 2px 5px;
-            min-width: 16px;
-            text-align: center;
-            box-shadow: 0 0 0 2px rgba(255,255,255,.9);
-            font-weight: 700;
-        }
-
-    @keyframes mbn-bump {
-        0% {
-            transform: translate(50%,-50%) scale(1)
-        }
-
-        30% {
-            transform: translate(50%,-50%) scale(1.2)
-        }
-
-        100% {
-            transform: translate(50%,-50%) scale(1)
-        }
-    }
-
-    .mbn-badge-bump {
-        animation: mbn-bump .35s ease;
+    html[data-theme="dark"] .mobile-bottom-nav {
+        background: rgba(10,15,28,.85);
+        border-top: 1px solid rgba(255,255,255,.10);
     }
 }
 
-/* =========================
-   Utilidades e pequenos ajustes
-   ========================= */
-.container-fluid { /* padding custom opcional */
-    /* padding-top:1.5rem; padding-bottom:1.5rem; */
+/* =========================================================
+   13) Helpers
+   ========================================================= */
+.bg-brand-grad {
+    background: var(--primary-grad) !important;
+}
+
+.text-light-2 {
+    color: var(--muted);
 }
 
 .table-responsive {
@@ -414,12 +437,12 @@ a {
     -webkit-overflow-scrolling: touch;
 }
 
-.preco-mask {
-    text-align: right;
-    direction: rtl;
+.img-thumbnail {
+    border-radius: 12px;
+    border-color: var(--border);
 }
 
-/* Animação do badge (desktop) */
+/* badge / cart bump */
 @keyframes bump {
     0% {
         transform: scale(1);
@@ -441,148 +464,3 @@ a {
 .mbn-badge-bump {
     animation: bump .35s ease-out;
 }
-
-/* Ajustes mobile gerais */
-@media (max-width:767.98px) {
-    .container-fluid {
-        padding-left: .5rem;
-        padding-right: .5rem;
-    }
-}
-
-
-/* === Carrinho (navbar desktop) === */
-.navbar .nav-link.cart-link {
-    display: inline-flex;
-    align-items: center;
-    padding-left: .25rem;
-    padding-right: .25rem;
-}
-
-.navbar .cart-wrap {
-    position: relative;
-    line-height: 1;
-    display: inline-flex;
-}
-
-#cart-badge {
-    position: absolute;
-    top: -4px; /* ajuste fino conforme seu header */
-    right: -6px; /* idem */
-    transform: translate(50%,-50%);
-    background: #dc3545;
-    color: #fff;
-    border-radius: 999px;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 6px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: .70rem;
-    box-shadow: 0 0 0 2px rgba(255,255,255,.9);
-}
-
-/* Animação “bump” usada pelo updateCartBadges */
-@keyframes bump {
-    0% {
-        transform: translate(50%,-50%) scale(1);
-    }
-
-    30% {
-        transform: translate(50%,-50%) scale(1.18);
-    }
-
-    100% {
-        transform: translate(50%,-50%) scale(1);
-    }
-}
-
-.mbn-badge-bump {
-    animation: bump .35s ease-out;
-}
-
-/* dot persistente no carrinho (desktop navbar) */
-.cart-wrap .cart-dot {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    width: 10px;
-    height: 10px;
-    background: #dc3545;
-    border-radius: 50%;
-    box-shadow: 0 0 0 2px rgba(255,255,255,.95);
-}
-
-/* dot persistente no carrinho (mobile bottom nav) */
-.mbn-dot {
-    position: absolute;
-    top: 6px;
-    right: 10px;
-    width: 9px;
-    height: 9px;
-    background: #dc3545;
-    border-radius: 999px;
-    box-shadow: 0 0 0 2px rgba(255,255,255,.95);
-}
-.fa-cart-shopping.has-unseen {
-    position: relative
-}
-
-    .fa-cart-shopping.has-unseen::after {
-        content: "";
-        position: absolute;
-        top: -2px;
-        right: -4px;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #dc3545;
-        box-shadow: 0 0 0 2px rgba(255,255,255,.95);
-    }
-
-/* ===== Cross-browser Form Anti-zoom + base ===== */
-html {
-    -webkit-text-size-adjust: 100%;
-    height: 100%;
-}
-
-body {
-    min-height: 100vh;
-    height: 100%;
-}
-
-/* Garante 16px em TUDO que toca o input (iOS/Chrome iOS anti-zoom) */
-input, select, textarea,
-label, .form-label,
-.input-group-text, .form-text,
-button, .btn, .btn * {
-    font-size: 16px;
-    line-height: 1.25;
-}
-
-/* Bootstrap às vezes reduz fonte no input-group */
-.input-group .form-control,
-.input-group .input-group-text {
-    font-size: 16px !important;
-}
-
-/* dvh quando suportado (corrige 100vh com teclado) */
-@supports (height: 100dvh) {
-    .use-dvh {
-        min-height: 100dvh;
-    }
-}
-
-/* Safe area padding (iPhone com notch) */
-.safe-bottom {
-    padding-bottom: calc(16px + env(safe-area-inset-bottom));
-}
-
-/* Trava scroll do body quando modal/sheet aberto */
-.body-lock {
-    overflow: hidden;
-    overscroll-behavior: contain;
-}
-

@@ -3,8 +3,13 @@
 @{
     var isEdit = Model?.Id.HasValue == true && Model.Id.Value > 0;
 }
+@* 
+@section Styles {
+    <link rel="stylesheet" href="~/css/produto-form.css" asp-append-version="true" />
+} *@
 
-<div class="container-fluid px-3 px-xl-4 mt-4 page-has-bottom-nav">
+
+<div class="container-fluid px-3 px-xl-4 mt-4 page-has-bottom-nav produto-form-page">
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
         <div>
             <h3 class="mb-0">@ViewData["Title"]</h3>

@@ -1,53 +1,56 @@
-﻿/* ============ Estoque (Index) ============ */
-/* Paleta do site */
+﻿/* =========================================================
+   Estoque (Index) — integrado ao tema global (light/dark)
+   NÃO redefine :root com paleta fixa.
+   Depende dos tokens do site.css:
+   --bg --text --muted --border --primary --primary-dark
+   --brand-start --brand-end --shadow-1 --radius --radius-lg
+   ========================================================= */
+
 :root {
-    --brand-start: #5b2eff; /* roxo */
-    --brand-end: #2d7bff; /* azul */
-    --primary: #2d7bff;
-    --primary-dk: #1f5ee3;
-    --bg: #f2f3f7; /* cinza de fundo */
-    --text: #111827; /* texto principal */
-    --muted: #6b7280; /* texto secundário */
-    --ok: #10b981; /* verde - OK */
-    --low: #f59e0b; /* amarelo - baixo */
-    --zero: #ef4444; /* vermelho - zerado */
-    --radius: 14px;
-    --shadow-1: 0 6px 18px rgba(0,0,0,.08);
-    --shadow-2: 0 12px 28px rgba(0,0,0,.12);
-    --appbar-height: 56px; /* altura da topbar global (ajuste se preciso) */
+    /* altura da topbar (ajuste fino se precisar) */
+    --appbar-height: 56px;
+    /* status */
+    --ok: #10b981;
+    --low: #f59e0b;
+    --zero: #ef4444;
+    /* layout */
+    --page-pad-bottom: calc(var(--mbn-height, 68px) + 16px);
 }
 
 /* página */
 .estoque-page {
-    background: var(--bg);
-    padding-bottom: calc(var(--mbn-height, 68px) + 16px);
+    background: transparent; /* quem pinta é o page-hero / body */
+    padding-bottom: var(--page-pad-bottom);
 }
 
-/* header sticky */
+/* header sticky (fica “glass” e funciona no dark) */
 .page-header {
     position: sticky;
     top: var(--appbar-height);
     z-index: 40;
-    background: rgba(242,243,247,.85);
-    backdrop-filter: saturate(120%) blur(6px);
-    border-radius: 12px;
-    padding: .5rem .75rem;
-    margin-bottom: .75rem;
-    box-shadow: 0 8px 24px -18px rgba(0,0,0,.4);
+    background: var(--glass, rgba(255,255,255,.70));
+    border: 1px solid var(--glass-border, rgba(255,255,255,.45));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: var(--radius-lg, 18px);
+    padding: .65rem .85rem;
+    margin-bottom: .9rem;
+    box-shadow: 0 10px 28px rgba(0,0,0,.10);
 }
 
     .page-header h1 {
         margin: 0;
-        font-weight: 800;
+        font-weight: 900;
         color: var(--text);
+        letter-spacing: -.02em;
     }
 
 /* KPIs */
 .kpi {
-    border-radius: var(--radius);
-    background: #fff;
+    border-radius: var(--radius-lg, 18px);
+    background: var(--bg-elev-2, #fff);
+    border: 1px solid var(--border);
     box-shadow: var(--shadow-1);
-    border: 1px solid rgba(0,0,0,.05);
     position: relative;
     overflow: hidden;
 }
@@ -57,7 +60,8 @@
         position: absolute;
         inset: 0 0 auto 0;
         height: 4px;
-        background: linear-gradient(90deg,var(--brand-start),var(--brand-end));
+        background: linear-gradient(90deg, var(--brand-start), var(--brand-end));
+        opacity: .95;
     }
 
     .kpi .text-muted {
@@ -65,70 +69,86 @@
     }
 
     .kpi .num {
-        font-weight: 800;
+        font-weight: 900;
         font-size: 1.15rem;
         color: var(--text);
     }
 
 /* filtros */
 .estoque-page .card {
-    border-radius: 16px;
-    border: 1px solid rgba(0,0,0,.06);
+    border-radius: var(--radius-lg, 18px);
+    border: 1px solid var(--border);
+    background: var(--bg-elev-2, #fff);
     box-shadow: var(--shadow-1);
 }
 
 .estoque-page .form-label {
-    font-weight: 700;
+    font-weight: 800;
     color: var(--text);
 }
 
-.estoque-page .form-control, .estoque-page .form-select {
-    border-radius: 10px;
-    border: 1px solid #e5e7eb;
+.estoque-page .form-control,
+.estoque-page .form-select {
+    border-radius: 12px;
+    border: 1px solid var(--input-border, rgba(15,23,42,.14));
+    background: var(--input-bg, rgba(255,255,255,.95));
+    color: var(--input-text, var(--text));
 }
 
-    .estoque-page .form-control:focus, .estoque-page .form-select:focus {
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(45,123,255,.18);
+    .estoque-page .form-control::placeholder {
+        color: var(--input-placeholder, rgba(107,114,128,.85));
     }
 
+    .estoque-page .form-control:focus,
+    .estoque-page .form-select:focus {
+        border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
+    }
+
+/* botões */
 .estoque-page .btn.btn-primary {
     background: var(--primary);
     border-color: var(--primary);
-    font-weight: 700;
+    font-weight: 800;
 }
 
     .estoque-page .btn.btn-primary:hover {
-        background: var(--primary-dk);
-        border-color: var(--primary-dk);
+        background: var(--primary-dark);
+        border-color: var(--primary-dark);
     }
 
-/* tabela */
-.table-responsive {
-    border-radius: 14px;
+.estoque-page .btn.btn-outline-secondary {
+    border-radius: 12px;
+}
+
+/* TABELA desktop */
+.table-responsive.d-none.d-md-block {
+    border-radius: var(--radius-lg, 18px);
     box-shadow: var(--shadow-1);
-    background: #fff;
-    border: 1px solid rgba(0,0,0,.05);
+    background: var(--bg-elev-2, #fff);
+    border: 1px solid var(--border);
     overflow: auto;
 }
 
+/* tabela */
 .estoque-table {
-    --head-bg: #f8fafc;
-    --row-border: #e5e7eb;
-    --row-hover: rgba(0,0,0,.025);
+    --head-bg: color-mix(in srgb, var(--text) 4%, transparent);
+    --row-border: var(--border);
+    --row-hover: color-mix(in srgb, var(--primary) 6%, transparent);
     border-collapse: separate;
     border-spacing: 0;
 }
 
+    /* header sticky do thead (sem “top” bugado) */
     .estoque-table thead th {
-        background: var(--head-bg);
-        color: var(--text);
-        font-weight: 800;
+        background: var(--head-bg) !important;
+        color: var(--text) !important;
+        font-weight: 900;
         white-space: nowrap;
-        border-bottom: 1px solid var(--row-border);
-        
-        top: calc(var(--appbar-height) + 64px);
-        z-index: 5; /* sticky do thead */
+        border-bottom: 1px solid var(--row-border) !important;
+        position: sticky;
+        top: 0; /* sticky dentro do table-responsive */
+        z-index: 5;
     }
 
     .estoque-table tbody tr {
@@ -144,12 +164,14 @@
         color: var(--text);
     }
 
-    .estoque-table .text-end {
-        text-align: right;
-    }
+        .estoque-table td.text-end {
+            text-align: right;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
 
     .estoque-table s {
-        color: #9ca3af;
+        color: color-mix(in srgb, var(--muted) 80%, transparent);
     }
 
 /* miniatura do produto */
@@ -157,14 +179,14 @@
     width: 40px;
     height: 40px;
     object-fit: contain;
-    background: #fff;
-    border: 1px solid rgba(0,0,0,.06);
-    border-radius: 8px;
+    background: var(--bg-elev-2, #fff);
+    border: 1px solid var(--border);
+    border-radius: 10px;
     transition: transform .12s ease;
 }
 
 .prod-cell:hover .prod-thumb {
-    transform: scale(1.04);
+    transform: scale(1.05);
 }
 
 .prod-title {
@@ -177,7 +199,7 @@
     text-overflow: ellipsis;
 }
 
-/* status */
+/* status dot */
 .status-dot {
     width: 10px;
     height: 10px;
@@ -198,7 +220,21 @@
     background: var(--zero);
 }
 
-/* colunas mais estáveis (opcional) */
+/* badge “data” (não usa bg-light fixo) */
+.badge-soft {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .35rem .55rem;
+    border-radius: 999px;
+    font-weight: 800;
+    font-size: .78rem;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--text) 6%, transparent);
+    color: var(--text);
+}
+
+/* colunas (opcional) */
 .estoque-table th:nth-child(2), .estoque-table td:nth-child(2) {
     width: 180px;
 }
@@ -216,141 +252,12 @@
 }
 
 .estoque-table th:last-child, .estoque-table td:last-child {
-    width: 80px;
+    width: 86px;
 }
 
-/* ===== Mobile: tabela vira cartões organizados ===== */
-/* ===== Mobile: card em DUAS COLUNAS (labels à esquerda, valores à direita) ===== */
-/* ===== Mobile: card em DUAS COLUNAS (labels à esquerda, valores à direita) ===== */
-@media (max-width: 576.98px) {
-
-    .table-responsive {
-        background: transparent;
-        box-shadow: none;
-        border: 0;
-    }
-
-    .estoque-table {
-        display: block;
-    }
-
-        .estoque-table thead {
-            display: none;
-        }
-
-        .estoque-table tbody {
-            display: grid;
-            gap: .9rem;
-        }
-
-        /* CARD */
-        .estoque-table tr {
-            display: grid;
-            grid-template-columns: 1fr;
-            position: relative;
-            background: #fff;
-            border: 1px solid rgba(0,0,0,.06);
-            border-radius: 16px;
-            box-shadow: var(--shadow-1);
-            overflow: hidden;
-            --label-w: 120px; /* LARGURA da coluna de rótulos (ajuste se quiser) */
-        }
-
-            .estoque-table tr::before {
-                content: "";
-                position: absolute;
-                inset: 0 0 auto 0;
-                height: 3px;
-                background: linear-gradient(90deg,var(--brand-start),var(--brand-end));
-                opacity: .9;
-            }
-
-            /* HEADER (Produto) */
-            .estoque-table tr > td:first-child {
-                display: grid;
-                grid-template-columns: auto 1fr;
-                gap: .7rem;
-                align-items: center;
-                padding: .9rem .95rem .75rem;
-                background: linear-gradient(180deg,#fff,#f9fafb);
-            }
-
-                .estoque-table tr > td:first-child::before {
-                    content: none;
-                }
-
-                .estoque-table tr > td:first-child .prod-thumb {
-                    width: 48px;
-                    height: 48px;
-                    border-radius: 10px;
-                }
-
-                .estoque-table tr > td:first-child .prod-title {
-                    font-weight: 800;
-                    font-size: .98rem;
-                    line-height: 1.15;
-                }
-
-                .estoque-table tr > td:first-child .small {
-                    margin-top: .15rem;
-                }
-
-            /* LINHAS rotuladas em duas colunas fixas */
-            .estoque-table tr > td:not(:first-child) {
-                display: grid;
-                grid-template-columns: var(--label-w) 1fr; /* labels à esquerda, valor à direita */
-                align-items: center;
-                gap: .55rem;
-                padding: .62rem .95rem;
-                border-top: 1px solid #eef2f6;
-            }
-
-                .estoque-table tr > td:not(:first-child)::before {
-                    content: attr(data-label);
-                    font-weight: 700;
-                    color: var(--muted);
-                }
-
-        /* Valores numéricos: à direita e sem quebra (R$ 159,90) */
-        .estoque-table td.text-end {
-            text-align: right;
-            white-space: nowrap;
-            font-variant-numeric: tabular-nums;
-        }
-            /* preço antigo pode quebrar numa linha menor */
-            .estoque-table td.text-end .small {
-                white-space: normal;
-                display: block;
-                margin-top: .15rem;
-            }
-
-        /* Lançamento: chip à direita */
-        .estoque-table td[data-label="Lançamento"] .badge {
-            justify-self: end;
-        }
-
-        /* Rodapé de ações (sem rótulo do lado esquerdo) */
-        .estoque-table td:last-child {
-            display: flex;
-            justify-content: flex-end;
-            gap: .55rem;
-            padding: .62rem .95rem .85rem;
-            border-top: 1px solid #eef2f6;
-        }
-
-            .estoque-table td:last-child::before {
-                content: none;
-            }
-}
-
-/* opcional: para telas MUITO estreitas, encolhe um pouco a coluna de rótulos */
-@media (max-width: 360px) {
-    .estoque-table tr {
-        --label-w: 110px;
-    }
-}
-
-/* ====== Cards mobile (aparecem só em < md) ====== */
+/* =========================================================
+   MOBILE: cards (você já usa .estoque-cards)
+   ========================================================= */
 .estoque-cards {
     display: none;
 }
@@ -358,86 +265,70 @@
 @media (max-width: 767.98px) {
     .estoque-cards {
         display: grid;
-        gap: .9rem;
+        gap: .95rem;
     }
 
     .ec-card {
         position: relative;
-        background: #fff;
-        border: 1px solid rgba(0,0,0,.06);
-        border-radius: 16px;
+        background: var(--bg-elev-2, #fff);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg, 18px);
         box-shadow: var(--shadow-1);
         overflow: hidden;
     }
-        /* filete do tema no topo */
+
         .ec-card::before {
             content: "";
             position: absolute;
             inset: 0 0 auto 0;
             height: 3px;
-            background: linear-gradient(90deg,var(--brand-start),var(--brand-end));
-            opacity: .9;
+            background: linear-gradient(90deg, var(--brand-start), var(--brand-end));
+            opacity: .95;
         }
 
     .ec-head {
         display: grid;
         grid-template-columns: auto 1fr;
-        gap: .7rem;
+        gap: .75rem;
         align-items: center;
-        padding: .9rem .95rem .7rem;
-        background: linear-gradient(180deg,#ffffff,#f9fafb);
+        padding: .95rem 1rem .75rem;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--bg-elev-2) 90%, transparent), color-mix(in srgb, var(--text) 2%, transparent) );
     }
 
     .ec-thumb {
-        width: 52px;
-        height: 52px;
-        border-radius: 12px;
+        width: 54px;
+        height: 54px;
+        border-radius: 14px;
         object-fit: contain;
-        background: #fff;
-        border: 1px solid rgba(0,0,0,.06);
+        background: var(--bg-elev-2, #fff);
+        border: 1px solid var(--border);
     }
 
     .ec-title {
         margin: 0;
-        font-size: .98rem;
-        font-weight: 800;
+        font-size: 1.02rem;
+        font-weight: 900;
         line-height: 1.15;
+        color: var(--text);
     }
 
-    .status-dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        display: inline-block;
-        margin-right: .35rem;
-    }
-
-    .dot-ok {
-        background: var(--ok);
-    }
-
-    .dot-low {
-        background: var(--low);
-    }
-
-    .dot-zero {
-        background: var(--zero);
+    .ec-status {
+        color: var(--muted) !important;
     }
 
     .ec-body {
-        padding: .35rem .95rem .2rem;
+        padding: .35rem 1rem .15rem;
         display: grid;
         gap: .1rem;
     }
 
-    /* duas colunas fixas: label | valor */
     .ec-row {
-        --label-w: 120px; /* ajuste fino conforme seu gosto */
+        --label-w: 120px;
         display: grid;
         grid-template-columns: var(--label-w) 1fr;
         align-items: center;
-        padding: .55rem 0;
-        border-top: 1px solid #eef2f6;
+        padding: .60rem 0;
+        border-top: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
     }
 
         .ec-row:first-child {
@@ -445,7 +336,7 @@
         }
 
     .ec-label {
-        font-weight: 700;
+        font-weight: 800;
         color: var(--muted);
     }
 
@@ -464,43 +355,20 @@
             display: block;
             margin-top: .15rem;
             white-space: normal;
+            color: var(--muted) !important;
         }
 
     .ec-foot {
         display: flex;
         justify-content: flex-end;
         gap: .5rem;
-        padding: .6rem .95rem .85rem;
-        border-top: 1px solid #eef2f6;
+        padding: .65rem 1rem .95rem;
+        border-top: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
     }
 
-    /* Telas muito estreitas: encolhe label */
     @media (max-width: 360px) {
         .ec-row {
             --label-w: 108px;
         }
     }
 }
-
-/* Miniaturas/títulos também são usados no desktop */
-.prod-thumb {
-    width: 40px;
-    height: 40px;
-    object-fit: contain;
-    background: #fff;
-    border: 1px solid rgba(0,0,0,.06);
-    border-radius: 8px;
-}
-
-.prod-cell:hover .prod-thumb {
-    transform: scale(1.04);
-    transition: transform .12s ease;
-}
-
-.prod-title.text-truncate-1 {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 520px;
-}
-

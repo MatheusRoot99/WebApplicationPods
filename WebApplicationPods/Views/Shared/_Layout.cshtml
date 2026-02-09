@@ -5,31 +5,38 @@
 @inject ILojaConfigService LojaSvc
 
 @{
-    // ===== Flags pra controlar o "chrome" (sidebar/nav) por página =====
-    // Use isso no Login/Landing:
-    // ViewData["HideChrome"] = true;
-    // ViewData["BodyClass"] = "auth-page"; (ou "landing-page")
     var hideChrome = (ViewData["HideChrome"] as bool?) ?? false;
     var bodyClass = (ViewData["BodyClass"] as string) ?? "";
 
-    // ===== Header da loja (pode ser null quando não tem loja - www/localhost) =====
     var cfg = await LojaSvc.GetAsync();
     var baseUrl = $"{Context.Request?.Scheme}://{Context.Request?.Host}";
     var headerVM = LojaSvc.BuildHeader(cfg, baseUrl, Url.Action("Perfil", "Loja"));
-
     ViewData["StoreHeader"] = headerVM;
 
-    // fallback quando não tem loja (www/localhost)
     var mobileBrand = headerVM?.Nome ?? "Pods Eletrônicos";
 }
 
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-theme="light">
+ @* THEME: data-theme será trocado via JS *@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-
     <title>@ViewData["Title"] - Pods Eletrônicos</title>
+
+    <!-- THEME: aplica antes de pintar a tela -->
+    <script>
+        (function () {
+          try {
+            var saved = localStorage.getItem('theme');
+            if (!saved) {
+              // prefere o SO
+              saved = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+            }
+            document.documentElement.setAttribute('data-theme', saved);
+          } catch {}
+        })();
+    </script>
 
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
@@ -41,7 +48,6 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/sidebar.css" asp-append-version="true" />
 
-    @* IMPORTANTE: permite @section Styles nas views *@
     @await RenderSectionAsync("Styles", required: false)
 
     <style>
@@ -58,7 +64,6 @@
             height: 100%;
         }
 
-        /* Banner para habilitar som */
         #rt-audio-banner {
             position: fixed;
             right: 16px;
@@ -80,7 +85,6 @@
                 opacity: .9;
             }
 
-        /* Só quando existir bottom-nav na página */
         .has-bottom-nav .page-content {
             padding-bottom: calc(var(--mbn-height) + var(--kb-shift) + env(safe-area-inset-bottom) + 12px);
         }
@@ -88,12 +92,10 @@
 </head>
 
 <body class="@bodyClass">
-    <!-- Token antiforgery fallback (pra JS/fetch) -->
     <input type="hidden" id="__RequestVerificationToken"
            name="__RequestVerificationToken"
            value="@antiforgery.GetAndStoreTokens(Context).RequestToken" />
 
-    @* ====== MODO LIMPO (Login/Landing) ====== *@
     @if (hideChrome)
     {
         <main class="container py-4">
@@ -107,7 +109,7 @@
 
             <div id="page-content-wrapper">
                 <!-- Topbar -->
-                <nav class="navbar navbar-dark bg-dark border-bottom">
+                <nav class="navbar navbar-dark border-bottom">
                     <div class="container-fluid">
 
                         <!-- ===== MOBILE TOOLBAR (até lg) ===== -->
@@ -124,7 +126,12 @@
                             <div class="mobile-brand text-truncate">@mobileBrand</div>
 
                             <div class="toolbar-actions">
-                                @* Carrinho (cliente) *@
+
+                                <!-- THEME toggle (mobile) -->
+                                <button type="button" class="theme-toggle" id="btnThemeMobile" title="Alternar tema">
+                                    <i class="fas fa-moon"></i>
+                                </button>
+
                                 @if (!User.IsInRole("Admin") && !User.IsInRole("Lojista"))
                                 {
                                     <a class="icon-btn position-relative" asp-controller="Carrinho" asp-action="Index" aria-label="Carrinho">
@@ -137,7 +144,6 @@
                                     </a>
                                 }
 
-                                @* Notificações *@
                                 @if (User.Identity?.IsAuthenticated == true)
                                 {
                                     <div class="dropdown">
@@ -149,7 +155,6 @@
                                     </div>
                                 }
 
-                                @* Conta *@
                                 <div class="dropdown">
                                     <button class="icon-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Conta">
                                         <i class="fas fa-user-circle"></i>
@@ -197,6 +202,13 @@
                             </div>
 
                             <div class="ms-auto d-flex align-items-center gap-2">
+
+                                <!-- THEME toggle (desktop) -->
+                                <button type="button" class="theme-toggle" id="btnTheme" title="Alternar tema">
+                                    <i class="fas fa-moon"></i>
+                                    <span class="d-none d-xl-inline">Tema</span>
+                                </button>
+
                                 @if (!User.IsInRole("Admin") && !User.IsInRole("Lojista"))
                                 {
                                     <a class="nav-link cart-link text-white" asp-controller="Carrinho" asp-action="Index">
@@ -255,8 +267,13 @@
                     @await Html.PartialAsync("_StoreHeader", headerVM)
                 }
 
+                <!-- THEME: wrapper que dá a “pegada” da referência -->
                 <main id="page-content" class="page-content container-fluid pt-3">
-                    @RenderBody()
+                    <div class="page-hero">
+                        <div class="app-shell">
+                            @RenderBody()
+                        </div>
+                    </div>
                 </main>
             </div>
         </div>
@@ -292,6 +309,35 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/sidebar.js" asp-append-version="true"></script>
     <script src="~/js/sabores.js" asp-append-version="true"></script>
+
+    <!-- THEME: toggle + ícone -->
+    <script>
+        (function(){
+          function currentTheme(){
+            return document.documentElement.getAttribute('data-theme') || 'light';
+          }
+          function setIcon(){
+            var t = currentTheme();
+            var iconClass = (t === 'dark') ? 'fa-sun' : 'fa-moon';
+            ['btnTheme','btnThemeMobile'].forEach(function(id){
+              var btn = document.getElementById(id);
+              if (!btn) return;
+              var i = btn.querySelector('i');
+              if (i) i.className = 'fas ' + iconClass;
+            });
+          }
+          function toggleTheme(){
+            var t = currentTheme();
+            var next = (t === 'dark') ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('theme', next); } catch {}
+            setIcon();
+          }
+          document.getElementById('btnTheme')?.addEventListener('click', toggleTheme);
+          document.getElementById('btnThemeMobile')?.addEventListener('click', toggleTheme);
+          setIcon();
+        })();
+    </script>
 
     <!-- ====== JS global: badges / toast / storage / csrf / sync ====== -->
     <script>
@@ -405,7 +451,7 @@
         })();
     </script>
 
-    <!-- Compensação do teclado: só aumenta respiro do CONTEÚDO -->
+    <!-- Compensação do teclado -->
     <script>
         (function(){
           function applyKbShift(){
@@ -429,7 +475,6 @@
     </script>
 
     <script>
-        // adiciona a classe só se o BottomNav existir
         (function(){
           if (document.querySelector('.mobile-bottom-nav')) {
             document.body.classList.add('has-bottom-nav');
@@ -459,7 +504,6 @@
         };
     </script>
 
-    @* ===== Realtime do Lojista (SignalR + Som + Notificação) ===== *@
     @if (User?.Identity?.IsAuthenticated == true && User.IsInRole("Lojista"))
     {
         <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js" crossorigin="anonymous"></script>
@@ -568,7 +612,6 @@
         </script>
     }
 
-    @* IMPORTANTE: permite @section Scripts nas views *@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

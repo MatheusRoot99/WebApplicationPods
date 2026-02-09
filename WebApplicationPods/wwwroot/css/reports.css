@@ -1,155 +1,107 @@
-﻿/* ============ Reports (Admin) ============ */
-/* Depende das variáveis já existentes no site:
-   --brand-start, --brand-end, --primary, --primary-dark,
-   --dark, --light, --gray, --text-dark, --text-light,
-   --primary-grad (gradiente marca) e --mbn-height (altura do bottom-nav)
-*/
-/* ===== Paleta de cores (site) ===== */
+﻿/* =========================================================
+   Reports (Admin) — integrado ao tema global (light/dark)
+   NÃO redefine :root com paleta fixa.
+   Depende dos tokens do site.css:
+   --bg --text --muted --border --primary --primary-dark
+   --brand-start --brand-end --shadow-1 --radius-lg
+   --glass --glass-border (se existir) - senão usa fallback
+   ========================================================= */
+
 :root {
-    /* marca */
-    --brand-start: #6a11cb; /* roxo */
-    --brand-end: #2575fc; /* azul  */
-    --primary: #2575fc; /* azul sólido para bordas/textos */
-    --primary-dark: #1e56d9;
-    /* base */
-    --dark: #111827; /* quase preto */
-    --light: #ffffff;
-    --gray: #f5f5f7;
-    --text-dark: #111827;
-    --text-light: #6b7280;
-    /* util */
-    --primary-grad: linear-gradient(135deg,var(--brand-start),var(--brand-end));
-    --shadow-1: 0 4px 20px rgba(0,0,0,.08);
-    /* altura do bottom-nav (ajuste se diferente) */
-    --mbn-height: 68px;
+    --page-pad-bottom: calc(var(--mbn-height, 68px) + 16px);
 }
 
-/* Espaço extra para não colidir com o bottom-nav em mobile */
+/* espaço para bottom-nav */
 .page-pad {
-    padding-bottom: calc(var(--mbn-height, 68px) + 16px);
+    padding-bottom: var(--page-pad-bottom);
 }
 
-/* Títulos */
-h2 {
-    font-weight: 700;
-    color: var(--dark);
-    margin: 0;
-}
-
-/* Toolbar (filtros superiores) */
-.toolbar .form-label {
-    font-weight: 500;
-    color: var(--text-dark);
-}
-
-.toolbar .form-control,
-.toolbar .form-select {
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    transition: border-color .2s, box-shadow .2s;
-    background: var(--light);
-    color: var(--text-dark);
-}
-
-    .toolbar .form-control:focus,
-    .toolbar .form-select:focus {
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
+    /* Título */
+    .page-pad h2 {
+        font-weight: 900;
+        color: var(--text);
+        margin: 0;
+        letter-spacing: -.02em;
     }
 
+/* Toolbar (filtros) */
+.toolbar {
+    background: var(--glass, rgba(255,255,255,.70));
+    border: 1px solid var(--glass-border, rgba(255,255,255,.45));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: var(--radius-lg, 18px);
+    padding: .85rem .95rem;
+    box-shadow: 0 10px 28px rgba(0,0,0,.10);
+}
+
+    .toolbar .form-label {
+        font-weight: 800;
+        color: var(--text);
+    }
+
+    .toolbar .form-control,
+    .toolbar .form-select {
+        border-radius: 12px;
+        border: 1px solid var(--input-border, rgba(15,23,42,.14));
+        background: var(--input-bg, rgba(255,255,255,.95));
+        color: var(--input-text, var(--text));
+        transition: border-color .2s, box-shadow .2s;
+    }
+
+        .toolbar .form-control:focus,
+        .toolbar .form-select:focus {
+            border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
+        }
+
+/* Botão da marca */
 .btn-brand {
-    background: var(--primary-grad, linear-gradient(135deg, var(--brand-start), var(--brand-end)));
+    background: linear-gradient(135deg, var(--brand-start), var(--brand-end));
     color: #fff;
     border: 0;
-    border-radius: 8px;
-    padding: .5rem 1.25rem;
-    font-weight: 500;
+    border-radius: 12px;
+    padding: .55rem 1.15rem;
+    font-weight: 900;
     transition: transform .15s ease, box-shadow .15s ease;
 }
 
     .btn-brand:hover {
         transform: translateY(-1px);
-        box-shadow: 0 6px 18px color-mix(in srgb, var(--primary) 25%, transparent);
+        box-shadow: 0 10px 22px color-mix(in srgb, var(--primary) 22%, transparent);
         color: #fff;
     }
 
-/* Cards base */
-.card {
-    border: 0;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,.08);
+/* Cards (não quebra o Bootstrap inteiro: limita ao container do relatório) */
+.page-pad .card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg, 18px);
+    box-shadow: var(--shadow-1);
     overflow: hidden;
-    background: var(--light);
-    transition: box-shadow .25s, transform .25s;
+    background: var(--bg-elev-2, #fff);
 }
 
-    .card:hover {
-        box-shadow: 0 6px 25px rgba(0,0,0,.10);
-        transform: translateY(-2px);
-    }
-
-.card-header {
-    background: var(--primary-grad, linear-gradient(135deg, var(--brand-start), var(--brand-end)));
+/* Header do card (gradiente mais “soft”, legível no dark) */
+.page-pad .card-header {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--brand-start) 88%, #000 12%), color-mix(in srgb, var(--brand-end) 92%, #000 8%) );
     color: #fff;
-    font-weight: 600;
+    font-weight: 900;
     border: 0;
-    padding: 1rem 1.25rem;
-}
-
-.card-body {
-    padding: 1rem 1.25rem;
+    padding: .95rem 1.15rem;
 }
 
 /* KPIs */
 .kpi .text-muted {
-    color: var(--text-light);
+    color: var(--muted) !important;
 }
 
 .kpi .h3 {
     color: var(--primary);
     margin: .25rem 0 0 0;
+    font-weight: 900;
 }
 
-/* Tabela */
-.table-container {
-    background: var(--light);
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,.08);
-    overflow: hidden;
-}
-
-.table {
-    margin-bottom: 0;
-}
-
-    .table thead th {
-        background: #f8fafc;
-        color: var(--text-dark);
-        font-weight: 600;
-        padding: 1rem;
-        border-bottom: 2px solid #e2e8f0;
-    }
-
-    .table td {
-        padding: 1rem;
-        vertical-align: middle;
-        border-color: #f1f5f9;
-    }
-
-.table-striped tbody tr:nth-of-type(odd) {
-    background-color: #fafafb;
-}
-
-.table tbody tr:hover {
-    background-color: #f8fafc;
-}
-
-.table-responsive {
-    width: 100%;
-    overflow-x: auto;
-}
-
-/* Gráficos responsivos (Chart.js) */
+/* Charts */
 .chart-wrap {
     position: relative;
     width: 100%;
@@ -163,27 +115,39 @@ h2 {
         height: 260px;
     }
 
-/* Badges auxiliares (se usar) */
-.badge-soft {
-    background: #eef2ff;
-    color: var(--primary);
-    border-radius: 999px;
-    padding: .25rem .6rem;
-    font-weight: 600;
+/* Tabela */
+.page-pad .table-responsive {
+    width: 100%;
+    overflow-x: auto;
 }
+
+.page-pad .table {
+    margin-bottom: 0;
+    color: var(--text);
+}
+
+    .page-pad .table thead th {
+        background: color-mix(in srgb, var(--text) 4%, transparent) !important;
+        color: var(--text) !important;
+        font-weight: 900;
+        border-bottom: 1px solid var(--border) !important;
+    }
+
+    .page-pad .table td {
+        border-color: color-mix(in srgb, var(--border) 88%, transparent) !important;
+        vertical-align: middle;
+    }
+
+    .page-pad .table tbody tr:hover {
+        background: color-mix(in srgb, var(--primary) 6%, transparent);
+    }
 
 /* Util */
-.text-muted {
-    color: var(--text-light) !important;
+.page-pad .text-muted {
+    color: var(--muted) !important;
 }
 
-/* Mobile tweaks */
-@media (max-width: 992px) {
-    .toolbar {
-        gap: .5rem 1rem;
-    }
-}
-
+/* Mobile */
 @media (max-width: 576px) {
     .chart-wrap.h320 {
         height: 280px;

@@ -3,7 +3,6 @@
 @model IEnumerable<PedidoModel>
 
 @{
-    // Dicionário de transições permitido exposto pelo controller
     var allowed = ViewBag.Allowed as IDictionary<string, string[]>;
     var pedidos = Model?.OrderByDescending(x => x.DataPedido) ?? Enumerable.Empty<PedidoModel>();
 }
@@ -32,7 +31,7 @@
         isDinheiroOuDebito &&
         string.Equals(p.Status, "Aguardando Pagamento (Entrega)", StringComparison.OrdinalIgnoreCase);
 
-    <tr data-id="@p.Id">
+    <tr data-id="@p.Id" data-order-id="@p.Id">
         <td data-th="Cliente">
             <div class="cell-primary">
                 <div class="title">@((p.Cliente?.Nome) ?? "—")</div>
@@ -40,94 +39,105 @@
             </div>
         </td>
 
-        <td data-th="Data">@p.DataPedido.ToString("dd/MM HH:mm")</td>
-        <td data-th="Total">@p.ValorTotal.ToString("C")</td>
-        <td data-th="Pagamento">@((p.MetodoPagamento ?? "—"))</td>
+        <td data-th="Data">
+            @p.DataPedido.ToString("dd/MM HH:mm")
+        </td>
+
+        <td data-th="Total" class="text-end">
+            @p.ValorTotal.ToString("C")
+        </td>
+
+        <td data-th="Pagamento">
+            @((p.MetodoPagamento ?? "—"))
+        </td>
+
         <td data-th="Status">
             <span class="badge badge-state" data-state="@statusAtual">@statusAtual</span>
         </td>
 
         <td data-th="Ações" class="text-end">
-            <!-- Grupo de ações: todos com class .js-inline-action para AJAX -->
-            @if (proximas.Any())
-            {
-                <div class="btn-group btn-group-sm" role="group" aria-label="Ações do pedido">
-                    @foreach (var prox in proximas)
-                    {
-                        var lowered = (prox ?? string.Empty).ToLowerInvariant();
-                        var label = prox;
-                        var css = "btn btn-outline-secondary btn-sm";
+            <div class="actions-wrap">
+                @* Transições *@
+                @if (proximas.Any())
+                {
+                    <div class="btn-group btn-group-sm actions-group" role="group" aria-label="Ações do pedido">
+                        @foreach (var prox in proximas)
+                        {
+                            var lowered = (prox ?? string.Empty).ToLowerInvariant();
+                            var label = prox;
+                            var css = "btn btn-outline-secondary btn-sm";
 
-                        if (lowered.Contains("pago")) { label = "Aprovar"; css = "btn btn-success btn-sm"; }
-                        else if (lowered.Contains("prepara")) { label = "Iniciar"; css = "btn btn-primary btn-sm"; }
-                        else if (lowered.Contains("pronto")) { label = "Pronto"; css = "btn btn-warning btn-sm"; }
-                        else if (lowered.Contains("saiu") && lowered.Contains("entrega")) { label = "Saiu p/ Entrega"; css = "btn btn-secondary btn-sm"; }
-                        else if (lowered.Contains("entregue")) { label = "Entregue"; css = "btn btn-dark btn-sm"; }
-                        else if (lowered.Contains("cancel")) { label = "Cancelar"; css = "btn btn-danger btn-sm"; }
+                            if (lowered.Contains("pago")) { label = "Aprovar"; css = "btn btn-success btn-sm"; }
+                            else if (lowered.Contains("prepara")) { label = "Iniciar"; css = "btn btn-primary btn-sm"; }
+                            else if (lowered.Contains("pronto")) { label = "Pronto"; css = "btn btn-warning btn-sm"; }
+                            else if (lowered.Contains("saiu") && lowered.Contains("entrega")) { label = "Saiu p/ Entrega"; css = "btn btn-secondary btn-sm"; }
+                            else if (lowered.Contains("entregue")) { label = "Entregue"; css = "btn btn-dark btn-sm"; }
+                            else if (lowered.Contains("cancel")) { label = "Cancelar"; css = "btn btn-danger btn-sm"; }
 
-                        <form class="d-inline js-inline-action"
-                              data-action="status"
-                              data-success="Status atualizado!"
-                              data-confirm="@((lowered.Contains("cancel")) ? "Confirmar cancelamento do pedido?" : "")"
-                              action="@Url.Action("AtualizarStatus", "PedidosAdmin")"
-                              method="post">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="id" value="@p.Id" />
-                            <input type="hidden" name="status" value="@prox" />
-                            <button type="submit" class="@css">@label</button>
-                        </form>
-                    }
-                </div>
-            }
+                            <form class="d-inline js-inline-action"
+                                  data-action="status"
+                                  data-success="Status atualizado!"
+                                  data-confirm="@((lowered.Contains("cancel")) ? "Confirmar cancelamento do pedido?" : "")"
+                                  action="@Url.Action("AtualizarStatus", "PedidosAdmin")"
+                                  method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@p.Id" />
+                                <input type="hidden" name="status" value="@prox" />
+                                <button type="submit" class="@css">@label</button>
+                            </form>
+                        }
+                    </div>
+                }
 
-            @* PIX manual pendente: botão para confirmar recebimento *@
-            @if (pagamentoPixManualPendente != null)
-            {
-                <form class="d-inline js-inline-action"
-                      data-action="confirmar-pix"
-                      data-success="PIX confirmado e estoque baixado!"
-                      action="@Url.Action("ConfirmarPixManual", "Pagamento")"
-                      method="post">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="pagamentoId" value="@pagamentoPixManualPendente.Id" />
-                    <button type="submit" class="btn btn-success btn-sm" title="Marcar PIX como recebido e baixar estoque">
-                        Confirmar PIX recebido
-                    </button>
-                </form>
-            }
+                @* PIX manual pendente *@
+                @if (pagamentoPixManualPendente != null)
+                {
+                    <form class="d-inline js-inline-action"
+                          data-action="confirmar-pix"
+                          data-success="PIX confirmado e estoque baixado!"
+                          action="@Url.Action("ConfirmarPixManual", "Pagamento")"
+                          method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="pagamentoId" value="@pagamentoPixManualPendente.Id" />
+                        <button type="submit" class="btn btn-success btn-sm">
+                            Confirmar PIX
+                        </button>
+                    </form>
+                }
 
-            @* Dinheiro / Débito na entrega: aprovar e baixar estoque *@
-            @if (podeAprovarNaEntrega)
-            {
-                <form class="d-inline js-inline-action"
-                      data-action="aprovar-entrega"
-                      data-success="Pagamento aprovado na entrega e estoque baixado!"
-                      action="@Url.Action("AprovarPagamentoEntrega", "Pagamento")"
-                      method="post">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="pedidoId" value="@p.Id" />
-                    <button type="submit" class="btn btn-success btn-sm">
-                        Aprovar pagamento &amp; baixar estoque
-                    </button>
-                </form>
-            }
+                @* Dinheiro/Débito na entrega *@
+                @if (podeAprovarNaEntrega)
+                {
+                    <form class="d-inline js-inline-action"
+                          data-action="aprovar-entrega"
+                          data-success="Pagamento aprovado na entrega e estoque baixado!"
+                          action="@Url.Action("AprovarPagamentoEntrega", "Pagamento")"
+                          method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="pedidoId" value="@p.Id" />
+                        <button type="submit" class="btn btn-success btn-sm">
+                            Aprovar na entrega
+                        </button>
+                    </form>
+                }
 
-            @* Botão de exclusão só aparece para cancelados *@
-            @if (string.Equals(p.Status, "Cancelado", StringComparison.OrdinalIgnoreCase))
-            {
-                <form class="d-inline js-inline-action"
-                      data-action="excluir"
-                      data-success="Pedido excluído."
-                      data-confirm="Excluir este pedido?"
-                      action="@Url.Action("Excluir", "PedidosAdmin")"
-                      method="post">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="id" value="@p.Id" />
-                    <button type="submit" class="btn btn-sm btn-excluir">
-                        <i class="bi bi-trash"></i> Excluir
-                    </button>
-                </form>
-            }
+                @* Excluir só para cancelados *@
+                @if (string.Equals(p.Status, "Cancelado", StringComparison.OrdinalIgnoreCase))
+                {
+                    <form class="d-inline js-inline-action"
+                          data-action="excluir"
+                          data-success="Pedido excluído."
+                          data-confirm="Excluir este pedido?"
+                          action="@Url.Action("Excluir", "PedidosAdmin")"
+                          method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@p.Id" />
+                        <button type="submit" class="btn btn-sm btn-excluir">
+                            <i class="bi bi-trash"></i> Excluir
+                        </button>
+                    </form>
+                }
+            </div>
         </td>
     </tr>
 }
