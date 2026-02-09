@@ -3,11 +3,6 @@
 @{
     var isEdit = Model?.Id.HasValue == true && Model.Id.Value > 0;
 }
-@* 
-@section Styles {
-    <link rel="stylesheet" href="~/css/produto-form.css" asp-append-version="true" />
-} *@
-
 
 <div class="container-fluid px-3 px-xl-4 mt-4 page-has-bottom-nav produto-form-page">
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
@@ -65,8 +60,7 @@
 
                     <div class="col-12">
                         <label asp-for="Descricao" class="form-label fw-semibold"></label>
-                        <textarea asp-for="Descricao" class="form-control" rows="3"
-                                  placeholder="Descrição do produto..."></textarea>
+                        <textarea asp-for="Descricao" class="form-control" rows="3" placeholder="Descrição do produto..."></textarea>
                         <span asp-validation-for="Descricao" class="text-danger small"></span>
                     </div>
 
@@ -130,7 +124,7 @@
                     <div>
                         <h5 class="mb-0">Variações (unidade, fardo, caixa...)</h5>
                         <div class="text-muted small">
-                            Estoque total (un.) = soma de (Estoque da variação × Multiplicador).
+                            Estoque total (un.) = soma de (Estoque da variação × Multiplicador), apenas variações ativas.
                         </div>
                     </div>
                     <button type="button" class="btn btn-outline-primary" id="btnAddVar">
@@ -157,7 +151,7 @@
                             {
                                 for (var i = 0; i < Model.Variacoes.Count; i++)
                                 {
-                                    <tr class="var-row">
+                                    <tr class="var-row" data-index="@i">
                                         <td>
                                             <input type="hidden" name="Variacoes[@i].Id" value="@Model.Variacoes[i].Id" />
                                             <input class="form-control"
@@ -174,17 +168,17 @@
                                         </td>
 
                                         <td>
-                                            <input class="form-control"
-                                                   name="Variacoes[@i].Preco"
-                                                   value="@Model.Variacoes[i].Preco"
-                                                   type="number" min="0" step="0.01" required />
+                                            <input class="form-control var-money var-preco"
+                                                   name="Variacoes[@i].PrecoTexto"
+                                                   value="@Model.Variacoes[i].PrecoTexto"
+                                                   type="text" inputmode="decimal" autocomplete="off" required placeholder="0,00" />
                                         </td>
 
                                         <td>
-                                            <input class="form-control"
-                                                   name="Variacoes[@i].PrecoPromocional"
-                                                   value="@(Model.Variacoes[i].PrecoPromocional?.ToString() ?? "")"
-                                                   type="number" min="0" step="0.01" />
+                                            <input class="form-control var-money var-promo"
+                                                   name="Variacoes[@i].PrecoPromocionalTexto"
+                                                   value="@Model.Variacoes[i].PrecoPromocionalTexto"
+                                                   type="text" inputmode="decimal" autocomplete="off" />
                                         </td>
 
                                         <td>
@@ -213,19 +207,19 @@
                             }
                             else
                             {
-                                <tr class="var-row">
+                                <tr class="var-row" data-index="0">
                                     <td>
-                                        <input type="hidden" name="Variacoes[0].Id" value="0" />
+                                        <input type="hidden" name="Variacoes[0].Id" value="" />
                                         <input class="form-control" name="Variacoes[0].Nome" value="Unidade" required />
                                     </td>
                                     <td>
                                         <input class="form-control var-multi" name="Variacoes[0].Multiplicador" value="1" type="number" min="1" step="1" required />
                                     </td>
                                     <td>
-                                        <input class="form-control" name="Variacoes[0].Preco" value="" type="number" min="0" step="0.01" required />
+                                        <input class="form-control var-money var-preco" name="Variacoes[0].PrecoTexto" value="" type="text" inputmode="decimal" autocomplete="off" required />
                                     </td>
                                     <td>
-                                        <input class="form-control" name="Variacoes[0].PrecoPromocional" value="" type="number" min="0" step="0.01" />
+                                        <input class="form-control var-money var-promo" name="Variacoes[0].PrecoPromocionalTexto" value="" type="text" inputmode="decimal" autocomplete="off" />
                                     </td>
                                     <td>
                                         <input class="form-control var-estoque" name="Variacoes[0].Estoque" value="0" type="number" min="0" step="1" />
@@ -249,7 +243,7 @@
                     <div class="col-lg-4">
                         <label class="form-label fw-semibold">Estoque total (em unidades)</label>
                         <input class="form-control" id="EstoqueTotalCalc" readonly />
-                        <div class="form-text">Soma de (Estoque × Multiplicador).</div>
+                        <div class="form-text">Soma de (Estoque × Multiplicador) apenas das variações ativas.</div>
                     </div>
                 </div>
 
@@ -269,100 +263,6 @@
 </div>
 
 @section Scripts {
-    <script>
-        (function () {
-            const varsBody = document.getElementById('varsBody');
-            const btnAdd = document.getElementById('btnAddVar');
-            const estoqueTotalInput = document.getElementById('EstoqueTotalCalc');
-            const estoqueTotalBadge = document.getElementById('estoqueTotalBadge');
-
-            function toInt(v) {
-                const n = parseInt(String(v ?? '').replace(/\D/g, ''), 10);
-                return Number.isFinite(n) ? n : 0;
-            }
-
-            function toFloat(v) {
-                const n = parseFloat(String(v ?? '').replace(',', '.'));
-                return Number.isFinite(n) ? n : 0;
-            }
-
-            function renumber() {
-                const rows = varsBody.querySelectorAll('tr.var-row');
-                rows.forEach((tr, idx) => {
-                    tr.querySelectorAll('[name]').forEach(el => {
-                        el.name = el.name.replace(/Variacoes\[\d+\]/g, `Variacoes[${idx}]`);
-                    });
-                });
-            }
-
-            function calcTotal() {
-                let total = 0;
-
-                varsBody.querySelectorAll('tr.var-row').forEach(tr => {
-                    const estoque = toInt(tr.querySelector('.var-estoque')?.value);
-                    const multi = toInt(tr.querySelector('.var-multi')?.value);
-                    total += (estoque * (multi || 1));
-                });
-
-                if (estoqueTotalInput) estoqueTotalInput.value = total;
-                if (estoqueTotalBadge) estoqueTotalBadge.textContent = total;
-            }
-
-            function bindRow(tr) {
-                tr.querySelectorAll('.var-estoque, .var-multi').forEach(inp => {
-                    inp.addEventListener('input', calcTotal);
-                });
-
-                tr.querySelectorAll('.btnRemoveVar').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        tr.remove();
-                        renumber();
-                        calcTotal();
-                    });
-                });
-            }
-
-            // Bind inicial
-            varsBody.querySelectorAll('tr.var-row').forEach(bindRow);
-            calcTotal();
-
-            btnAdd?.addEventListener('click', () => {
-                const idx = varsBody.querySelectorAll('tr.var-row').length;
-
-                const tr = document.createElement('tr');
-                tr.className = 'var-row';
-                tr.innerHTML = `
-                    <td>
-                        <input type="hidden" name="Variacoes[${idx}].Id" value="0" />
-                        <input class="form-control" name="Variacoes[${idx}].Nome" placeholder="Ex: Caixa 12" required />
-                    </td>
-                    <td>
-                        <input class="form-control var-multi" name="Variacoes[${idx}].Multiplicador" value="1" type="number" min="1" step="1" required />
-                    </td>
-                    <td>
-                        <input class="form-control" name="Variacoes[${idx}].Preco" value="" type="number" min="0" step="0.01" required />
-                    </td>
-                    <td>
-                        <input class="form-control" name="Variacoes[${idx}].PrecoPromocional" value="" type="number" min="0" step="0.01" />
-                    </td>
-                    <td>
-                        <input class="form-control var-estoque" name="Variacoes[${idx}].Estoque" value="0" type="number" min="0" step="1" />
-                    </td>
-                    <td class="text-center">
-                        <input class="form-check-input var-ativo" type="checkbox" name="Variacoes[${idx}].Ativo" value="true" checked />
-                        <input type="hidden" name="Variacoes[${idx}].Ativo" value="false" />
-                    </td>
-                    <td class="text-end">
-                        <button type="button" class="btn btn-outline-danger btn-sm btnRemoveVar" title="Remover">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-
-                varsBody.appendChild(tr);
-                bindRow(tr);
-                calcTotal();
-            });
-        })();
-    </script>
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/produto-form.js" asp-append-version="true"></script>
 }

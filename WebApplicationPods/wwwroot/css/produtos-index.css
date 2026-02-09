@@ -1,236 +1,262 @@
-﻿/* =========================
-   PRODUTOS - INDEX
-   ========================= */
+﻿/* =========================================================
+   PRODUTOS - INDEX (escopado)
+   - Usa tokens do site.css (light/dark)
+   - Não redefine :root
+   - Ganha do global com seletor .produtos-page ...
+   ========================================================= */
 
-:root {
-    --brand-1: #6d28d9; /* roxo */
-    --brand-2: #2563eb; /* azul */
-    --brand-3: #06b6d4; /* ciano */
-    --text-1: #0f172a; /* slate-900 */
-    --text-2: #64748b; /* slate-500 */
-    --card: #ffffff;
-    --muted: #f1f5f9; /* slate-100 */
-    --border: #e5e7eb; /* gray-200 */
-    --shadow: 0 10px 25px rgba(15, 23, 42, .08);
-}
-
-/* área geral */
+/* Área geral */
 .produtos-page {
     min-height: 100vh;
-    background: radial-gradient(1200px 500px at 10% 0%, rgba(37,99,235,.08), transparent 60%), radial-gradient(1200px 500px at 90% 10%, rgba(109,40,217,.08), transparent 60%), #fff;
+    background: var(--page-hero, radial-gradient(1200px 500px at 10% 0%, rgba(37,99,235,.08), transparent 60%), radial-gradient(1200px 500px at 90% 10%, rgba(109,40,217,.08), transparent 60%), var(--bg, #fff));
 }
 
-/* header gradiente */
-.gradient-header {
-    background: linear-gradient(135deg, var(--brand-1) 0%, var(--brand-2) 45%, var(--brand-3) 100%);
-}
-
-    .gradient-header .btn {
-        border: 0;
+    /* Header gradiente */
+    .produtos-page .gradient-header {
+        background: var(--primary-grad, linear-gradient(135deg, #6a11cb, #2575fc));
     }
 
-        .gradient-header .btn:hover {
-            filter: brightness(0.98);
+        .produtos-page .gradient-header .btn {
+            border: 0;
         }
 
-/* flash container (se precisar “full width” em lg) */
-.container-full-lg {
-    max-width: 1140px;
-}
+            .produtos-page .gradient-header .btn:hover {
+                filter: brightness(0.98);
+            }
 
-/* search box */
-.search-box {
-    background: #fff;
-    border: 1px solid var(--border);
-    box-shadow: 0 8px 20px rgba(2,6,23,.06);
-    overflow: hidden;
-}
-
-    .search-box .input-group-text {
-        color: rgba(2,6,23,.65);
+    /* Flash container */
+    .produtos-page .container-full-lg {
+        max-width: 1140px;
     }
 
-    .search-box input {
-        outline: none !important;
-        box-shadow: none !important;
+    /* Search box */
+    .produtos-page .search-box {
+        background: var(--input-bg, #fff);
+        border: 1px solid var(--border, #e5e7eb);
+        box-shadow: 0 8px 20px rgba(2,6,23,.06);
+        overflow: hidden;
     }
 
-/* botões de filtro */
-.filter-btn {
-    border-width: 1px;
-    font-weight: 600;
-    padding: .45rem .9rem;
-}
+        .produtos-page .search-box .input-group-text {
+            background: transparent;
+            border: 0;
+            color: color-mix(in srgb, var(--text, #111827) 65%, transparent);
+        }
 
-    .filter-btn.active {
-        color: #fff !important;
-        background: linear-gradient(135deg, var(--brand-2), var(--brand-1));
-        border-color: transparent;
+        .produtos-page .search-box input.form-control {
+            background: transparent;
+            border: 0;
+            outline: none !important;
+            box-shadow: none !important;
+            color: var(--text, #111827);
+        }
+
+    /* Botões filtro */
+    .produtos-page .filter-btn {
+        border-width: 1px;
+        font-weight: 800;
+        padding: .45rem .9rem;
+        border-radius: 999px;
     }
 
-/* tabela */
-.produtos-table {
-    background: var(--card);
-}
+        .produtos-page .filter-btn.active {
+            color: #fff !important;
+            background: var(--primary-grad, linear-gradient(135deg, #6a11cb, #2575fc));
+            border-color: transparent !important;
+        }
 
-    .produtos-table thead th {
-        font-size: .85rem;
-        text-transform: uppercase;
-        letter-spacing: .04em;
-        color: rgba(2,6,23,.55);
-        white-space: nowrap;
+    /* Tabela (força ganhar do global) */
+    .produtos-page .table-responsive {
+        border: 1px solid var(--border, #e5e7eb);
+        background: var(--bg-elev-2, #fff);
     }
 
-    .produtos-table tbody td {
-        vertical-align: middle;
-        border-color: rgba(226,232,240,.9);
+    .produtos-page table.produtos-table {
+        background: var(--bg-elev-2, #fff);
+        color: var(--text, #111827);
     }
 
-    .produtos-table tbody tr:hover {
-        background: rgba(99,102,241,.04);
+        /* head */
+        .produtos-page table.produtos-table thead th {
+            background: var(--table-head, rgba(2,6,23,.04)) !important;
+            color: color-mix(in srgb, var(--text, #111827) 70%, transparent) !important;
+            font-size: .82rem;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            white-space: nowrap;
+            border-bottom: 1px solid var(--border, #e5e7eb) !important;
+        }
+
+        /* body */
+        .produtos-page table.produtos-table tbody td {
+            vertical-align: middle;
+            border-color: color-mix(in srgb, var(--border, #e5e7eb) 70%, transparent) !important;
+        }
+
+        .produtos-page table.produtos-table tbody tr:hover {
+            background: color-mix(in srgb, var(--primary, #2575fc) 6%, transparent) !important;
+        }
+
+    /* Colunas */
+    .produtos-page .col-produto {
+        min-width: 360px;
     }
 
-/* colunas (se você já usa no css antigo, isso não atrapalha) */
-.col-produto {
-    min-width: 360px;
-}
-
-.col-acoes {
-    min-width: 210px;
-}
-
-.col-sabores {
-    min-width: 220px;
-}
-
-/* imagem do produto */
-.product-img-container {
-    width: 54px;
-    height: 54px;
-    flex: 0 0 54px;
-    border-radius: 14px;
-    overflow: hidden;
-    background: #fff;
-}
-
-.product-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.product-img-placeholder {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, rgba(148,163,184,.25), rgba(226,232,240,.7));
-    color: rgba(2,6,23,.35);
-    font-size: 1.1rem;
-}
-
-/* preços */
-.price-normal {
-    font-weight: 800;
-    color: var(--text-1);
-}
-
-.price-old {
-    color: rgba(2,6,23,.45);
-    text-decoration: line-through;
-    font-weight: 700;
-}
-
-.price-new {
-    font-weight: 900;
-    color: #16a34a;
-}
-
-.discount-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 800;
-    font-size: .75rem;
-    padding: .25rem .5rem;
-    border-radius: 999px;
-    margin-left: .35rem;
-    color: #fff;
-    background: linear-gradient(135deg, #ef4444, #f97316);
-    box-shadow: 0 10px 20px rgba(239,68,68,.15);
-}
-
-/* chips de sabores */
-.flavor-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: .4rem;
-    border-radius: 999px;
-    padding: .38rem .6rem;
-    background: rgba(99,102,241,.10);
-    color: rgba(2,6,23,.85);
-    border: 1px solid rgba(99,102,241,.16);
-    font-weight: 700;
-    font-size: .82rem;
-}
-
-    .flavor-chip .chip-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, var(--brand-2), var(--brand-1));
-        box-shadow: 0 0 0 3px rgba(37,99,235,.10);
+    .produtos-page .col-acoes {
+        min-width: 210px;
     }
 
-    .flavor-chip .chip-qty {
-        color: rgba(2,6,23,.55);
+    .produtos-page .col-sabores {
+        min-width: 220px;
+    }
+
+    /* Imagem produto */
+    .produtos-page .product-img-container {
+        width: 54px;
+        height: 54px;
+        flex: 0 0 54px;
+        border-radius: 14px;
+        overflow: hidden;
+        background: var(--bg-elev-2, #fff);
+        border: 1px solid color-mix(in srgb, var(--border, #e5e7eb) 70%, transparent);
+    }
+
+    .produtos-page .product-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .produtos-page .product-img-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, color-mix(in srgb, var(--border, #e5e7eb) 30%, transparent), color-mix(in srgb, var(--border, #e5e7eb) 65%, transparent) );
+        color: color-mix(in srgb, var(--text, #111827) 35%, transparent);
+        font-size: 1.1rem;
+    }
+
+    /* Preços */
+    .produtos-page .price-normal {
+        font-weight: 900;
+        color: var(--text, #111827);
+    }
+
+    .produtos-page .price-old {
+        color: color-mix(in srgb, var(--text, #111827) 40%, transparent);
+        text-decoration: line-through;
         font-weight: 800;
     }
 
-/* ações */
-.btn-action {
-    font-weight: 700;
-}
-
-.btn-group .btn {
-    border-radius: 999px !important;
-}
-
-    .btn-group .btn + .btn {
-        margin-left: .4rem;
+    .produtos-page .price-new {
+        font-weight: 900;
+        color: var(--bs-success, #198754);
     }
 
-/* progresso estoque */
-.progress {
-    background: rgba(226,232,240,.7);
-    border-radius: 999px;
-    overflow: hidden;
-}
-
-.progress-bar {
-    border-radius: 999px;
-}
-
-/* mobile cards */
-.product-card {
-    border: 1px solid rgba(226,232,240,.9);
-    border-radius: 18px;
-    box-shadow: var(--shadow);
-    overflow: hidden;
-}
-
-    .product-card .card-body {
-        padding: 1rem 1rem 1.1rem;
+    .produtos-page .discount-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        font-size: .75rem;
+        padding: .25rem .55rem;
+        border-radius: 999px;
+        margin-left: .35rem;
+        color: #fff;
+        background: linear-gradient(135deg, #ef4444, #f97316);
+        box-shadow: 0 10px 20px rgba(239,68,68,.15);
     }
 
-    .product-card .product-img-container {
-        width: 74px;
-        height: 74px;
-        border-radius: 18px;
+    /* Categoria badge */
+    .produtos-page .badge.bg-light.text-dark {
+        background: color-mix(in srgb, var(--primary, #2575fc) 10%, transparent) !important;
+        color: var(--text, #111827) !important;
+        border: 1px solid color-mix(in srgb, var(--primary, #2575fc) 18%, transparent) !important;
     }
 
-/* padding para bottom nav (se existir) */
-.page-has-bottom-nav {
-    padding-bottom: calc(var(--mbn-height, 68px) + 18px);
+    /* Chips sabores */
+    .produtos-page .flavor-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        border-radius: 999px;
+        padding: .38rem .6rem;
+        background: color-mix(in srgb, var(--primary, #2575fc) 10%, transparent);
+        color: color-mix(in srgb, var(--text, #111827) 85%, transparent);
+        border: 1px solid color-mix(in srgb, var(--primary, #2575fc) 18%, transparent);
+        font-weight: 800;
+        font-size: .82rem;
+    }
+
+        .produtos-page .flavor-chip .chip-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary-grad, linear-gradient(135deg, #6a11cb, #2575fc));
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary, #2575fc) 12%, transparent);
+        }
+
+        .produtos-page .flavor-chip .chip-qty {
+            color: color-mix(in srgb, var(--text, #111827) 55%, transparent);
+            font-weight: 900;
+        }
+
+    /* Ações */
+    .produtos-page .btn-action {
+        font-weight: 900;
+    }
+
+    /* (IMPORTANTE) não mexer no .btn-group global, então escopa */
+    .produtos-page .btn-group .btn {
+        border-radius: 999px !important;
+    }
+
+        .produtos-page .btn-group .btn + .btn {
+            margin-left: .4rem;
+        }
+
+    /* Progresso estoque (escopado para não quebrar global) */
+    .produtos-page .progress {
+        background: color-mix(in srgb, var(--border, #e5e7eb) 40%, transparent);
+        border-radius: 999px;
+        overflow: hidden;
+    }
+
+    .produtos-page .progress-bar {
+        border-radius: 999px;
+    }
+
+    /* Mobile cards */
+    .produtos-page .product-card {
+        border: 1px solid var(--border, #e5e7eb) !important;
+        border-radius: var(--radius-lg, 18px) !important;
+        box-shadow: var(--shadow-1, 0 10px 28px rgba(0,0,0,.10)) !important;
+        overflow: hidden;
+        background: var(--bg-elev-2, #fff);
+    }
+
+        .produtos-page .product-card .card-body {
+            padding: 1rem 1rem 1.1rem;
+        }
+
+        .produtos-page .product-card .product-img-container {
+            width: 74px;
+            height: 74px;
+            border-radius: 18px;
+        }
+
+    /* Padding para bottom nav */
+    .produtos-page .page-has-bottom-nav {
+        padding-bottom: calc(var(--mbn-height, 68px) + 18px);
+    }
+
+/* Dark: pequenos ajustes */
+html[data-theme="dark"] .produtos-page .search-box {
+    box-shadow: 0 10px 30px rgba(0,0,0,.25);
+}
+
+html[data-theme="dark"] .produtos-page .price-new {
+    color: #22c55e;
 }

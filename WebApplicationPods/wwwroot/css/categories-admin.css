@@ -1,168 +1,125 @@
-﻿/* ============ Categorias (Admin) ============ */
-/* Cobre: Index (lista), Criar, Editar e Excluir */
+﻿/* =========================================================
+   categories-admin.css
+   - NÃO redefine :root (usa tokens do site.css)
+   - Escopado em .categories-admin e .categories-form
+   - Tabela vira "cards" no mobile usando data-label
+   ========================================================= */
 
-/* 1) Escopo das variáveis: valem só dentro .categories-admin e .categories-form  */
 .categories-admin,
 .categories-form {
-    /* ---- paleta fixa da marca ---- */
-    --brand-start: #6a11cb; /* roxo */
-    --brand-end: #2575fc; /* azul */
-    --primary: #2575fc; /* azul principal */
-    --primary-dark: #1e56d9;
-    /* ---- base ---- */
-    --dark: #111827;
-    --light: #ffffff;
-    --gray: #f5f5f7;
-    --text-dark: #111827;
-    --text-light: #6b7280;
-    /* ---- utilitários ---- */
-    --primary-grad: linear-gradient(135deg, var(--brand-start), var(--brand-end));
-    --shadow-1: 0 4px 20px rgba(0,0,0,.08);
-    --shadow-2: 0 8px 30px rgba(0,0,0,.12);
-    --radius: 12px;
-    --mbn-height: 68px;
-    /* espaço pro bottom-nav não cobrir o fim no mobile */
-    padding-bottom: calc(var(--mbn-height) + 16px);
-    background: var(--gray);
+    /* só layout local */
+    padding-bottom: calc(var(--mbn-height, 70px) + 16px);
 }
 
     /* ---------- Cabeçalho da página ---------- */
     .categories-admin .page-head h1 {
-        font-weight: 800;
-        color: var(--text-dark);
+        font-weight: 900;
+        color: var(--text);
         margin: 0;
+        letter-spacing: -0.3px;
     }
 
-    /* ---------- Botões principais ---------- */
-    .categories-admin .btn-primary,
-    .categories-form .btn-primary {
-        background: var(--primary);
-        border-color: var(--primary);
-    }
-
-        .categories-admin .btn-primary:hover,
-        .categories-form .btn-primary:hover,
-        .categories-admin .btn-primary:focus,
-        .categories-form .btn-primary:focus {
-            background: var(--primary-dark);
-            border-color: var(--primary-dark);
-        }
-
-    /* outline -> cheio no hover (ações) */
-    .categories-admin .btn-outline-primary:hover {
-        background: var(--primary);
-        color: #fff;
-        border-color: var(--primary);
-    }
-
-    /* ---------- Cards ---------- */
+    /* ---------- Cards (garante consistência com o site.css) ---------- */
     .categories-admin .card,
     .categories-form .card {
-        border: none;
-        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
         box-shadow: var(--shadow-1);
         overflow: hidden;
     }
 
-        .categories-admin .card:hover,
-        .categories-form .card:hover {
-            box-shadow: var(--shadow-2);
+    /* ---------- Headers com variações ---------- */
+    .categories-admin .brand-header,
+    .categories-form .brand-header {
+        background: var(--primary-grad);
+        color: #fff;
+        border: 0;
+    }
+
+    .categories-form .danger-header {
+        background: linear-gradient(135deg, #ef4444, #b91c1c);
+        color: #fff;
+        border: 0;
+    }
+
+        /* garante contraste do título dentro do header */
+        .categories-admin .brand-header h5,
+        .categories-form .brand-header h4,
+        .categories-form .danger-header h4 {
+            color: #fff;
+            font-weight: 900;
         }
 
-/* Variações de header (use nas views) */
-.brand-header {
-    background: var(--primary-grad);
-    color: #fff;
-    border: 0;
-}
-
-.warn-header {
-    background: linear-gradient(135deg,#f59e0b,#d97706);
-    color: #fff;
-    border: 0;
-}
-
-.danger-header {
-    background: linear-gradient(135deg,#ef4444,#b91c1c);
-    color: #fff;
-    border: 0;
-}
-
-/* Header padrão quando não usar as variações acima */
-.categories-admin .card-header,
-.categories-form .card-header {
-    border-bottom: 1px solid rgba(0,0,0,.06);
-    font-weight: 600;
-    background: #fff;
-}
-
-/* ---------- Busca (header) ---------- */
-.categories-admin .search-wrap {
-    min-width: 250px;
-    width: 100%;
-}
+    /* ---------- Busca no header ---------- */
+    .categories-admin .search-wrap {
+        min-width: 240px;
+        width: 100%;
+    }
 
 @media (min-width: 768px) {
     .categories-admin .search-wrap {
-        width: 260px;
+        width: 280px;
     }
 }
 
-.categories-admin .search-wrap .form-control,
-.categories-admin .search-wrap .form-select {
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    transition: .15s ease;
+.categories-admin .search-wrap .form-control {
+    border-radius: 12px;
 }
 
-    .categories-admin .search-wrap .form-control:focus,
-    .categories-admin .search-wrap .form-select:focus {
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(37,117,252,.15);
-    }
-
-/* ---------- Tabela (Index) ---------- */
+/* ---------- Tabela ---------- */
 .categories-admin .table-wrap {
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
 }
 
-.categories-admin table {
-    min-width: 700px;
-}
-/* força horizontal quando preciso */
-
-.categories-admin .table thead th {
-    background: #f8fafc;
-    color: var(--text-dark);
-    font-weight: 600;
-    padding: 1rem;
-    border-bottom: 2px solid #e2e8f0;
+.categories-admin #categoriasTable {
+    margin: 0;
+    min-width: 720px; /* desktop scroll suave se precisar */
 }
 
-.categories-admin .table td {
-    padding: 1rem;
-    vertical-align: middle;
-    border-color: #f1f5f9;
-}
-
-/* hover com leve mistura usando a cor primária (fallback cinza) */
-@supports (color: color-mix(in srgb, white, black)) {
-    .categories-admin .table-hover tbody tr:hover {
-        background-color: color-mix(in srgb, var(--primary) 8%, #ffffff);
+    .categories-admin #categoriasTable thead th {
+        background: var(--table-head) !important;
+        color: var(--text) !important;
+        font-weight: 900;
+        padding: 1rem;
+        border-bottom: 1px solid var(--border);
     }
-}
 
-@supports not (color: color-mix(in srgb, white, black)) {
-    .categories-admin .table-hover tbody tr:hover {
-        background-color: #f8fafc;
+    .categories-admin #categoriasTable td {
+        padding: 1rem;
+        vertical-align: middle;
+        border-color: color-mix(in srgb, var(--border) 80%, transparent);
+        color: var(--text);
     }
+
+/* ícone da categoria */
+.categories-admin .icon-category {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: inline-grid;
+    place-items: center;
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: var(--primary);
+    border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
-/* grupo de botões nas ações */
+/* botões de ação */
 .categories-admin .btn-group .btn {
-    border-radius: 8px;
+    border-radius: 10px;
+}
+
+.categories-admin .btn-outline-primary:hover {
+    background: var(--primary) !important;
+    border-color: var(--primary) !important;
+    color: #fff !important;
+}
+
+.categories-admin .btn-outline-danger:hover {
+    background: var(--bs-danger, #dc3545) !important;
+    border-color: var(--bs-danger, #dc3545) !important;
+    color: #fff !important;
 }
 
 /* feedback touch */
@@ -172,53 +129,33 @@
     transition: transform .1s ease;
 }
 
-/* Footer e paginação */
-.categories-admin .card-footer {
-    border-top: 1px solid rgba(0,0,0,.06);
-    background: #fff;
-}
-
-.categories-admin .pagination .page-link {
-    color: var(--text-dark);
-}
-
-.categories-admin .pagination .page-item.active .page-link {
-    background: var(--primary);
-    border-color: var(--primary);
-}
-
 /* ---------- Formulários (Criar/Editar/Excluir) ---------- */
-.categories-form .card-header {
-    padding: 1.1rem 1.25rem;
-}
-
 .categories-form .card-body {
-    background: #fff;
+    background: var(--bg-elev-2);
 }
 
 .categories-form .form-label {
-    font-weight: 600;
-    color: var(--text-dark);
+    font-weight: 900;
+    color: var(--text);
+}
+
+.categories-form .input-group-text {
+    border-radius: 12px 0 0 12px;
 }
 
 .categories-form .form-control,
-.categories-form .form-select,
-.categories-form .input-group-text {
-    border-radius: 10px;
-    border: 1px solid #e2e8f0;
-    transition: .15s ease;
+.categories-form textarea.form-control {
+    border-radius: 12px;
 }
 
-    .categories-form .form-control:focus,
-    .categories-form .form-select:focus {
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(37,117,252,.15);
-    }
-
-.categories-form .input-group-text {
-    background-color: #f8f9fa;
+/* quando tiver input-group, deixa bordas bonitas */
+.categories-form .input-group .form-control,
+.categories-form .input-group textarea.form-control {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
 }
 
+/* ações do form */
 .categories-form .form-actions {
     display: flex;
     gap: .75rem;
@@ -226,24 +163,104 @@
     flex-wrap: wrap;
 }
 
-/* ---------- Responsividade ---------- */
-@media (max-width: 992px) {
-    .categories-admin .btn-group .btn {
-        padding: .45rem .7rem;
+    .categories-form .form-actions .btn {
+        border-radius: 12px;
+        font-weight: 900;
     }
+
+/* ---------- Mobile: tabela vira cards usando data-label ---------- */
+@media (max-width: 767.98px) {
+    /* sem scroll horizontal no mobile */
+    .categories-admin .table-wrap {
+        overflow-x: visible;
+    }
+
+    .categories-admin #categoriasTable {
+        min-width: 0;
+    }
+
+        /* esconde o thead e empilha */
+        .categories-admin #categoriasTable thead {
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+            height: 0;
+            width: 0;
+            overflow: hidden;
+        }
+
+        .categories-admin #categoriasTable,
+        .categories-admin #categoriasTable tbody,
+        .categories-admin #categoriasTable tr,
+        .categories-admin #categoriasTable td {
+            display: block;
+            width: 100%;
+        }
+
+            .categories-admin #categoriasTable tr {
+                background: var(--bg-elev-2);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-lg);
+                box-shadow: var(--shadow-1);
+                margin: .6rem .25rem .95rem;
+                overflow: hidden;
+            }
+
+            .categories-admin #categoriasTable td {
+                border: 0;
+                border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+                padding: .75rem 1rem;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: .75rem;
+            }
+
+                .categories-admin #categoriasTable td:last-child {
+                    border-bottom: 0;
+                    padding-bottom: .9rem;
+                }
+
+                /* label vem do data-label */
+                .categories-admin #categoriasTable td::before {
+                    content: attr(data-label);
+                    flex: 0 0 auto;
+                    font-weight: 900;
+                    color: var(--muted);
+                    margin-right: 1rem;
+                }
+
+                /* primeira célula (Nome) fica sem label e mais bonita */
+                .categories-admin #categoriasTable td[data-label="Nome"]::before {
+                    content: "";
+                    display: none;
+                }
+
+                .categories-admin #categoriasTable td[data-label="Nome"] {
+                    padding-top: .95rem;
+                }
+
+                /* ações */
+                .categories-admin #categoriasTable td[data-label="Ações"] {
+                    flex-wrap: wrap;
+                    gap: .5rem;
+                }
+
+                    .categories-admin #categoriasTable td[data-label="Ações"]::before {
+                        content: "Ações";
+                        margin-right: auto;
+                    }
+
+                    .categories-admin #categoriasTable td[data-label="Ações"] .btn-group {
+                        width: 100%;
+                        display: flex;
+                        justify-content: flex-end;
+                        gap: .5rem;
+                    }
 }
 
-@media (max-width: 576px) {
-    .categories-admin .btn,
-    .categories-admin .form-control,
-    .categories-form .btn,
-    .categories-form .form-control {
-        font-size: .95rem;
-    }
-
-    .categories-admin .icon-category {
-        width: 30px;
-        height: 30px;
-        font-size: .85rem;
-    }
+/* ---------- Dark: ajustes mínimos de contraste ---------- */
+html[data-theme="dark"] .categories-admin .icon-category {
+    background: rgba(37,117,252,.14);
+    border-color: rgba(37,117,252,.22);
 }

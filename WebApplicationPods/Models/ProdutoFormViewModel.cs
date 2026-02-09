@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+﻿using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
 
 namespace WebApplicationPods.Models
@@ -7,51 +7,59 @@ namespace WebApplicationPods.Models
     {
         public int? Id { get; set; }
 
-        [Required(ErrorMessage = "O nome do produto é obrigatório")]
-        [StringLength(100)]
+        [Required(ErrorMessage = "Informe o nome.")]
+        [StringLength(120)]
         public string Nome { get; set; } = string.Empty;
 
+        [StringLength(1000)]
         public string? Descricao { get; set; }
+
+        [StringLength(80)]
         public string? Marca { get; set; }
+
+        [StringLength(80)]
         public string? SKU { get; set; }
+
+        [StringLength(80)]
         public string? CodigoBarras { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Selecione uma categoria.")]
         public int CategoriaId { get; set; }
 
-        public bool RequerMaioridade { get; set; }
         public bool Ativo { get; set; } = true;
-        public bool MaisVendido { get; set; }
-        public bool EmPromocao { get; set; } // (opcional manter no produto; promo real fica na variação)
+        public bool EmPromocao { get; set; } = false;
+        public bool MaisVendido { get; set; } = false;
+        public bool RequerMaioridade { get; set; } = false;
 
-        [ValidateNever]
         public string? ImagemUrl { get; set; }
-
-        [ValidateNever]
         public IFormFile? ImagemUpload { get; set; }
 
-        // ✅ Variações
         public List<ProdutoVariacaoFormRow> Variacoes { get; set; } = new();
 
         public class ProdutoVariacaoFormRow
         {
-            public int? Id { get; set; } // quando editar
+            public int? Id { get; set; }
 
-            [Required, StringLength(80)]
+            [Required(ErrorMessage = "Informe o nome da variação.")]
+            [StringLength(80)]
             public string Nome { get; set; } = "Unidade";
 
-            [Range(1, 999)]
+            [Range(1, 999, ErrorMessage = "Multiplicador deve ser >= 1.")]
             public int Multiplicador { get; set; } = 1;
 
-            [Range(0.01, double.MaxValue)]
-            public decimal Preco { get; set; }
+            // ✅ Usamos TEXTO para aceitar vírgula no form (pt-BR)
+            [Required(ErrorMessage = "Informe o preço.")]
+            public string PrecoTexto { get; set; } = "";
 
-            public decimal? PrecoPromocional { get; set; }
+            public string? PrecoPromocionalTexto { get; set; }
 
-            [Range(0, int.MaxValue)]
-            public int Estoque { get; set; }
+            [Range(0, int.MaxValue, ErrorMessage = "Estoque inválido.")]
+            public int Estoque { get; set; } = 0;
 
+            [StringLength(40)]
             public string? SKU { get; set; }
+
+            [StringLength(30)]
             public string? CodigoBarras { get; set; }
 
             public bool Ativo { get; set; } = true;

@@ -1,0 +1,327 @@
+﻿/* =========================================================
+   panel.css — UI padrão para Admin/Lojista
+   Depende do site.css (tokens: --bg, --text, --muted, --border,
+   --primary, --primary-dark, --primary-grad, --shadow-1, --radius-lg)
+   ========================================================= */
+
+/* Wrapper padrão (opcional): aplique class="panel" no container mais externo */
+.panel,
+.panel-page {
+    color: var(--text);
+}
+
+/* Head de página (título + ações) */
+.panel-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: .75rem 1rem;
+    padding: 0;
+}
+
+    .panel-head h1,
+    .panel-head h2 {
+        margin: 0;
+        font-weight: 900;
+        letter-spacing: -0.3px;
+    }
+
+/* Card “header row” (ex: filtros/topbar) */
+.panel-bar {
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-1);
+    padding: .95rem 1rem;
+}
+
+/* Toolbar forms (filtros) */
+.panel-toolbar .form-label {
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: .35rem;
+}
+
+.panel-toolbar .form-control,
+.panel-toolbar .form-select {
+    border-radius: 12px;
+}
+
+.panel-toolbar .btn {
+    border-radius: 12px;
+    font-weight: 800;
+}
+
+/* Botões “brand” padrão */
+.btn-brand {
+    background: var(--primary-grad);
+    color: #fff;
+    border: 0;
+    border-radius: 12px;
+    padding: .55rem 1rem;
+    font-weight: 900;
+    transition: transform .12s ease, box-shadow .12s ease;
+}
+
+    .btn-brand:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 26px rgba(37,117,252,.22);
+        color: #fff;
+    }
+
+.btn-outline-brand {
+    color: var(--primary);
+    border: 1px solid var(--primary);
+    border-radius: 12px;
+    padding: .55rem 1rem;
+    font-weight: 900;
+    background: transparent;
+    transition: background .12s ease, color .12s ease;
+}
+
+    .btn-outline-brand:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* KPIs padrão */
+.panel-kpis .kpi-card {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-1);
+    padding: 1rem;
+}
+
+    .panel-kpis .kpi-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 4px;
+        background: var(--primary-grad);
+        opacity: .95;
+    }
+
+.panel-kpis .kpi-label {
+    color: var(--muted);
+    font-weight: 800;
+    font-size: .85rem;
+}
+
+.panel-kpis .kpi-value {
+    margin-top: .1rem;
+    font-weight: 1000;
+    font-size: 1.25rem;
+    letter-spacing: -0.2px;
+}
+
+/* Tabelas “bonitas” padrão */
+.panel-table-wrap {
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-1);
+    overflow: hidden;
+}
+
+.panel-table {
+    margin: 0;
+}
+
+    .panel-table thead th {
+        background: var(--table-head) !important;
+        border-bottom: 1px solid var(--border);
+        font-weight: 900;
+        color: var(--text);
+        padding: 1rem;
+        white-space: nowrap;
+    }
+
+    .panel-table td {
+        padding: 1rem;
+        vertical-align: middle;
+        border-color: color-mix(in srgb, var(--border) 80%, transparent);
+        color: var(--text);
+    }
+
+    .panel-table tbody tr:hover {
+        background: color-mix(in srgb, var(--primary) 6%, transparent);
+    }
+
+/* “Pill badge” (ex: LIVE) */
+.panel-pill {
+    background: var(--primary-grad);
+    color: #fff;
+    border-radius: 999px;
+    padding: .25rem .6rem;
+    font-size: .75rem;
+    font-weight: 900;
+}
+
+/* Status legend (bolinhas) */
+.panel-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .45rem 1rem;
+}
+
+    .panel-legend .legend-item {
+        font-size: .9rem;
+        color: var(--muted);
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        font-weight: 700;
+    }
+
+    .panel-legend .dot {
+        width: .65rem;
+        height: .65rem;
+        border-radius: 50%;
+        background: #cbd5e1;
+    }
+
+        .panel-legend .dot.info {
+            background: var(--bs-info, #0dcaf0);
+        }
+
+        .panel-legend .dot.primary {
+            background: var(--primary, #0d6efd);
+        }
+
+        .panel-legend .dot.warning {
+            background: var(--bs-warning, #ffc107);
+        }
+
+        .panel-legend .dot.secondary {
+            background: var(--bs-secondary, #6c757d);
+        }
+
+        .panel-legend .dot.dark {
+            background: color-mix(in srgb, var(--text) 90%, transparent);
+        }
+
+        .panel-legend .dot.danger {
+            background: var(--bs-danger, #dc3545);
+        }
+
+/* Busca rápida */
+.panel-search .input-group-text,
+.panel-search .form-control {
+    border-radius: 12px;
+}
+
+/* Skeleton simples (para listas/tabelas) */
+.panel-skeleton {
+    display: grid;
+    gap: .5rem;
+    padding: .75rem 0;
+}
+
+    .panel-skeleton .sk-line {
+        height: 12px;
+        background: linear-gradient(90deg,#f2f4f8 25%,#e9eef5 37%,#f2f4f8 63%);
+        background-size: 400% 100%;
+        animation: panelSk 1.2s ease-in-out infinite;
+        border-radius: 6px;
+    }
+
+html[data-theme="dark"] .panel-skeleton .sk-line {
+    background: linear-gradient(90deg, rgba(255,255,255,.06) 25%, rgba(255,255,255,.10) 37%, rgba(255,255,255,.06) 63%);
+}
+
+@keyframes panelSk {
+    0% {
+        background-position: 100% 0;
+    }
+
+    100% {
+        background-position: 0 0;
+    }
+}
+
+/* =========================================================
+   Responsive pattern genérico: tabela vira cards no mobile
+   - Para usar: adicione class="panel-table panel-responsive"
+     e adicione data-th="NomeDaColuna" em cada td
+   ========================================================= */
+
+@media (max-width: 767.98px) {
+    .panel-responsive thead {
+        position: absolute;
+        left: -9999px;
+        top: -9999px;
+        height: 0;
+        width: 0;
+        overflow: hidden;
+    }
+
+    .panel-responsive,
+    .panel-responsive tbody,
+    .panel-responsive tr,
+    .panel-responsive td {
+        display: block;
+        width: 100%;
+    }
+
+        .panel-responsive tr {
+            background: var(--bg-elev-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-1);
+            margin: .6rem .25rem .95rem;
+            overflow: hidden;
+        }
+
+        .panel-responsive td {
+            border: 0;
+            border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+            padding: .7rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .75rem;
+        }
+
+            .panel-responsive td:last-child {
+                border-bottom: 0;
+                padding-bottom: .9rem;
+            }
+
+            .panel-responsive td::before {
+                content: attr(data-th);
+                flex: 0 0 auto;
+                font-weight: 900;
+                color: var(--muted);
+                margin-right: 1rem;
+            }
+
+            /* opcional: primeira coluna sem label */
+            .panel-responsive td.panel-primary {
+                padding-top: .95rem;
+            }
+
+                .panel-responsive td.panel-primary::before {
+                    content: "";
+                    display: none;
+                }
+
+            .panel-responsive td.panel-actions {
+                flex-wrap: wrap;
+            }
+
+                .panel-responsive td.panel-actions::before {
+                    content: "Ações";
+                    margin-right: auto;
+                }
+}
+
+/* Pequenos ajustes de densidade */
+@media (max-width: 992px) {
+    .panel-bar {
+        padding: .85rem .9rem;
+    }
+}

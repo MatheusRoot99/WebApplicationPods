@@ -11,505 +11,11 @@
 }
 
 @section Styles {
-    <style>
-        /* ===========================
-           Loja Settings — Clean Modern + Dark
-           (Inline/Scoped)
-           =========================== */
-
-        :root {
-            /* Light */
-            --bg: #F6F8FC;
-            --card: #FFFFFF;
-            --card-2: rgba(255,255,255,.72);
-            --text: #0F172A;
-            --muted: #64748B;
-            --border: #E6ECF5;
-            --brand-500: #2F6BFF;
-            --brand-600: #2458E6;
-            --brand-50: #EEF4FF;
-            --success-500: #22C55E;
-            --success-600: #16A34A;
-            --danger-500: #EF4444;
-            --shadow: 0 18px 55px rgba(15,23,42,.10);
-            --shadow-soft: 0 10px 28px rgba(15,23,42,.08);
-            --radius-xl: 26px;
-            --radius-lg: 20px;
-            --radius-md: 16px;
-            --radius-sm: 12px;
-            --ring-brand: rgba(47,107,255,.22);
-            --ring-success: rgba(34,197,94,.22);
-            --mbn-h: 68px;
-            --page-safe-bottom: calc(var(--mbn-h) + 16px);
-        }
-
-        /* Dark overrides (activated by #loja-settings[data-theme="dark"]) */
-        #loja-settings[data-theme="dark"] {
-            --bg: #0B1220;
-            --card: rgba(14, 22, 39, .82);
-            --card-2: rgba(14, 22, 39, .58);
-            --text: #EAF0FF;
-            --muted: rgba(234,240,255,.68);
-            --border: rgba(234,240,255,.12);
-            --brand-50: rgba(47,107,255,.10);
-            --shadow: 0 20px 60px rgba(0,0,0,.45);
-            --shadow-soft: 0 14px 34px rgba(0,0,0,.35);
-            --ring-brand: rgba(47,107,255,.30);
-            --ring-success: rgba(34,197,94,.30);
-        }
-
-        /* Page background */
-        body {
-            background: radial-gradient(1100px 560px at 12% -10%, rgba(47,107,255,.10), transparent 62%), radial-gradient(1100px 560px at 100% 0%, rgba(34,197,94,.08), transparent 62%), var(--bg);
-        }
-
-        /* Outer “glass” container */
-        #loja-settings {
-            border-radius: var(--radius-xl);
-            padding: 22px;
-            border: 1px solid rgba(15,23,42,.06);
-            background: linear-gradient(180deg, rgba(255,255,255,.78), rgba(255,255,255,.55));
-            box-shadow: var(--shadow);
-            position: relative;
-            overflow: hidden;
-        }
-
-            /* dark background inside container */
-            #loja-settings[data-theme="dark"] {
-                background: radial-gradient(900px 420px at 20% -10%, rgba(47,107,255,.18), transparent 60%), radial-gradient(900px 420px at 100% 0%, rgba(34,197,94,.10), transparent 60%), rgba(10, 16, 30, .55);
-                border-color: rgba(234,240,255,.10);
-            }
-
-            /* Subtle grain highlight */
-            #loja-settings::before {
-                content: "";
-                position: absolute;
-                inset: 0;
-                background: radial-gradient(900px 340px at 20% 0%, rgba(255,255,255,.25), transparent 60%);
-                pointer-events: none;
-                opacity: .55;
-            }
-
-            #loja-settings[data-theme="dark"]::before {
-                opacity: .18;
-            }
-
-            /* Header (title + toggle) */
-            #loja-settings .page-head {
-                display: flex;
-                align-items: flex-start;
-                justify-content: space-between;
-                gap: 16px;
-                padding: 6px 0 16px 0;
-                border-bottom: 1px dashed var(--border);
-                margin-bottom: 16px;
-                position: relative;
-                z-index: 2;
-            }
-
-            #loja-settings .head-left {
-                display: flex;
-                align-items: center;
-                gap: 14px;
-                min-width: 0;
-            }
-
-            #loja-settings .icon-wrap {
-                width: 54px;
-                height: 54px;
-                border-radius: 18px;
-                display: grid;
-                place-items: center;
-                background: linear-gradient(135deg, var(--brand-50), rgba(255,255,255,.65));
-                border: 1px solid rgba(15,23,42,.06);
-                box-shadow: var(--shadow-soft);
-                flex: 0 0 auto;
-            }
-
-            #loja-settings[data-theme="dark"] .icon-wrap {
-                background: linear-gradient(135deg, rgba(47,107,255,.16), rgba(14,22,39,.62));
-                border-color: rgba(234,240,255,.10);
-            }
-
-            #loja-settings .icon-wrap i {
-                font-size: 1.2rem;
-                color: var(--brand-600);
-            }
-
-            #loja-settings[data-theme="dark"] .icon-wrap i {
-                color: #8FB0FF;
-            }
-
-            #loja-settings .title {
-                margin: 0;
-                font-size: 1.32rem;
-                font-weight: 900;
-                color: var(--text);
-                letter-spacing: -0.02em;
-                line-height: 1.15;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-
-            #loja-settings .subtitle {
-                margin: .25rem 0 0 0;
-                color: var(--muted);
-                font-size: .95rem;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-
-        .brand-gradient {
-            background: linear-gradient(135deg, var(--brand-600), var(--success-500));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-
-        /* Theme toggle pill */
-        #loja-settings .theme-toggle {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: var(--card-2);
-            border: 1px solid var(--border);
-            border-radius: 999px;
-            padding: 8px 10px;
-            box-shadow: var(--shadow-soft);
-            user-select: none;
-        }
-
-        #loja-settings[data-theme="dark"] .theme-toggle {
-            border-color: rgba(234,240,255,.12);
-        }
-
-        #loja-settings .theme-toggle .label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--muted);
-            font-weight: 800;
-            font-size: .86rem;
-        }
-
-            #loja-settings .theme-toggle .label i {
-                opacity: .9;
-            }
-
-        /* Switch */
-        #loja-settings .switch {
-            width: 46px;
-            height: 26px;
-            border-radius: 999px;
-            border: 1px solid var(--border);
-            background: rgba(148,163,184,.30);
-            position: relative;
-            cursor: pointer;
-            transition: all .2s ease;
-        }
-
-        #loja-settings[data-theme="dark"] .switch {
-            background: rgba(148,163,184,.18);
-            border-color: rgba(234,240,255,.14);
-        }
-
-        #loja-settings .switch::after {
-            content: "";
-            width: 20px;
-            height: 20px;
-            border-radius: 999px;
-            position: absolute;
-            top: 50%;
-            left: 3px;
-            transform: translateY(-50%);
-            background: #fff;
-            box-shadow: 0 8px 18px rgba(15,23,42,.16);
-            transition: all .2s ease;
-        }
-
-        #loja-settings[data-theme="dark"] .switch::after {
-            background: rgba(234,240,255,.92);
-        }
-
-        #loja-settings .switch.on {
-            background: linear-gradient(135deg, var(--brand-500), var(--brand-600));
-            border-color: rgba(47,107,255,.55);
-        }
-
-            #loja-settings .switch.on::after {
-                left: calc(100% - 23px);
-            }
-
-        /* Main card */
-        #loja-settings .main-card {
-            border: 1px solid rgba(15,23,42,.06);
-            border-radius: var(--radius-lg);
-            background: var(--card);
-            box-shadow: var(--shadow-soft);
-            position: relative;
-            z-index: 2;
-            overflow: hidden;
-        }
-
-        #loja-settings[data-theme="dark"] .main-card {
-            border-color: rgba(234,240,255,.10);
-        }
-
-        /* Section title */
-        #loja-settings .section-title {
-            display: flex;
-            align-items: center;
-            gap: .55rem;
-            font-size: 1.02rem;
-            font-weight: 900;
-            color: var(--text);
-            margin: .25rem 0 .85rem;
-        }
-
-            #loja-settings .section-title i {
-                color: var(--brand-600);
-            }
-
-        #loja-settings[data-theme="dark"] .section-title i {
-            color: #8FB0FF;
-        }
-
-        /* Labels/inputs */
-        #loja-settings .form-label {
-            font-weight: 800;
-            color: color-mix(in srgb, var(--text) 80%, #334155 20%);
-        }
-
-        #loja-settings[data-theme="dark"] .form-label {
-            color: rgba(234,240,255,.82);
-        }
-
-        #loja-settings .form-control,
-        #loja-settings .form-select {
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--border);
-            background: rgba(255,255,255,.92);
-            color: var(--text);
-            padding-top: .62rem;
-            padding-bottom: .62rem;
-            transition: box-shadow .15s ease, border-color .15s ease, background .15s ease;
-        }
-
-        #loja-settings[data-theme="dark"] .form-control,
-        #loja-settings[data-theme="dark"] .form-select {
-            background: rgba(10,16,30,.55);
-            border-color: rgba(234,240,255,.12);
-            color: var(--text);
-        }
-
-        #loja-settings .form-control::placeholder {
-            color: #94A3B8;
-        }
-
-        #loja-settings[data-theme="dark"] .form-control::placeholder {
-            color: rgba(234,240,255,.35);
-        }
-
-        #loja-settings .form-control:focus,
-        #loja-settings .form-select:focus {
-            border-color: rgba(47,107,255,.70);
-            box-shadow: 0 0 0 .22rem var(--ring-brand);
-            background: #fff;
-        }
-
-        #loja-settings[data-theme="dark"] .form-control:focus,
-        #loja-settings[data-theme="dark"] .form-select:focus {
-            background: rgba(10,16,30,.75);
-        }
-
-        #loja-settings .form-text {
-            color: var(--muted);
-            font-size: .86rem;
-        }
-
-        /* Checkboxes */
-        #loja-settings .form-check-input {
-            width: 1.08rem;
-            height: 1.08rem;
-            border-color: var(--border);
-        }
-
-        #loja-settings[data-theme="dark"] .form-check-input {
-            border-color: rgba(234,240,255,.16);
-            background-color: rgba(10,16,30,.55);
-        }
-
-        #loja-settings .form-check-input:checked {
-            background: linear-gradient(135deg, var(--brand-600), var(--brand-500));
-            border-color: var(--brand-600);
-        }
-
-        #loja-settings .form-check-label {
-            color: color-mix(in srgb, var(--text) 80%, #334155 20%);
-        }
-
-        #loja-settings[data-theme="dark"] .form-check-label {
-            color: rgba(234,240,255,.80);
-        }
-
-        #loja-settings hr {
-            border-color: var(--border);
-            opacity: .75;
-        }
-
-        /* Buttons */
-        #loja-settings .btn {
-            border-radius: 12px;
-            padding: .62rem 1rem;
-            font-weight: 900;
-            letter-spacing: -0.01em;
-        }
-
-        #loja-settings .btn-success {
-            background: linear-gradient(135deg, var(--success-500), var(--success-600));
-            border: none;
-            color: #fff;
-            box-shadow: 0 12px 26px rgba(34,197,94,.18);
-        }
-
-            #loja-settings .btn-success:focus {
-                box-shadow: 0 0 0 .22rem var(--ring-success), 0 12px 26px rgba(34,197,94,.18);
-            }
-
-        #loja-settings .btn-primary {
-            background: linear-gradient(135deg, var(--brand-500), var(--brand-600));
-            border: none;
-            color: #fff;
-        }
-
-        #loja-settings .btn-outline-secondary {
-            border: 1px solid var(--border);
-            color: color-mix(in srgb, var(--text) 70%, #334155 30%);
-            background: rgba(255,255,255,.85);
-        }
-
-        #loja-settings[data-theme="dark"] .btn-outline-secondary {
-            background: rgba(10,16,30,.45);
-            border-color: rgba(234,240,255,.12);
-            color: rgba(234,240,255,.82);
-        }
-
-        /* Alerts */
-        #loja-settings .alert-success {
-            background: linear-gradient(135deg, rgba(34,197,94,.10), rgba(255,255,255,.85));
-            border: 1px solid rgba(34,197,94,.25);
-            color: var(--text);
-            border-left: 4px solid var(--success-500);
-        }
-
-        #loja-settings[data-theme="dark"] .alert-success {
-            background: linear-gradient(135deg, rgba(34,197,94,.14), rgba(10,16,30,.65));
-        }
-
-        #loja-settings .alert-danger {
-            background: linear-gradient(135deg, rgba(239,68,68,.10), rgba(255,255,255,.85));
-            border: 1px solid rgba(239,68,68,.22);
-            color: color-mix(in srgb, var(--text) 15%, #991B1B 85%);
-            border-left: 4px solid var(--danger-500);
-        }
-
-        #loja-settings[data-theme="dark"] .alert-danger {
-            background: linear-gradient(135deg, rgba(239,68,68,.16), rgba(10,16,30,.65));
-            color: rgba(255,220,220,.90);
-        }
-
-        /* Logo thumb */
-        #loja-settings .logo-thumb {
-            width: 48px;
-            height: 48px;
-            object-fit: cover;
-            border-radius: 999px;
-            border: 1px solid rgba(15,23,42,.08);
-            box-shadow: 0 6px 16px rgba(15,23,42,.12);
-        }
-
-        #loja-settings[data-theme="dark"] .logo-thumb {
-            border-color: rgba(234,240,255,.14);
-            box-shadow: 0 10px 26px rgba(0,0,0,.35);
-        }
-
-        /* Maps block */
-        #loja-settings .bg-light {
-            background: color-mix(in srgb, var(--card) 75%, #EEF4FF 25%) !important;
-        }
-
-        #loja-settings[data-theme="dark"] .bg-light {
-            background: rgba(10,16,30,.42) !important;
-        }
-
-        #loja-settings .border {
-            border-color: var(--border) !important;
-        }
-
-        #loja-settings #enderecoPreview {
-            padding: .65rem .85rem;
-            background: rgba(255,255,255,.90);
-            border: 1px dashed rgba(100,116,139,.35);
-            border-radius: var(--radius-sm);
-            color: var(--text);
-        }
-
-        #loja-settings[data-theme="dark"] #enderecoPreview {
-            background: rgba(10,16,30,.55);
-            border-color: rgba(234,240,255,.16);
-        }
-
-        #loja-settings #mapsUrlPreview {
-            font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
-            background: rgba(255,255,255,.90);
-        }
-
-        #loja-settings[data-theme="dark"] #mapsUrlPreview {
-            background: rgba(10,16,30,.55);
-        }
-
-        /* Validation */
-        #loja-settings span.text-danger {
-            font-size: .86rem;
-            color: #B91C1C !important;
-        }
-
-        #loja-settings[data-theme="dark"] span.text-danger {
-            color: #FFB4B4 !important;
-        }
-
-        /* Actions */
-        #loja-settings .form-actions .btn {
-            min-height: 44px;
-        }
-
-        /* Mobile safe */
-        @@media (max-width: 991.98px) {
-            #page-content-wrapper,
-            #page-content-wrapper .container,
-            #page-content-wrapper {
-                padding-bottom: var(--page-safe-bottom);
-            }
-        }
-
-        /* Tighten on very small screens */
-        @@media (max-width: 575.98px) {
-            #loja-settings {
-                padding: 16px;
-                border-radius: 22px;
-            }
-
-                #loja-settings .theme-toggle .label span {
-                    display: none;
-                }
-        }
-    </style>
+    <link rel="stylesheet" href="~/css/loja-settings.css" asp-append-version="true" />
 }
 
-<div class="container py-4">
-    <div id="loja-settings" class="loja-settings" data-theme="light">
+<div class="container py-4 loja-settings-page">
+    <div id="loja-settings" class="loja-settings">
 
         <header class="page-head">
             <div class="head-left">
@@ -522,12 +28,13 @@
                 </div>
             </div>
 
-            <div class="theme-toggle" role="group" aria-label="Alternar tema">
+            <!-- usa o toggle global do layout (html[data-theme]) -->
+            <div class="theme-pill" role="group" aria-label="Tema do site">
                 <div class="label" id="themeLabel">
-                    <i class="fa-solid fa-sun"></i>
-                    <span>Light</span>
+                    <i class="fa-solid fa-moon"></i>
+                    <span>Tema</span>
                 </div>
-                <div class="switch" id="themeSwitch" role="switch" aria-checked="false" tabindex="0" title="Alternar tema"></div>
+                <button type="button" class="switch" id="themeSwitch" title="Alternar tema" aria-label="Alternar tema"></button>
             </div>
         </header>
 
@@ -631,7 +138,7 @@
             <hr class="my-3 my-md-4" />
 
             <section class="section">
-                <h2 class="section-title"><i class="bi bi-geo-alt-fill me-2"></i>Endereço da Loja (Retirada no local)</h2>
+                <h2 class="section-title"><i class="bi bi-geo-alt-fill me-2"></i>Endereço da Loja</h2>
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label asp-for="Logradouro" class="form-label">Logradouro</label>
@@ -673,7 +180,8 @@
             </section>
 
             <section class="section mt-3">
-                <h2 class="section-title"><i class="bi bi-map me-2"></i>Localização para o Google Maps</h2>
+                <h2 class="section-title"><i class="bi bi-map me-2"></i>Google Maps</h2>
+
                 <div class="row g-3">
                     <div class="col-md-3">
                         <label asp-for="Latitude" class="form-label">Latitude</label>
@@ -693,7 +201,7 @@
                     </div>
                 </div>
 
-                <div class="mt-3 p-3 border rounded bg-light">
+                <div class="mt-3 p-3 border rounded bg-light maps-block">
                     <div class="small text-muted">Endereço completo (visual):</div>
                     <div id="enderecoPreview" class="fw-semibold">@Model.EnderecoTexto</div>
 
@@ -704,7 +212,7 @@
                             <a id="btnAbrirMaps" class="btn btn-primary" target="_blank" rel="noopener">
                                 <i class="bi bi-geo-alt"></i> Abrir no Maps
                             </a>
-                            <button type="button" id="btnCopyMaps" class="btn btn-outline-secondary">
+                            <button type="button" id="btnCopyMaps" class="btn btn-outline-secondary" title="Copiar">
                                 <i class="bi bi-clipboard"></i>
                             </button>
                         </div>
@@ -727,7 +235,6 @@
                 </button>
             </form>
         }
-
     </div>
 </div>
 
@@ -738,45 +245,30 @@
         document.addEventListener('DOMContentLoaded', () => {
           const qs = (q) => document.querySelector(q);
 
-          // ===== THEME TOGGLE =====
-          const root = qs('#loja-settings');
-          const sw = qs('#themeSwitch');
+          // ===== THEME: usa o do layout (html[data-theme]) =====
+          const btn = qs('#themeSwitch');
           const label = qs('#themeLabel');
 
-          function setTheme(theme) {
-            if (!root || !sw || !label) return;
-            root.setAttribute('data-theme', theme);
-
-            const isDark = theme === 'dark';
-            sw.classList.toggle('on', isDark);
-            sw.setAttribute('aria-checked', isDark ? 'true' : 'false');
-
-            label.innerHTML = isDark
+          function currentTheme(){
+            return document.documentElement.getAttribute('data-theme') || 'light';
+          }
+          function setLabel(){
+            const t = currentTheme();
+            if (!label) return;
+            label.innerHTML = (t === 'dark')
               ? '<i class="fa-solid fa-moon"></i><span>Dark</span>'
               : '<i class="fa-solid fa-sun"></i><span>Light</span>';
-
-            try { localStorage.setItem('loja_settings_theme', theme); } catch {}
+            btn?.classList.toggle('on', t === 'dark');
           }
-
-          function toggleTheme() {
-            const current = root?.getAttribute('data-theme') || 'light';
-            setTheme(current === 'dark' ? 'light' : 'dark');
+          function toggleTheme(){
+            const t = currentTheme();
+            const next = (t === 'dark') ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('theme', next); } catch {}
+            setLabel();
           }
-
-          // init theme
-          let saved = null;
-          try { saved = localStorage.getItem('loja_settings_theme'); } catch {}
-          if (!saved) {
-            // fallback: prefer system
-            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            saved = prefersDark ? 'dark' : 'light';
-          }
-          setTheme(saved);
-
-          sw?.addEventListener('click', toggleTheme);
-          sw?.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleTheme(); }
-          });
+          btn?.addEventListener('click', toggleTheme);
+          setLabel();
 
           // ===== MAP PREVIEW =====
           function montaEndereco() {
@@ -811,7 +303,6 @@
             const endPrev = qs('#enderecoPreview');
             const urlPrev = qs('#mapsUrlPreview');
             const btnMaps = qs('#btnAbrirMaps');
-
             if (endPrev) endPrev.textContent = montaEndereco();
             const url = montaMapsUrl();
             if (urlPrev) urlPrev.value = url;

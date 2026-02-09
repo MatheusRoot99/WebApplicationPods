@@ -184,9 +184,17 @@ namespace WebApplicationPods.Controllers
             var vm = new ProdutoFormViewModel
             {
                 Variacoes = new List<ProdutoFormViewModel.ProdutoVariacaoFormRow>
-        {
-            new() { Nome = "Unidade", Multiplicador = 1, Preco = 0.01m, Estoque = 0 }
-        }
+                    {
+                        new() {
+                            Nome = "Unidade",
+                            Multiplicador = 1,
+                            PrecoTexto = "0,01",
+                            PrecoPromocionalTexto = "",
+                            Estoque = 0,
+                            Ativo = true
+                        }
+                    }
+
             };
 
             return View(vm);
@@ -200,26 +208,25 @@ namespace WebApplicationPods.Controllers
         {
             CarregarCategorias();
 
-            // valida variações
-            if (vm.Variacoes == null || vm.Variacoes.Count == 0)
+            // ===== normaliza + limpa variações =====
+            vm.Variacoes = (vm.Variacoes ?? new())
+                .Where(v => !string.IsNullOrWhiteSpace(v.Nome))
+                .ToList();
+
+            if (vm.Variacoes.Count == 0)
                 ModelState.AddModelError("", "Adicione pelo menos 1 variação (Unidade, Fardo, Caixa...).");
 
-            if (vm.Variacoes != null)
+            // ===== valida variações (server) =====
+            foreach (var v in vm.Variacoes)
             {
-                // remove linhas vazias (caso usuário clique add e deixe em branco)
-                vm.Variacoes = vm.Variacoes
-                    .Where(v => !string.IsNullOrWhiteSpace(v.Nome))
-                    .ToList();
+                var preco = ParseDecimalBR(v.PrecoTexto);
+                var promo = string.IsNullOrWhiteSpace(v.PrecoPromocionalTexto) ? (decimal?)null : ParseDecimalBR(v.PrecoPromocionalTexto);
 
-                if (vm.Variacoes.Count == 0)
-                    ModelState.AddModelError("", "Adicione pelo menos 1 variação válida.");
+                if (preco <= 0)
+                    ModelState.AddModelError("", $"Preço inválido na variação: {v.Nome}");
 
-                foreach (var v in vm.Variacoes)
-                {
-                    if (v.Preco <= 0) ModelState.AddModelError("", $"Preço inválido na variação: {v.Nome}");
-                    if (v.PrecoPromocional.HasValue && v.PrecoPromocional.Value >= v.Preco)
-                        ModelState.AddModelError("", $"Promo deve ser menor que o preço em: {v.Nome}");
-                }
+                if (promo.HasValue && promo.Value > 0 && promo.Value >= preco)
+                    ModelState.AddModelError("", $"Promo deve ser menor que o preço em: {v.Nome}");
             }
 
             if (!ModelState.IsValid)
@@ -243,7 +250,7 @@ namespace WebApplicationPods.Controllers
                 DataCadastro = DateTime.Now
             };
 
-            // imagem opcional (reusa seu validador)
+            // imagem opcional
             if (vm.ImagemUpload is { Length: > 0 })
             {
                 var erroImg = ValidateImage(vm.ImagemUpload, out var extLower);
@@ -268,12 +275,15 @@ namespace WebApplicationPods.Controllers
             // variações
             foreach (var v in vm.Variacoes)
             {
+                var preco = ParseDecimalBR(v.PrecoTexto);
+                var promo = string.IsNullOrWhiteSpace(v.PrecoPromocionalTexto) ? (decimal?)null : ParseDecimalBR(v.PrecoPromocionalTexto);
+
                 produto.Variacoes.Add(new ProdutoVariacaoModel
                 {
                     Nome = v.Nome.Trim(),
-                    Multiplicador = v.Multiplicador,
-                    Preco = v.Preco,
-                    PrecoPromocional = v.PrecoPromocional,
+                    Multiplicador = v.Multiplicador <= 0 ? 1 : v.Multiplicador,
+                    Preco = preco,
+                    PrecoPromocional = (promo.HasValue && promo.Value > 0) ? promo : null,
                     Estoque = v.Estoque,
                     SKU = v.SKU,
                     CodigoBarras = v.CodigoBarras,
@@ -281,8 +291,10 @@ namespace WebApplicationPods.Controllers
                 });
             }
 
-            // estoque total (compatibilidade/exibição)
-            produto.Estoque = produto.Variacoes.Sum(x => x.Estoque);
+            // ✅ estoque total correto (ATIVOS × multiplicador)
+            produto.Estoque = produto.Variacoes
+                .Where(x => x.Ativo)
+                .Sum(x => x.Estoque * x.Multiplicador);
 
             _context.Produtos.Add(produto);
             await _context.SaveChangesAsync();
@@ -290,6 +302,7 @@ namespace WebApplicationPods.Controllers
             FlashOk("Produto cadastrado com variações!");
             return RedirectToAction(nameof(Index));
         }
+
 
 
         [Authorize(Roles = "Lojista,Admin")]
@@ -307,6 +320,8 @@ namespace WebApplicationPods.Controllers
             }
 
             CarregarCategorias();
+
+            var ptbr = CultureInfo.GetCultureInfo("pt-BR");
 
             var vm = new ProdutoFormViewModel
             {
@@ -329,17 +344,27 @@ namespace WebApplicationPods.Controllers
                         Id = v.Id,
                         Nome = v.Nome,
                         Multiplicador = v.Multiplicador,
-                        Preco = v.Preco,
-                        PrecoPromocional = v.PrecoPromocional,
+                        PrecoTexto = v.Preco.ToString("N2", ptbr),
+                        PrecoPromocionalTexto = v.PrecoPromocional.HasValue
+                            ? v.PrecoPromocional.Value.ToString("N2", ptbr)
+                            : "",
                         Estoque = v.Estoque,
                         SKU = v.SKU,
                         CodigoBarras = v.CodigoBarras,
                         Ativo = v.Ativo
-                    }).ToList()
+                    })
+                    .ToList()
             };
 
             if (vm.Variacoes.Count == 0)
-                vm.Variacoes.Add(new() { Nome = "Unidade", Multiplicador = 1, Preco = 0.01m, Estoque = 0 });
+                vm.Variacoes.Add(new()
+                {
+                    Nome = "Unidade",
+                    Multiplicador = 1,
+                    PrecoTexto = "0,01",
+                    PrecoPromocionalTexto = "",
+                    Estoque = 0
+                });
 
             return View(vm);
         }
@@ -365,6 +390,7 @@ namespace WebApplicationPods.Controllers
 
             CarregarCategorias();
 
+            // ===== normaliza + limpa variações =====
             vm.Variacoes = (vm.Variacoes ?? new())
                 .Where(v => !string.IsNullOrWhiteSpace(v.Nome))
                 .ToList();
@@ -372,10 +398,16 @@ namespace WebApplicationPods.Controllers
             if (vm.Variacoes.Count == 0)
                 ModelState.AddModelError("", "Adicione pelo menos 1 variação.");
 
+            // ===== valida variações (server) =====
             foreach (var v in vm.Variacoes)
             {
-                if (v.Preco <= 0) ModelState.AddModelError("", $"Preço inválido na variação: {v.Nome}");
-                if (v.PrecoPromocional.HasValue && v.PrecoPromocional.Value >= v.Preco)
+                var preco = ParseDecimalBR(v.PrecoTexto);
+                var promo = string.IsNullOrWhiteSpace(v.PrecoPromocionalTexto) ? (decimal?)null : ParseDecimalBR(v.PrecoPromocionalTexto);
+
+                if (preco <= 0)
+                    ModelState.AddModelError("", $"Preço inválido na variação: {v.Nome}");
+
+                if (promo.HasValue && promo.Value > 0 && promo.Value >= preco)
                     ModelState.AddModelError("", $"Promo deve ser menor que o preço em: {v.Nome}");
             }
 
@@ -421,23 +453,27 @@ namespace WebApplicationPods.Controllers
             }
 
             // ===== sincroniza variações =====
-            var idsNoForm = vm.Variacoes.Where(x => x.Id.HasValue).Select(x => x.Id!.Value).ToHashSet();
+            var idsNoForm = vm.Variacoes
+                .Where(x => x.Id.HasValue && x.Id.Value > 0)
+                .Select(x => x.Id!.Value)
+                .ToHashSet();
 
-            // remove as que sumiram do form
             var paraRemover = produto.Variacoes.Where(v => !idsNoForm.Contains(v.Id)).ToList();
             foreach (var r in paraRemover)
                 _context.ProdutoVariacoes.Remove(r);
 
-            // update/add
             foreach (var row in vm.Variacoes)
             {
-                if (row.Id.HasValue)
+                var preco = ParseDecimalBR(row.PrecoTexto);
+                var promo = string.IsNullOrWhiteSpace(row.PrecoPromocionalTexto) ? (decimal?)null : ParseDecimalBR(row.PrecoPromocionalTexto);
+
+                if (row.Id.HasValue && row.Id.Value > 0)
                 {
                     var ent = produto.Variacoes.First(v => v.Id == row.Id.Value);
                     ent.Nome = row.Nome.Trim();
-                    ent.Multiplicador = row.Multiplicador;
-                    ent.Preco = row.Preco;
-                    ent.PrecoPromocional = row.PrecoPromocional;
+                    ent.Multiplicador = row.Multiplicador <= 0 ? 1 : row.Multiplicador;
+                    ent.Preco = preco;
+                    ent.PrecoPromocional = (promo.HasValue && promo.Value > 0) ? promo : null;
                     ent.Estoque = row.Estoque;
                     ent.SKU = row.SKU;
                     ent.CodigoBarras = row.CodigoBarras;
@@ -448,9 +484,9 @@ namespace WebApplicationPods.Controllers
                     produto.Variacoes.Add(new ProdutoVariacaoModel
                     {
                         Nome = row.Nome.Trim(),
-                        Multiplicador = row.Multiplicador,
-                        Preco = row.Preco,
-                        PrecoPromocional = row.PrecoPromocional,
+                        Multiplicador = row.Multiplicador <= 0 ? 1 : row.Multiplicador,
+                        Preco = preco,
+                        PrecoPromocional = (promo.HasValue && promo.Value > 0) ? promo : null,
                         Estoque = row.Estoque,
                         SKU = row.SKU,
                         CodigoBarras = row.CodigoBarras,
@@ -459,14 +495,17 @@ namespace WebApplicationPods.Controllers
                 }
             }
 
-            // estoque total
-            produto.Estoque = produto.Variacoes.Sum(v => v.Estoque);
+            // ✅ estoque total correto (ATIVOS × multiplicador)
+            produto.Estoque = produto.Variacoes
+                .Where(v => v.Ativo)
+                .Sum(v => v.Estoque * v.Multiplicador);
 
             await _context.SaveChangesAsync();
 
             FlashOk("Produto e variações atualizados!");
             return RedirectToAction(nameof(Index));
         }
+
 
 
 
@@ -574,5 +613,21 @@ namespace WebApplicationPods.Controllers
             var slug = Regex.Replace(s ?? "", "[^a-zA-Z0-9]+", "-").Trim('-');
             return slug.ToLowerInvariant();
         }
+
+        private static decimal ParseDecimalBR(string? s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return 0m;
+
+            s = s.Trim();
+            s = Regex.Replace(s, @"[^\d\.,\-]", "");
+
+            if (s.Contains(",") && s.Contains("."))
+                s = s.Replace(".", "").Replace(",", ".");
+            else
+                s = s.Replace(",", ".");
+
+            return decimal.TryParse(s, NumberStyles.Number, CultureInfo.InvariantCulture, out var d) ? d : 0m;
+        }
+
     }
 }

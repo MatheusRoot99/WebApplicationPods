@@ -1,311 +1,357 @@
-﻿/*===========================
-Clean Modern (Light)
-Paleta global para esta página
-===========================
+﻿/* =========================================================
+   LOJA SETTINGS (page css)
+   - Escopado: nada de :root, nada de body global
+   - Dark automático via html[data-theme="dark"]
+   ========================================================= */
 
-body {
-    outline: 10px solid red !important;
+.loja-settings-page {
+    padding-bottom: calc(var(--mbn-height, 68px) + 16px);
 }
 
-:root {
-     Brand (azul) 
-    --brand-500: #2F6BFF;
-    --brand-600: #2458E6;
-    --brand-50: #EEF4FF;
-     Action (verde – salvar/sucesso) 
-    --success-500: #22C55E;
-    --success-600: #16A34A;
-    --success-50: #ECFDF3;
-     Base 
-    --bg: #F6F8FC;
-    --card: #FFFFFF;
-    --text: #0F172A;  slate-900 
-    --muted: #64748B;  slate-500 
-    --border: #E6ECF5;
-     UI 
-    --shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
-    --shadow-soft: 0 6px 18px rgba(15, 23, 42, 0.06);
-    --radius-lg: 18px;
-    --radius-md: 12px;
-    --radius-sm: 10px;
-    --ring-brand: rgba(47, 107, 255, .22);
-    --ring-success: rgba(34, 197, 94, .22);
-     layout bottom nav (se usar) 
-    --mbn-h: 68px;
-    --page-safe-bottom: calc(var(--mbn-h) + 16px);
+/* Fundo da página (escopado na wrapper do conteúdo) */
+.loja-settings-page {
+    background: radial-gradient(1100px 560px at 12% -10%, color-mix(in srgb, var(--primary, #2575fc) 12%, transparent), transparent 62%), radial-gradient(1100px 560px at 100% 0%, color-mix(in srgb, var(--bs-success, #198754) 10%, transparent), transparent 62%);
+    border-radius: var(--radius-lg, 18px);
 }
 
- ===========================
-   PAGE SCOPE
-   =========================== 
+/* Outer “glass” container */
 #loja-settings {
-    background: radial-gradient(900px 420px at 8% -10%, rgba(47,107,255,.12), transparent 60%), radial-gradient(900px 420px at 100% 0%, rgba(34,197,94,.10), transparent 60%);
-    border-radius: var(--radius-lg);
+    border-radius: 26px;
+    padding: 22px;
+    border: 1px solid color-mix(in srgb, var(--border, rgba(15,23,42,.10)) 55%, transparent);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--bg-elev, rgba(255,255,255,.92)) 85%, transparent), color-mix(in srgb, var(--bg-elev, rgba(255,255,255,.92)) 65%, transparent));
+    box-shadow: var(--shadow-2, 0 18px 60px rgba(0,0,0,.16));
+    position: relative;
+    overflow: hidden;
 }
 
-     Cabeçalho 
-    #loja-settings .page-head {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        padding: .25rem 0 1rem 0;
-        border-bottom: 1px dashed var(--border);
-    }
+html[data-theme="dark"] #loja-settings {
+    background: radial-gradient(900px 420px at 20% -10%, color-mix(in srgb, var(--primary, #2575fc) 22%, transparent), transparent 60%), radial-gradient(900px 420px at 100% 0%, color-mix(in srgb, #22c55e 14%, transparent), transparent 60%), rgba(10, 16, 30, .55);
+    border-color: rgba(255,255,255,.10);
+}
 
-        #loja-settings .page-head .icon-wrap {
-            width: 52px;
-            height: 52px;
-            border-radius: 14px;
-            display: grid;
-            place-items: center;
-            background: linear-gradient(135deg, var(--brand-50), #fff);
-            border: 1px solid rgba(15,23,42,.06);
-            box-shadow: var(--shadow-soft);
-        }
+/* brilho sutil */
+#loja-settings::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(900px 340px at 20% 0%, rgba(255,255,255,.25), transparent 60%);
+    pointer-events: none;
+    opacity: .55;
+}
 
-            #loja-settings .page-head .icon-wrap i {
-                font-size: 1.15rem;
-                color: var(--brand-600);
-            }
+html[data-theme="dark"] #loja-settings::before {
+    opacity: .18;
+}
 
-        #loja-settings .page-head .title {
-            margin: 0;
-            font-size: 1.45rem;
-            font-weight: 800;
-            color: var(--text);
-            letter-spacing: -0.01em;
-        }
+/* Header */
+#loja-settings .page-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 6px 0 16px 0;
+    border-bottom: 1px dashed var(--border, rgba(15,23,42,.10));
+    margin-bottom: 16px;
+    position: relative;
+    z-index: 2;
+}
 
-        #loja-settings .page-head .subtitle {
-            margin: .2rem 0 0 0;
-            color: var(--muted);
-        }
+#loja-settings .head-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
 
-.brand-gradient {
-    background: linear-gradient(135deg, var(--brand-600), var(--success-500));
+#loja-settings .icon-wrap {
+    width: 54px;
+    height: 54px;
+    border-radius: 18px;
+    display: grid;
+    place-items: center;
+    background: color-mix(in srgb, var(--primary, #2575fc) 10%, #fff 90%);
+    border: 1px solid rgba(15,23,42,.06);
+    box-shadow: var(--shadow-1, 0 10px 28px rgba(0,0,0,.10));
+    flex: 0 0 auto;
+}
+
+html[data-theme="dark"] #loja-settings .icon-wrap {
+    background: linear-gradient(135deg, rgba(37,117,252,.18), rgba(14,22,39,.62));
+    border-color: rgba(255,255,255,.10);
+}
+
+#loja-settings .icon-wrap i {
+    font-size: 1.2rem;
+    color: var(--primary, #2575fc);
+}
+
+html[data-theme="dark"] #loja-settings .icon-wrap i {
+    color: #8FB0FF;
+}
+
+#loja-settings .title {
+    margin: 0;
+    font-size: 1.32rem;
+    font-weight: 900;
+    color: var(--text, #0f172a);
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#loja-settings .subtitle {
+    margin: .25rem 0 0 0;
+    color: var(--muted, #6b7280);
+    font-size: .95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#loja-settings .brand-gradient {
+    background: linear-gradient(135deg, var(--primary, #2575fc), #22c55e);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
 }
 
- Card principal 
+/* Pill tema */
+#loja-settings .theme-pill {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: color-mix(in srgb, var(--bg-elev-2, #fff) 80%, transparent);
+    border: 1px solid var(--border, rgba(15,23,42,.10));
+    border-radius: 999px;
+    padding: 8px 10px;
+    box-shadow: var(--shadow-1, 0 10px 28px rgba(0,0,0,.10));
+    user-select: none;
+}
+
+html[data-theme="dark"] #loja-settings .theme-pill {
+    background: rgba(17,24,39,.55);
+    border-color: rgba(255,255,255,.12);
+}
+
+#loja-settings .theme-pill .label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted, #6b7280);
+    font-weight: 900;
+    font-size: .86rem;
+}
+
+/* Switch button */
+#loja-settings .switch {
+    width: 46px;
+    height: 26px;
+    border-radius: 999px;
+    border: 1px solid var(--border, rgba(15,23,42,.10));
+    background: rgba(148,163,184,.30);
+    position: relative;
+    cursor: pointer;
+    transition: all .2s ease;
+    padding: 0;
+}
+
+html[data-theme="dark"] #loja-settings .switch {
+    background: rgba(148,163,184,.18);
+    border-color: rgba(255,255,255,.14);
+}
+
+#loja-settings .switch::after {
+    content: "";
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    position: absolute;
+    top: 50%;
+    left: 3px;
+    transform: translateY(-50%);
+    background: #fff;
+    box-shadow: 0 8px 18px rgba(15,23,42,.16);
+    transition: all .2s ease;
+}
+
+html[data-theme="dark"] #loja-settings .switch::after {
+    background: rgba(234,240,255,.92);
+}
+
+#loja-settings .switch.on {
+    background: var(--primary-grad, linear-gradient(135deg, #6a11cb, #2575fc));
+    border-color: color-mix(in srgb, var(--primary, #2575fc) 55%, transparent);
+}
+
+    #loja-settings .switch.on::after {
+        left: calc(100% - 23px);
+    }
+
+/* Card principal */
 #loja-settings .main-card {
     border: 1px solid rgba(15,23,42,.06);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
-    background: var(--card);
+    border-radius: 20px;
+    background: var(--bg-elev-2, #fff);
+    box-shadow: var(--shadow-1, 0 10px 28px rgba(0,0,0,.10));
+    position: relative;
+    z-index: 2;
+    overflow: hidden;
 }
 
- Seções 
-#loja-settings .section {
-    margin-top: .25rem;
+html[data-theme="dark"] #loja-settings .main-card {
+    border-color: rgba(255,255,255,.10);
 }
 
+/* Titulos seção */
 #loja-settings .section-title {
     display: flex;
     align-items: center;
     gap: .55rem;
-    font-size: 1.05rem;
-    font-weight: 800;
-    color: var(--text);
+    font-size: 1.02rem;
+    font-weight: 900;
+    color: var(--text, #0f172a);
     margin: .25rem 0 .85rem;
 }
 
     #loja-settings .section-title i {
-        color: var(--brand-600);
+        color: var(--primary, #2575fc);
     }
 
- Labels / inputs 
+html[data-theme="dark"] #loja-settings .section-title i {
+    color: #8FB0FF;
+}
+
+/* Inputs/labels */
 #loja-settings .form-label {
-    font-weight: 650;
-    color: #334155;  slate-700 
+    font-weight: 900;
+    color: color-mix(in srgb, var(--text, #0f172a) 80%, #334155 20%);
+}
+
+html[data-theme="dark"] #loja-settings .form-label {
+    color: rgba(234,240,255,.82);
 }
 
 #loja-settings .form-control,
 #loja-settings .form-select {
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    background: #fff;
-    color: var(--text);
-    transition: box-shadow .15s ease, border-color .15s ease, transform .02s ease;
+    border-radius: 12px;
+    border: 1px solid var(--border, rgba(15,23,42,.10));
+    background: var(--input-bg, rgba(255,255,255,.95));
+    color: var(--text, #0f172a);
+    padding-top: .62rem;
+    padding-bottom: .62rem;
 }
 
-    #loja-settings .form-control::placeholder {
-        color: #94A3B8;  slate-400 
-    }
+html[data-theme="dark"] #loja-settings .form-control,
+html[data-theme="dark"] #loja-settings .form-select {
+    background: rgba(10,15,28,.70);
+    border-color: rgba(255,255,255,.12);
+    color: rgba(255,255,255,.92);
+}
 
-    #loja-settings .form-control:focus,
-    #loja-settings .form-select:focus {
-        border-color: rgba(47,107,255,.65);
-        box-shadow: 0 0 0 .22rem var(--ring-brand);
-    }
+#loja-settings .form-control:focus,
+#loja-settings .form-select:focus {
+    border-color: color-mix(in srgb, var(--primary, #2575fc) 70%, transparent);
+    box-shadow: 0 0 0 .22rem color-mix(in srgb, var(--primary, #2575fc) 22%, transparent);
+}
 
 #loja-settings .form-text {
-    color: var(--muted);
+    color: var(--muted, #6b7280);
     font-size: .86rem;
 }
 
- Checkboxes 
-#loja-settings .form-check-input {
-    width: 1.08rem;
-    height: 1.08rem;
-    border-color: var(--border);
+/* checkbox */
+#loja-settings .form-check-input:checked {
+    background: var(--primary-grad, linear-gradient(135deg, #6a11cb, #2575fc));
+    border-color: var(--primary, #2575fc);
 }
 
-    #loja-settings .form-check-input:checked {
-        background: linear-gradient(135deg, var(--brand-600), var(--brand-500));
-        border-color: var(--brand-600);
-    }
-
-#loja-settings .form-check-inline {
-    margin-right: .75rem;
-    margin-bottom: .35rem;
-}
-
-#loja-settings .form-check-label {
-    color: #334155;
-}
-
- Botões 
+/* Botões */
 #loja-settings .btn {
-    border-radius: var(--radius-sm);
+    border-radius: 12px;
     padding: .62rem 1rem;
-    font-weight: 750;
-    letter-spacing: -0.01em;
+    font-weight: 900;
 }
 
 #loja-settings .btn-success {
-    background: linear-gradient(135deg, var(--success-500), var(--success-600));
-    border: none;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    border: 0;
     color: #fff;
 }
-
-    #loja-settings .btn-success:hover {
-        filter: brightness(.96);
-    }
-
-    #loja-settings .btn-success:focus {
-        box-shadow: 0 0 0 .22rem var(--ring-success);
-    }
 
 #loja-settings .btn-primary {
-    background: linear-gradient(135deg, var(--brand-500), var(--brand-600));
-    border: none;
+    background: var(--primary-grad, linear-gradient(135deg, #6a11cb, #2575fc));
+    border: 0;
     color: #fff;
 }
 
-    #loja-settings .btn-primary:hover {
-        filter: brightness(.96);
-    }
-
 #loja-settings .btn-outline-secondary {
-    border: 1px solid var(--border);
-    color: #334155;
-    background: #fff;
+    border: 1px solid var(--border, rgba(15,23,42,.10));
+    background: color-mix(in srgb, var(--bg-elev-2, #fff) 85%, transparent);
+    color: color-mix(in srgb, var(--text, #0f172a) 70%, #334155 30%);
 }
 
-    #loja-settings .btn-outline-secondary:hover {
-        background: #F1F5F9;  slate-100 
-        color: var(--text);
-    }
-
-#loja-settings .btn-outline-danger {
-    border-color: #EF4444;
-    color: #EF4444;
+html[data-theme="dark"] #loja-settings .btn-outline-secondary {
+    background: rgba(10,16,30,.45);
+    border-color: rgba(255,255,255,.12);
+    color: rgba(234,240,255,.82);
 }
 
-    #loja-settings .btn-outline-danger:hover {
-        background: #EF4444;
-        color: #fff;
-    }
-
- Alerts 
+/* Alerts */
 #loja-settings .alert-success {
-    background: linear-gradient(135deg, var(--success-50), #ffffff);
-    border: 1px solid rgba(34,197,94,.20);
-    color: var(--text);
-    border-left: 4px solid var(--success-500);
+    border-left: 4px solid #22c55e;
 }
 
 #loja-settings .alert-danger {
-    background: #FFF1F2;
-    border: 1px solid rgba(239,68,68,.22);
-    color: #991B1B;
-    border-left: 4px solid #EF4444;
+    border-left: 4px solid #ef4444;
 }
 
- Logo thumb 
+/* thumb logo */
 #loja-settings .logo-thumb {
     width: 48px;
     height: 48px;
     object-fit: cover;
     border-radius: 999px;
     border: 1px solid rgba(15,23,42,.08);
-    box-shadow: 0 4px 12px rgba(15,23,42,.10);
+    box-shadow: 0 6px 16px rgba(15,23,42,.12);
 }
 
- Maps bloco 
-#loja-settings .bg-light {
-    background: #F3F6FD !important;
+html[data-theme="dark"] #loja-settings .logo-thumb {
+    border-color: rgba(255,255,255,.14);
+    box-shadow: 0 10px 26px rgba(0,0,0,.35);
 }
 
-#loja-settings .border {
-    border-color: var(--border) !important;
+/* Maps block */
+#loja-settings .maps-block {
+    background: color-mix(in srgb, var(--bg-elev-2, #fff) 70%, var(--primary, #2575fc) 6%);
+    border-color: var(--border, rgba(15,23,42,.10)) !important;
+}
+
+html[data-theme="dark"] #loja-settings .maps-block {
+    background: rgba(10,16,30,.42);
 }
 
 #loja-settings #enderecoPreview {
     padding: .65rem .85rem;
-    background: #fff;
-    border: 1px dashed rgba(100,116,139,.35);
-    border-radius: var(--radius-sm);
-    color: var(--text);
+    background: color-mix(in srgb, var(--bg-elev-2, #fff) 92%, transparent);
+    border: 1px dashed color-mix(in srgb, var(--muted, #6b7280) 35%, transparent);
+    border-radius: 12px;
 }
 
 #loja-settings #mapsUrlPreview {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-    background: #fff;
-    color: var(--text);
+    font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
 }
 
- Separadores 
-#loja-settings hr {
-    border-color: var(--border);
-    opacity: .7;
-}
-
- Validação 
-#loja-settings .field-validation-error,
-#loja-settings span.text-danger {
-    font-size: .86rem;
-    color: #B91C1C !important;
-}
-
- Ações do formulário 
-#loja-settings .form-actions .btn {
-    min-height: 44px;
-}
-
- Safe area p/ bottom-nav no mobile 
-@media (max-width: 991.98px) {
-    #page-content-wrapper,
-    #page-content-wrapper .container,
-    #page-content-wrapper {
-        padding-bottom: var(--page-safe-bottom);
+/* Mobile */
+@media (max-width: 575.98px) {
+    #loja-settings {
+        padding: 16px;
+        border-radius: 22px;
     }
 
-    .navbar.fixed-top + #page-content-wrapper {
-        padding-top: 56px;
-    }
-
-    #bottomNav, .mbn, .mobile-bottom-nav {
-        height: var(--mbn-h);
-    }
+        #loja-settings .theme-pill .label span {
+            display: none;
+        }
 }
-
- Melhor UX no mobile 
-@media (hover: none) {
-    #loja-settings .form-control:focus {
-        transform: none;
-    }
-}
-*/
