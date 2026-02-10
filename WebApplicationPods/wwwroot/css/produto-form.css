@@ -1,237 +1,288 @@
-﻿/* ========= Produto Form - Dark Glass UI ========= */
-:root {
-    --pf-bg-0: #0b1020;
-    --pf-bg-1: #0e1630;
-    --pf-card: rgba(18, 26, 46, .72);
-    --pf-card-2: rgba(18, 26, 46, .52);
-    --pf-stroke: rgba(255,255,255,.08);
-    --pf-stroke-2: rgba(255,255,255,.12);
-    --pf-text: rgba(255,255,255,.92);
-    --pf-muted: rgba(255,255,255,.68);
-    --pf-accent: #6d5efc; /* roxo neon */
-    --pf-accent-2: #2dd4bf; /* teal neon */
-    --pf-danger: #ff5c77;
-    --pf-warning: #ffcc66;
-    --pf-shadow: 0 18px 55px rgba(0,0,0,.45);
-    --pf-shadow-soft: 0 10px 28px rgba(0,0,0,.28);
-    --pf-radius: 16px;
+﻿/* =========================
+   Produto Form - Tema integrado ao layout
+   Escopo: .pf-scope
+   ========================= */
+
+/* Base */
+.pf-scope {
+    --pf-accent: #3b82f6;
+    --pf-accent2: #8b5cf6;
+    --pf-danger: #ef4444;
+    /* LIGHT default */
+    --pf-text: rgba(17,24,39,.92);
+    --pf-muted: rgba(17,24,39,.62);
+    --pf-placeholder: rgba(17,24,39,.42);
+    --pf-card: rgba(255,255,255,.92);
+    --pf-card-stroke: rgba(17,24,39,.12);
+    --pf-shadow: 0 18px 55px rgba(0,0,0,.10);
+    --pf-surface-1: rgba(255,255,255,.86); /* header table / rows */
+    --pf-surface-2: rgba(255,255,255,.92); /* inputs/selects */
+    --pf-surface-3: rgba(17,24,39,.04); /* hover */
+
+    --pf-border: rgba(17,24,39,.14);
+    --pf-border-strong: rgba(17,24,39,.18);
+    --pf-badge-bg: rgba(59,130,246,.08);
+    --pf-badge-border: rgba(59,130,246,.20);
 }
 
-/* Página */
-.produto-form-page {
+/* DARK (Bootstrap 5.3 theme) */
+body[data-bs-theme="dark"] .pf-scope {
+    --pf-text: rgba(255,255,255,.92);
+    --pf-muted: rgba(255,255,255,.62);
+    --pf-placeholder: rgba(255,255,255,.42);
+    --pf-card: rgba(15,23,42,.70);
+    --pf-card-stroke: rgba(255,255,255,.10);
+    --pf-shadow: 0 18px 55px rgba(0,0,0,.35);
+    --pf-surface-1: rgba(2,6,23,.55);
+    --pf-surface-2: rgba(2,6,23,.62);
+    --pf-surface-3: rgba(59,130,246,.08);
+    --pf-border: rgba(255,255,255,.12);
+    --pf-border-strong: rgba(255,255,255,.16);
+    --pf-badge-bg: rgba(59,130,246,.12);
+    --pf-badge-border: rgba(59,130,246,.22);
+}
+
+/* LIGHT (Bootstrap 5.3 theme) */
+body[data-bs-theme="light"] .pf-scope {
+    /* já é o default, mas deixo explícito */
+}
+
+/* Fallback: se não tiver data-bs-theme */
+@media (prefers-color-scheme: dark) {
+    body:not([data-bs-theme]) .pf-scope {
+        --pf-text: rgba(255,255,255,.92);
+        --pf-muted: rgba(255,255,255,.62);
+        --pf-placeholder: rgba(255,255,255,.42);
+        --pf-card: rgba(15,23,42,.70);
+        --pf-card-stroke: rgba(255,255,255,.10);
+        --pf-shadow: 0 18px 55px rgba(0,0,0,.35);
+        --pf-surface-1: rgba(2,6,23,.55);
+        --pf-surface-2: rgba(2,6,23,.62);
+        --pf-surface-3: rgba(59,130,246,.08);
+        --pf-border: rgba(255,255,255,.12);
+        --pf-border-strong: rgba(255,255,255,.16);
+        --pf-badge-bg: rgba(59,130,246,.12);
+        --pf-badge-border: rgba(59,130,246,.22);
+    }
+}
+
+/* =========================
+   Core look
+   ========================= */
+
+.pf-scope {
     color: var(--pf-text);
 }
 
-    /* Fundo “premium” atrás do conteúdo */
-    .produto-form-page::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        z-index: -1;
-        background: radial-gradient(900px 480px at 12% 18%, rgba(109,94,252,.28), transparent 60%), radial-gradient(860px 520px at 78% 18%, rgba(45,212,191,.18), transparent 62%), radial-gradient(900px 620px at 55% 95%, rgba(109,94,252,.14), transparent 60%), linear-gradient(180deg, var(--pf-bg-1), var(--pf-bg-0));
+    /* Full width sem estourar sidebar */
+    .pf-scope .pf-full {
+        width: 100%;
+        max-width: 100%;
     }
 
-    /* Topo (título + voltar) */
-    .produto-form-page h3 {
-        letter-spacing: .2px;
-        font-weight: 800;
+    /* Icon box do header */
+    .pf-scope .pf-iconbox {
+        background: linear-gradient(135deg, rgba(59, 130, 246, .18), rgba(139, 92, 246, .18));
+        border: 1px solid var(--pf-border);
     }
 
-    .produto-form-page .text-muted {
-        color: var(--pf-muted) !important;
+    /* Icon gradient */
+    .pf-scope .pf-icongrad {
+        background: linear-gradient(90deg, var(--pf-accent), var(--pf-accent2));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
     }
 
-    /* Botão voltar */
-    .produto-form-page a.btn.btn-outline-secondary {
-        border-color: var(--pf-stroke-2);
-        color: var(--pf-text);
-        background: rgba(255,255,255,.02);
-        border-radius: 999px;
-        padding: .55rem 1.0rem;
-    }
-
-        .produto-form-page a.btn.btn-outline-secondary:hover {
-            background: rgba(255,255,255,.06);
-            border-color: rgba(255,255,255,.18);
-        }
-
-    /* Card principal */
-    .produto-form-page .card {
+    /* Glass card */
+    .pf-scope .glass-card {
         background: var(--pf-card);
-        border: 1px solid var(--pf-stroke);
-        border-radius: var(--pf-radius);
+        border: 1px solid var(--pf-card-stroke);
         box-shadow: var(--pf-shadow);
-        overflow: hidden;
         backdrop-filter: blur(10px);
     }
 
-    /* Header do card (substitui “bg-dark” por algo mais elegante sem mexer no HTML) */
-    .produto-form-page .card-header.bg-dark {
-        background: linear-gradient(90deg, rgba(109,94,252,.22), rgba(45,212,191,.10)) !important;
-        border-bottom: 1px solid var(--pf-stroke);
+    /* Title gradient */
+    .pf-scope .gradient-text {
+        background: linear-gradient(90deg, var(--pf-accent), var(--pf-accent2));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
     }
 
-    /* Badge estoque total no header */
-    .produto-form-page .card-header .badge.bg-secondary {
-        background: rgba(255,255,255,.06) !important;
-        border: 1px solid var(--pf-stroke-2);
-        color: var(--pf-text);
-        padding: .55rem .75rem;
-        border-radius: 999px;
+    /* Text helpers (tailwind classes) */
+    .pf-scope .text-gray-300,
+    .pf-scope .text-gray-400,
+    .pf-scope .text-gray-500 {
+        color: var(--pf-muted) !important;
     }
 
-    /* Separadores */
-    .produto-form-page hr {
-        border-color: rgba(255,255,255,.10);
-        opacity: 1;
+    /* Badge estoque */
+    .pf-scope .stock-badge {
+        background: var(--pf-badge-bg);
+        border: 1px solid var(--pf-badge-border);
     }
 
-    /* Labels */
-    .produto-form-page .form-label {
-        color: rgba(255,255,255,.86);
+    /* Primary button */
+    .pf-scope .btn-primary {
+        background: linear-gradient(90deg, var(--pf-accent), var(--pf-accent2));
+        border: 1px solid var(--pf-border);
+        transition: all .25s ease;
+        box-shadow: 0 12px 28px rgba(59,130,246,.18);
     }
 
-        .produto-form-page .form-label.fw-semibold {
-            font-weight: 700;
+        .pf-scope .btn-primary:hover {
+            transform: translateY(-1px);
         }
 
-    /* Inputs / selects / textarea */
-    .produto-form-page .form-control,
-    .produto-form-page .form-select {
-        background: rgba(255,255,255,.04);
-        border: 1px solid var(--pf-stroke);
-        color: var(--pf-text);
-        border-radius: 12px;
-        transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+    /* Upload icon */
+    .pf-scope .pf-upload-ico {
+        color: var(--pf-muted);
     }
 
-        .produto-form-page .form-control::placeholder {
-            color: rgba(255,255,255,.38);
+    /* Inputs/selects/textarea */
+    .pf-scope input[type="text"],
+    .pf-scope input[type="number"],
+    .pf-scope textarea,
+    .pf-scope select {
+        background: var(--pf-surface-2) !important;
+        color: var(--pf-text) !important;
+        border-color: var(--pf-border) !important;
+    }
+
+        .pf-scope input::placeholder,
+        .pf-scope textarea::placeholder {
+            color: var(--pf-placeholder) !important;
         }
 
-        .produto-form-page .form-control:focus,
-        .produto-form-page .form-select:focus {
-            background: rgba(255,255,255,.06);
-            border-color: rgba(109,94,252,.55);
-            box-shadow: 0 0 0 .25rem rgba(109,94,252,.18);
-            color: var(--pf-text);
+        .pf-scope input:focus,
+        .pf-scope textarea:focus,
+        .pf-scope select:focus {
+            outline: none !important;
+            border-color: rgba(59,130,246,.55) !important;
+            box-shadow: 0 0 0 3px rgba(59,130,246,.18) !important;
         }
 
-    .produto-form-page .form-text {
-        color: rgba(255,255,255,.55) !important;
+    /* Input icon */
+    .pf-scope .input-icon {
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--pf-placeholder) !important;
     }
 
-    /* Switch/checkbox */
-    .produto-form-page .form-check-input {
-        background-color: rgba(255,255,255,.08);
-        border: 1px solid var(--pf-stroke);
+    /* =========================
+   TABELA / VARIAÇÕES
+   (remove “faixas”)
+   ========================= */
+
+    .pf-scope .pf-table thead {
+        background: var(--pf-surface-1) !important;
     }
 
-        .produto-form-page .form-check-input:checked {
-            background-color: var(--pf-accent);
-            border-color: rgba(109,94,252,.7);
+    .pf-scope .variation-row {
+        background: var(--pf-surface-1) !important;
+        transition: background .2s ease, border-color .2s ease;
+        border-left: 4px solid transparent;
+    }
+
+        .pf-scope .variation-row:hover {
+            background: var(--pf-surface-3) !important;
+            border-left-color: var(--pf-accent);
         }
 
-    .produto-form-page .form-check-label {
-        color: rgba(255,255,255,.78);
+    /* Remove button */
+    .pf-scope .remove-btn {
+        transition: all .2s ease;
     }
 
-    /* Alert de validação */
-    .produto-form-page .alert.alert-danger {
-        background: rgba(255,92,119,.10);
-        border: 1px solid rgba(255,92,119,.25);
-        color: rgba(255,255,255,.90);
-        border-radius: 12px;
-    }
-
-    /* Botões */
-    .produto-form-page .btn {
-        border-radius: 999px;
-    }
-
-        .produto-form-page .btn.btn-primary {
-            border: 1px solid rgba(109,94,252,.55);
-            background: linear-gradient(90deg, rgba(109,94,252,.95), rgba(93,83,255,.75));
-            box-shadow: 0 14px 30px rgba(109,94,252,.18);
+        .pf-scope .remove-btn:hover {
+            transform: scale(1.06);
+            background: rgba(239,68,68,.10) !important;
+            border-color: rgba(239,68,68,.35) !important;
         }
 
-            .produto-form-page .btn.btn-primary:hover {
-                filter: brightness(1.03);
-            }
+    /* =========================
+   Switch
+   ========================= */
 
-        .produto-form-page .btn.btn-outline-primary {
-            border-color: rgba(109,94,252,.45);
-            color: var(--pf-text);
-            background: rgba(109,94,252,.10);
+    .pf-scope .switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 26px;
+    }
+
+        .pf-scope .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
         }
 
-            .produto-form-page .btn.btn-outline-primary:hover {
-                background: rgba(109,94,252,.16);
-                border-color: rgba(109,94,252,.70);
-            }
+    .pf-scope .slider {
+        position: absolute;
+        inset: 0;
+        cursor: pointer;
+        background: rgba(128,128,128,.25);
+        border: 1px solid var(--pf-border);
+        transition: .25s;
+        border-radius: 34px;
+    }
 
-        .produto-form-page .btn.btn-outline-danger {
-            border-color: rgba(255,92,119,.38);
-            color: var(--pf-text);
-            background: rgba(255,92,119,.08);
+        .pf-scope .slider:before {
+            content: "";
+            position: absolute;
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background: #fff;
+            border-radius: 50%;
+            transition: .25s;
         }
 
-            .produto-form-page .btn.btn-outline-danger:hover {
-                background: rgba(255,92,119,.14);
-                border-color: rgba(255,92,119,.60);
-            }
-
-    /* Tabela variações - dark */
-    .produto-form-page .table-responsive {
-        border-radius: 14px;
-        border: 1px solid var(--pf-stroke);
-        overflow: hidden;
-        background: rgba(255,255,255,.02);
+    .pf-scope input:checked + .slider {
+        background: linear-gradient(90deg, var(--pf-accent), var(--pf-accent2));
+        border-color: rgba(59,130,246,.35);
     }
 
-    .produto-form-page table.table {
-        margin: 0;
-        color: var(--pf-text);
+        .pf-scope input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+
+    /* =========================
+   OVERRIDES das classes Tailwind “dark fixas”
+   (isso aqui é o que elimina as FAIXAS no tema claro)
+   ========================= */
+
+    .pf-scope .bg-gray-900,
+    .pf-scope .bg-gray-900\/50,
+    .pf-scope .bg-gray-800,
+    .pf-scope .bg-gray-700 {
+        background-color: var(--pf-surface-1) !important;
     }
 
-    .produto-form-page .table thead.table-light {
-        background: rgba(255,255,255,.05) !important;
-        color: rgba(255,255,255,.85);
+    .pf-scope .border-gray-800,
+    .pf-scope .border-gray-700,
+    .pf-scope .divide-gray-800 {
+        border-color: var(--pf-border) !important;
     }
 
-    .produto-form-page .table thead th {
-        border-bottom: 1px solid rgba(255,255,255,.10) !important;
+    .pf-scope .text-white {
+        color: var(--pf-text) !important;
     }
 
-    .produto-form-page .table td,
-    .produto-form-page .table th {
-        border-color: rgba(255,255,255,.06) !important;
+    /* chevron (select) */
+    .pf-scope .fa-chevron-down {
+        color: var(--pf-muted) !important;
     }
 
-    .produto-form-page .table-hover tbody tr:hover {
-        background: rgba(109,94,252,.06);
+    /* image preview */
+    .pf-scope .image-preview {
+        background: linear-gradient(135deg, rgba(59,130,246,.10), rgba(139,92,246,.10));
+        border: 2px dashed rgba(59,130,246,.30);
     }
 
-    /* Inputs dentro da tabela */
-    .produto-form-page #tblVars .form-control {
-        border-radius: 10px;
-        background: rgba(255,255,255,.04);
-    }
-
-    /* Thumbnail */
-    .produto-form-page .img-thumbnail {
-        background: rgba(255,255,255,.04);
-        border: 1px solid var(--pf-stroke);
-        border-radius: 14px;
-    }
-
-/* Ajuste mobile */
-@media (max-width: 991.98px) {
-    .produto-form-page .card-body {
-        padding: 1rem;
-    }
-
-    .produto-form-page .card-header {
-        padding: .9rem 1rem;
-    }
-}
+        .pf-scope .image-preview:hover {
+            border-color: rgba(59,130,246,.55);
+        }

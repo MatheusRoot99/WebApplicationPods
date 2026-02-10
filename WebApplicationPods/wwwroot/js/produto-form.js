@@ -1,389 +1,275 @@
-﻿// produto-form.js
-document.addEventListener('DOMContentLoaded', function () {
-    // Elementos principais
-    const varsBody = document.getElementById('varsBody');
-    const btnAddVar = document.getElementById('btnAddVar');
-    const estoqueTotalInput = document.getElementById('EstoqueTotalCalc');
-    const estoqueTotalBadge = document.getElementById('estoqueTotalBadge');
+﻿document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('productForm');
+    const variationsTable = document.getElementById('variationsTable');
+    const noVariations = document.getElementById('noVariations');
 
-    if (!varsBody || !btnAddVar) {
-        console.error('Elementos necessários não encontrados');
-        return;
-    }
+    const totalStockElement = document.getElementById('totalStock');
+    const totalStockInput = document.getElementById('totalStockInput');
 
-    // ============== FUNÇÕES UTILITÁRIAS ==============
+    const imagePreview = document.getElementById('imagePreview');
+    const imageUpload = document.getElementById('imageUpload');
+    const imageContainer = document.getElementById('imageContainer');
 
-    function toInt(valor) {
-        if (valor === null || valor === undefined || valor === '') return 0;
-        const numero = parseInt(String(valor).replace(/\D/g, ''), 10);
-        return isNaN(numero) ? 0 : numero;
-    }
+    const btnAdd = document.getElementById('addVariation');
+    const btnClearAll = document.getElementById('clearAllVariations');
 
-    function parseMoneyBR(valor) {
-        if (!valor || valor === '') return 0;
+    if (!variationsTable || !noVariations || !btnAdd) return;
 
-        let stringValor = String(valor).trim();
-        stringValor = stringValor.replace(/[^\d,-]/g, '');
-
-        if (stringValor.includes(',') && stringValor.includes('.')) {
-            stringValor = stringValor.replace(/\./g, '');
-            stringValor = stringValor.replace(',', '.');
-        } else if (stringValor.includes(',')) {
-            stringValor = stringValor.replace(',', '.');
+    function checkEmptyTable() {
+        const rows = variationsTable.querySelectorAll('tr.variation-row');
+        if (rows.length === 0) {
+            noVariations.classList.remove('hidden');
+            variationsTable.classList.add('hidden');
+        } else {
+            noVariations.classList.add('hidden');
+            variationsTable.classList.remove('hidden');
         }
-
-        const numero = parseFloat(stringValor);
-        return isNaN(numero) ? 0 : numero;
     }
 
-    function formatMoneyBR(valor, incluirZeroDecimal = false) {
-        const numero = typeof valor === 'number' ? valor : parseMoneyBR(valor);
-        if (isNaN(numero)) return incluirZeroDecimal ? '0,00' : '';
-        if (numero === 0) return incluirZeroDecimal ? '0,00' : '';
-
-        return numero.toLocaleString('pt-BR', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
-    }
-
-    function formatMoneyInput(element) {
-        let valor = element.value;
-        valor = valor.replace(/\D/g, '');
-
-        if (valor === '') {
-            element.value = '';
-            return;
-        }
-
-        const numero = parseInt(valor) / 100;
-        element.value = formatMoneyBR(numero, true);
-    }
-
-    function renumberRows() {
-        const rows = Array.from(varsBody.querySelectorAll('.var-row'));
-
-        rows.forEach((row, index) => {
-            row.dataset.index = index;
-
-            row.querySelectorAll('[name]').forEach(input => {
-                const oldName = input.getAttribute('name');
-                if (oldName) {
-                    const newName = oldName.replace(
-                        /Variacoes\[\d+\]/g,
-                        `Variacoes[${index}]`
-                    );
-                    input.setAttribute('name', newName);
-                }
-            });
-        });
-    }
-
-    function calcularEstoqueTotal() {
+    function calculateTotalStock() {
         let total = 0;
+        const rows = variationsTable.querySelectorAll('tr.variation-row');
 
-        varsBody.querySelectorAll('.var-row').forEach(row => {
-            const ativo = row.querySelector('.var-ativo').checked;
-            if (!ativo) return;
+        rows.forEach(row => {
+            const stock = parseInt(row.querySelector('.variation-stock')?.value) || 0;
+            const multiplier = parseInt(row.querySelector('.variation-multiplier')?.value) || 1;
+            const isActive = row.querySelector('.variation-active')?.checked ?? true;
 
-            const estoque = toInt(row.querySelector('.var-estoque').value);
-            const multiplicador = toInt(row.querySelector('.var-multi').value) || 1;
-
-            total += estoque * multiplicador;
+            if (isActive) total += stock * multiplier;
         });
 
-        if (estoqueTotalInput) estoqueTotalInput.value = total;
-        if (estoqueTotalBadge) estoqueTotalBadge.textContent = total;
+        const totalText = total.toLocaleString('pt-BR');
+        if (totalStockElement) totalStockElement.textContent = totalText;
+        if (totalStockInput) totalStockInput.value = totalText;
 
         return total;
     }
 
-    function validarPrecoPromocional(row) {
-        const precoInput = row.querySelector('.var-preco');
-        const promoInput = row.querySelector('.var-promo');
+    function renumberRows() {
+        const rows = Array.from(variationsTable.querySelectorAll('tr.variation-row'));
+        rows.forEach((row, idx) => {
+            row.dataset.index = idx;
 
-        if (!precoInput || !promoInput) return true;
+            row.querySelectorAll('[name]').forEach(el => {
+                const name = el.getAttribute('name');
+                if (!name) return;
+                el.setAttribute('name', name.replace(/Variacoes\[\d+\]/g, `Variacoes[${idx}]`));
+            });
+        });
+    }
 
-        const preco = parseMoneyBR(precoInput.value);
-        const promo = parseMoneyBR(promoInput.value);
+    function syncNomeRow(row) {
+        const sel = row.querySelector('.variation-name');
+        const custom = row.querySelector('.variation-custom-name');
+        const hidden = row.querySelector('.variation-name-hidden');
+        if (!sel || !custom || !hidden) return;
 
-        promoInput.classList.remove('is-invalid', 'is-valid');
-
-        if (promo <= 0 || promoInput.value.trim() === '') {
-            promoInput.classList.remove('is-invalid');
-            return true;
-        }
-
-        if (promo < preco) {
-            promoInput.classList.remove('is-invalid');
-            return true;
+        if (sel.value === 'Outro') {
+            custom.classList.remove('hidden');
+            hidden.value = (custom.value || '').trim();
         } else {
-            promoInput.classList.add('is-invalid');
-            return false;
+            custom.classList.add('hidden');
+            custom.value = '';
+            hidden.value = sel.value;
         }
     }
 
-    // ============== FUNÇÕES DE AÇÃO ==============
+    function wireRow(row) {
+        const nameSelect = row.querySelector('.variation-name');
+        const customName = row.querySelector('.variation-custom-name');
+        const stockInput = row.querySelector('.variation-stock');
+        const multiplierInput = row.querySelector('.variation-multiplier');
+        const activeCheckbox = row.querySelector('.variation-active');
+        const removeBtn = row.querySelector('.remove-variation');
 
-    function adicionarVariacao() {
-        const rows = varsBody.querySelectorAll('.var-row');
-        const novoIndex = rows.length;
+        if (nameSelect) nameSelect.addEventListener('change', () => syncNomeRow(row));
+        if (customName) customName.addEventListener('input', () => syncNomeRow(row));
 
-        const novaLinha = document.createElement('tr');
-        novaLinha.className = 'var-row';
-        novaLinha.dataset.index = novoIndex;
+        const updateStock = () => calculateTotalStock();
+        if (stockInput) stockInput.addEventListener('input', updateStock);
+        if (multiplierInput) multiplierInput.addEventListener('input', updateStock);
+        if (activeCheckbox) activeCheckbox.addEventListener('change', updateStock);
 
-        novaLinha.innerHTML = `
-            <td>
-                <input type="hidden" name="Variacoes[${novoIndex}].Id" value="" />
-                <input class="form-control" 
-                       name="Variacoes[${novoIndex}].Nome" 
-                       placeholder="Ex: Caixa com 12 unidades" 
-                       required />
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function () {
+                row.remove();
+                renumberRows();
+                calculateTotalStock();
+                checkEmptyTable();
+            });
+        }
+
+        syncNomeRow(row);
+    }
+
+    function createVariationRow(idx) {
+        const row = document.createElement('tr');
+        row.className = 'variation-row bg-gray-900/50';
+        row.dataset.index = idx;
+
+        row.innerHTML = `
+            <td class="py-3 px-4">
+                <input type="hidden" name="Variacoes[${idx}].Id" value="" />
+                <input type="hidden" class="variation-name-hidden" name="Variacoes[${idx}].Nome" value="Unidade" />
+
+                <div class="flex gap-2">
+                    <select class="variation-name w-32 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-white">
+                        <option value="Unidade">Unidade</option>
+                        <option value="Caixa">Caixa</option>
+                        <option value="Fardo">Fardo</option>
+                        <option value="Outro">Outro</option>
+                    </select>
+
+                    <input type="text"
+                        class="variation-custom-name hidden w-32 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-white"
+                        placeholder="Nome...">
+                </div>
             </td>
-            <td>
-                <input class="form-control var-multi" 
-                       name="Variacoes[${novoIndex}].Multiplicador" 
-                       value="1" 
-                       type="number" 
-                       min="1" 
-                       step="1" 
-                       required />
+
+            <td class="py-3 px-4">
+                <input type="number"
+                    min="1"
+                    value="1"
+                    class="variation-multiplier w-20 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-white"
+                    name="Variacoes[${idx}].Multiplicador">
             </td>
-            <td>
-                <input class="form-control var-money var-preco" 
-                       name="Variacoes[${novoIndex}].PrecoTexto" 
-                       value="" 
-                       type="text" 
-                       placeholder="0,00"
-                       required />
+
+            <td class="py-3 px-4">
+                <div class="relative">
+                    <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">R$</span>
+                    <input type="text"
+                        value="0,00"
+                        class="variation-price w-28 pl-8 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-white"
+                        placeholder="0,00"
+                        name="Variacoes[${idx}].PrecoTexto">
+                </div>
             </td>
-            <td>
-                <input class="form-control var-money var-promo" 
-                       name="Variacoes[${novoIndex}].PrecoPromocionalTexto" 
-                       value="" 
-                       type="text" 
-                       placeholder="0,00 (opcional)" />
+
+            <td class="py-3 px-4">
+                <div class="relative">
+                    <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">R$</span>
+                    <input type="text"
+                        value="0,00"
+                        class="variation-promo w-28 pl-8 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-white"
+                        placeholder="0,00"
+                        name="Variacoes[${idx}].PrecoPromocionalTexto">
+                </div>
             </td>
-            <td>
-                <input class="form-control var-estoque" 
-                       name="Variacoes[${novoIndex}].Estoque" 
-                       value="0" 
-                       type="number" 
-                       min="0" 
-                       step="1" />
+
+            <td class="py-3 px-4">
+                <input type="number"
+                    min="0"
+                    value="0"
+                    class="variation-stock w-20 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-white"
+                    name="Variacoes[${idx}].Estoque">
             </td>
-            <td class="text-center">
-                <input class="form-check-input var-ativo" 
-                       type="checkbox" 
-                       name="Variacoes[${novoIndex}].Ativo" 
-                       value="true" 
-                       checked />
-                <input type="hidden" name="Variacoes[${novoIndex}].Ativo" value="false" />
+
+            <td class="py-3 px-4">
+                <label class="flex items-center justify-center cursor-pointer">
+                    <div class="switch">
+                        <input type="checkbox" class="variation-active" checked name="Variacoes[${idx}].Ativo" value="true">
+                        <span class="slider"></span>
+                    </div>
+                </label>
+                <input type="hidden" name="Variacoes[${idx}].Ativo" value="false">
             </td>
-            <td class="text-end">
-                <button type="button" class="btn btn-outline-danger btn-sm btnRemoveVar" title="Remover">
+
+            <td class="py-3 px-4">
+                <button type="button"
+                    class="remove-variation remove-btn w-9 h-9 flex items-center justify-center rounded-lg border border-gray-700 text-red-400 hover:border-red-500">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
         `;
+        return row;
+    }
 
-        varsBody.appendChild(novaLinha);
+    btnAdd.addEventListener('click', function () {
+        const idx = variationsTable.querySelectorAll('tr.variation-row').length;
+        const row = createVariationRow(idx);
+        variationsTable.appendChild(row);
+        wireRow(row);
+
         renumberRows();
+        checkEmptyTable();
+        calculateTotalStock();
+    });
 
-        const novosInputs = novaLinha.querySelectorAll('input');
-        novosInputs.forEach(input => {
-            if (input.classList.contains('var-money')) {
-                input.addEventListener('input', function (e) {
-                    formatMoneyInput(e.target);
-                });
-
-                input.addEventListener('blur', function () {
-                    setTimeout(() => {
-                        validarPrecoPromocional(novaLinha);
-                    }, 100);
-                });
+    if (btnClearAll) {
+        btnClearAll.addEventListener('click', function () {
+            if (confirm('Tem certeza que deseja excluir TODAS as variações?')) {
+                variationsTable.innerHTML = '';
+                renumberRows();
+                checkEmptyTable();
+                calculateTotalStock();
             }
         });
-
-        novaLinha.querySelector('[name$=".Nome"]').focus();
-        calcularEstoqueTotal();
     }
 
-    function removerVariacao(btn) {
-        const row = btn.closest('.var-row');
-        const rows = varsBody.querySelectorAll('.var-row');
+    // Upload imagem
+    if (imagePreview && imageUpload) {
+        imagePreview.addEventListener('click', function () {
+            imageUpload.click();
+        });
 
-        if (rows.length <= 1) {
-            alert('É necessário ter pelo menos uma variação.');
-            return;
+        imageUpload.addEventListener('change', function (e) {
+            const file = e.target.files?.[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (ev) {
+                imageContainer.innerHTML = `
+                    <div class="relative">
+                        <img src="${ev.target.result}" class="max-h-64 rounded-xl">
+                        <button type="button" class="pf-remove-image absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center" id="removeImage">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+
+                document.getElementById('removeImage')?.addEventListener('click', function () {
+                    imageContainer.innerHTML = '';
+                    imageUpload.value = '';
+                });
+            };
+
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // Máscara de moeda
+    function formatCurrency(value) {
+        const n = parseFloat(value);
+        if (Number.isNaN(n)) return '0,00';
+        return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    document.addEventListener('input', function (e) {
+        const t = e.target;
+        if (!t) return;
+
+        if (t.classList.contains('variation-price') || t.classList.contains('variation-promo')) {
+            let value = t.value.replace(/\D/g, '');
+            value = (value / 100).toFixed(2);
+            t.value = formatCurrency(value);
         }
 
-        if (confirm('Deseja realmente remover esta variação?')) {
-            row.remove();
-            renumberRows();
-            calcularEstoqueTotal();
+        if (t.classList.contains('variation-stock') || t.classList.contains('variation-multiplier') || t.classList.contains('variation-active')) {
+            calculateTotalStock();
         }
-    }
+    });
 
-    // ============== INICIALIZAÇÃO ==============
-
-    function formatarValoresExistentes() {
-        varsBody.querySelectorAll('.var-money').forEach(input => {
-            const valor = input.value;
-            if (valor && valor.trim() !== '') {
-                const numero = parseMoneyBR(valor);
-                if (numero > 0) {
-                    if (input.classList.contains('var-preco') && Math.abs(numero - 0.01) < 0.0001) {
-                        input.value = '0,01';
-                    } else {
-                        input.value = formatMoneyBR(numero, true);
-                    }
-                } else {
-                    if (input.classList.contains('var-promo')) {
-                        input.setAttribute('placeholder', '0,00 (opcional)');
-                    } else {
-                        input.setAttribute('placeholder', '0,00');
-                    }
-                }
-            } else {
-                if (input.classList.contains('var-promo')) {
-                    input.setAttribute('placeholder', '0,00 (opcional)');
-                } else {
-                    input.setAttribute('placeholder', '0,00');
-                }
-            }
-        });
-    }
-
-    function adicionarEventos() {
-        varsBody.querySelectorAll('.var-money').forEach(input => {
-            if (input.classList.contains('var-promo')) {
-                input.setAttribute('placeholder', '0,00 (opcional)');
-            } else {
-                input.setAttribute('placeholder', '0,00');
-            }
-
-            input.addEventListener('input', function (e) {
-                formatMoneyInput(e.target);
-            });
-
-            input.addEventListener('blur', function () {
-                const row = this.closest('.var-row');
-                if (row) {
-                    setTimeout(() => {
-                        validarPrecoPromocional(row);
-                    }, 100);
-                }
-
-                if (this.value === '' && this.classList.contains('var-promo')) {
-                    this.setAttribute('placeholder', '0,00 (opcional)');
-                }
-            });
-
-            input.addEventListener('focus', function () {
-                const currentPlaceholder = this.getAttribute('placeholder');
-                this.dataset.originalPlaceholder = currentPlaceholder;
-                this.setAttribute('placeholder', '');
-            });
-
-            input.addEventListener('blur', function () {
-                if (this.value === '') {
-                    const originalPlaceholder = this.dataset.originalPlaceholder ||
-                        (this.classList.contains('var-promo') ? '0,00 (opcional)' : '0,00');
-                    this.setAttribute('placeholder', originalPlaceholder);
-                }
-            });
-        });
-
-        varsBody.querySelectorAll('.var-estoque, .var-multi, .var-ativo').forEach(input => {
-            input.addEventListener('change', calcularEstoqueTotal);
-            input.addEventListener('input', calcularEstoqueTotal);
-        });
-
-        btnAddVar.addEventListener('click', adicionarVariacao);
-
-        varsBody.addEventListener('click', function (e) {
-            if (e.target.closest('.btnRemoveVar')) {
-                removerVariacao(e.target.closest('.btnRemoveVar'));
-            }
-        });
-
-        varsBody.querySelectorAll('.var-row').forEach(row => {
-            validarPrecoPromocional(row);
-        });
-    }
-
-    function inicializar() {
-        varsBody.querySelectorAll('.var-preco').forEach(input => {
-            if (input.value === '0,01' || parseMoneyBR(input.value) === 0.01) {
-                input.value = '0,01';
-            }
-        });
-
-        formatarValoresExistentes();
-        adicionarEventos();
-        calcularEstoqueTotal();
-    }
-
-    inicializar();
-
-    // ============== VALIDAÇÃO DO FORMULÁRIO ==============
-
-    const form = document.querySelector('form');
+    // Submit: garante Nome hidden correto
     if (form) {
-        form.addEventListener('submit', function (event) {
-            let isValid = true;
-            const errorMessages = [];
-
-            varsBody.querySelectorAll('.var-row').forEach((row, index) => {
-                const nome = row.querySelector('[name$=".Nome"]').value.trim();
-                const preco = row.querySelector('.var-preco').value.trim();
-                const multiplicador = row.querySelector('.var-multi').value;
-
-                if (!nome) {
-                    isValid = false;
-                    errorMessages.push(`Variação ${index + 1}: Nome é obrigatório`);
-                }
-
-                if (!preco || parseMoneyBR(preco) <= 0) {
-                    isValid = false;
-                    errorMessages.push(`Variação ${index + 1}: Preço inválido (deve ser maior que 0)`);
-                }
-
-                if (!multiplicador || parseInt(multiplicador) < 1) {
-                    isValid = false;
-                    errorMessages.push(`Variação ${index + 1}: Multiplicador deve ser maior que 0`);
-                }
-
-                if (!validarPrecoPromocional(row)) {
-                    isValid = false;
-                    errorMessages.push(`Variação ${index + 1}: Preço promocional deve ser menor que o preço normal`);
-                }
-            });
-
-            if (!isValid) {
-                event.preventDefault();
-                event.stopPropagation();
-
-                let errorHtml = '<div class="alert alert-danger">';
-                errorHtml += '<h6>Corrija os seguintes erros:</h6><ul class="mb-0">';
-                errorMessages.forEach(msg => {
-                    errorHtml += `<li>${msg}</li>`;
-                });
-                errorHtml += '</ul></div>';
-
-                const validationSummary = document.querySelector('[asp-validation-summary]');
-                if (validationSummary) {
-                    validationSummary.innerHTML = errorHtml;
-                } else {
-                    const errorDiv = document.createElement('div');
-                    errorDiv.innerHTML = errorHtml;
-                    form.prepend(errorDiv);
-                }
-
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
+        form.addEventListener('submit', function () {
+            variationsTable.querySelectorAll('tr.variation-row').forEach(row => syncNomeRow(row));
+            calculateTotalStock();
         });
     }
+
+    // inicializar linhas existentes
+    variationsTable.querySelectorAll('tr.variation-row').forEach(row => wireRow(row));
+    renumberRows();
+    checkEmptyTable();
+    calculateTotalStock();
 });
