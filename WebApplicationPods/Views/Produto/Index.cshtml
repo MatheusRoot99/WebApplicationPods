@@ -4,6 +4,50 @@
 @{
     Layout = "_Layout";
     ViewData["Title"] = "Catálogo de Produtos";
+
+    // ===== helpers locais =====
+    int EstoqueTotal(ProdutoModel p)
+    {
+        var variacoesAtivas = (p.Variacoes ?? new List<ProdutoVariacaoModel>()).Where(v => v.Ativo).ToList();
+        if (variacoesAtivas.Any()) return variacoesAtivas.Sum(v => v.Estoque); // Index: estoque = soma das variações ativas (como você já vinha usando)
+        return p.Estoque;
+    }
+
+    decimal PrecoBase(ProdutoModel p)
+    {
+        var variacoesAtivas = (p.Variacoes ?? new List<ProdutoVariacaoModel>()).Where(v => v.Ativo).ToList();
+        if (variacoesAtivas.Any()) return variacoesAtivas.Min(v => v.Preco);
+        return p.Preco;
+    }
+
+    decimal? PromoValida(ProdutoModel p)
+    {
+        var variacoesAtivas = (p.Variacoes ?? new List<ProdutoVariacaoModel>()).Where(v => v.Ativo).ToList();
+        if (variacoesAtivas.Any())
+        {
+            var promos = variacoesAtivas
+                .Where(v => v.PrecoPromocional.HasValue && v.PrecoPromocional.Value > 0 && v.PrecoPromocional.Value < v.Preco)
+                .Select(v => v.PrecoPromocional!.Value)
+                .ToList();
+
+            return promos.Any() ? promos.Min() : (decimal?)null;
+        }
+
+        if (p.PrecoPromocional.HasValue && p.PrecoPromocional.Value > 0 && p.PrecoPromocional.Value < p.Preco)
+            return p.PrecoPromocional.Value;
+
+        return null;
+    }
+
+    // ===== stats (baseado no Model atual) =====
+    var total = Model?.Count() ?? 0;
+    var emEstoque = Model?.Count(p => EstoqueTotal(p) > 0) ?? 0;
+    var baixoEstoque = Model?.Count(p =>
+    {
+        var e = EstoqueTotal(p);
+        return e > 0 && e <= 5;
+    }) ?? 0;
+    var ativos = Model?.Count(p => p.Ativo) ?? 0;
 }
 
 @section Styles {
@@ -13,9 +57,9 @@
 <div class="container-fluid px-0 produtos-page">
     <!-- Header -->
     <header class="gradient-header py-4 mb-4 shadow">
-        <div class="container">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center text-center text-md-start">
-                <div class="mb-3 mb-md-0">
+        <div class="container container-full-lg">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center text-center text-md-start gap-3">
+                <div>
                     <h1 class="display-6 text-white fw-bold mb-1">@ViewData["Title"]</h1>
                     <p class="text-white-50 mb-0">Gerencie seu inventário</p>
                 </div>
@@ -31,247 +75,287 @@
         @await Html.PartialAsync("_Flash")
     </div>
 
-    <!-- CONTEÚDO -->
-    <div id="pageRoot" class="container-fluid px-0 page-has-bottom-nav">
-        @if (!Model.Any())
+    <div id="pageRoot" class="container container-full-lg page-has-bottom-nav">
+
+        @if (Model == null || !Model.Any())
         {
-            <div class="container">
-                <div class="alert alert-info shadow-sm text-center">
-                    Nenhum produto cadastrado. Clique em <b>Novo Produto</b> para começar.
-                </div>
+            <div class="alert alert-info shadow-sm text-center">
+                Nenhum produto cadastrado. Clique em <b>Novo Produto</b> para começar.
             </div>
         }
         else
         {
-            <!-- Barra de busca -->
-            <div class="container-fluid px-3 px-xl-4 mb-4">
-                <div class="row g-3 align-items-center">
-                    <div class="col-lg-8 col-xl-6">
-                        <div class="search-box input-group rounded-pill shadow-sm">
-                            <span class="input-group-text bg-white border-0 ps-4"><i class="fas fa-search"></i></span>
-                            <input type="text" class="form-control border-0" id="searchInput" placeholder="Pesquisar por nome, categoria, sabor...">
+            <!-- STATS (Figma) -->
+            <div class="stats-grid">
+                <div class="stats-card total">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="label">Total de Produtos</div>
+                            <div class="value">@total</div>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-box"></i>
                         </div>
                     </div>
-                    <div class="col-lg-4 col-xl-6 text-lg-end text-center">
-                        <button class="btn btn-outline-primary rounded-pill filter-btn active" data-filter="all">Todos</button>
-                        <button class="btn btn-outline-primary rounded-pill filter-btn" data-filter="in-stock">Em estoque</button>
-                        <button class="btn btn-outline-primary rounded-pill filter-btn" data-filter="low-stock">Baixo estoque</button>
-                        <button class="btn btn-outline-primary rounded-pill filter-btn" data-filter="active">Ativos</button>
+                </div>
+
+                <div class="stats-card instock">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="label">Em Estoque</div>
+                            <div class="value">@emEstoque</div>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-check"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-card low">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="label">Baixo Estoque</div>
+                            <div class="value">@baixoEstoque</div>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-triangle-exclamation"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-card active">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="label">Produtos Ativos</div>
+                            <div class="value">@ativos</div>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Tabela Desktop -->
-            <div class="d-none d-lg-block">
-                <div class="container-fluid px-3 px-xl-4">
-                    <div class="table-responsive rounded-3 shadow-sm">
-                        <table class="table table-hover align-middle mb-0 produtos-table">
-                            <thead class="table-light">
-                                <tr class="text-center">
-                                    <th class="ps-4 text-start col-produto">Produto</th>
-                                    <th class="col-preco">Preço</th>
-                                    <th class="col-promocao">Promoção</th>
-                                    <th class="col-categoria">Categoria</th>
-                                    <th class="col-estoque">Estoque</th>
-                                    <th class="col-sabores">Sabores (estoque)</th>
-                                    <th class="col-cadastro">Cadastro</th>
-                                    <th class="col-ativo">Ativo</th>
-                                    <th class="text-end pe-4 col-acoes">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var item in Model)
-                                {
-                                    var statusClass = item.Ativo ? "" : "table-secondary opacity-75";
+            <!-- BUSCA + FILTROS + TOGGLE -->
+            <div class="filters-card">
+                <div class="row g-3 align-items-center">
+                    <div class="col-lg-6">
+                        <div class="search-box input-group">
+                            <span class="input-group-text bg-white border-0 ps-4">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" class="form-control border-0" id="searchInput"
+                                   placeholder="Pesquisar por nome, categoria, sabor...">
+                        </div>
+                    </div>
 
-                                    // ===== VARIAÇÕES (se tiver, usa elas) =====
-                                    var variacoesAtivas = (item.Variacoes ?? new List<ProdutoVariacaoModel>())
-                                        .Where(v => v.Ativo)
-                                        .ToList();
+                    <div class="col-lg-4">
+                        <div class="d-flex flex-wrap gap-2 justify-content-lg-center justify-content-start">
+                            <button class="btn filter-btn active" type="button" data-filter="all">Todos</button>
+                            <button class="btn filter-btn" type="button" data-filter="in-stock">Em estoque</button>
+                            <button class="btn filter-btn" type="button" data-filter="low-stock">Baixo estoque</button>
+                            <button class="btn filter-btn" type="button" data-filter="active">Ativos</button>
+                        </div>
+                    </div>
 
-                                    var temVariacoes = variacoesAtivas.Any();
+                    <div class="col-lg-2 text-lg-end">
+                        <div class="view-toggle" role="group" aria-label="Visualização">
+                            <button type="button" class="view-btn" id="btnGrid" title="Grade">
+                                <i class="fas fa-table-cells"></i>
+                            </button>
+                            <button type="button" class="view-btn active" id="btnTable" title="Tabela">
+                                <i class="fas fa-list"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                                    var estoqueTotal = temVariacoes
-                                        ? variacoesAtivas.Sum(v => v.Estoque)
-                                        : item.Estoque;
+            <!-- TABELA -->
+            <div id="viewTable" class="table-shell">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 produtos-table">
+                        <thead class="table-light">
+                            <tr class="text-center">
+                                <th class="ps-4 text-start col-produto">Produto</th>
+                                <th class="col-preco">Preço</th>
+                                <th class="col-promocao">Promoção</th>
+                                <th class="col-categoria">Categoria</th>
+                                <th class="col-estoque">Estoque</th>
+                                <th class="col-sabores text-start">Sabores</th>
+                                <th class="col-cadastro">Cadastro</th>
+                                <th class="col-ativo">Ativo</th>
+                                <th class="text-end pe-4 col-acoes">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                var statusClass = item.Ativo ? "" : "table-secondary opacity-75";
 
-                                    // preço base: menor preço das variações ativas; senão, do produto
-                                    var precoBase = temVariacoes
-                                        ? variacoesAtivas.Min(v => v.Preco)
-                                        : item.Preco;
+                                var variacoesAtivas = (item.Variacoes ?? new List<ProdutoVariacaoModel>())
+                                .Where(v => v.Ativo)
+                                .ToList();
+                                var temVariacoes = variacoesAtivas.Any();
 
-                                    // promo válida: menor promo < preço, nas variações; senão, do produto
-                                    decimal? promoValida = null;
+                                var estoqueTotal = EstoqueTotal(item);
+                                var precoBase = PrecoBase(item);
+                                var promoValida = PromoValida(item);
 
-                                    if (temVariacoes)
-                                    {
-                                        var promos = variacoesAtivas
-                                            .Where(v => v.PrecoPromocional.HasValue && v.PrecoPromocional.Value > 0 && v.PrecoPromocional.Value < v.Preco)
-                                            .Select(v => v.PrecoPromocional!.Value)
-                                            .ToList();
+                                var estoqueClass = estoqueTotal <= 5 ? "text-warning" : "text-dark";
 
-                                        if (promos.Any()) promoValida = promos.Min();
-                                    }
-                                    else if (item.PrecoPromocional.HasValue && item.PrecoPromocional.Value > 0 && item.PrecoPromocional.Value < item.Preco)
-                                    {
-                                        promoValida = item.PrecoPromocional.Value;
-                                    }
+                                var sabores = (item.SaboresQuantidadesList ?? new List<ProdutoModel.SaborQuantidade>())
+                                .Where(sq => sq.Quantidade >= 0)
+                                .OrderByDescending(sq => sq.Quantidade)
+                                .ToList();
 
-                                    var estoqueClass = estoqueTotal <= 5 ? "text-warning" : "text-dark";
+                                var topChips = sabores.Take(4).ToList();
+                                var hiddenChips = sabores.Skip(4).ToList();
+                                var temMais = hiddenChips.Any();
+                                var popoverText = string.Join(", ", hiddenChips.Select(sq => $"{sq.Sabor} ({sq.Quantidade})"));
 
-                                    // sabores (legado pods)
-                                    var sabores = (item.SaboresQuantidadesList ?? new List<ProdutoModel.SaborQuantidade>())
-                                        .Where(sq => sq.Quantidade >= 0)
-                                        .OrderByDescending(sq => sq.Quantidade)
-                                        .ToList();
-
-                                    var topChips = sabores.Take(4).ToList();
-                                    var hiddenChips = sabores.Skip(4).ToList();
-                                    var temMais = hiddenChips.Any();
-                                    var popoverText = string.Join(", ", hiddenChips.Select(sq => $"{sq.Sabor} ({sq.Quantidade})"));
-
-                                    <tr class="@statusClass"
-                                        data-estoque="@estoqueTotal"
-                                        data-ativo="@(item.Ativo ? "1" : "0")">
-                                        <!-- Produto -->
-                                        <td class="ps-4">
-                                            <div class="d-flex align-items-center">
-                                                <div class="product-img-container me-3">
-                                                    @if (!string.IsNullOrEmpty(item.ImagemUrl))
-                                                    {
-                                                        <img src="@item.ImagemUrl" alt="Imagem @item.Nome" class="product-img rounded-3 shadow-sm" loading="lazy">
-                                                    }
-                                                    else
-                                                    {
-                                                        <div class="product-img-placeholder rounded-3 shadow-sm">
-                                                            <i class="fas fa-box"></i>
-                                                        </div>
-                                                    }
-                                                </div>
-                                                <div class="text-truncate">
-                                                    <div class="fw-bold">@item.Nome</div>
-                                                    <small class="text-muted">ID: @item.Id</small>
-                                                    @if (temVariacoes)
-                                                    {
-                                                        <div class="small text-muted">Variações: @variacoesAtivas.Count</div>
-                                                    }
-                                                </div>
+                                <tr class="@statusClass js-item"
+                                    data-estoque="@estoqueTotal"
+                                    data-ativo="@(item.Ativo ? "1" : "0")">
+                                    <!-- Produto -->
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center">
+                                            <div class="product-img-container me-3">
+                                                @if (!string.IsNullOrEmpty(item.ImagemUrl))
+                                                {
+                                                    <img src="@item.ImagemUrl" alt="Imagem @item.Nome" class="product-img" loading="lazy" />
+                                                }
+                                                else
+                                                {
+                                                    <div class="product-img-placeholder">
+                                                        <i class="fas fa-box"></i>
+                                                    </div>
+                                                }
                                             </div>
-                                        </td>
+                                            <div class="text-truncate">
+                                                <div class="fw-bold">@item.Nome</div>
+                                                <small class="text-muted">ID: @item.Id</small>
+                                                @if (temVariacoes)
+                                                {
+                                                    <div class="small text-muted">Variações: @variacoesAtivas.Count</div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </td>
 
-                                        <!-- Preço -->
-                                        <td class="text-center">
-                                            @if (promoValida.HasValue)
-                                            {
-                                                <span class="price-old">@precoBase.ToString("C")</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="price-normal">@precoBase.ToString("C")</span>
-                                            }
-                                        </td>
+                                    <!-- Preço -->
+                                    <td class="text-center">
+                                        @if (promoValida.HasValue)
+                                        {
+                                            <span class="price-old">@precoBase.ToString("C")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="price-normal">@precoBase.ToString("C")</span>
+                                        }
+                                    </td>
 
-                                        <!-- Promo -->
-                                        <td class="text-center">
-                                            @if (promoValida.HasValue)
-                                            {
-                                                var desconto = Math.Round((1 - (promoValida.Value / precoBase)) * 100);
-                                                <span class="price-new">@promoValida.Value.ToString("C")</span>
-                                                <span class="discount-badge">-@desconto%</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="text-muted">—</span>
-                                            }
-                                        </td>
+                                    <!-- Promo -->
+                                    <td class="text-center">
+                                        @if (promoValida.HasValue)
+                                        {
+                                            var desconto = Math.Round((1 - (promoValida.Value / precoBase)) * 100);
+                                            <span class="price-new">@promoValida.Value.ToString("C")</span>
+                                            <span class="discount-badge">-@desconto%</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </td>
 
-                                        <!-- Categoria -->
-                                        <td class="text-center">
-                                            <span class="badge bg-light text-dark rounded-pill px-3 py-2">@item.Categoria?.Nome</span>
-                                        </td>
+                                    <!-- Categoria -->
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-dark rounded-pill px-3 py-2">
+                                            @item.Categoria?.Nome
+                                        </span>
+                                    </td>
 
-                                        <!-- Estoque -->
-                                        <td class="text-center">
-                                            <div class="d-flex flex-column align-items-center">
-                                                <div class="progress w-100" style="height: 10px;">
-                                                    <div class="progress-bar @(estoqueTotal > 5 ? "bg-success" : "bg-warning")"
-                                                         role="progressbar"
-                                                         style="width: @(Math.Min(estoqueTotal * 10, 100))%"></div>
-                                                </div>
-                                                <div class="mt-1">
-                                                    <span class="badge bg-light text-dark border">
-                                                        <i class="fas fa-box me-1"></i>
-                                                        <span class="fw-bold @estoqueClass estoque-valor">@estoqueTotal</span>
+                                    <!-- Estoque -->
+                                    <td class="text-center">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <div class="progress w-100" style="height: 10px; max-width: 140px;">
+                                                <div class="progress-bar @(estoqueTotal > 5 ? "bg-success" : "bg-warning")"
+                                                     role="progressbar"
+                                                     style="width: @(Math.Min(estoqueTotal * 10, 100))%"></div>
+                                            </div>
+                                            <div class="mt-1">
+                                                <span class="badge bg-light text-dark border">
+                                                    <i class="fas fa-box me-1"></i>
+                                                    <span class="fw-bold @estoqueClass">@estoqueTotal</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- Sabores -->
+                                    <td class="text-start">
+                                        @if (topChips.Any())
+                                        {
+                                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                                @foreach (var s in topChips)
+                                                {
+                                                    <span class="badge flavor-chip">
+                                                        <span class="chip-dot"></span>
+                                                        @s.Sabor <span class="chip-qty">(@s.Quantidade)</span>
                                                     </span>
-                                                </div>
+                                                }
+                                                @if (temMais)
+                                                {
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-secondary rounded-pill"
+                                                            data-bs-toggle="popover"
+                                                            data-bs-placement="top"
+                                                            data-bs-trigger="focus"
+                                                            title="Mais sabores"
+                                                            data-bs-content="@popoverText">
+                                                        +@hiddenChips.Count
+                                                    </button>
+                                                }
                                             </div>
-                                        </td>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </td>
 
-                                        <!-- Sabores -->
-                                        <td>
-                                            @if (topChips.Any())
-                                            {
-                                                <div class="d-flex flex-wrap gap-2 align-items-center">
-                                                    @foreach (var s in topChips)
-                                                    {
-                                                        <span class="badge flavor-chip">
-                                                            <span class="chip-dot"></span>
-                                                            @s.Sabor
-                                                            <span class="chip-qty">(@s.Quantidade)</span>
-                                                        </span>
-                                                    }
-                                                    @if (temMais)
-                                                    {
-                                                        <button type="button"
-                                                                class="btn btn-sm btn-outline-secondary rounded-pill"
-                                                                data-bs-toggle="popover"
-                                                                data-bs-placement="top"
-                                                                data-bs-trigger="focus"
-                                                                title="Mais sabores"
-                                                                data-bs-content="@popoverText">
-                                                            +@hiddenChips.Count
-                                                        </button>
-                                                    }
-                                                </div>
-                                            }
-                                            else
-                                            {
-                                                <span class="text-muted">—</span>
-                                            }
-                                        </td>
+                                    <!-- Cadastro -->
+                                    <td class="text-center">@item.DataCadastro.ToShortDateString()</td>
 
-                                        <!-- Cadastro -->
-                                        <td class="text-center">@item.DataCadastro.ToShortDateString()</td>
+                                    <!-- Ativo -->
+                                    <td class="text-center">
+                                        <span class="badge @(item.Ativo ? "bg-success" : "bg-secondary") px-3 py-2 rounded-pill">
+                                            @(item.Ativo ? "Sim" : "Não")
+                                        </span>
+                                    </td>
 
-                                        <!-- Ativo -->
-                                        <td class="text-center">
-                                            <span class="badge @(item.Ativo ? "bg-success" : "bg-secondary") px-3 py-2 rounded-pill">
-                                                @(item.Ativo ? "Sim" : "Não")
-                                            </span>
-                                        </td>
-
-                                        <!-- Ações -->
-                                        <td class="text-end pe-4">
-                                            <div class="btn-group">
-                                                <a asp-action="Editar" asp-route-id="@item.Id" class="btn btn-outline-primary btn-action">
-                                                    <i class="fas fa-edit me-1"></i> Editar
-                                                </a>
-                                                <a asp-action="Excluir" asp-route-id="@item.Id" class="btn btn-outline-danger btn-action">
-                                                    <i class="fas fa-trash-alt me-1"></i> Excluir
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
+                                    <!-- Ações -->
+                                    <td class="text-end pe-4">
+                                        <div class="btn-group">
+                                            <a asp-action="Editar" asp-route-id="@item.Id" class="btn btn-outline-primary btn-action">
+                                                <i class="fas fa-edit me-1"></i> Editar
+                                            </a>
+                                            <a asp-action="Excluir" asp-route-id="@item.Id" class="btn btn-outline-danger btn-action">
+                                                <i class="fas fa-trash-alt me-1"></i> Excluir
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- Cards Mobile -->
-            <div class="container-fluid px-3 px-xl-4 d-lg-none">
-                <div class="row row-cols-1 row-cols-md-2 g-4">
+            <!-- GRADE (Cards) - vale para desktop também -->
+            <div id="viewGrid" class="mt-3 d-none">
+                <div class="cards-grid">
                     @foreach (var item in Model)
                     {
                         var variacoesAtivasMob = (item.Variacoes ?? new List<ProdutoVariacaoModel>())
@@ -280,29 +364,9 @@
 
                         var temVariacoesMob = variacoesAtivasMob.Any();
 
-                        var estoqueTotalMob = temVariacoesMob
-                        ? variacoesAtivasMob.Sum(v => v.Estoque)
-                        : item.Estoque;
-
-                        var precoBaseMob = temVariacoesMob
-                        ? variacoesAtivasMob.Min(v => v.Preco)
-                        : item.Preco;
-
-                        decimal? promoValidaMob = null;
-
-                        if (temVariacoesMob)
-                        {
-                            var promosMob = variacoesAtivasMob
-                            .Where(v => v.PrecoPromocional.HasValue && v.PrecoPromocional.Value > 0 && v.PrecoPromocional.Value < v.Preco)
-                            .Select(v => v.PrecoPromocional!.Value)
-                            .ToList();
-
-                            if (promosMob.Any()) promoValidaMob = promosMob.Min();
-                        }
-                        else if (item.PrecoPromocional.HasValue && item.PrecoPromocional.Value > 0 && item.PrecoPromocional.Value < item.Preco)
-                        {
-                            promoValidaMob = item.PrecoPromocional.Value;
-                        }
+                        var estoqueTotalMob = EstoqueTotal(item);
+                        var precoBaseMob = PrecoBase(item);
+                        var promoValidaMob = PromoValida(item);
 
                         var saboresMob = (item.SaboresQuantidadesList ?? new List<ProdutoModel.SaborQuantidade>())
                         .Where(sq => sq.Quantidade >= 0)
@@ -311,25 +375,26 @@
                         .Select(sq => $"{sq.Sabor} ({sq.Quantidade})")
                         .ToList();
 
-                        <div class="col">
-                            <div class="card product-card h-100 shadow-sm"
-                                 data-estoque="@estoqueTotalMob"
-                                 data-ativo="@(item.Ativo ? "1" : "0")">
-                                <div class="card-body">
-                                    <div class="text-center mb-3">
-                                        <div class="product-img-container mx-auto mb-2">
-                                            @if (!string.IsNullOrEmpty(item.ImagemUrl))
-                                            {
-                                                <img src="@item.ImagemUrl" alt="@item.Nome" class="product-img rounded-3 shadow-sm" loading="lazy">
-                                            }
-                                            else
-                                            {
-                                                <div class="product-img-placeholder rounded-3 shadow-sm">
-                                                    <i class="fas fa-box"></i>
-                                                </div>
-                                            }
-                                        </div>
-                                        <h5 class="card-title fw-bold mb-1">@item.Nome</h5>
+                        <div class="card product-card js-item"
+                             data-estoque="@estoqueTotalMob"
+                             data-ativo="@(item.Ativo ? "1" : "0")">
+                            <div class="card-body">
+                                <div class="d-flex gap-3 align-items-start">
+                                    <div class="product-img-container">
+                                        @if (!string.IsNullOrEmpty(item.ImagemUrl))
+                                        {
+                                            <img src="@item.ImagemUrl" alt="@item.Nome" class="product-img" loading="lazy" />
+                                        }
+                                        else
+                                        {
+                                            <div class="product-img-placeholder">
+                                                <i class="fas fa-box"></i>
+                                            </div>
+                                        }
+                                    </div>
+
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold">@item.Nome</div>
                                         <div class="small text-muted">ID: @item.Id</div>
                                         @if (temVariacoesMob)
                                         {
@@ -337,41 +402,40 @@
                                         }
                                     </div>
 
-                                    <div class="text-center mb-3">
+                                    <div class="text-end">
                                         @if (promoValidaMob.HasValue)
                                         {
-                                            <div class="mb-1"><span class="price-old">@precoBaseMob.ToString("C")</span></div>
-                                            <div>
-                                                <span class="price-new">@promoValidaMob.Value.ToString("C")</span>
+                                            <div class="price-old">@precoBaseMob.ToString("C")</div>
+                                            <div class="d-flex align-items-center gap-2 justify-content-end">
+                                                <div class="price-new">@promoValidaMob.Value.ToString("C")</div>
                                                 @{
-                                                    var descontoMob = Math.Round((1 - (promoValidaMob.Value / precoBaseMob)) * 100);
+                                                    var d = Math.Round((1 - (promoValidaMob.Value / precoBaseMob)) * 100);
                                                 }
-                                                <span class="discount-badge">-@descontoMob%</span>
+                                                <span class="discount-badge">-@d%</span>
                                             </div>
                                         }
                                         else
                                         {
-                                            <div class="fw-bold text-primary fs-5">@precoBaseMob.ToString("C")</div>
+                                            <div class="price-normal">@precoBaseMob.ToString("C")</div>
                                         }
                                     </div>
+                                </div>
 
-                                    <div class="row g-2">
-                                        <div class="col-6">
-                                            <span class="text-muted small">Categoria</span>
-                                            <div>@item.Categoria?.Nome</div>
-                                        </div>
-                                        <div class="col-6">
-                                            <span class="text-muted small">Estoque</span>
-                                            <div class="fw-bold">@estoqueTotalMob</div>
-                                        </div>
-                                        <div class="col-12">
-                                            <span class="text-muted small">Cadastro</span>
-                                            <div>@item.DataCadastro.ToShortDateString()</div>
-                                        </div>
+                                <div class="row g-2 mt-3">
+                                    <div class="col-6">
+                                        <div class="small text-muted">Categoria</div>
+                                        <div class="fw-semibold">@item.Categoria?.Nome</div>
                                     </div>
-
-                                    <div class="mt-3">
-                                        <span class="text-muted small d-block mb-1">Sabores</span>
+                                    <div class="col-6 text-end">
+                                        <div class="small text-muted">Estoque</div>
+                                        <div class="fw-bold">@estoqueTotalMob</div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="small text-muted">Cadastro</div>
+                                        <div class="fw-semibold">@item.DataCadastro.ToShortDateString()</div>
+                                    </div>
+                                    <div class="col-12 mt-1">
+                                        <div class="small text-muted mb-1">Sabores</div>
                                         <div class="d-flex flex-wrap gap-2">
                                             @if (saboresMob.Any())
                                             {
@@ -386,20 +450,24 @@
                                             }
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div class="d-flex justify-content-end gap-2 pt-3 border-top mt-3">
-                                        <a asp-action="Editar" asp-route-id="@item.Id" class="btn btn-primary btn-action">
-                                            <i class="fas fa-edit"></i> Editar
-                                        </a>
-                                        <a asp-action="Excluir" asp-route-id="@item.Id" class="btn btn-danger btn-action">
-                                            <i class="fas fa-trash-alt"></i> Excluir
-                                        </a>
-                                    </div>
+                                <div class="d-flex justify-content-end gap-2 pt-3 border-top mt-3">
+                                    <a asp-action="Editar" asp-route-id="@item.Id" class="btn btn-outline-primary btn-action">
+                                        <i class="fas fa-edit me-1"></i> Editar
+                                    </a>
+                                    <a asp-action="Excluir" asp-route-id="@item.Id" class="btn btn-outline-danger btn-action">
+                                        <i class="fas fa-trash-alt me-1"></i> Excluir
+                                    </a>
                                 </div>
                             </div>
                         </div>
                     }
                 </div>
+            </div>
+
+            <div class="results-count mt-3">
+                Exibindo <span id="resultsCount">@total</span> de @total produtos
             </div>
         }
     </div>
@@ -407,60 +475,95 @@
 
 @section Scripts {
     <script>
-        // Popovers (Bootstrap 5) - sem jQuery
         document.addEventListener('DOMContentLoaded', function () {
-            const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
-            popoverTriggerList.map(function (el) {
-                return new bootstrap.Popover(el);
-            });
+            // Popovers (Bootstrap 5) - sem jQuery
+            const popoverEls = Array.prototype.slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+            popoverEls.forEach(el => new bootstrap.Popover(el));
 
-            // Filtros e busca (desktop + mobile)
-            const filterButtons = document.querySelectorAll('.filter-btn');
             const searchInput = document.getElementById('searchInput');
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            const items = document.querySelectorAll('.js-item');
+            const resultsCount = document.getElementById('resultsCount');
 
-            function applyFilter(filter) {
-                const rows = document.querySelectorAll('tbody tr');
-                const cards = document.querySelectorAll('.product-card');
+            const btnGrid = document.getElementById('btnGrid');
+            const btnTable = document.getElementById('btnTable');
+            const viewGrid = document.getElementById('viewGrid');
+            const viewTable = document.getElementById('viewTable');
 
-                function shouldShow(el) {
-                    const estoque = parseInt(el.getAttribute('data-estoque') || '0', 10);
-                    const ativo = (el.getAttribute('data-ativo') || '0') === '1';
+            let currentFilter = 'all';
+            let currentTerm = '';
 
-                    if (filter === 'all') return true;
-                    if (filter === 'in-stock') return estoque > 0;
-                    if (filter === 'low-stock') return estoque <= 5;
-                    if (filter === 'active') return ativo;
-                    return true;
-                }
+            function matchesFilter(el) {
+                const estoque = parseInt(el.getAttribute('data-estoque') || '0', 10);
+                const ativo = (el.getAttribute('data-ativo') || '0') === '1';
 
-                rows.forEach(r => r.style.display = shouldShow(r) ? '' : 'none');
-                cards.forEach(c => c.style.display = shouldShow(c) ? '' : 'none');
+                if (currentFilter === 'all') return true;
+                if (currentFilter === 'in-stock') return estoque > 0;
+                if (currentFilter === 'low-stock') return estoque > 0 && estoque <= 5;
+                if (currentFilter === 'active') return ativo;
+                return true;
             }
 
+            function matchesSearch(el) {
+                if (!currentTerm) return true;
+                return (el.textContent || '').toLowerCase().includes(currentTerm);
+            }
+
+            function applyAll() {
+                let visible = 0;
+                items.forEach(el => {
+                    const show = matchesFilter(el) && matchesSearch(el);
+                    el.style.display = show ? '' : 'none';
+                    if (show) visible++;
+                });
+                if (resultsCount) resultsCount.textContent = String(visible);
+            }
+
+            // filtros
             filterButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
                     filterButtons.forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
-                    applyFilter(btn.getAttribute('data-filter'));
+                    currentFilter = btn.getAttribute('data-filter') || 'all';
+                    applyAll();
                 });
             });
 
+            // busca
             if (searchInput) {
                 searchInput.addEventListener('input', () => {
-                    const t = (searchInput.value || '').toLowerCase();
-                    const rows = document.querySelectorAll('tbody tr');
-                    const cards = document.querySelectorAll('.product-card');
-
-                    function match(el) {
-                        return (el.textContent || '').toLowerCase().includes(t);
-                    }
-
-                    rows.forEach(r => r.style.display = match(r) ? '' : 'none');
-                    cards.forEach(c => c.style.display = match(c) ? '' : 'none');
+                    currentTerm = (searchInput.value || '').trim().toLowerCase();
+                    applyAll();
                 });
             }
 
-            // Define --mbn-height quando existir bottom-nav fixa
+            // toggle view
+            function setView(mode) {
+                if (!viewGrid || !viewTable) return;
+
+                const isGrid = mode === 'grid';
+                viewGrid.classList.toggle('d-none', !isGrid);
+                viewTable.classList.toggle('d-none', isGrid);
+
+                if (btnGrid) btnGrid.classList.toggle('active', isGrid);
+                if (btnTable) btnTable.classList.toggle('active', !isGrid);
+
+                try { localStorage.setItem('produtos_view', mode); } catch(e){}
+            }
+
+            if (btnGrid) btnGrid.addEventListener('click', () => setView('grid'));
+            if (btnTable) btnTable.addEventListener('click', () => setView('table'));
+
+            // restaura view
+            try {
+                const saved = localStorage.getItem('produtos_view');
+                if (saved === 'grid' || saved === 'table') setView(saved);
+            } catch(e){}
+
+            // primeira aplicação
+            applyAll();
+
+            // Ajuste de altura p/ bottom-nav fixa, se existir
             const nav = document.querySelector('.mobile-bottom-nav, .bottom-nav, .mbn, .navbar-fixed-bottom');
             const root = document.documentElement;
 
@@ -477,4 +580,3 @@
         });
     </script>
 }
-

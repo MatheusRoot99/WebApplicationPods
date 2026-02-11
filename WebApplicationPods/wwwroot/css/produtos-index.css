@@ -1,262 +1,825 @@
-﻿/* =========================================================
-   PRODUTOS - INDEX (escopado)
-   - Usa tokens do site.css (light/dark)
-   - Não redefine :root
-   - Ganha do global com seletor .produtos-page ...
-   ========================================================= */
+﻿/* ===========================
+   Produtos - Index (Figma-like) - Tema Dark/Light
+   Arquivo: wwwroot/css/produtos-index.css
+   =========================== */
 
-/* Área geral */
-.produtos-page {
-    min-height: 100vh;
-    background: var(--page-hero, radial-gradient(1200px 500px at 10% 0%, rgba(37,99,235,.08), transparent 60%), radial-gradient(1200px 500px at 90% 10%, rgba(109,40,217,.08), transparent 60%), var(--bg, #fff));
+:root {
+    --px-page: 16px;
+    --radius-lg: 18px;
+    --radius-md: 14px;
+    --radius-sm: 12px;
 }
 
-    /* Header gradiente */
-    .produtos-page .gradient-header {
-        background: var(--primary-grad, linear-gradient(135deg, #6a11cb, #2575fc));
+    /* Tema Light (default) */
+    :root[data-theme="light"] {
+        --bg-1: #eff6ff;
+        --bg-2: #ffffff;
+        --bg-3: #faf5ff;
+        --card: #ffffff;
+        --stroke: rgba(15, 23, 42, .10);
+        --stroke-2: rgba(15, 23, 42, .08);
+        --text: rgba(15, 23, 42, .92);
+        --muted: rgba(15, 23, 42, .60);
+        --muted-light: rgba(15, 23, 42, .35);
+        --blue: #2563eb;
+        --purple: #7c3aed;
+        --success: #16a34a;
+        --warn: #f59e0b;
+        --danger: #ef4444;
+        --shadow: 0 18px 45px rgba(2, 6, 23, .08);
+        --shadow-2: 0 10px 25px rgba(2, 6, 23, .08);
+        --shadow-3: 0 4px 12px rgba(0, 0, 0, 0.05);
+        --gradient-primary: linear-gradient(90deg, var(--blue), var(--purple));
     }
 
-        .produtos-page .gradient-header .btn {
-            border: 0;
-        }
-
-            .produtos-page .gradient-header .btn:hover {
-                filter: brightness(0.98);
-            }
-
-    /* Flash container */
-    .produtos-page .container-full-lg {
-        max-width: 1140px;
+    /* Tema Dark */
+    :root[data-theme="dark"] {
+        --bg-1: #0f172a;
+        --bg-2: #1e293b;
+        --bg-3: #334155;
+        --card: #1e293b;
+        --stroke: rgba(255, 255, 255, .10);
+        --stroke-2: rgba(255, 255, 255, .08);
+        --text: rgba(255, 255, 255, .92);
+        --muted: rgba(255, 255, 255, .60);
+        --muted-light: rgba(255, 255, 255, .35);
+        --blue: #60a5fa;
+        --purple: #a78bfa;
+        --success: #4ade80;
+        --warn: #fbbf24;
+        --danger: #f87171;
+        --shadow: 0 18px 45px rgba(0, 0, 0, .25);
+        --shadow-2: 0 10px 25px rgba(0, 0, 0, .2);
+        --shadow-3: 0 4px 12px rgba(0, 0, 0, .15);
+        --gradient-primary: linear-gradient(90deg, var(--blue), var(--purple));
     }
 
-    /* Search box */
-    .produtos-page .search-box {
-        background: var(--input-bg, #fff);
-        border: 1px solid var(--border, #e5e7eb);
-        box-shadow: 0 8px 20px rgba(2,6,23,.06);
-        overflow: hidden;
+/* ===== Page Container ===== */
+.produtos-page {
+    min-height: 100vh;
+    background: radial-gradient(1200px 600px at 15% 0%, var(--bg-1), transparent 55%), radial-gradient(1200px 600px at 85% 0%, var(--bg-3), transparent 55%), linear-gradient(180deg, var(--bg-1), var(--bg-2) 40%, var(--bg-3));
+    color: var(--text);
+}
+
+/* ===== Header gradiente ===== */
+.gradient-header {
+    background: var(--gradient-primary);
+    border-bottom: 1px solid var(--stroke);
+}
+
+    .gradient-header .display-6 {
+        letter-spacing: -0.02em;
     }
 
-        .produtos-page .search-box .input-group-text {
-            background: transparent;
-            border: 0;
-            color: color-mix(in srgb, var(--text, #111827) 65%, transparent);
+    .gradient-header .btn {
+        border: 0;
+        background: rgba(255, 255, 255, 0.95);
+        color: var(--blue);
+        transition: all 0.2s ease;
+    }
+
+        .gradient-header .btn:hover {
+            background: white;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-3);
         }
 
-        .produtos-page .search-box input.form-control {
-            background: transparent;
-            border: 0;
-            outline: none !important;
-            box-shadow: none !important;
-            color: var(--text, #111827);
+        .gradient-header .btn i {
+            font-size: 1.05rem;
         }
 
-    /* Botões filtro */
-    .produtos-page .filter-btn {
-        border-width: 1px;
+/* ===== Containers ===== */
+.container-full-lg {
+    max-width: 1200px;
+}
+
+/* ===== Stats ===== */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+@media (min-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.stats-card {
+    background: var(--card);
+    border: 1px solid var(--stroke-2);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-2);
+    padding: 18px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+    .stats-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow);
+    }
+
+    .stats-card .label {
+        font-size: .86rem;
+        color: var(--muted);
+        margin-bottom: 6px;
+    }
+
+    .stats-card .value {
+        font-size: 2rem;
         font-weight: 800;
-        padding: .45rem .9rem;
+        line-height: 1;
+        letter-spacing: -0.02em;
+    }
+
+    .stats-card .icon {
+        width: 46px;
+        height: 46px;
         border-radius: 999px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--stroke);
     }
 
-        .produtos-page .filter-btn.active {
-            color: #fff !important;
-            background: var(--primary-grad, linear-gradient(135deg, #6a11cb, #2575fc));
-            border-color: transparent !important;
+        .stats-card .icon i {
+            font-size: 1.05rem;
         }
 
-    /* Tabela (força ganhar do global) */
-    .produtos-page .table-responsive {
-        border: 1px solid var(--border, #e5e7eb);
-        background: var(--bg-elev-2, #fff);
+    /* Stats card colors */
+    .stats-card.total .icon {
+        background: rgba(37, 99, 235, .12);
+        color: var(--blue);
     }
 
-    .produtos-page table.produtos-table {
-        background: var(--bg-elev-2, #fff);
-        color: var(--text, #111827);
+    .stats-card.total .value {
+        color: var(--text);
     }
 
-        /* head */
-        .produtos-page table.produtos-table thead th {
-            background: var(--table-head, rgba(2,6,23,.04)) !important;
-            color: color-mix(in srgb, var(--text, #111827) 70%, transparent) !important;
-            font-size: .82rem;
-            text-transform: uppercase;
-            letter-spacing: .04em;
-            white-space: nowrap;
-            border-bottom: 1px solid var(--border, #e5e7eb) !important;
+    .stats-card.instock .icon {
+        background: rgba(22, 163, 74, .12);
+        color: var(--success);
+    }
+
+    .stats-card.instock .value {
+        color: var(--success);
+    }
+
+    .stats-card.low .icon {
+        background: rgba(245, 158, 11, .14);
+        color: var(--warn);
+    }
+
+    .stats-card.low .value {
+        color: var(--warn);
+    }
+
+    .stats-card.active .icon {
+        background: rgba(37, 99, 235, .12);
+        color: var(--blue);
+    }
+
+    .stats-card.active .value {
+        color: var(--blue);
+    }
+
+/* Tema dark adjustments */
+:root[data-theme="dark"] .stats-card.total .icon {
+    background: rgba(96, 165, 250, .15);
+}
+
+:root[data-theme="dark"] .stats-card.instock .icon {
+    background: rgba(74, 222, 128, .15);
+}
+
+:root[data-theme="dark"] .stats-card.low .icon {
+    background: rgba(251, 191, 36, .15);
+}
+
+:root[data-theme="dark"] .stats-card.active .icon {
+    background: rgba(96, 165, 250, .15);
+}
+
+/* ===== Card barra de filtros ===== */
+.filters-card {
+    background: var(--card);
+    border: 1px solid var(--stroke-2);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-2);
+    padding: 16px;
+    margin-bottom: 18px;
+}
+
+.search-box {
+    overflow: hidden;
+    border-radius: 999px;
+    border: 1px solid var(--stroke);
+    background: var(--card);
+}
+
+    .search-box .input-group-text {
+        background: var(--card);
+        color: var(--muted);
+        border: none;
+    }
+
+    .search-box input {
+        height: 46px;
+        font-size: .98rem;
+        background: var(--card);
+        color: var(--text);
+        border: none;
+    }
+
+        .search-box input:focus {
+            background: var(--card);
+            color: var(--text);
+            box-shadow: none;
         }
 
-        /* body */
-        .produtos-page table.produtos-table tbody td {
-            vertical-align: middle;
-            border-color: color-mix(in srgb, var(--border, #e5e7eb) 70%, transparent) !important;
+        .search-box input::placeholder {
+            color: var(--muted-light);
         }
 
-        .produtos-page table.produtos-table tbody tr:hover {
-            background: color-mix(in srgb, var(--primary, #2575fc) 6%, transparent) !important;
-        }
+/* ===== Pills filtros ===== */
+.filter-btn {
+    border-radius: 999px !important;
+    border: 1px solid rgba(37, 99, 235, .18);
+    padding: 10px 14px;
+    font-weight: 700;
+    color: rgba(37, 99, 235, .95);
+    background: rgba(37, 99, 235, .06);
+    transition: all 0.2s ease;
+}
 
-    /* Colunas */
-    .produtos-page .col-produto {
-        min-width: 360px;
+    .filter-btn:hover {
+        background: rgba(37, 99, 235, .10);
     }
 
-    .produtos-page .col-acoes {
-        min-width: 210px;
+    .filter-btn.active {
+        background: var(--blue);
+        border-color: var(--blue);
+        color: white;
+        box-shadow: 0 10px 18px rgba(37, 99, 235, .25);
     }
 
-    .produtos-page .col-sabores {
-        min-width: 220px;
+/* Tema dark para filtros */
+:root[data-theme="dark"] .filter-btn {
+    border: 1px solid rgba(96, 165, 250, .3);
+    color: rgba(96, 165, 250, .95);
+    background: rgba(96, 165, 250, .08);
+}
+
+    :root[data-theme="dark"] .filter-btn:hover {
+        background: rgba(96, 165, 250, .12);
     }
 
-    /* Imagem produto */
-    .produtos-page .product-img-container {
-        width: 54px;
-        height: 54px;
-        flex: 0 0 54px;
-        border-radius: 14px;
-        overflow: hidden;
-        background: var(--bg-elev-2, #fff);
-        border: 1px solid color-mix(in srgb, var(--border, #e5e7eb) 70%, transparent);
+    :root[data-theme="dark"] .filter-btn.active {
+        background: var(--blue);
+        border-color: var(--blue);
+        color: #1e293b;
+        box-shadow: 0 10px 18px rgba(96, 165, 250, .25);
     }
 
-    .produtos-page .product-img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
+/* ===== Toggle view (grade/tabela) ===== */
+.view-toggle {
+    background: rgba(15, 23, 42, .06);
+    border-radius: 12px;
+    padding: 4px;
+    display: inline-flex;
+    gap: 4px;
+}
+
+:root[data-theme="dark"] .view-toggle {
+    background: rgba(255, 255, 255, .06);
+}
+
+.view-toggle .view-btn {
+    border: 0;
+    background: transparent;
+    border-radius: 10px;
+    width: 42px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    transition: all 0.2s ease;
+}
+
+    .view-toggle .view-btn:hover {
+        color: var(--text);
     }
 
-    .produtos-page .product-img-placeholder {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, color-mix(in srgb, var(--border, #e5e7eb) 30%, transparent), color-mix(in srgb, var(--border, #e5e7eb) 65%, transparent) );
-        color: color-mix(in srgb, var(--text, #111827) 35%, transparent);
+    .view-toggle .view-btn.active {
+        background: var(--card);
+        color: var(--blue);
+        box-shadow: var(--shadow-3);
+    }
+
+    .view-toggle .view-btn i {
+        font-size: 1.0rem;
+    }
+
+/* ===== Wrapper da tabela ===== */
+.table-shell {
+    background: var(--card);
+    border: 1px solid var(--stroke-2);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-2);
+    overflow: hidden;
+}
+
+.produtos-table {
+    background: var(--card);
+    color: var(--text);
+}
+
+    .produtos-table thead th {
+        font-size: .86rem;
+        color: var(--muted);
+        padding-top: 16px !important;
+        padding-bottom: 16px !important;
+        border-bottom: 1px solid var(--stroke) !important;
+        background: var(--card);
+    }
+
+    .produtos-table tbody td {
+        padding-top: 18px !important;
+        padding-bottom: 18px !important;
+        border-top: 1px solid var(--stroke-2);
+        background: var(--card);
+    }
+
+    .produtos-table tbody tr:hover {
+        background: rgba(37, 99, 235, .03);
+    }
+
+:root[data-theme="dark"] .produtos-table tbody tr:hover {
+    background: rgba(96, 165, 250, .05);
+}
+
+.col-produto {
+    min-width: 280px;
+}
+
+.col-sabores {
+    min-width: 220px;
+}
+
+.col-acoes {
+    min-width: 170px;
+}
+
+/* ===== Imagem produto ===== */
+.product-img-container {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: var(--bg-2);
+    border: 1px solid var(--stroke-2);
+    overflow: hidden;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+}
+
+.product-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.product-img-placeholder {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    color: var(--muted-light);
+    background: var(--bg-2);
+}
+
+    .product-img-placeholder i {
         font-size: 1.1rem;
     }
 
-    /* Preços */
-    .produtos-page .price-normal {
-        font-weight: 900;
-        color: var(--text, #111827);
-    }
-
-    .produtos-page .price-old {
-        color: color-mix(in srgb, var(--text, #111827) 40%, transparent);
-        text-decoration: line-through;
-        font-weight: 800;
-    }
-
-    .produtos-page .price-new {
-        font-weight: 900;
-        color: var(--bs-success, #198754);
-    }
-
-    .produtos-page .discount-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 900;
-        font-size: .75rem;
-        padding: .25rem .55rem;
-        border-radius: 999px;
-        margin-left: .35rem;
-        color: #fff;
-        background: linear-gradient(135deg, #ef4444, #f97316);
-        box-shadow: 0 10px 20px rgba(239,68,68,.15);
-    }
-
-    /* Categoria badge */
-    .produtos-page .badge.bg-light.text-dark {
-        background: color-mix(in srgb, var(--primary, #2575fc) 10%, transparent) !important;
-        color: var(--text, #111827) !important;
-        border: 1px solid color-mix(in srgb, var(--primary, #2575fc) 18%, transparent) !important;
-    }
-
-    /* Chips sabores */
-    .produtos-page .flavor-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: .4rem;
-        border-radius: 999px;
-        padding: .38rem .6rem;
-        background: color-mix(in srgb, var(--primary, #2575fc) 10%, transparent);
-        color: color-mix(in srgb, var(--text, #111827) 85%, transparent);
-        border: 1px solid color-mix(in srgb, var(--primary, #2575fc) 18%, transparent);
-        font-weight: 800;
-        font-size: .82rem;
-    }
-
-        .produtos-page .flavor-chip .chip-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--primary-grad, linear-gradient(135deg, #6a11cb, #2575fc));
-            box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary, #2575fc) 12%, transparent);
-        }
-
-        .produtos-page .flavor-chip .chip-qty {
-            color: color-mix(in srgb, var(--text, #111827) 55%, transparent);
-            font-weight: 900;
-        }
-
-    /* Ações */
-    .produtos-page .btn-action {
-        font-weight: 900;
-    }
-
-    /* (IMPORTANTE) não mexer no .btn-group global, então escopa */
-    .produtos-page .btn-group .btn {
-        border-radius: 999px !important;
-    }
-
-        .produtos-page .btn-group .btn + .btn {
-            margin-left: .4rem;
-        }
-
-    /* Progresso estoque (escopado para não quebrar global) */
-    .produtos-page .progress {
-        background: color-mix(in srgb, var(--border, #e5e7eb) 40%, transparent);
-        border-radius: 999px;
-        overflow: hidden;
-    }
-
-    .produtos-page .progress-bar {
-        border-radius: 999px;
-    }
-
-    /* Mobile cards */
-    .produtos-page .product-card {
-        border: 1px solid var(--border, #e5e7eb) !important;
-        border-radius: var(--radius-lg, 18px) !important;
-        box-shadow: var(--shadow-1, 0 10px 28px rgba(0,0,0,.10)) !important;
-        overflow: hidden;
-        background: var(--bg-elev-2, #fff);
-    }
-
-        .produtos-page .product-card .card-body {
-            padding: 1rem 1rem 1.1rem;
-        }
-
-        .produtos-page .product-card .product-img-container {
-            width: 74px;
-            height: 74px;
-            border-radius: 18px;
-        }
-
-    /* Padding para bottom nav */
-    .produtos-page .page-has-bottom-nav {
-        padding-bottom: calc(var(--mbn-height, 68px) + 18px);
-    }
-
-/* Dark: pequenos ajustes */
-html[data-theme="dark"] .produtos-page .search-box {
-    box-shadow: 0 10px 30px rgba(0,0,0,.25);
+/* ===== Preços ===== */
+.price-old {
+    color: var(--muted);
+    text-decoration: line-through;
+    font-weight: 700;
+    font-size: .92rem;
 }
 
-html[data-theme="dark"] .produtos-page .price-new {
-    color: #22c55e;
+.price-normal {
+    color: var(--text);
+    font-weight: 800;
+}
+
+.price-new {
+    color: var(--success);
+    font-weight: 900;
+}
+
+.discount-badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: var(--danger);
+    color: white;
+    font-weight: 900;
+    font-size: .78rem;
+    line-height: 1;
+}
+
+/* ===== Estoque bar ===== */
+.progress {
+    background: var(--stroke-2);
+    border-radius: 999px;
+}
+
+.progress-bar {
+    border-radius: 999px;
+}
+
+.estoque-valor {
+    letter-spacing: -0.01em;
+}
+
+/* ===== Chips sabores ===== */
+.flavor-chip {
+    background: rgba(124, 58, 237, .08);
+    color: rgba(124, 58, 237, .92);
+    border: 1px solid rgba(124, 58, 237, .12);
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+:root[data-theme="dark"] .flavor-chip {
+    background: rgba(167, 139, 250, .12);
+    color: rgba(167, 139, 250, .95);
+    border: 1px solid rgba(167, 139, 250, .2);
+}
+
+.flavor-chip .chip-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(124, 58, 237, .80);
+    display: inline-block;
+}
+
+:root[data-theme="dark"] .flavor-chip .chip-dot {
+    background: var(--purple);
+}
+
+.flavor-chip .chip-qty {
+    color: rgba(124, 58, 237, .70);
+    font-weight: 900;
+}
+
+:root[data-theme="dark"] .flavor-chip .chip-qty {
+    color: rgba(167, 139, 250, .8);
+}
+
+/* ===== Botões ações ===== */
+.btn-action {
+    border-radius: 12px !important;
+    padding: 10px 14px;
+    font-weight: 800;
+    transition: all 0.2s ease;
+}
+
+    .btn-action:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-3);
+    }
+
+    .btn-action.btn-outline-primary {
+        border-color: rgba(37, 99, 235, .25);
+        color: var(--blue);
+    }
+
+:root[data-theme="dark"] .btn-action.btn-outline-primary {
+    border-color: rgba(96, 165, 250, .3);
+    color: var(--blue);
+}
+
+.btn-action.btn-outline-primary:hover {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: white;
+}
+
+.btn-action.btn-outline-danger {
+    border-color: rgba(239, 68, 68, .25);
+    color: var(--danger);
+}
+
+:root[data-theme="dark"] .btn-action.btn-outline-danger {
+    border-color: rgba(248, 113, 113, .3);
+    color: var(--danger);
+}
+
+.btn-action.btn-outline-danger:hover {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: white;
+}
+
+/* ===== Cards (Grade) ===== */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 14px;
+}
+
+@media (min-width: 768px) {
+    .cards-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1200px) {
+    .cards-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+.product-card {
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--stroke-2);
+    box-shadow: var(--shadow-2);
+    overflow: hidden;
+    background: var(--card);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+    .product-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow);
+    }
+
+    .product-card .card-body {
+        padding: 16px;
+        background: var(--card);
+        color: var(--text);
+    }
+
+    .product-card .card-title {
+        letter-spacing: -0.01em;
+        color: var(--text);
+    }
+
+    .product-card .btn {
+        border-radius: 12px;
+        font-weight: 800;
+    }
+
+/* ===== Estado vazio ===== */
+.empty-state {
+    background: var(--card);
+    border: 2px dashed var(--stroke);
+    border-radius: var(--radius-lg);
+    padding: 60px 40px;
+    text-align: center;
+    color: var(--text);
+}
+
+.empty-state-icon {
+    font-size: 64px;
+    color: var(--muted-light);
+    margin-bottom: 20px;
+}
+
+.empty-state h3 {
+    color: var(--text);
+}
+
+.empty-state p {
+    color: var(--muted);
+}
+
+/* ===== Footer count ===== */
+.results-count {
+    color: var(--muted);
+    font-size: .92rem;
+    text-align: center;
+    padding: 8px 0 18px;
+}
+
+/* ===== Badges ===== */
+.badge-category {
+    background: var(--bg-2);
+    color: var(--text);
+    border: 1px solid var(--stroke-2);
+}
+
+.badge-status {
+    color: white;
+}
+
+    .badge-status.bg-success {
+        background: var(--success) !important;
+    }
+
+    .badge-status.bg-secondary {
+        background: var(--muted) !important;
+    }
+
+/* ===== Modalidades de exibição ===== */
+#tableView.d-none,
+#gridView.d-none {
+    display: none !important;
+}
+
+.product-row[style*="display: none"] {
+    display: none !important;
+}
+
+/* ===== Responsividade ===== */
+@media (max-width: 767.98px) {
+    .produtos-page {
+        padding: 0;
+    }
+
+    .container-full-lg {
+        padding: 0 12px;
+    }
+
+    .stats-grid {
+        gap: 12px;
+    }
+
+    .stats-card {
+        padding: 16px;
+    }
+
+    .filters-card {
+        padding: 14px;
+    }
+
+    .filter-btn {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+    }
+
+    .search-box input {
+        height: 42px;
+        font-size: 0.95rem;
+    }
+
+    .table-shell {
+        border-radius: var(--radius-md);
+        overflow-x: auto;
+    }
+
+    .produtos-table th,
+    .produtos-table td {
+        padding: 12px 8px !important;
+    }
+
+    .col-produto {
+        min-width: 200px;
+    }
+
+    .product-img-container {
+        width: 48px;
+        height: 48px;
+    }
+
+    .btn-action {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+    }
+
+    .empty-state {
+        padding: 40px 20px;
+        margin: 20px;
+    }
+}
+
+/* ===== Correções para 100% altura ===== */
+html, body {
+    height: 100%;
+}
+
+.produtos-page {
+    min-height: 100vh;
+    width: 100%;
+}
+
+.page-content {
+    flex: 1;
+}
+
+#page-content {
+    padding-bottom: calc(16px + var(--mbn-height, 0px));
+}
+
+/* Suporte para bottom nav */
+.has-bottom-nav .produtos-page {
+    padding-bottom: var(--mbn-height, 68px);
+}
+
+/* Animações suaves */
+.stats-card,
+.product-card,
+.filter-btn,
+.view-btn,
+.btn-action {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.app-shell {
+    min-height: 100%;
+    width: 100%;
+}
+
+:root {
+    --kb-shift: 0px;
+    --mbn-height: 0px;
+}
+
+html, body {
+    height: 100%;
+    overflow-x: hidden;
+}
+
+#rt-audio-banner {
+    position: fixed;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    z-index: 2000;
+    background: #111;
+    color: #fff;
+    border-radius: 999px;
+    display: none;
+    align-items: center;
+    gap: .5rem;
+    padding: .55rem .9rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,.2);
+    cursor: pointer;
+    font-weight: 700;
+}
+
+    #rt-audio-banner i {
+        opacity: .9;
+    }
+
+/* Garante que o conteúdo principal ocupe 100% */
+#wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#page-content-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.page-content {
+    flex: 1;
+    width: 100%;
+}
+
+.page-hero {
+    flex: 1;
+    width: 100%;
+}
+
+.app-shell {
+    min-height: 100%;
+    width: 100%;
+}
+
+/* ===== FULL WIDTH nesta tela ===== */
+.produtos-page .container-full-lg {
+    max-width: none !important; /* remove limite */
+    width: 100% !important;
+}
+
+/* se o .container do bootstrap estiver centralizando */
+.produtos-page .container.container-full-lg {
+    max-width: none !important;
+    width: 100% !important;
+}
+
+/* padding lateral padrão (ajusta a “margem” sem limitar largura) */
+.produtos-page .container-full-lg {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+}
+
+@media (min-width: 1200px) {
+    .produtos-page .container-full-lg {
+        padding-left: 32px !important;
+        padding-right: 32px !important;
+    }
 }
