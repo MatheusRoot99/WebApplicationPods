@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
+using WebApplicationPods.Enum;
 
 namespace WebApplicationPods.Models
 {
@@ -26,6 +27,9 @@ namespace WebApplicationPods.Models
         [Required(ErrorMessage = "Selecione uma categoria.")]
         public int CategoriaId { get; set; }
 
+        // ✅ Agora é enum (combina com ProdutoModel)
+        public ProdutoTipo TipoProduto { get; set; } = ProdutoTipo.Padrao;
+
         public bool Ativo { get; set; } = true;
         public bool EmPromocao { get; set; } = false;
         public bool MaisVendido { get; set; } = false;
@@ -47,7 +51,6 @@ namespace WebApplicationPods.Models
             [Range(1, 999, ErrorMessage = "Multiplicador deve ser >= 1.")]
             public int Multiplicador { get; set; } = 1;
 
-            // ✅ Usamos TEXTO para aceitar vírgula no form (pt-BR)
             [Required(ErrorMessage = "Informe o preço.")]
             public string PrecoTexto { get; set; } = "";
 

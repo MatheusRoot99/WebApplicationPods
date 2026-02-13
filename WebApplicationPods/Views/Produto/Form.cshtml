@@ -1,20 +1,26 @@
-﻿@model WebApplicationPods.Models.ProdutoFormViewModel
+﻿@using WebApplicationPods.Enum
+@using WebApplicationPods.Models
+@model WebApplicationPods.Models.ProdutoFormViewModel
+
 @{
     var isEdit = Model?.Id.HasValue == true && Model.Id.Value > 0;
-    ViewData["Title"] = isEdit ? "Editar Produto" : "Cadastro Universal de Produto";
+
+    var tipo = Model.TipoProduto;
+    var isPadrao = tipo == ProdutoTipo.Padrao;
+    var isPod = tipo == ProdutoTipo.PodVape;
+    var isBebida = tipo == ProdutoTipo.BebidaAlcoolica;
+
+    var lockType = isEdit;
 }
+
 
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="~/css/produto-form-figma.css" asp-append-version="true" />
 
 <div class="pf2">
-    <!-- Toast host -->
     <div id="pf2ToastHost" class="pf2-toast-host"></div>
 
     <div class="pf2-wrap">
-
-        <!-- Header -->
         <div class="pf2-header">
             <div class="pf2-title">
                 <div class="pf2-icon">
@@ -42,7 +48,6 @@
             </div>
         </div>
 
-        <!-- Progress -->
         <div class="pf2-card pf2-progress">
             <div class="pf2-progress-top">
                 <span class="muted">Progresso do cadastro</span>
@@ -64,19 +69,24 @@
             <input type="hidden" asp-for="Id" />
             <input type="hidden" asp-for="ImagemUrl" />
 
-            <!-- Tipo de Produto (UI ONLY) -->
+            <!-- ✅ hidden REAL (vai pro banco) -->
+            <input type="hidden" id="TipoProdutoHidden" name="TipoProduto" value="@((int)Model.TipoProduto)" />
+
+            <!-- Tipo de Produto -->
             <div class="pf2-card pf2-type">
                 <div class="pf2-card-head">
                     <div class="pf2-card-ico bg-blue"><i class="fas fa-mug-hot"></i></div>
                     <div>
                         <h2>Tipo de Produto</h2>
-                        <p class="muted">Define regra de maioridade (UI)</p>
+                        <p class="muted">Define regra de maioridade</p>
                     </div>
                 </div>
 
                 <div class="pf2-type-grid">
-                    <label class="pf2-type-item is-selected" data-type="padrao">
-                        <input type="radio" name="TipoProdutoUI" value="padrao" checked />
+                    <label class="pf2-type-item @(isPadrao ? "is-selected" : "")" data-type="padrao">
+                        <input type="radio" name="TipoProdutoUI" value="padrao"
+                               @(isPadrao ? "checked" : "")
+                               @(lockType ? "disabled" : "") />
                         <div class="pf2-type-icon text-blue"><i class="fas fa-box"></i></div>
                         <div class="pf2-type-txt">
                             <strong>Produto Padrão</strong>
@@ -84,8 +94,10 @@
                         </div>
                     </label>
 
-                    <label class="pf2-type-item" data-type="pod">
-                        <input type="radio" name="TipoProdutoUI" value="pod" />
+                    <label class="pf2-type-item @(isPod ? "is-selected" : "")" data-type="pod">
+                        <input type="radio" name="TipoProdutoUI" value="pod"
+                               @(isPod ? "checked" : "")
+                               @(lockType ? "disabled" : "") />
                         <div class="pf2-type-icon text-purple"><i class="fas fa-bolt"></i></div>
                         <div class="pf2-type-txt">
                             <strong>Pod / Vape</strong>
@@ -93,8 +105,10 @@
                         </div>
                     </label>
 
-                    <label class="pf2-type-item" data-type="bebida-alcoolica">
-                        <input type="radio" name="TipoProdutoUI" value="bebida-alcoolica" />
+                    <label class="pf2-type-item @(isBebida ? "is-selected" : "")" data-type="bebida-alcoolica">
+                        <input type="radio" name="TipoProdutoUI" value="bebida-alcoolica"
+                               @(isBebida ? "checked" : "")
+                               @(lockType ? "disabled" : "") />
                         <div class="pf2-type-icon text-red"><i class="fas fa-wine-bottle"></i></div>
                         <div class="pf2-type-txt">
                             <strong>Bebida Alcoólica</strong>
@@ -102,6 +116,14 @@
                         </div>
                     </label>
                 </div>
+
+                @if (lockType)
+                {
+                    <div class="pf2-help muted" style="margin-top:10px;">
+                        <i class="fas fa-lock"></i>
+                        Este produto foi criado como <strong>@Model.TipoProduto</strong> e não pode trocar o tipo no editar.
+                    </div>
+                }
             </div>
 
             <!-- Informações Básicas -->
@@ -121,7 +143,7 @@
                             <i class="fas fa-tag"></i>
                             <input asp-for="Nome" required maxlength="120"
                                    placeholder="Ex: Coca-Cola 2L, Pod Ice Mint 5000 puffs" />
-                            <span class="pf2-ok" id="nomeOk"><i class="fas fa-check-circle"></i></span>
+                            <span class="pf2-ok" id="nomeOk"></span>
                         </div>
                         <span asp-validation-for="Nome" class="pf2-val"></span>
                     </div>
@@ -140,7 +162,7 @@
                             <select asp-for="CategoriaId" asp-items="ViewBag.Categorias" required>
                                 <option value="">Selecione uma categoria</option>
                             </select>
-                            <span class="pf2-chevron"><i class="fas fa-chevron-down"></i></span>
+                            <span class="pf2-chevron"></span>
                         </div>
                         <span asp-validation-for="CategoriaId" class="pf2-val"></span>
                     </div>
@@ -280,19 +302,19 @@
                     {
                         for (var i = 0; i < Model.Variacoes.Count; i++)
                         {
-                            var nome = Model.Variacoes[i].Nome ?? "Unidade";
-                            var isPadrao = nome == "Unidade" || nome == "Caixa" || nome == "Fardo";
-                            var isOutro = !isPadrao;
+                            var nomeVar = Model.Variacoes[i].Nome ?? "Unidade";
+                            var isPadraoVar = nomeVar == "Unidade" || nomeVar == "Caixa" || nomeVar == "Fardo";
+                            var isOutro = !isPadraoVar;
 
                             <div class="pf2-vari" data-index="@i">
                                 <input type="hidden" name="Variacoes[@i].Id" value="@Model.Variacoes[i].Id" />
-                                <input type="hidden" class="v-name-hidden" name="Variacoes[@i].Nome" value="@nome" />
+                                <input type="hidden" class="v-name-hidden" name="Variacoes[@i].Nome" value="@nomeVar" />
 
                                 <div class="pf2-vari-top">
                                     <div class="pf2-vari-badge">
                                         <i class="fas fa-cubes"></i>
                                         <span>Variação</span>
-                                        <strong class="v-badge">@nome</strong>
+                                        <strong class="v-badge">@nomeVar</strong>
                                     </div>
 
                                     <button type="button" class="pf2-iconbtn v-remove" title="Remover">
@@ -305,27 +327,39 @@
                                         <label>Nome</label>
                                         <div class="pf2-row">
                                             <select class="v-name">
-                                                <option value="Unidade" selected="@(nome == "Unidade")">Unidade</option>
-                                                <option value="Caixa" selected="@(nome == "Caixa")">Caixa</option>
-                                                <option value="Fardo" selected="@(nome == "Fardo")">Fardo</option>
+                                                <option value="Unidade" selected="@(nomeVar == "Unidade")">Unidade</option>
+                                                <option value="Caixa" selected="@(nomeVar == "Caixa")">Caixa</option>
+                                                <option value="Fardo" selected="@(nomeVar == "Fardo")">Fardo</option>
                                                 <option value="Outro" selected="@(isOutro)">Outro</option>
                                             </select>
 
                                             <input type="text"
                                                    class="v-custom @(isOutro ? "" : "hidden")"
                                                    placeholder="Nome..."
-                                                   value="@(isOutro? nome : "")" />
+                                                   value="@(isOutro? nomeVar : "")" />
                                         </div>
                                         <span class="pf2-val v-nome-val hidden">Informe o nome da variação.</span>
                                     </div>
 
-                                    <div class="pf2-field">
-                                        <label>Multiplicador</label>
-                                        <input type="number"
-                                               min="1"
-                                               class="v-mult"
-                                               name="Variacoes[@i].Multiplicador"
-                                               value="@(Model.Variacoes[i].Multiplicador < 1 ? 1 : Model.Variacoes[i].Multiplicador)" />
+                                    <!-- ✅ Multiplicador + Estoque lado a lado -->
+                                    <div class="pf2-field pf2-inline2">
+                                        <div class="pf2-inline2-col">
+                                            <label>Multiplicador</label>
+                                            <input type="number"
+                                                   min="1"
+                                                   class="v-mult"
+                                                   name="Variacoes[@i].Multiplicador"
+                                                   value="@(Model.Variacoes[i].Multiplicador < 1 ? 1 : Model.Variacoes[i].Multiplicador)" />
+                                        </div>
+
+                                        <div class="pf2-inline2-col">
+                                            <label>Estoque</label>
+                                            <input type="number"
+                                                   min="0"
+                                                   class="v-stock"
+                                                   name="Variacoes[@i].Estoque"
+                                                   value="@Model.Variacoes[i].Estoque" />
+                                        </div>
                                     </div>
 
                                     <div class="pf2-field">
@@ -351,15 +385,6 @@
                                                    value="@Model.Variacoes[i].PrecoPromocionalTexto"
                                                    placeholder="0,00" />
                                         </div>
-                                    </div>
-
-                                    <div class="pf2-field">
-                                        <label>Estoque</label>
-                                        <input type="number"
-                                               min="0"
-                                               class="v-stock"
-                                               name="Variacoes[@i].Estoque"
-                                               value="@Model.Variacoes[i].Estoque" />
                                     </div>
 
                                     <div class="pf2-field pf2-switchfield">
@@ -412,9 +437,15 @@
                                     <span class="pf2-val v-nome-val hidden">Informe o nome da variação.</span>
                                 </div>
 
-                                <div class="pf2-field">
-                                    <label>Multiplicador</label>
-                                    <input type="number" min="1" class="v-mult" name="Variacoes[0].Multiplicador" value="1" />
+                                <div class="pf2-field pf2-inline2">
+                                    <div class="pf2-inline2-col">
+                                        <label>Multiplicador</label>
+                                        <input type="number" min="1" class="v-mult" name="Variacoes[0].Multiplicador" value="1" />
+                                    </div>
+                                    <div class="pf2-inline2-col">
+                                        <label>Estoque</label>
+                                        <input type="number" min="0" class="v-stock" name="Variacoes[0].Estoque" value="0" />
+                                    </div>
                                 </div>
 
                                 <div class="pf2-field">
@@ -432,11 +463,6 @@
                                         <span>R$</span>
                                         <input type="text" class="v-promo" name="Variacoes[0].PrecoPromocionalTexto" placeholder="0,00" value="" />
                                     </div>
-                                </div>
-
-                                <div class="pf2-field">
-                                    <label>Estoque</label>
-                                    <input type="number" min="0" class="v-stock" name="Variacoes[0].Estoque" value="0" />
                                 </div>
 
                                 <div class="pf2-field pf2-switchfield">
@@ -466,7 +492,6 @@
                 </div>
             </div>
 
-            <!-- Footer -->
             <div class="pf2-footer">
                 <a asp-action="Index" class="pf2-btn pf2-btn-ghost big">
                     <i class="fas fa-times"></i>
@@ -475,13 +500,13 @@
 
                 <button type="submit" class="pf2-btn pf2-btn-primary big">
                     <i class="fas fa-save"></i>
-                    @(isEdit ? "Salvar Produto" : "Salvar Produto")
+                    Salvar Produto
                 </button>
             </div>
 
         </form>
-
-        <partial name="_ValidationScriptsPartial" />
-        <script src="~/js/produto-form-figma.js" asp-append-version="true"></script>
     </div>
 </div>
+
+<partial name="_ValidationScriptsPartial" />
+<script src="~/js/produto-form.js" asp-append-version="true"></script>

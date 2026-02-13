@@ -890,3 +890,14 @@
         opacity: 0;
     }
 }
+
+.pf2-inline2 {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.pf2-inline2-col {
+    flex: 1;
+}
+

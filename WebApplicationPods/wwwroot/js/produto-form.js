@@ -23,18 +23,21 @@
     const maioridadeHint = document.getElementById('maioridadeHint');
     const maioridadeCard = document.getElementById('maioridadeCard');
 
-    // image
+    // ✅ hidden REAL (vai pro banco) - enum int: 0,1,2
+    const tipoHidden = document.getElementById('TipoProdutoHidden');
+
     const imageUpload = document.getElementById('imageUpload');
     const imagePreviewBox = document.getElementById('imagePreviewBox');
 
-    // toast host
     const toastHost = document.getElementById('pf2ToastHost');
 
-    // key do rascunho (novo vs editar)
     const idHidden = document.querySelector('input[name="Id"]');
     const draftKey = `produto-rascunho:${(idHidden && idHidden.value && idHidden.value !== "0") ? idHidden.value : "new"}`;
 
     if (!variationsList || !btnAdd) return;
+
+    // ✅ Tipo travado no Editar (quando você desabilita os radios no servidor)
+    const typeIsLocked = tipoRadios.some(r => r.disabled);
 
     /* =========================
        Toast
@@ -64,47 +67,87 @@
         setTimeout(() => {
             node.style.animation = 'pf2ToastOut .22s ease forwards';
             setTimeout(() => node.remove(), 260);
-        }, 2600);
+        }, 2200);
     };
 
     /* =========================
-       Money helpers
+       Money helpers (pt-BR) - LIVE
        ========================= */
-    const moneyFormatFromDigits = (digits) => {
+    const moneyFromDigits = (digits) => {
         const n = Number(digits || 0) / 100;
         return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     };
 
-    const normalizeMoney = (val) => {
-        const digits = (val || '').replace(/\D/g, '');
-        return moneyFormatFromDigits(digits);
+    const onlyDigits = (s) => (s || '').replace(/\D/g, '');
+    const normalizeMoney = (val) => moneyFromDigits(onlyDigits(val));
+
+    const maskMoneyLive = (input) => {
+        const digits = onlyDigits(input.value);
+        const limited = digits.length > 12 ? digits.slice(0, 12) : digits;
+        input.value = moneyFromDigits(limited);
+        const len = input.value.length;
+        try { input.setSelectionRange(len, len); } catch { }
     };
 
-    const maskMoneyOnBlur = (input) => {
-        input.value = normalizeMoney(input.value);
+    const wireMoney = (input) => {
+        if (!input) return;
+
+        input.addEventListener('focus', () => {
+            if (!input.value || input.value.trim() === '') input.value = '0,00';
+            const len = input.value.length;
+            try { input.setSelectionRange(len, len); } catch { }
+        });
+
+        input.addEventListener('input', () => {
+            maskMoneyLive(input);
+            scheduleDraftSave();
+        });
+
+        input.addEventListener('blur', () => {
+            input.value = normalizeMoney(input.value);
+            scheduleDraftSave();
+        });
     };
 
     /* =========================
-       Tipo Produto UI
+       Tipo Produto UI (salva no hidden int)
+       enum int: Padrao=0, PodVape=1, BebidaAlcoolica=2
        ========================= */
+    const uiToEnumInt = (ui) => {
+        if (ui === 'pod') return '1';
+        if (ui === 'bebida-alcoolica') return '2';
+        return '0';
+    };
+
+    const enumIntToUi = (val) => {
+        const v = String(val ?? '0');
+        if (v === '1') return 'pod';
+        if (v === '2') return 'bebida-alcoolica';
+        return 'padrao';
+    };
+
     const getType = () => {
         const checked = tipoRadios.find(r => r.checked);
         return checked ? checked.value : 'padrao';
     };
 
-    const setType = (value) => {
-        const radio = tipoRadios.find(r => r.value === value);
+    const setType = (uiValue, saveDraft = false) => {
+        const radio = tipoRadios.find(r => r.value === uiValue);
         if (radio) radio.checked = true;
-        applyTypeUI();
+        applyTypeUI(saveDraft);
     };
 
-    const applyTypeUI = () => {
+    const applyTypeUI = (saveDraft = true) => {
         const t = getType();
 
         typeCards.forEach(card => {
             card.classList.toggle('is-selected', card.dataset.type === t);
         });
 
+        // ✅ atualiza hidden real (vai pro banco)
+        if (tipoHidden) tipoHidden.value = uiToEnumInt(t);
+
+        // maioridade: força para Pod/Bebida
         if (maioridade) {
             const forced = (t === 'pod' || t === 'bebida-alcoolica');
             maioridade.disabled = forced;
@@ -119,7 +162,14 @@
         }
 
         updateProgress();
-        scheduleDraftSave();
+        if (saveDraft) scheduleDraftSave();
+    };
+
+    // ✅ força o UI pelo hidden do banco (Edit e Create)
+    const forceTypeFromHidden = () => {
+        if (!tipoHidden) return;
+        const ui = enumIntToUi(tipoHidden.value);
+        setType(ui, false); // não salva draft aqui
     };
 
     /* =========================
@@ -236,11 +286,8 @@
         if (sel) sel.addEventListener('change', onAnyChange);
         if (custom) custom.addEventListener('input', onAnyChange);
 
-        if (price) {
-            price.addEventListener('blur', () => { maskMoneyOnBlur(price); onAnyChange(); });
-            price.addEventListener('input', scheduleDraftSave);
-        }
-        if (promo) promo.addEventListener('blur', () => { maskMoneyOnBlur(promo); scheduleDraftSave(); });
+        wireMoney(price);
+        wireMoney(promo);
 
         if (mult) mult.addEventListener('input', onAnyChange);
         if (stock) stock.addEventListener('input', onAnyChange);
@@ -315,9 +362,15 @@
           <span class="pf2-val v-nome-val hidden">Informe o nome da variação.</span>
         </div>
 
-        <div class="pf2-field">
-          <label>Multiplicador</label>
-          <input type="number" min="1" class="v-mult" name="Variacoes[${idx}].Multiplicador" value="${Math.max(1, parseInt(d.multiplicador ?? 1, 10) || 1)}" />
+        <div class="pf2-field pf2-inline2">
+          <div class="pf2-inline2-col">
+            <label>Multiplicador</label>
+            <input type="number" min="1" class="v-mult" name="Variacoes[${idx}].Multiplicador" value="${Math.max(1, parseInt(d.multiplicador ?? 1, 10) || 1)}" />
+          </div>
+          <div class="pf2-inline2-col">
+            <label>Estoque</label>
+            <input type="number" min="0" class="v-stock" name="Variacoes[${idx}].Estoque" value="${parseInt(d.estoque ?? 0, 10) || 0}" />
+          </div>
         </div>
 
         <div class="pf2-field">
@@ -337,11 +390,6 @@
           </div>
         </div>
 
-        <div class="pf2-field">
-          <label>Estoque</label>
-          <input type="number" min="0" class="v-stock" name="Variacoes[${idx}].Estoque" value="${parseInt(d.estoque ?? 0, 10) || 0}" />
-        </div>
-
         <div class="pf2-field pf2-switchfield">
           <label>Ativo</label>
           <div class="pf2-switch">
@@ -357,43 +405,14 @@
     };
 
     /* =========================
-       Image preview helpers + salvar preview no draft
-       ========================= */
-    const renderEmptyPreview = () => {
-        if (!imagePreviewBox) return;
-        imagePreviewBox.innerHTML = `
-      <div class="pf2-empty">
-        <i class="fas fa-image"></i>
-        <span class="muted">Nenhuma imagem selecionada</span>
-      </div>
-    `;
-    };
-
-    const renderImagePreview = (src, fromDraft) => {
-        if (!imagePreviewBox) return;
-        imagePreviewBox.innerHTML = `
-      <img src="${src}" alt="Preview" />
-      <button type="button" class="pf2-x" id="removeImage"><i class="fas fa-times"></i></button>
-    `;
-        document.getElementById('removeImage')?.addEventListener('click', () => {
-            renderEmptyPreview();
-            if (imageUpload) imageUpload.value = '';
-            // remove preview do draft
-            scheduleDraftSave(true);
-            toast('info', 'Imagem removida');
-        });
-
-        if (!fromDraft) toast('ok', 'Imagem carregada');
-    };
-
-    /* =========================
-       Draft: save / load
+       Draft
        ========================= */
     let saveTimer = null;
 
-    const buildDraft = async (forceRemoveImagePreview) => {
+    const buildDraft = async () => {
         const draft = {
             tipoProdutoUI: getType(),
+            tipoProdutoHidden: tipoHidden?.value ?? '0',
             produto: {
                 nome: nome?.value ?? '',
                 descricao: desc?.value ?? '',
@@ -421,12 +440,6 @@
             imagePreviewBase64: null
         };
 
-        // preview base64 (apenas se tiver arquivo selecionado)
-        if (forceRemoveImagePreview) {
-            draft.imagePreviewBase64 = null;
-            return draft;
-        }
-
         const file = imageUpload?.files?.[0];
         if (file && file.type.startsWith('image/')) {
             draft.imagePreviewBase64 = await new Promise((resolve) => {
@@ -435,7 +448,6 @@
                 reader.readAsDataURL(file);
             });
         } else {
-            // se não tem file, tenta manter preview atual se for base64 já renderizada (ex.: restore)
             const img = imagePreviewBox?.querySelector('img');
             const src = img?.getAttribute('src') || '';
             draft.imagePreviewBase64 = src.startsWith('data:image/') ? src : null;
@@ -444,13 +456,11 @@
         return draft;
     };
 
-    const scheduleDraftSave = (forceRemoveImagePreview) => {
+    const scheduleDraftSave = () => {
         if (saveTimer) clearTimeout(saveTimer);
         saveTimer = setTimeout(async () => {
             try {
-                const draft = await buildDraft(!!forceRemoveImagePreview);
-
-                // não salva se estiver totalmente vazio (nome vazio e sem preço em variações)
+                const draft = await buildDraft();
                 const hasAny =
                     (draft.produto.nome || '').trim().length > 0 ||
                     draft.variacoes.some(v => (v.precoTexto || '').trim().length > 0);
@@ -461,12 +471,10 @@
                 }
 
                 localStorage.setItem(draftKey, JSON.stringify(draft));
-                toast('info', 'Rascunho salvo', 'Salvo automaticamente');
             } catch (e) {
-                // silencioso
                 console.error('Draft save error', e);
             }
-        }, 900);
+        }, 700);
     };
 
     const loadDraft = () => {
@@ -476,7 +484,6 @@
         try {
             const d = JSON.parse(raw);
 
-            // produto
             if (nome) nome.value = d?.produto?.nome ?? '';
             if (desc) desc.value = d?.produto?.descricao ?? '';
             if (categoria) categoria.value = d?.produto?.categoriaId ?? '';
@@ -499,10 +506,15 @@
             if (maisVend) maisVend.checked = !!d?.produto?.maisVendido;
             if (reqMaior) reqMaior.checked = !!d?.produto?.requerMaioridade;
 
-            // tipo UI
-            if (d?.tipoProdutoUI) setType(d.tipoProdutoUI);
+            // ✅ TIPO:
+            // - Editar travado: NÃO deixa draft mexer no tipo
+            // - Criar: pode restaurar
+            if (!typeIsLocked) {
+                if (tipoHidden && d?.tipoProdutoHidden != null) tipoHidden.value = String(d.tipoProdutoHidden);
+                if (d?.tipoProdutoUI) setType(d.tipoProdutoUI, false);
+            }
 
-            // variações (recria)
+            // variações
             variationsList.innerHTML = '';
             const vars = Array.isArray(d?.variacoes) && d.variacoes.length ? d.variacoes : [null];
             vars.forEach((v, idx) => {
@@ -512,12 +524,25 @@
             });
             renumber();
 
-            // preview image
+            // preview
             if (d?.imagePreviewBase64 && typeof d.imagePreviewBase64 === 'string' && d.imagePreviewBase64.startsWith('data:image/')) {
-                renderImagePreview(d.imagePreviewBase64, true);
+                if (imagePreviewBox) {
+                    imagePreviewBox.innerHTML = `
+            <img src="${d.imagePreviewBase64}" alt="Preview" />
+            <button type="button" class="pf2-x" id="removeImage"><i class="fas fa-times"></i></button>
+          `;
+                    document.getElementById('removeImage')?.addEventListener('click', () => {
+                        if (imagePreviewBox) imagePreviewBox.innerHTML = `
+              <div class="pf2-empty">
+                <i class="fas fa-image"></i>
+                <span class="muted">Nenhuma imagem selecionada</span>
+              </div>`;
+                        if (imageUpload) imageUpload.value = '';
+                        scheduleDraftSave();
+                    });
+                }
             }
 
-            toast('ok', 'Rascunho carregado', 'Dados anteriores foram recuperados');
             return true;
         } catch (e) {
             console.error('Draft load error', e);
@@ -525,14 +550,11 @@
         }
     };
 
-    const clearDraft = () => {
-        localStorage.removeItem(draftKey);
-    };
+    const clearDraft = () => localStorage.removeItem(draftKey);
 
     /* =========================
-       Wire core listeners
+       Core listeners
        ========================= */
-    // Add variation
     btnAdd.addEventListener('click', () => {
         const idx = variationsList.querySelectorAll('.pf2-vari').length;
         const card = createVariationCard(idx);
@@ -545,7 +567,6 @@
         toast('ok', 'Variação adicionada');
     });
 
-    // Clear all (mantém 1)
     if (btnClear) {
         btnClear.addEventListener('click', () => {
             if (!confirm('Tem certeza que deseja excluir TODAS as variações?')) return;
@@ -563,7 +584,6 @@
         });
     }
 
-    // Image preview
     if (imageUpload) {
         imageUpload.addEventListener('change', (e) => {
             const file = e.target.files?.[0];
@@ -582,14 +602,27 @@
 
             const reader = new FileReader();
             reader.onload = (ev) => {
-                renderImagePreview(ev.target.result, false);
-                scheduleDraftSave(); // salva preview base64
+                if (imagePreviewBox) {
+                    imagePreviewBox.innerHTML = `
+            <img src="${ev.target.result}" alt="Preview" />
+            <button type="button" class="pf2-x" id="removeImage"><i class="fas fa-times"></i></button>
+          `;
+                    document.getElementById('removeImage')?.addEventListener('click', () => {
+                        if (imagePreviewBox) imagePreviewBox.innerHTML = `
+              <div class="pf2-empty">
+                <i class="fas fa-image"></i>
+                <span class="muted">Nenhuma imagem selecionada</span>
+              </div>`;
+                        imageUpload.value = '';
+                        scheduleDraftSave();
+                    });
+                }
+                scheduleDraftSave();
             };
             reader.readAsDataURL(file);
         });
     }
 
-    // desc count
     const updateDescCount = () => {
         if (!desc || !descCount) return;
         descCount.textContent = String((desc.value || '').length);
@@ -599,26 +632,27 @@
     if (nome) nome.addEventListener('input', () => { updateProgress(); scheduleDraftSave(); });
     if (categoria) categoria.addEventListener('change', () => { updateProgress(); scheduleDraftSave(); });
 
-    // status checks -> save
     ['Ativo', 'EmPromocao', 'MaisVendido', 'RequerMaioridade'].forEach(n => {
         const el = document.querySelector(`[name="${n}"]`);
         if (el) el.addEventListener('change', () => { updateProgress(); scheduleDraftSave(); });
     });
 
-    // type product
-    tipoRadios.forEach(r => r.addEventListener('change', applyTypeUI));
-    typeCards.forEach(card => {
-        card.addEventListener('click', () => {
-            const t = card.dataset.type;
-            const radio = tipoRadios.find(r => r.value === t);
-            if (radio) {
-                radio.checked = true;
-                applyTypeUI();
-            }
+    // ✅ Tipo Produto: só no Criar
+    if (!typeIsLocked) {
+        tipoRadios.forEach(r => r.addEventListener('change', () => applyTypeUI(true)));
+        typeCards.forEach(card => {
+            card.addEventListener('click', () => {
+                const t = card.dataset.type;
+                const radio = tipoRadios.find(r => r.value === t);
+                if (radio) {
+                    radio.checked = true;
+                    applyTypeUI(true);
+                }
+            });
         });
-    });
+    }
 
-    // submit: valida + normaliza + limpa draft se ok
+    // submit
     if (form) {
         form.addEventListener('submit', (e) => {
             let ok = true;
@@ -628,8 +662,8 @@
 
                 const p = card.querySelector('.v-price');
                 const pr = card.querySelector('.v-promo');
-                if (p) maskMoneyOnBlur(p);
-                if (pr) maskMoneyOnBlur(pr);
+                if (p) p.value = normalizeMoney(p.value);
+                if (pr) pr.value = normalizeMoney(pr.value);
 
                 if (!validateVariationCard(card)) ok = false;
             });
@@ -643,26 +677,33 @@
                 return;
             }
 
-            // sucesso: limpa rascunho (o server vai redirecionar)
             clearDraft();
             toast('ok', 'Enviando', 'Salvando produto...');
         });
     }
 
     /* =========================
-       Init
+       INIT (ordem correta)
+       1) carrega draft
+       2) se não carregou, wire html
+       3) força tipo pelo hidden (sempre)
        ========================= */
-    // tenta carregar draft primeiro
     const loaded = loadDraft();
 
-    // se não carregou draft, só "wire" o que veio do server
     if (!loaded) {
         variationsList.querySelectorAll('.pf2-vari').forEach(wireVariation);
         renumber();
     }
 
+    // money nos inputs do server
+    variationsList.querySelectorAll('.v-price').forEach(wireMoney);
+    variationsList.querySelectorAll('.v-promo').forEach(wireMoney);
+
     updateDescCount();
-    applyTypeUI();
+
+    // ✅ Garantia final: no Editar o tipo sempre reflete o banco
+    forceTypeFromHidden();
+
     calcTotalStock();
     updateProgress();
 });

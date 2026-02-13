@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Newtonsoft.Json;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using WebApplicationPods.Enum;
 
 namespace WebApplicationPods.Models
 {
@@ -13,13 +14,15 @@ namespace WebApplicationPods.Models
         // ===== MULTI-LOJA =====
         public int LojaId { get; set; }
 
+        // ✅ NOVO: tipo real salvo no banco
+        public ProdutoTipo TipoProduto { get; set; } = ProdutoTipo.Padrao;
+
         // ===== Conveniência (genérico) =====
         [Required(ErrorMessage = "O nome do produto é obrigatório")]
         [StringLength(100)]
         public string Nome { get; set; } = string.Empty;
 
         public bool RequerMaioridade { get; set; } = false;
-
 
         [StringLength(2000)]
         public string? Descricao { get; set; }
@@ -74,6 +77,7 @@ namespace WebApplicationPods.Models
 
         [ValidateNever]
         public virtual ICollection<PedidoItemModel> PedidoItens { get; set; } = new List<PedidoItemModel>();
+
         [ValidateNever]
         public ICollection<ProdutoVariacaoModel> Variacoes { get; set; } = new List<ProdutoVariacaoModel>();
 

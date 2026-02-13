@@ -10,6 +10,7 @@ using WebApplicationPods.Data;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
 using WebApplicationPods.Services.Interface;
+using WebApplicationPods.Enum;
 
 namespace WebApplicationPods.Controllers
 {
@@ -76,8 +77,6 @@ namespace WebApplicationPods.Controllers
             page = page < 1 ? 1 : page;
             pageSize = pageSize is < 1 or > 60 ? 12 : pageSize;
 
-            // BancoContext já filtra por loja via QueryFilter, se _hasLoja = true.
-            // Mesmo assim, se Admin quiser ver "sem loja", o filtro pode estar desligado (depende do seu design).
             var query = _context.Produtos.AsNoTracking().Where(p => p.Ativo);
 
             if (!string.IsNullOrWhiteSpace(q))
@@ -183,23 +182,24 @@ namespace WebApplicationPods.Controllers
 
             var vm = new ProdutoFormViewModel
             {
+                TipoProduto = ProdutoTipo.Padrao,
                 Variacoes = new List<ProdutoFormViewModel.ProdutoVariacaoFormRow>
-                    {
-                        new() {
-                            Nome = "Unidade",
-                            Multiplicador = 1,
-                            PrecoTexto = "0,01",
-                            PrecoPromocionalTexto = "",
-                            Estoque = 0,
-                            Ativo = true
-                        }
-                    }
-
+    {
+        new()
+        {
+            Nome = "Unidade",
+            Multiplicador = 1,
+            PrecoTexto = "0,01",
+            PrecoPromocionalTexto = "",
+            Estoque = 0,
+            Ativo = true
+        }
+    }
             };
+
 
             return View(vm);
         }
-
 
         [Authorize(Roles = "Lojista,Admin")]
         [HttpPost]
@@ -208,7 +208,6 @@ namespace WebApplicationPods.Controllers
         {
             CarregarCategorias();
 
-            // ===== normaliza + limpa variações =====
             vm.Variacoes = (vm.Variacoes ?? new())
                 .Where(v => !string.IsNullOrWhiteSpace(v.Nome))
                 .ToList();
@@ -216,7 +215,6 @@ namespace WebApplicationPods.Controllers
             if (vm.Variacoes.Count == 0)
                 ModelState.AddModelError("", "Adicione pelo menos 1 variação (Unidade, Fardo, Caixa...).");
 
-            // ===== valida variações (server) =====
             foreach (var v in vm.Variacoes)
             {
                 var preco = ParseDecimalBR(v.PrecoTexto);
@@ -243,6 +241,9 @@ namespace WebApplicationPods.Controllers
                 SKU = vm.SKU,
                 CodigoBarras = vm.CodigoBarras,
                 CategoriaId = vm.CategoriaId,
+
+                // ✅ salva tipo no banco
+                TipoProduto = vm.TipoProduto,
                 RequerMaioridade = vm.RequerMaioridade,
                 Ativo = vm.Ativo,
                 MaisVendido = vm.MaisVendido,
@@ -250,7 +251,6 @@ namespace WebApplicationPods.Controllers
                 DataCadastro = DateTime.Now
             };
 
-            // imagem opcional
             if (vm.ImagemUpload is { Length: > 0 })
             {
                 var erroImg = ValidateImage(vm.ImagemUpload, out var extLower);
@@ -272,7 +272,6 @@ namespace WebApplicationPods.Controllers
                 produto.ImagemUrl = $"/imagens/produtos/{fileName}";
             }
 
-            // variações
             foreach (var v in vm.Variacoes)
             {
                 var preco = ParseDecimalBR(v.PrecoTexto);
@@ -291,7 +290,6 @@ namespace WebApplicationPods.Controllers
                 });
             }
 
-            // ✅ estoque total correto (ATIVOS × multiplicador)
             produto.Estoque = produto.Variacoes
                 .Where(x => x.Ativo)
                 .Sum(x => x.Estoque * x.Multiplicador);
@@ -302,8 +300,6 @@ namespace WebApplicationPods.Controllers
             FlashOk("Produto cadastrado com variações!");
             return RedirectToAction(nameof(Index));
         }
-
-
 
         [Authorize(Roles = "Lojista,Admin")]
         [HttpGet]
@@ -332,11 +328,16 @@ namespace WebApplicationPods.Controllers
                 SKU = produto.SKU,
                 CodigoBarras = produto.CodigoBarras,
                 CategoriaId = produto.CategoriaId,
+
                 RequerMaioridade = produto.RequerMaioridade,
                 Ativo = produto.Ativo,
                 MaisVendido = produto.MaisVendido,
                 EmPromocao = produto.EmPromocao,
                 ImagemUrl = produto.ImagemUrl,
+
+                // ✅ carrega tipo do banco (vai pra View e pro hidden)
+                TipoProduto = produto.TipoProduto,
+
                 Variacoes = produto.Variacoes
                     .OrderBy(v => v.Multiplicador)
                     .Select(v => new ProdutoFormViewModel.ProdutoVariacaoFormRow
@@ -369,8 +370,6 @@ namespace WebApplicationPods.Controllers
             return View(vm);
         }
 
-
-
         [Authorize(Roles = "Lojista,Admin")]
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -390,7 +389,6 @@ namespace WebApplicationPods.Controllers
 
             CarregarCategorias();
 
-            // ===== normaliza + limpa variações =====
             vm.Variacoes = (vm.Variacoes ?? new())
                 .Where(v => !string.IsNullOrWhiteSpace(v.Nome))
                 .ToList();
@@ -398,7 +396,6 @@ namespace WebApplicationPods.Controllers
             if (vm.Variacoes.Count == 0)
                 ModelState.AddModelError("", "Adicione pelo menos 1 variação.");
 
-            // ===== valida variações (server) =====
             foreach (var v in vm.Variacoes)
             {
                 var preco = ParseDecimalBR(v.PrecoTexto);
@@ -414,7 +411,6 @@ namespace WebApplicationPods.Controllers
             if (!ModelState.IsValid)
                 return View(vm);
 
-            // atualiza campos do produto
             produto.Nome = vm.Nome;
             produto.Descricao = vm.Descricao;
             produto.Marca = vm.Marca;
@@ -426,7 +422,9 @@ namespace WebApplicationPods.Controllers
             produto.MaisVendido = vm.MaisVendido;
             produto.EmPromocao = vm.EmPromocao;
 
-            // imagem opcional
+            // ✅ TRAVA TIPO NO EDITAR (mantém o do banco)
+            vm.TipoProduto = produto.TipoProduto;
+
             if (vm.ImagemUpload is { Length: > 0 })
             {
                 var erroImg = ValidateImage(vm.ImagemUpload, out var extLower);
@@ -452,7 +450,6 @@ namespace WebApplicationPods.Controllers
                 produto.ImagemUrl = $"/imagens/produtos/{fileName}";
             }
 
-            // ===== sincroniza variações =====
             var idsNoForm = vm.Variacoes
                 .Where(x => x.Id.HasValue && x.Id.Value > 0)
                 .Select(x => x.Id!.Value)
@@ -495,7 +492,6 @@ namespace WebApplicationPods.Controllers
                 }
             }
 
-            // ✅ estoque total correto (ATIVOS × multiplicador)
             produto.Estoque = produto.Variacoes
                 .Where(v => v.Ativo)
                 .Sum(v => v.Estoque * v.Multiplicador);
@@ -505,9 +501,6 @@ namespace WebApplicationPods.Controllers
             FlashOk("Produto e variações atualizados!");
             return RedirectToAction(nameof(Index));
         }
-
-
-
 
         [Authorize(Roles = "Lojista,Admin")]
         [HttpPost]
@@ -628,6 +621,5 @@ namespace WebApplicationPods.Controllers
 
             return decimal.TryParse(s, NumberStyles.Number, CultureInfo.InvariantCulture, out var d) ? d : 0m;
         }
-
     }
 }
