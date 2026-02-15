@@ -8,9 +8,28 @@
     --radius-lg: 18px;
     --radius-md: 14px;
     --radius-sm: 12px;
+    /* defaults seguros (caso não exista data-theme) */
+    --bg-1: #eff6ff;
+    --bg-2: #ffffff;
+    --bg-3: #faf5ff;
+    --card: #ffffff;
+    --stroke: rgba(15, 23, 42, .10);
+    --stroke-2: rgba(15, 23, 42, .08);
+    --text: rgba(15, 23, 42, .92);
+    --muted: rgba(15, 23, 42, .60);
+    --muted-light: rgba(15, 23, 42, .35);
+    --blue: #2563eb;
+    --purple: #7c3aed;
+    --success: #16a34a;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --shadow: 0 18px 45px rgba(2, 6, 23, .08);
+    --shadow-2: 0 10px 25px rgba(2, 6, 23, .08);
+    --shadow-3: 0 4px 12px rgba(0, 0, 0, 0.05);
+    --gradient-primary: linear-gradient(90deg, var(--blue), var(--purple));
 }
 
-    /* Tema Light (default) */
+    /* Tema Light */
     :root[data-theme="light"] {
         --bg-1: #eff6ff;
         --bg-2: #ffffff;
@@ -49,7 +68,7 @@
         --warn: #fbbf24;
         --danger: #f87171;
         --shadow: 0 18px 45px rgba(0, 0, 0, .25);
-        --shadow-2: 0 10px 25px rgba(0, 0, 0, .2);
+        --shadow-2: 0 10px 25px rgba(0, 0, 0, .20);
         --shadow-3: 0 4px 12px rgba(0, 0, 0, .15);
         --gradient-primary: linear-gradient(90deg, var(--blue), var(--purple));
     }
@@ -57,6 +76,7 @@
 /* ===== Page Container ===== */
 .produtos-page {
     min-height: 100vh;
+    width: 100%;
     background: radial-gradient(1200px 600px at 15% 0%, var(--bg-1), transparent 55%), radial-gradient(1200px 600px at 85% 0%, var(--bg-3), transparent 55%), linear-gradient(180deg, var(--bg-1), var(--bg-2) 40%, var(--bg-3));
     color: var(--text);
 }
@@ -79,7 +99,7 @@
     }
 
         .gradient-header .btn:hover {
-            background: white;
+            background: #fff;
             transform: translateY(-1px);
             box-shadow: var(--shadow-3);
         }
@@ -184,7 +204,7 @@
         color: var(--blue);
     }
 
-/* Tema dark adjustments */
+/* Tema dark adjustments (mantém contraste) */
 :root[data-theme="dark"] .stats-card.total .icon {
     background: rgba(96, 165, 250, .15);
 }
@@ -224,23 +244,28 @@
         border: none;
     }
 
-    .search-box input {
-        height: 46px;
-        font-size: .98rem;
+/* ✅ remove bg-white do seu HTML no dark */
+:root[data-theme="dark"] .search-box .input-group-text.bg-white {
+    background: var(--card) !important;
+}
+
+.search-box input {
+    height: 46px;
+    font-size: .98rem;
+    background: var(--card);
+    color: var(--text);
+    border: none;
+}
+
+    .search-box input:focus {
         background: var(--card);
         color: var(--text);
-        border: none;
+        box-shadow: none;
     }
 
-        .search-box input:focus {
-            background: var(--card);
-            color: var(--text);
-            box-shadow: none;
-        }
-
-        .search-box input::placeholder {
-            color: var(--muted-light);
-        }
+    .search-box input::placeholder {
+        color: var(--muted-light);
+    }
 
 /* ===== Pills filtros ===== */
 .filter-btn {
@@ -260,13 +285,13 @@
     .filter-btn.active {
         background: var(--blue);
         border-color: var(--blue);
-        color: white;
+        color: #fff;
         box-shadow: 0 10px 18px rgba(37, 99, 235, .25);
     }
 
 /* Tema dark para filtros */
 :root[data-theme="dark"] .filter-btn {
-    border: 1px solid rgba(96, 165, 250, .3);
+    border: 1px solid rgba(96, 165, 250, .30);
     color: rgba(96, 165, 250, .95);
     background: rgba(96, 165, 250, .08);
 }
@@ -335,28 +360,52 @@
     color: var(--text);
 }
 
+    /* ✅ header coerente em ambos temas */
     .produtos-table thead th {
         font-size: .86rem;
         color: var(--muted);
         padding-top: 16px !important;
         padding-bottom: 16px !important;
         border-bottom: 1px solid var(--stroke) !important;
-        background: var(--card);
+        background: var(--card) !important;
     }
 
-    .produtos-table tbody td {
-        padding-top: 18px !important;
-        padding-bottom: 18px !important;
-        border-top: 1px solid var(--stroke-2);
-        background: var(--card);
-    }
+/* ✅ Força header no dark mesmo com table-light do bootstrap */
+:root[data-theme="dark"] .produtos-table thead.table-light,
+:root[data-theme="dark"] .produtos-table thead,
+:root[data-theme="dark"] .produtos-table thead th {
+    background: var(--card) !important;
+    color: var(--muted) !important;
+    border-bottom: 1px solid var(--stroke) !important;
+}
 
-    .produtos-table tbody tr:hover {
-        background: rgba(37, 99, 235, .03);
-    }
+/* body */
+.produtos-table tbody td {
+    padding-top: 18px !important;
+    padding-bottom: 18px !important;
+    border-top: 1px solid var(--stroke-2);
+    background: var(--card);
+}
+
+.produtos-table tbody tr:hover {
+    background: rgba(37, 99, 235, .03);
+}
 
 :root[data-theme="dark"] .produtos-table tbody tr:hover {
     background: rgba(96, 165, 250, .05);
+}
+
+/* ✅ garante que bg-light/text-dark do bootstrap não “apague” no dark */
+:root[data-theme="dark"] .produtos-table .bg-light {
+    background: rgba(255,255,255,.06) !important;
+}
+
+:root[data-theme="dark"] .produtos-table .text-dark {
+    color: var(--text) !important;
+}
+
+:root[data-theme="dark"] .produtos-table .border {
+    border-color: var(--stroke) !important;
 }
 
 .col-produto {
@@ -427,7 +476,7 @@
     padding: 6px 10px;
     border-radius: 10px;
     background: var(--danger);
-    color: white;
+    color: #fff;
     font-weight: 900;
     font-size: .78rem;
     line-height: 1;
@@ -463,7 +512,7 @@
 :root[data-theme="dark"] .flavor-chip {
     background: rgba(167, 139, 250, .12);
     color: rgba(167, 139, 250, .95);
-    border: 1px solid rgba(167, 139, 250, .2);
+    border: 1px solid rgba(167, 139, 250, .20);
 }
 
 .flavor-chip .chip-dot {
@@ -484,7 +533,7 @@
 }
 
 :root[data-theme="dark"] .flavor-chip .chip-qty {
-    color: rgba(167, 139, 250, .8);
+    color: rgba(167, 139, 250, .80);
 }
 
 /* ===== Botões ações ===== */
@@ -506,14 +555,14 @@
     }
 
 :root[data-theme="dark"] .btn-action.btn-outline-primary {
-    border-color: rgba(96, 165, 250, .3);
+    border-color: rgba(96, 165, 250, .30);
     color: var(--blue);
 }
 
 .btn-action.btn-outline-primary:hover {
     background: var(--blue);
     border-color: var(--blue);
-    color: white;
+    color: #fff;
 }
 
 .btn-action.btn-outline-danger {
@@ -522,14 +571,14 @@
 }
 
 :root[data-theme="dark"] .btn-action.btn-outline-danger {
-    border-color: rgba(248, 113, 113, .3);
+    border-color: rgba(248, 113, 113, .30);
     color: var(--danger);
 }
 
 .btn-action.btn-outline-danger:hover {
     background: var(--danger);
     border-color: var(--danger);
-    color: white;
+    color: #fff;
 }
 
 /* ===== Cards (Grade) ===== */
@@ -621,7 +670,7 @@
 }
 
 .badge-status {
-    color: white;
+    color: #fff;
 }
 
     .badge-status.bg-success {
@@ -629,16 +678,18 @@
     }
 
     .badge-status.bg-secondary {
-        background: var(--muted) !important;
+        background: rgba(148,163,184,.55) !important;
     }
 
-/* ===== Modalidades de exibição ===== */
-#tableView.d-none,
-#gridView.d-none {
-    display: none !important;
+/* ✅ badge “Sim/Não” (você usa bg-success/bg-secondary) não sumir no dark */
+:root[data-theme="dark"] .badge.bg-secondary {
+    background: rgba(148,163,184,.35) !important;
+    color: var(--text) !important;
 }
 
-.product-row[style*="display: none"] {
+/* ===== Modalidades de exibição (IDs corretos: viewTable/viewGrid) ===== */
+#viewTable.d-none,
+#viewGrid.d-none {
     display: none !important;
 }
 
@@ -704,18 +755,15 @@
     }
 }
 
-/* ===== Correções para 100% altura ===== */
+/* ===== Correções de altura / layout ===== */
 html, body {
     height: 100%;
+    overflow-x: hidden;
 }
 
-.produtos-page {
-    min-height: 100vh;
-    width: 100%;
-}
-
-.page-content {
-    flex: 1;
+:root {
+    --kb-shift: 0px;
+    --mbn-height: 0px;
 }
 
 #page-content {
@@ -735,43 +783,12 @@ html, body {
 .btn-action {
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 .app-shell {
     min-height: 100%;
     width: 100%;
 }
 
-:root {
-    --kb-shift: 0px;
-    --mbn-height: 0px;
-}
-
-html, body {
-    height: 100%;
-    overflow-x: hidden;
-}
-
-#rt-audio-banner {
-    position: fixed;
-    right: 16px;
-    bottom: calc(16px + env(safe-area-inset-bottom));
-    z-index: 2000;
-    background: #111;
-    color: #fff;
-    border-radius: 999px;
-    display: none;
-    align-items: center;
-    gap: .5rem;
-    padding: .55rem .9rem;
-    box-shadow: 0 8px 24px rgba(0,0,0,.2);
-    cursor: pointer;
-    font-weight: 700;
-}
-
-    #rt-audio-banner i {
-        opacity: .9;
-    }
-
-/* Garante que o conteúdo principal ocupe 100% */
 #wrapper {
     min-height: 100vh;
     display: flex;
@@ -794,24 +811,35 @@ html, body {
     width: 100%;
 }
 
-.app-shell {
-    min-height: 100%;
-    width: 100%;
+/* Banner (seu) */
+#rt-audio-banner {
+    position: fixed;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    z-index: 2000;
+    background: #111;
+    color: #fff;
+    border-radius: 999px;
+    display: none;
+    align-items: center;
+    gap: .5rem;
+    padding: .55rem .9rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,.2);
+    cursor: pointer;
+    font-weight: 700;
 }
+
+    #rt-audio-banner i {
+        opacity: .9;
+    }
 
 /* ===== FULL WIDTH nesta tela ===== */
-.produtos-page .container-full-lg {
-    max-width: none !important; /* remove limite */
-    width: 100% !important;
-}
-
-/* se o .container do bootstrap estiver centralizando */
+.produtos-page .container-full-lg,
 .produtos-page .container.container-full-lg {
     max-width: none !important;
     width: 100% !important;
 }
 
-/* padding lateral padrão (ajusta a “margem” sem limitar largura) */
 .produtos-page .container-full-lg {
     padding-left: 24px !important;
     padding-right: 24px !important;
@@ -822,4 +850,14 @@ html, body {
         padding-left: 32px !important;
         padding-right: 32px !important;
     }
+}
+
+/* ===== Linha inativa (sem sumir no dark) ===== */
+.row-inativo {
+    opacity: .75;
+}
+
+:root[data-theme="dark"] .row-inativo {
+    opacity: .72;
+    background: rgba(255,255,255,.03) !important;
 }

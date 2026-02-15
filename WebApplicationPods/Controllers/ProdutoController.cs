@@ -59,12 +59,12 @@ namespace WebApplicationPods.Controllers
         // ========= LISTA (painel) =========
         [Authorize(Roles = "Lojista,Admin")]
         public async Task<IActionResult> Index(
-            string? q,
-            int? categoriaId,
-            bool? emPromocao,
-            string? sort = "nome",
-            int page = 1,
-            int pageSize = 12)
+             string? q,
+             int? categoriaId,
+             bool? emPromocao,
+             string? sort = "nome",
+             int page = 1,
+             int pageSize = 12)
         {
             // Gate de flash
             var src = TempData.Peek("FlashSource") as string;
@@ -77,7 +77,14 @@ namespace WebApplicationPods.Controllers
             page = page < 1 ? 1 : page;
             pageSize = pageSize is < 1 or > 60 ? 12 : pageSize;
 
-            var query = _context.Produtos.AsNoTracking().Where(p => p.Ativo);
+            var lojaId = GetLojaIdOrFail();
+
+            // ✅ CORREÇÃO: usar IQueryable<ProdutoModel> como tipo base
+            IQueryable<ProdutoModel> query = _context.Produtos
+                .AsNoTracking()
+                .Where(p => p.LojaId == lojaId && p.Ativo)
+                .Include(p => p.Categoria)
+                .Include(p => p.Variacoes);
 
             if (!string.IsNullOrWhiteSpace(q))
             {
@@ -97,7 +104,8 @@ namespace WebApplicationPods.Controllers
                     : query.Where(p => !p.PrecoPromocional.HasValue || p.PrecoPromocional >= p.Preco);
             }
 
-            query = sort switch
+            // ✅ CORREÇÃO: aplicar ordenação e manter como IQueryable<ProdutoModel>
+            IQueryable<ProdutoModel> queryOrdenada = sort switch
             {
                 "preco" => query.OrderBy(p => p.Preco),
                 "preco_desc" => query.OrderByDescending(p => p.Preco),
@@ -107,13 +115,14 @@ namespace WebApplicationPods.Controllers
                 _ => query.OrderBy(p => p.Nome),
             };
 
-            var total = await query.CountAsync();
+            var total = await queryOrdenada.CountAsync();
 
-            var itens = await query
+            var itens = await queryOrdenada
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
 
+            // ✅ SaboresQuantidadesList depende disso
             foreach (var p in itens)
                 p.DeserializarSaboresQuantidades();
 
@@ -502,29 +511,65 @@ namespace WebApplicationPods.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        // ========= EXCLUIR (GET - tela de confirmação) =========
+        [Authorize(Roles = "Lojista,Admin")]
+        [HttpGet]
+        public IActionResult Excluir(int id)
+        {
+            var lojaId = GetLojaIdOrFail();
+
+            var produto = _context.Produtos
+                .AsNoTracking()
+                .Include(p => p.Variacoes)
+                .FirstOrDefault(p => p.Id == id && p.LojaId == lojaId);
+
+            if (produto == null)
+            {
+                FlashErr("Produto não encontrado");
+                return RedirectToAction(nameof(Index));
+            }
+
+            return View(produto);
+        }
+
+        // ========= EXCLUIR (POST - confirma exclusão) =========
         [Authorize(Roles = "Lojista,Admin")]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult ConfirmarExcluir(int id)
+        public async Task<IActionResult> ConfirmarExcluir(int id)
         {
             try
             {
-                var produto = _produtoRepository.ObterPorId(id);
+                var lojaId = GetLojaIdOrFail();
+
+                var produto = await _context.Produtos
+                    .Include(p => p.Variacoes)
+                    .FirstOrDefaultAsync(p => p.Id == id && p.LojaId == lojaId);
+
                 if (produto == null)
                 {
                     FlashErr("Produto não encontrado");
                     return RedirectToAction(nameof(Index));
                 }
 
-                _produtoRepository.Remover(id);
-                FlashOk("Produto excluído com sucesso!");
+                // ✅ Soft delete (evita erro por FK com PedidoItens)
+                produto.Ativo = false;
+
+                // opcional: desativar variações
+                if (produto.Variacoes != null)
+                    foreach (var v in produto.Variacoes)
+                        v.Ativo = false;
+
+                await _context.SaveChangesAsync();
+
+                FlashOk("Produto excluído (desativado) com sucesso!");
+                return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
                 FlashErr($"Erro ao excluir produto: {ex.Message}");
+                return RedirectToAction(nameof(Index));
             }
-
-            return RedirectToAction(nameof(Index));
         }
 
         // ========= Auxiliares =========

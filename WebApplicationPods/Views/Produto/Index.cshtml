@@ -191,7 +191,8 @@
                         <tbody>
                             @foreach (var item in Model)
                             {
-                                var statusClass = item.Ativo ? "" : "table-secondary opacity-75";
+                                var statusClass = item.Ativo ? "" : "row-inativo";
+
 
                                 var variacoesAtivas = (item.Variacoes ?? new List<ProdutoVariacaoModel>())
                                 .Where(v => v.Ativo)
