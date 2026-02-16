@@ -80,6 +80,9 @@
     background: radial-gradient(1200px 600px at 15% 0%, var(--bg-1), transparent 55%), radial-gradient(1200px 600px at 85% 0%, var(--bg-3), transparent 55%), linear-gradient(180deg, var(--bg-1), var(--bg-2) 40%, var(--bg-3));
     color: var(--text);
 }
+.hidden {
+    display: none !important;
+}
 
 /* ===== Header gradiente ===== */
 .gradient-header {
