@@ -9,7 +9,8 @@
     int EstoqueTotal(ProdutoModel p)
     {
         var variacoesAtivas = (p.Variacoes ?? new List<ProdutoVariacaoModel>()).Where(v => v.Ativo).ToList();
-        if (variacoesAtivas.Any()) return variacoesAtivas.Sum(v => v.Estoque); // Index: estoque = soma das variações ativas (como você já vinha usando)
+        if (variacoesAtivas.Any())
+            return variacoesAtivas.Sum(v => v.Estoque * v.Multiplicador); // ✅ igual ao Form
         return p.Estoque;
     }
 
@@ -193,7 +194,6 @@
                             {
                                 var statusClass = item.Ativo ? "" : "row-inativo";
 
-
                                 var variacoesAtivas = (item.Variacoes ?? new List<ProdutoVariacaoModel>())
                                 .Where(v => v.Ativo)
                                 .ToList();
@@ -206,8 +206,9 @@
                                 var estoqueClass = estoqueTotal <= 5 ? "text-warning" : "text-dark";
 
                                 var sabores = (item.SaboresQuantidadesList ?? new List<ProdutoModel.SaborQuantidade>())
-                                .Where(sq => sq.Quantidade >= 0)
+                                .Where(sq => !string.IsNullOrWhiteSpace(sq.Sabor))
                                 .OrderByDescending(sq => sq.Quantidade)
+                                .ThenBy(sq => sq.Sabor)
                                 .ToList();
 
                                 var topChips = sabores.Take(4).ToList();
@@ -354,7 +355,7 @@
                 </div>
             </div>
 
-            <!-- GRADE (Cards) - vale para desktop também -->
+            <!-- GRADE (Cards) -->
             <div id="viewGrid" class="mt-3 d-none">
                 <div class="cards-grid">
                     @foreach (var item in Model)
@@ -370,8 +371,9 @@
                         var promoValidaMob = PromoValida(item);
 
                         var saboresMob = (item.SaboresQuantidadesList ?? new List<ProdutoModel.SaborQuantidade>())
-                        .Where(sq => sq.Quantidade >= 0)
+                        .Where(sq => !string.IsNullOrWhiteSpace(sq.Sabor))
                         .OrderByDescending(sq => sq.Quantidade)
+                        .ThenBy(sq => sq.Sabor)
                         .Take(6)
                         .Select(sq => $"{sq.Sabor} ({sq.Quantidade})")
                         .ToList();

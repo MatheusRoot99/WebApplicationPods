@@ -1,48 +1,61 @@
 ﻿document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('productForm');
-    const variationsList = document.getElementById('variationsList');
 
+    // ===== Variações =====
+    const variationsList = document.getElementById('variationsList');
+    const btnAdd = document.getElementById('addVariation');
+    const btnClear = document.getElementById('clearAllVariations');
     const totalStockEl = document.getElementById('totalStock');
     const totalStockInput = document.getElementById('totalStockInput');
 
-    const btnAdd = document.getElementById('addVariation');
-    const btnClear = document.getElementById('clearAllVariations');
+    // ===== Sabores =====
+    const saboresSection = document.getElementById('saboresSection');
+    const flavorsList = document.getElementById('flavorsList');
+    const btnAddFlavor = document.getElementById('addFlavor');
+    const btnClearFlavors = document.getElementById('clearAllFlavors');
+    const flavorTemplate = document.getElementById('flavorTemplate');
 
+    // ===== Progresso / campos =====
     const progressText = document.getElementById('progressText');
     const progressBar = document.getElementById('progressBar');
-
     const desc = document.querySelector('[name="Descricao"]');
     const descCount = document.getElementById('descCount');
     const nome = document.querySelector('[name="Nome"]');
     const nomeOk = document.getElementById('nomeOk');
     const categoria = document.querySelector('[name="CategoriaId"]');
 
+    // ===== Tipo =====
     const tipoRadios = Array.from(document.querySelectorAll('input[name="TipoProdutoUI"]'));
     const typeCards = Array.from(document.querySelectorAll('.pf2-type-item'));
     const maioridade = document.getElementById('requerMaioridade');
     const maioridadeHint = document.getElementById('maioridadeHint');
     const maioridadeCard = document.getElementById('maioridadeCard');
-
-    // ✅ hidden REAL (vai pro banco) - enum int: 0,1,2
     const tipoHidden = document.getElementById('TipoProdutoHidden');
 
+    // ===== Imagem =====
     const imageUpload = document.getElementById('imageUpload');
     const imagePreviewBox = document.getElementById('imagePreviewBox');
 
+    // ===== Toast =====
     const toastHost = document.getElementById('pf2ToastHost');
 
+    // ===== Draft key =====
     const idHidden = document.querySelector('input[name="Id"]');
     const draftKey = `produto-rascunho:${(idHidden && idHidden.value && idHidden.value !== "0") ? idHidden.value : "new"}`;
 
-    if (!variationsList || !btnAdd) return;
+    if (!form) return;
 
-    // ✅ Tipo travado no Editar (quando você desabilita os radios no servidor)
+    // Se a página não tiver variações, não trava a view inteira
+    // (mas no seu caso tem)
+    const hasVariations = !!variationsList;
+
+    // ✅ Tipo travado no Editar
     const typeIsLocked = tipoRadios.some(r => r.disabled);
 
     /* =========================
        Toast
        ========================= */
-    const toast = (type, title, desc) => {
+    const toast = (type, title, descText) => {
         if (!toastHost) return;
 
         const iconByType = {
@@ -58,7 +71,7 @@
       <div class="ico"><i class="fas ${iconByType[type] || iconByType.info}"></i></div>
       <div>
         <div class="title">${title || ''}</div>
-        ${desc ? `<div class="desc">${desc}</div>` : ``}
+        ${descText ? `<div class="desc">${descText}</div>` : ``}
       </div>
     `;
 
@@ -110,7 +123,7 @@
     };
 
     /* =========================
-       Tipo Produto UI (salva no hidden int)
+       Tipo Produto UI (hidden int)
        enum int: Padrao=0, PodVape=1, BebidaAlcoolica=2
        ========================= */
     const uiToEnumInt = (ui) => {
@@ -144,10 +157,9 @@
             card.classList.toggle('is-selected', card.dataset.type === t);
         });
 
-        // ✅ atualiza hidden real (vai pro banco)
         if (tipoHidden) tipoHidden.value = uiToEnumInt(t);
 
-        // maioridade: força para Pod/Bebida
+        // maioridade forçada para Pod/Bebida
         if (maioridade) {
             const forced = (t === 'pod' || t === 'bebida-alcoolica');
             maioridade.disabled = forced;
@@ -161,19 +173,21 @@
             if (maioridadeCard) maioridadeCard.style.opacity = forced ? '0.92' : '1';
         }
 
+        // ✅ aplica modo sabores conforme tipo
+        applyFlavorMode();
+
         updateProgress();
         if (saveDraft) scheduleDraftSave();
     };
 
-    // ✅ força o UI pelo hidden do banco (Edit e Create)
     const forceTypeFromHidden = () => {
         if (!tipoHidden) return;
         const ui = enumIntToUi(tipoHidden.value);
-        setType(ui, false); // não salva draft aqui
+        setType(ui, false);
     };
 
     /* =========================
-       Variation helpers
+       Variações
        ========================= */
     const syncName = (card) => {
         const sel = card.querySelector('.v-name');
@@ -196,6 +210,8 @@
     };
 
     const calcTotalStock = () => {
+        if (!variationsList) return 0;
+
         let total = 0;
 
         variationsList.querySelectorAll('.pf2-vari').forEach(card => {
@@ -214,6 +230,8 @@
     };
 
     const renumber = () => {
+        if (!variationsList) return;
+
         const cards = Array.from(variationsList.querySelectorAll('.pf2-vari'));
         cards.forEach((card, idx) => {
             card.dataset.index = idx;
@@ -256,7 +274,10 @@
         const catOkNow = (categoria?.value || '').toString().trim().length > 0 && categoria.value !== "0";
         if (catOkNow) done++;
 
-        const hasValidVar = Array.from(variationsList.querySelectorAll('.pf2-vari')).some(validateVariationCard);
+        const hasValidVar = variationsList
+            ? Array.from(variationsList.querySelectorAll('.pf2-vari')).some(validateVariationCard)
+            : true;
+
         if (hasValidVar) done++;
 
         const pct = Math.round((done / total) * 100);
@@ -405,7 +426,167 @@
     };
 
     /* =========================
-       Draft
+       Sabores (modo POD: select + outro)
+       ========================= */
+    const isPodType = () => getType() === 'pod';
+
+    const syncFlavorBadge = (row) => {
+        const badge = row.querySelector('.fl-badge');
+        const real = row.querySelector('.fl-name');
+        if (!badge) return;
+        const val = (real?.value || '').trim();
+        badge.textContent = val ? val : '—';
+    };
+
+    const validateFlavorRow = (row) => {
+        const real = row.querySelector('.fl-name');
+        const valMsg = row.querySelector('.fl-val');
+        const ok = ((real?.value || '').trim().length > 0);
+        if (valMsg) valMsg.classList.toggle('hidden', ok);
+        return ok;
+    };
+
+    const renumberFlavors = () => {
+        if (!flavorsList) return;
+
+        const rows = Array.from(flavorsList.querySelectorAll('.flavor-row'));
+        rows.forEach((row, idx) => {
+            row.dataset.index = idx;
+
+            row.querySelectorAll('[name]').forEach(el => {
+                const nameAttr = el.getAttribute('name');
+                if (!nameAttr) return;
+                el.setAttribute('name', nameAttr.replace(/Sabores\[\d+\]/g, `Sabores[${idx}]`));
+            });
+        });
+    };
+
+    const applyFlavorMode = () => {
+        if (!flavorsList) return;
+
+        const pod = isPodType();
+
+        // Se você quiser esconder tudo fora de POD, troque para:
+        // if (saboresSection) saboresSection.style.display = pod ? '' : 'none';
+        if (saboresSection) saboresSection.style.display = '';
+
+        flavorsList.querySelectorAll('.flavor-row').forEach(row => {
+            const sel = row.querySelector('.fl-pod-select');
+            const real = row.querySelector('.fl-name');
+            const other = row.querySelector('.fl-other');
+
+            if (!real) return;
+
+            if (sel) sel.style.display = pod ? '' : 'none';
+
+            if (!pod) {
+                if (other) { other.classList.add('hidden'); other.value = ''; }
+                return;
+            }
+
+            if (!sel) return;
+
+            const v = sel.value || '';
+
+            if (v === '__OUTRO__') {
+                if (other) other.classList.remove('hidden');
+                if (other && (!other.value || other.value.trim() === '')) {
+                    const current = (real.value || '').trim();
+                    if (current) other.value = current;
+                }
+                if (other) real.value = (other.value || '').trim();
+            } else if (v) {
+                if (other) { other.classList.add('hidden'); other.value = ''; }
+                real.value = v;
+            } else {
+                if (other) { other.classList.add('hidden'); other.value = ''; }
+            }
+
+            syncFlavorBadge(row);
+        });
+    };
+
+    const wireFlavorRow = (row) => {
+        const remove = row.querySelector('.fl-remove');
+        const real = row.querySelector('.fl-name');
+        const qty = row.querySelector('.fl-qty');
+        const sel = row.querySelector('.fl-pod-select');
+        const other = row.querySelector('.fl-other');
+
+        const onAny = () => {
+            syncFlavorBadge(row);
+            validateFlavorRow(row);
+            applyFlavorMode();
+            scheduleDraftSave();
+        };
+
+        if (real) real.addEventListener('input', onAny);
+        if (qty) qty.addEventListener('input', scheduleDraftSave);
+
+        if (sel) sel.addEventListener('change', onAny);
+
+        if (other) {
+            other.addEventListener('input', () => {
+                if (sel && sel.value === '__OUTRO__' && real) {
+                    real.value = (other.value || '').trim();
+                }
+                onAny();
+            });
+        }
+
+        if (remove) {
+            remove.addEventListener('click', () => {
+                const count = flavorsList.querySelectorAll('.flavor-row').length;
+                if (count <= 1) {
+                    toast('warn', 'Atenção', 'Mantemos pelo menos 1 linha de sabor.');
+                    // limpa ao invés de remover
+                    if (real) real.value = '';
+                    if (qty) qty.value = '0';
+                    if (sel) sel.value = '';
+                    if (other) { other.value = ''; other.classList.add('hidden'); }
+                    syncFlavorBadge(row);
+                    validateFlavorRow(row);
+                    scheduleDraftSave();
+                    return;
+                }
+
+                row.remove();
+                renumberFlavors();
+                scheduleDraftSave();
+                toast('info', 'Sabor removido');
+            });
+        }
+
+        syncFlavorBadge(row);
+        validateFlavorRow(row);
+    };
+
+    const createFlavorRow = (idx, data) => {
+        const d = data || { sabor: '', quantidade: 0 };
+
+        const html = flavorTemplate
+            ? flavorTemplate.innerHTML.replaceAll('__i__', String(idx))
+            : '';
+
+        const wrap = document.createElement('div');
+        wrap.innerHTML = html.trim();
+        const node = wrap.firstElementChild;
+
+        if (!node) return null;
+
+        const real = node.querySelector('.fl-name');
+        const qty = node.querySelector('.fl-qty');
+        const badge = node.querySelector('.fl-badge');
+
+        if (real) real.value = d.sabor ?? '';
+        if (qty) qty.value = String(parseInt(d.quantidade ?? 0, 10) || 0);
+        if (badge) badge.textContent = (d.sabor || '').trim() ? d.sabor : '—';
+
+        return node;
+    };
+
+    /* =========================
+       Draft (inclui sabores)
        ========================= */
     let saveTimer = null;
 
@@ -425,7 +606,20 @@
                 maisVendido: document.querySelector('[name="MaisVendido"]')?.checked ?? false,
                 requerMaioridade: document.querySelector('[name="RequerMaioridade"]')?.checked ?? false
             },
-            variacoes: Array.from(variationsList.querySelectorAll('.pf2-vari')).map(card => {
+            sabores: flavorsList ? Array.from(flavorsList.querySelectorAll('.flavor-row')).map(row => {
+                const real = row.querySelector('.fl-name');
+                const qty = row.querySelector('.fl-qty');
+                const sel = row.querySelector('.fl-pod-select');
+                const other = row.querySelector('.fl-other');
+
+                return {
+                    sabor: real?.value ?? '',
+                    quantidade: qty?.value ?? '0',
+                    sel: sel?.value ?? '',
+                    other: other?.value ?? ''
+                };
+            }) : [],
+            variacoes: variationsList ? Array.from(variationsList.querySelectorAll('.pf2-vari')).map(card => {
                 syncName(card);
                 return {
                     id: card.querySelector('input[name$=".Id"]')?.value ?? '',
@@ -436,7 +630,7 @@
                     estoque: card.querySelector('.v-stock')?.value ?? '0',
                     ativo: card.querySelector('.v-active')?.checked ?? true
                 };
-            }),
+            }) : [],
             imagePreviewBase64: null
         };
 
@@ -463,7 +657,8 @@
                 const draft = await buildDraft();
                 const hasAny =
                     (draft.produto.nome || '').trim().length > 0 ||
-                    draft.variacoes.some(v => (v.precoTexto || '').trim().length > 0);
+                    (draft.variacoes || []).some(v => (v.precoTexto || '').trim().length > 0) ||
+                    (draft.sabores || []).some(s => (s.sabor || '').trim().length > 0);
 
                 if (!hasAny) {
                     localStorage.removeItem(draftKey);
@@ -506,23 +701,43 @@
             if (maisVend) maisVend.checked = !!d?.produto?.maisVendido;
             if (reqMaior) reqMaior.checked = !!d?.produto?.requerMaioridade;
 
-            // ✅ TIPO:
-            // - Editar travado: NÃO deixa draft mexer no tipo
-            // - Criar: pode restaurar
+            // Tipo: só no Criar
             if (!typeIsLocked) {
                 if (tipoHidden && d?.tipoProdutoHidden != null) tipoHidden.value = String(d.tipoProdutoHidden);
                 if (d?.tipoProdutoUI) setType(d.tipoProdutoUI, false);
             }
 
-            // variações
-            variationsList.innerHTML = '';
-            const vars = Array.isArray(d?.variacoes) && d.variacoes.length ? d.variacoes : [null];
-            vars.forEach((v, idx) => {
-                const card = createVariationCard(idx, v || undefined);
-                variationsList.appendChild(card);
-                wireVariation(card);
-            });
-            renumber();
+            // Sabores
+            if (flavorsList) {
+                flavorsList.innerHTML = '';
+                const sabores = Array.isArray(d?.sabores) && d.sabores.length ? d.sabores : [{ sabor: '', quantidade: 0 }];
+                sabores.forEach((s, idx) => {
+                    const row = createFlavorRow(idx, s);
+                    if (!row) return;
+                    flavorsList.appendChild(row);
+
+                    // tenta restaurar select/outro se existirem (em POD)
+                    const sel = row.querySelector('.fl-pod-select');
+                    const other = row.querySelector('.fl-other');
+                    if (sel && s?.sel != null) sel.value = String(s.sel);
+                    if (other && s?.other != null) other.value = String(s.other);
+
+                    wireFlavorRow(row);
+                });
+                renumberFlavors();
+            }
+
+            // Variações
+            if (variationsList) {
+                variationsList.innerHTML = '';
+                const vars = Array.isArray(d?.variacoes) && d.variacoes.length ? d.variacoes : [null];
+                vars.forEach((v, idx) => {
+                    const card = createVariationCard(idx, v || undefined);
+                    variationsList.appendChild(card);
+                    wireVariation(card);
+                });
+                renumber();
+            }
 
             // preview
             if (d?.imagePreviewBase64 && typeof d.imagePreviewBase64 === 'string' && d.imagePreviewBase64.startsWith('data:image/')) {
@@ -553,21 +768,23 @@
     const clearDraft = () => localStorage.removeItem(draftKey);
 
     /* =========================
-       Core listeners
+       Listeners: Variações
        ========================= */
-    btnAdd.addEventListener('click', () => {
-        const idx = variationsList.querySelectorAll('.pf2-vari').length;
-        const card = createVariationCard(idx);
-        variationsList.appendChild(card);
-        wireVariation(card);
-        renumber();
-        calcTotalStock();
-        updateProgress();
-        scheduleDraftSave();
-        toast('ok', 'Variação adicionada');
-    });
+    if (btnAdd && variationsList) {
+        btnAdd.addEventListener('click', () => {
+            const idx = variationsList.querySelectorAll('.pf2-vari').length;
+            const card = createVariationCard(idx);
+            variationsList.appendChild(card);
+            wireVariation(card);
+            renumber();
+            calcTotalStock();
+            updateProgress();
+            scheduleDraftSave();
+            toast('ok', 'Variação adicionada');
+        });
+    }
 
-    if (btnClear) {
+    if (btnClear && variationsList) {
         btnClear.addEventListener('click', () => {
             if (!confirm('Tem certeza que deseja excluir TODAS as variações?')) return;
 
@@ -584,6 +801,43 @@
         });
     }
 
+    /* =========================
+       Listeners: Sabores
+       ========================= */
+    if (btnAddFlavor && flavorsList && flavorTemplate) {
+        btnAddFlavor.addEventListener('click', () => {
+            const idx = flavorsList.querySelectorAll('.flavor-row').length;
+            const row = createFlavorRow(idx, { sabor: '', quantidade: 0 });
+            if (!row) return;
+            flavorsList.appendChild(row);
+            wireFlavorRow(row);
+            renumberFlavors();
+            applyFlavorMode();
+            scheduleDraftSave();
+            toast('ok', 'Sabor adicionado');
+        });
+    }
+
+    if (btnClearFlavors && flavorsList) {
+        btnClearFlavors.addEventListener('click', () => {
+            if (!confirm('Tem certeza que deseja limpar os sabores?')) return;
+
+            flavorsList.innerHTML = '';
+            const row = createFlavorRow(0, { sabor: '', quantidade: 0 });
+            if (row) {
+                flavorsList.appendChild(row);
+                wireFlavorRow(row);
+            }
+            renumberFlavors();
+            applyFlavorMode();
+            scheduleDraftSave();
+            toast('warn', 'Sabores limpos', 'Mantivemos 1 linha');
+        });
+    }
+
+    /* =========================
+       Imagem preview
+       ========================= */
     if (imageUpload) {
         imageUpload.addEventListener('change', (e) => {
             const file = e.target.files?.[0];
@@ -623,6 +877,9 @@
         });
     }
 
+    /* =========================
+       Desc counter + base fields
+       ========================= */
     const updateDescCount = () => {
         if (!desc || !descCount) return;
         descCount.textContent = String((desc.value || '').length);
@@ -637,7 +894,7 @@
         if (el) el.addEventListener('change', () => { updateProgress(); scheduleDraftSave(); });
     });
 
-    // ✅ Tipo Produto: só no Criar
+    // Tipo: só no Criar
     if (!typeIsLocked) {
         tipoRadios.forEach(r => r.addEventListener('change', () => applyTypeUI(true)));
         typeCards.forEach(card => {
@@ -652,11 +909,25 @@
         });
     }
 
-    // submit
-    if (form) {
-        form.addEventListener('submit', (e) => {
-            let ok = true;
+    /* =========================
+       Submit
+       ========================= */
+    form.addEventListener('submit', (e) => {
+        let ok = true;
 
+        // valida sabores: se tiver algum preenchido, exige nome válido (ou pode exigir sempre)
+        if (flavorsList) {
+            const rows = Array.from(flavorsList.querySelectorAll('.flavor-row'));
+            rows.forEach(row => {
+                // se quiser obrigar sempre 1 sabor, troque para: if (!validateFlavorRow(row)) ok = false;
+                // aqui: valida se tiver qualquer coisa digitada/selecionada
+                const real = row.querySelector('.fl-name');
+                const has = ((real?.value || '').trim().length > 0);
+                if (has && !validateFlavorRow(row)) ok = false;
+            });
+        }
+
+        if (variationsList) {
             variationsList.querySelectorAll('.pf2-vari').forEach(card => {
                 syncName(card);
 
@@ -667,20 +938,20 @@
 
                 if (!validateVariationCard(card)) ok = false;
             });
+        }
 
-            calcTotalStock();
-            updateProgress();
+        calcTotalStock();
+        updateProgress();
 
-            if (!ok) {
-                e.preventDefault();
-                toast('err', 'Erro no formulário', 'Verifique as variações: Nome e Preço são obrigatórios');
-                return;
-            }
+        if (!ok) {
+            e.preventDefault();
+            toast('err', 'Erro no formulário', 'Verifique os campos obrigatórios.');
+            return;
+        }
 
-            clearDraft();
-            toast('ok', 'Enviando', 'Salvando produto...');
-        });
-    }
+        clearDraft();
+        toast('ok', 'Enviando', 'Salvando produto...');
+    });
 
     /* =========================
        INIT (ordem correta)
@@ -691,18 +962,32 @@
     const loaded = loadDraft();
 
     if (!loaded) {
-        variationsList.querySelectorAll('.pf2-vari').forEach(wireVariation);
-        renumber();
+        // wire sabores do server
+        if (flavorsList) {
+            flavorsList.querySelectorAll('.flavor-row').forEach(wireFlavorRow);
+            renumberFlavors();
+        }
+
+        // wire variações do server
+        if (variationsList) {
+            variationsList.querySelectorAll('.pf2-vari').forEach(wireVariation);
+            renumber();
+        }
     }
 
     // money nos inputs do server
-    variationsList.querySelectorAll('.v-price').forEach(wireMoney);
-    variationsList.querySelectorAll('.v-promo').forEach(wireMoney);
+    if (variationsList) {
+        variationsList.querySelectorAll('.v-price').forEach(wireMoney);
+        variationsList.querySelectorAll('.v-promo').forEach(wireMoney);
+    }
 
     updateDescCount();
 
-    // ✅ Garantia final: no Editar o tipo sempre reflete o banco
+    // ✅ Tipo sempre reflete hidden do banco
     forceTypeFromHidden();
+
+    // ✅ aplica modo sabores (POD mostra select)
+    applyFlavorMode();
 
     calcTotalStock();
     updateProgress();

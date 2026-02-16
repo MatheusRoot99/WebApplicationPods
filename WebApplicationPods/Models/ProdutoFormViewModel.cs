@@ -67,5 +67,17 @@ namespace WebApplicationPods.Models
 
             public bool Ativo { get; set; } = true;
         }
+
+        public List<SaborQuantidadeRow> Sabores { get; set; } = new();
+
+        public class SaborQuantidadeRow
+        {
+            [StringLength(50)]
+            public string Sabor { get; set; } = string.Empty;
+
+            [Range(0, int.MaxValue, ErrorMessage = "Quantidade inválida.")]
+            public int Quantidade { get; set; } = 0;
+        }
+
     }
 }

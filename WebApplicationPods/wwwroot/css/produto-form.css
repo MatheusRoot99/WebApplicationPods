@@ -634,7 +634,13 @@
     }
 
 .pf2-vari-grid {
-    display: grid;
+    display: flex;
+    grid-template-columns: repeat(6, minmax(0,1fr));
+    gap: 12px;
+}
+
+.pf2-vari-grid2 {
+    /*display: flex;*/
     grid-template-columns: repeat(6, minmax(0,1fr));
     gap: 12px;
 }

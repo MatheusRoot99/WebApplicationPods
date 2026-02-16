@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -79,7 +80,6 @@ namespace WebApplicationPods.Controllers
 
             var lojaId = GetLojaIdOrFail();
 
-            // ✅ CORREÇÃO: usar IQueryable<ProdutoModel> como tipo base
             IQueryable<ProdutoModel> query = _context.Produtos
                 .AsNoTracking()
                 .Where(p => p.LojaId == lojaId && p.Ativo)
@@ -104,7 +104,6 @@ namespace WebApplicationPods.Controllers
                     : query.Where(p => !p.PrecoPromocional.HasValue || p.PrecoPromocional >= p.Preco);
             }
 
-            // ✅ CORREÇÃO: aplicar ordenação e manter como IQueryable<ProdutoModel>
             IQueryable<ProdutoModel> queryOrdenada = sort switch
             {
                 "preco" => query.OrderBy(p => p.Preco),
@@ -193,19 +192,22 @@ namespace WebApplicationPods.Controllers
             {
                 TipoProduto = ProdutoTipo.Padrao,
                 Variacoes = new List<ProdutoFormViewModel.ProdutoVariacaoFormRow>
-    {
-        new()
-        {
-            Nome = "Unidade",
-            Multiplicador = 1,
-            PrecoTexto = "0,01",
-            PrecoPromocionalTexto = "",
-            Estoque = 0,
-            Ativo = true
-        }
-    }
+                {
+                    new()
+                    {
+                        Nome = "Unidade",
+                        Multiplicador = 1,
+                        PrecoTexto = "0,01",
+                        PrecoPromocionalTexto = "",
+                        Estoque = 0,
+                        Ativo = true
+                    }
+                }
             };
 
+            // ✅ garante 1 linha de sabor na UI
+            if (vm.Sabores == null) vm.Sabores = new();
+            if (vm.Sabores.Count == 0) vm.Sabores.Add(new ProdutoFormViewModel.SaborQuantidadeRow());
 
             return View(vm);
         }
@@ -251,14 +253,18 @@ namespace WebApplicationPods.Controllers
                 CodigoBarras = vm.CodigoBarras,
                 CategoriaId = vm.CategoriaId,
 
-                // ✅ salva tipo no banco
+                // ✅ tipo no banco
                 TipoProduto = vm.TipoProduto,
+
                 RequerMaioridade = vm.RequerMaioridade,
                 Ativo = vm.Ativo,
                 MaisVendido = vm.MaisVendido,
                 EmPromocao = vm.EmPromocao,
                 DataCadastro = DateTime.Now
             };
+
+            // ✅ SABORES (salva JSON)
+            ApplySaboresFromVm(vm, produto);
 
             if (vm.ImagemUpload is { Length: > 0 })
             {
@@ -306,7 +312,7 @@ namespace WebApplicationPods.Controllers
             _context.Produtos.Add(produto);
             await _context.SaveChangesAsync();
 
-            FlashOk("Produto cadastrado com variações!");
+            FlashOk("Produto cadastrado com variações e sabores!");
             return RedirectToAction(nameof(Index));
         }
 
@@ -326,6 +332,9 @@ namespace WebApplicationPods.Controllers
 
             CarregarCategorias();
 
+            // ✅ Sabores do banco -> VM
+            produto.DeserializarSaboresQuantidades();
+
             var ptbr = CultureInfo.GetCultureInfo("pt-BR");
 
             var vm = new ProdutoFormViewModel
@@ -344,7 +353,7 @@ namespace WebApplicationPods.Controllers
                 EmPromocao = produto.EmPromocao,
                 ImagemUrl = produto.ImagemUrl,
 
-                // ✅ carrega tipo do banco (vai pra View e pro hidden)
+                // ✅ tipo do banco
                 TipoProduto = produto.TipoProduto,
 
                 Variacoes = produto.Variacoes
@@ -363,6 +372,14 @@ namespace WebApplicationPods.Controllers
                         CodigoBarras = v.CodigoBarras,
                         Ativo = v.Ativo
                     })
+                    .ToList(),
+
+                Sabores = (produto.SaboresQuantidadesList ?? new List<ProdutoModel.SaborQuantidade>())
+                    .Select(s => new ProdutoFormViewModel.SaborQuantidadeRow
+                    {
+                        Sabor = s.Sabor,
+                        Quantidade = s.Quantidade
+                    })
                     .ToList()
             };
 
@@ -375,6 +392,10 @@ namespace WebApplicationPods.Controllers
                     PrecoPromocionalTexto = "",
                     Estoque = 0
                 });
+
+            // ✅ garante 1 linha pra UI se não tiver sabores
+            if (vm.Sabores == null) vm.Sabores = new();
+            if (vm.Sabores.Count == 0) vm.Sabores.Add(new ProdutoFormViewModel.SaborQuantidadeRow());
 
             return View(vm);
         }
@@ -433,6 +454,9 @@ namespace WebApplicationPods.Controllers
 
             // ✅ TRAVA TIPO NO EDITAR (mantém o do banco)
             vm.TipoProduto = produto.TipoProduto;
+
+            // ✅ SABORES (salva JSON)
+            ApplySaboresFromVm(vm, produto);
 
             if (vm.ImagemUpload is { Length: > 0 })
             {
@@ -507,7 +531,7 @@ namespace WebApplicationPods.Controllers
 
             await _context.SaveChangesAsync();
 
-            FlashOk("Produto e variações atualizados!");
+            FlashOk("Produto, variações e sabores atualizados!");
             return RedirectToAction(nameof(Index));
         }
 
@@ -552,10 +576,9 @@ namespace WebApplicationPods.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
-                // ✅ Soft delete (evita erro por FK com PedidoItens)
+                // ✅ Soft delete
                 produto.Ativo = false;
 
-                // opcional: desativar variações
                 if (produto.Variacoes != null)
                     foreach (var v in produto.Variacoes)
                         v.Ativo = false;
@@ -581,6 +604,31 @@ namespace WebApplicationPods.Controllers
                 .ToList();
 
             ViewBag.Categorias = new SelectList(categorias, "Id", "Nome");
+
+            // ✅ sabores fixos só para POD/VAPE (a view decide quando mostrar)
+            ViewBag.SaboresPod = ObterTodosSabores();
+        }
+
+        // ✅ Centraliza salvar sabores do VM no ProdutoModel (JSON)
+        private static void ApplySaboresFromVm(ProdutoFormViewModel vm, ProdutoModel produto)
+        {
+            var sabores = (vm.Sabores ?? new List<ProdutoFormViewModel.SaborQuantidadeRow>())
+                .Where(s => !string.IsNullOrWhiteSpace(s.Sabor))
+                .Select(s => new ProdutoModel.SaborQuantidade
+                {
+                    Sabor = s.Sabor.Trim(),
+                    Quantidade = s.Quantidade < 0 ? 0 : s.Quantidade
+                })
+                .GroupBy(s => s.Sabor, StringComparer.OrdinalIgnoreCase)
+                .Select(g => new ProdutoModel.SaborQuantidade
+                {
+                    Sabor = g.First().Sabor,
+                    Quantidade = g.Sum(x => x.Quantidade)
+                })
+                .ToList();
+
+            produto.SaboresQuantidadesList = sabores;
+            produto.SerializarSaboresQuantidades();
         }
 
         [HttpGet]

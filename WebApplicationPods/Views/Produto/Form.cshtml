@@ -1,5 +1,6 @@
 ﻿@using WebApplicationPods.Enum
 @using WebApplicationPods.Models
+@using Microsoft.AspNetCore.Mvc.Rendering
 @model WebApplicationPods.Models.ProdutoFormViewModel
 
 @{
@@ -11,8 +12,9 @@
     var isBebida = tipo == ProdutoTipo.BebidaAlcoolica;
 
     var lockType = isEdit;
-}
 
+    var saboresPod = (ViewBag.SaboresPod as List<SelectListItem>) ?? new List<SelectListItem>();
+}
 
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -281,6 +283,222 @@
                 </div>
             </div>
 
+            <!-- Sabores -->
+            <div class="pf2-card" id="saboresSection">
+                <div class="pf2-card-head">
+                    <div class="pf2-card-ico"><i class="fas fa-ice-cream"></i></div>
+                    <div>
+                        <h2>Sabores</h2>
+                        <p class="muted">No POD/VAPE você terá lista fixa + “Outro…”. Nos demais, fica texto livre.</p>
+                    </div>
+                </div>
+
+                <div class="pf2-vari-head" style="margin-top: 6px;">
+                    <div></div>
+                    <div class="pf2-vari-actions">
+                        <button type="button" id="addFlavor" class="pf2-btn pf2-btn-primary">
+                            <i class="fas fa-plus"></i> Adicionar Sabor
+                        </button>
+                        <button type="button" id="clearAllFlavors" class="pf2-btn pf2-btn-danger">
+                            <i class="fas fa-trash"></i> Limpar Sabores
+                        </button>
+                    </div>
+                </div>
+
+                <div id="flavorsList" class="pf2-vari-list">
+                    @if (Model?.Sabores != null && Model.Sabores.Any(s => !string.IsNullOrWhiteSpace(s.Sabor)))
+                    {
+                        for (var i = 0; i < Model.Sabores.Count; i++)
+                        {
+                            var saborAtual = Model.Sabores[i].Sabor ?? "";
+                            var saborEhDaLista = saboresPod.Any(x => string.Equals(x.Value, saborAtual, StringComparison.OrdinalIgnoreCase));
+
+                            <div class="pf2-vari flavor-row" data-index="@i">
+                                <div class="pf2-vari-top">
+                                    <div class="pf2-vari-badge">
+                                        <i class="fas fa-tag"></i>
+                                        <span>Sabor</span>
+                                        <strong class="fl-badge">@(!string.IsNullOrWhiteSpace(saborAtual) ? saborAtual : "—")</strong>
+                                    </div>
+
+                                    <button type="button" class="pf2-iconbtn fl-remove" title="Remover">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+
+                                <div class="pf2-vari-grid">
+                                    <div class="pf2-field pf2-span-2">
+                                        <label>Nome do Sabor</label>
+
+                                        <div class="pf2-row">
+                                            <!-- ✅ Select (só POD mostra; JS controla) -->
+                                            <select class="fl-pod-select" data-role="pod-select">
+                                                <option value="">Selecione...</option>
+                                                @foreach (var s in saboresPod)
+                                                {
+                                                    <option value="@s.Value" selected="@(string.Equals(s.Value, saborAtual, StringComparison.OrdinalIgnoreCase))">@s.Text</option>
+                                                }
+                                                <option value="__OUTRO__" selected="@(!string.IsNullOrWhiteSpace(saborAtual) && !saborEhDaLista)">Outro...</option>
+                                            </select>
+
+                                            <!-- ✅ input REAL (vai pro model binder) -->
+                                            <input type="text"
+                                                   class="fl-name"
+                                                   name="Sabores[@i].Sabor"
+                                                   value="@saborAtual"
+                                                   maxlength="50"
+                                                   placeholder="Ex: Limão, Uva, Honey, Ice Mint..." />
+
+                                            <!-- input usado só quando escolher Outro -->
+                                            <input type="text"
+                                                   class="fl-other @(!string.IsNullOrWhiteSpace(saborAtual) && !saborEhDaLista ? "" : "hidden")"
+                                                   placeholder="Digite o sabor..."
+                                                   maxlength="50"
+                                                   value="@(!saborEhDaLista ? saborAtual : "")" />
+                                        </div>
+
+                                        <span class="pf2-val fl-val hidden">Informe o sabor.</span>
+                                    </div>
+
+                                    <div class="pf2-field">
+                                        <label>Quantidade (opcional)</label>
+                                        <div class="pf2-input">
+                                            <i class="fas fa-boxes-stacked"></i>
+                                            <input type="number"
+                                                   min="0"
+                                                   class="fl-qty"
+                                                   name="Sabores[@i].Quantidade"
+                                                   value="@Model.Sabores[i].Quantidade" />
+                                        </div>
+                                        <div class="pf2-help muted">Se não quiser controlar por sabor, deixe 0.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="pf2-vari flavor-row" data-index="0">
+                            <div class="pf2-vari-top">
+                                <div class="pf2-vari-badge">
+                                    <i class="fas fa-tag"></i>
+                                    <span>Sabor</span>
+                                    <strong class="fl-badge">—</strong>
+                                </div>
+
+                                <button type="button" class="pf2-iconbtn fl-remove" title="Remover">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+
+                            <div class="pf2-vari-grid">
+                                <div class="pf2-field pf2-span-2">
+                                    <label>Nome do Sabor</label>
+
+                                    <div class="pf2-row">
+                                        <select class="fl-pod-select" data-role="pod-select">
+                                            <option value="">Selecione...</option>
+                                            @foreach (var s in saboresPod)
+                                            {
+                                                <option value="@s.Value">@s.Text</option>
+                                            }
+                                            <option value="__OUTRO__">Outro...</option>
+                                        </select>
+
+                                        <input type="text"
+                                               class="fl-name"
+                                               name="Sabores[0].Sabor"
+                                               value=""
+                                               maxlength="50"
+                                               placeholder="Ex: Limão, Uva, Honey, Ice Mint..." />
+
+                                        <input type="text"
+                                               class="fl-other hidden"
+                                               placeholder="Digite o sabor..."
+                                               maxlength="50"
+                                               value="" />
+                                    </div>
+
+                                    <span class="pf2-val fl-val hidden">Informe o sabor.</span>
+                                </div>
+
+                                <div class="pf2-field">
+                                    <label>Quantidade (opcional)</label>
+                                    <div class="pf2-input">
+                                        <i class="fas fa-boxes-stacked"></i>
+                                        <input type="number"
+                                               min="0"
+                                               class="fl-qty"
+                                               name="Sabores[0].Quantidade"
+                                               value="0" />
+                                    </div>
+                                    <div class="pf2-help muted">Se não quiser controlar por sabor, deixe 0.</div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <template id="flavorTemplate">
+                    <div class="pf2-vari flavor-row" data-index="__i__">
+                        <div class="pf2-vari-top">
+                            <div class="pf2-vari-badge">
+                                <i class="fas fa-tag"></i>
+                                <span>Sabor</span>
+                                <strong class="fl-badge">—</strong>
+                            </div>
+
+                            <button type="button" class="pf2-iconbtn fl-remove" title="Remover">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+
+                        <div class="pf2-vari-grid">
+                            <div class="pf2-field pf2-span-2">
+                                <label>Nome do Sabor</label>
+
+                                <div class="pf2-row">
+                                    <select class="fl-pod-select" data-role="pod-select">
+                                        <option value="">Selecione...</option>
+                                        @foreach (var s in saboresPod)
+                                        {
+                                            <option value="@s.Value">@s.Text</option>
+                                        }
+                                        <option value="__OUTRO__">Outro...</option>
+                                    </select>
+
+                                    <input type="text"
+                                           class="fl-name"
+                                           name="Sabores[__i__].Sabor"
+                                           maxlength="50"
+                                           placeholder="Ex: Limão, Uva, Honey, Ice Mint..." />
+
+                                    <input type="text"
+                                           class="fl-other hidden"
+                                           placeholder="Digite o sabor..."
+                                           maxlength="50" />
+                                </div>
+
+                                <span class="pf2-val fl-val hidden">Informe o sabor.</span>
+                            </div>
+
+                            <div class="pf2-field">
+                                <label>Quantidade (opcional)</label>
+                                <div class="pf2-input">
+                                    <i class="fas fa-boxes-stacked"></i>
+                                    <input type="number"
+                                           min="0"
+                                           class="fl-qty"
+                                           name="Sabores[__i__].Quantidade"
+                                           value="0" />
+                                </div>
+                                <div class="pf2-help muted">Se não quiser controlar por sabor, deixe 0.</div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
             <!-- Variações -->
             <div class="pf2-card">
                 <div class="pf2-vari-head">
@@ -341,7 +559,6 @@
                                         <span class="pf2-val v-nome-val hidden">Informe o nome da variação.</span>
                                     </div>
 
-                                    <!-- ✅ Multiplicador + Estoque lado a lado -->
                                     <div class="pf2-field pf2-inline2">
                                         <div class="pf2-inline2-col">
                                             <label>Multiplicador</label>
