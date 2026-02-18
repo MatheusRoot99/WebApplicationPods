@@ -14,6 +14,7 @@
     var lockType = isEdit;
 
     var saboresPod = (ViewBag.SaboresPod as List<SelectListItem>) ?? new List<SelectListItem>();
+    ViewData["Title"] = isEdit ? "Editar Produto" : "Cadastro de Produto";
 }
 
 <script src="https://cdn.tailwindcss.com"></script>
@@ -128,6 +129,46 @@
                 }
             </div>
 
+            <!-- POD Info (só POD) -->
+            <div class="pf2-card" id="podInfoSection" style="display:none;">
+                <div class="pf2-card-head">
+                    <div class="pf2-card-ico bg-purple"><i class="fas fa-bolt"></i></div>
+                    <div>
+                        <h2>Informações do POD/VAPE</h2>
+                        <p class="muted">Puffs, bateria e tipo</p>
+                    </div>
+                </div>
+
+                <div class="pf2-grid">
+                    <div class="pf2-field">
+                        <label>Puffs</label>
+                        <div class="pf2-input">
+                            <i class="fas fa-fire"></i>
+                            <input asp-for="PodPuffs" type="number" min="0" placeholder="Ex: 5000" />
+                        </div>
+                        <span asp-validation-for="PodPuffs" class="pf2-val"></span>
+                    </div>
+
+                    <div class="pf2-field">
+                        <label>Capacidade da bateria</label>
+                        <div class="pf2-input">
+                            <i class="fas fa-battery-half"></i>
+                            <input asp-for="PodCapacidadeBateria" maxlength="40" placeholder="Ex: 600 mAh" />
+                        </div>
+                        <span asp-validation-for="PodCapacidadeBateria" class="pf2-val"></span>
+                    </div>
+
+                    <div class="pf2-field pf2-span-2">
+                        <label>Tipo</label>
+                        <div class="pf2-input">
+                            <i class="fas fa-list"></i>
+                            <input asp-for="PodTipo" maxlength="40" placeholder="Ex: Descartável / Recarregável" />
+                        </div>
+                        <span asp-validation-for="PodTipo" class="pf2-val"></span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Informações Básicas -->
             <div class="pf2-card">
                 <div class="pf2-card-head">
@@ -212,6 +253,7 @@
                             <input type="file" id="imageUpload" name="ImagemUpload" accept="image/*" />
                             <div class="pf2-file-hint muted">Formatos: JPG/PNG/WEBP (máx. 2MB)</div>
                         </div>
+                        <span asp-validation-for="ImagemUpload" class="pf2-val"></span>
                     </div>
 
                     <div class="pf2-field">
@@ -220,7 +262,6 @@
                             @if (!string.IsNullOrWhiteSpace(Model?.ImagemUrl))
                             {
                                 <img src="@Model.ImagemUrl" alt="Preview" />
-                                <button type="button" class="pf2-x" id="removeImage"><i class="fas fa-times"></i></button>
                             }
                             else
                             {
@@ -283,13 +324,15 @@
                 </div>
             </div>
 
-            <!-- Sabores -->
+            <!-- =======================
+                 SABORES (APENAS PADRÃO/BEBIDA)
+                 ======================= -->
             <div class="pf2-card" id="saboresSection">
                 <div class="pf2-card-head">
                     <div class="pf2-card-ico"><i class="fas fa-ice-cream"></i></div>
                     <div>
                         <h2>Sabores</h2>
-                        <p class="muted">Dropdown aparece somente quando Tipo = POD/VAPE. Nos outros tipos é texto livre.</p>
+                        <p class="muted">Para Padrão/Bebida: apenas texto. POD/VAPE usa a seção de sabores+preços.</p>
                     </div>
                 </div>
 
@@ -306,81 +349,21 @@
                 </div>
 
                 <div id="flavorsList" class="pf2-vari-list">
-                    @if (Model?.Sabores != null && Model.Sabores.Any(s => !string.IsNullOrWhiteSpace(s.Sabor)))
-                    {
-                        for (var i = 0; i < Model.Sabores.Count; i++)
-                        {
-                            var saborAtual = Model.Sabores[i].Sabor ?? "";
-
-                            <div class="pf2-vari flavor-row" data-index="@i">
-                                <div class="pf2-vari-top">
-                                    <div class="pf2-vari-badge">
-                                        <i class="fas fa-tag"></i>
-                                        <span>Sabor</span>
-                                        <strong class="fl-badge">@(!string.IsNullOrWhiteSpace(saborAtual) ? saborAtual : "—")</strong>
-                                    </div>
-
-                                    <button type="button" class="pf2-iconbtn fl-remove" title="Remover">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-
-                                <div class="pf2-vari-grid">
-                                    <div class="pf2-field pf2-span-2">
-                                        <label>Nome do Sabor</label>
-
-                                        <div class="pf2-row">
-                                            <!-- dropdown aparece só em POD (JS controla) -->
-                                            <select class="fl-pod-select" data-role="pod-select">
-                                                <option value="">Selecione...</option>
-                                                @foreach (var s in saboresPod)
-                                                {
-                                                    <option value="@s.Value">@s.Text</option>
-                                                }
-                                                <option value="__OUTRO__">Outro...</option>
-                                            </select>
-
-                                            <!-- input REAL (vai pro model binder) -->
-                                            <input type="text"
-                                                   class="fl-name"
-                                                   name="Sabores[@i].Sabor"
-                                                   value="@saborAtual"
-                                                   maxlength="50"
-                                                   placeholder="Ex: Limão, Uva, Ice Mint..." />
-
-                                            <input type="text"
-                                                   class="fl-other hidden"
-                                                   placeholder="Digite o sabor..."
-                                                   maxlength="50" />
-                                        </div>
-
-                                        <span class="pf2-val fl-val hidden">Informe o sabor.</span>
-                                    </div>
-
-                                    <div class="pf2-field">
-                                        <label>Quantidade (opcional)</label>
-                                        <div class="pf2-input">
-                                            <i class="fas fa-boxes-stacked"></i>
-                                            <input type="number"
-                                                   min="0"
-                                                   class="fl-qty"
-                                                   name="Sabores[@i].Quantidade"
-                                                   value="@Model.Sabores[i].Quantidade" />
-                                        </div>
-                                        <div class="pf2-help muted">Se não quiser controlar por sabor, deixe 0.</div>
-                                    </div>
-                                </div>
-                            </div>
-                        }
+                    @{
+                        if (Model.Sabores == null) { Model.Sabores = new(); }
+                        if (Model.Sabores.Count == 0) { Model.Sabores.Add(new ProdutoFormViewModel.SaborRow()); }
                     }
-                    else
+
+                    @for (var i = 0; i < Model.Sabores.Count; i++)
                     {
-                        <div class="pf2-vari flavor-row" data-index="0">
+                        var saborAtual = Model.Sabores[i].Sabor ?? "";
+
+                        <div class="pf2-vari flavor-row" data-index="@i">
                             <div class="pf2-vari-top">
                                 <div class="pf2-vari-badge">
                                     <i class="fas fa-tag"></i>
                                     <span>Sabor</span>
-                                    <strong class="fl-badge">—</strong>
+                                    <strong class="fl-badge">@(!string.IsNullOrWhiteSpace(saborAtual) ? saborAtual : "—")</strong>
                                 </div>
 
                                 <button type="button" class="pf2-iconbtn fl-remove" title="Remover">
@@ -391,51 +374,20 @@
                             <div class="pf2-vari-grid">
                                 <div class="pf2-field pf2-span-2">
                                     <label>Nome do Sabor</label>
-
                                     <div class="pf2-row">
-                                        <select class="fl-pod-select" data-role="pod-select">
-                                            <option value="">Selecione...</option>
-                                            @foreach (var s in saboresPod)
-                                            {
-                                                <option value="@s.Value">@s.Text</option>
-                                            }
-                                            <option value="__OUTRO__">Outro...</option>
-                                        </select>
-
                                         <input type="text"
                                                class="fl-name"
-                                               name="Sabores[0].Sabor"
-                                               value=""
+                                               name="Sabores[@i].Sabor"
+                                               value="@saborAtual"
                                                maxlength="50"
-                                               placeholder="Ex: Limão, Uva, Ice Mint..." />
-
-                                        <input type="text"
-                                               class="fl-other hidden"
-                                               placeholder="Digite o sabor..."
-                                               maxlength="50" />
+                                               placeholder="Ex: Limão, Uva, Maracujá..." />
                                     </div>
-
-                                    <span class="pf2-val fl-val hidden">Informe o sabor.</span>
-                                </div>
-
-                                <div class="pf2-field">
-                                    <label>Quantidade (opcional)</label>
-                                    <div class="pf2-input">
-                                        <i class="fas fa-boxes-stacked"></i>
-                                        <input type="number"
-                                               min="0"
-                                               class="fl-qty"
-                                               name="Sabores[0].Quantidade"
-                                               value="0" />
-                                    </div>
-                                    <div class="pf2-help muted">Se não quiser controlar por sabor, deixe 0.</div>
                                 </div>
                             </div>
                         </div>
                     }
                 </div>
 
-                <!-- template SEM Razor dinâmico além de options já renderizadas -->
                 <template id="flavorTemplate">
                     <div class="pf2-vari flavor-row" data-index="__i__">
                         <div class="pf2-vari-top">
@@ -453,9 +405,161 @@
                         <div class="pf2-vari-grid">
                             <div class="pf2-field pf2-span-2">
                                 <label>Nome do Sabor</label>
-
                                 <div class="pf2-row">
-                                    <select class="fl-pod-select" data-role="pod-select">
+                                    <input type="text"
+                                           class="fl-name"
+                                           name="Sabores[__i__].Sabor"
+                                           maxlength="50"
+                                           placeholder="Ex: Limão, Uva, Maracujá..." />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- =======================
+                 POD: Sabores + Preço/Estoque (usa Variacoes)
+                 ======================= -->
+            <div class="pf2-card" id="podSaboresVariacoesSection" style="display:none;">
+                <div class="pf2-card-head">
+                    <div class="pf2-card-ico bg-purple"><i class="fas fa-tags"></i></div>
+                    <div>
+                        <h2>Sabores e Variações (POD/VAPE)</h2>
+                        <p class="muted">Cada linha é um sabor com estoque e preço</p>
+                    </div>
+                </div>
+
+                <div class="pf2-vari-head" style="margin-top:6px;">
+                    <div></div>
+                    <div class="pf2-vari-actions">
+                        <button type="button" id="addPodRow" class="pf2-btn pf2-btn-primary">
+                            <i class="fas fa-plus"></i> Adicionar Sabor
+                        </button>
+                        <button type="button" id="clearAllPodRows" class="pf2-btn pf2-btn-danger">
+                            <i class="fas fa-trash"></i> Limpar
+                        </button>
+                    </div>
+                </div>
+
+                <div id="podList" class="pf2-vari-list">
+                    @{
+                        if (Model.Variacoes == null) { Model.Variacoes = new(); }
+                        if (Model.Variacoes.Count == 0)
+                        {
+                            Model.Variacoes.Add(new ProdutoFormViewModel.ProdutoVariacaoFormRow
+                            {
+                                Nome = "",
+                                Multiplicador = 1,
+                                Estoque = 0,
+                                PrecoTexto = "",
+                                PrecoPromocionalTexto = "",
+                                Ativo = true
+                            });
+                        }
+                    }
+
+                    @for (var i = 0; i < Model.Variacoes.Count; i++)
+                    {
+                        var saborAtual = Model.Variacoes[i].Nome ?? "";
+
+                        <div class="pf2-vari pod-row" data-index="@i">
+                            <input type="hidden" name="Variacoes[@i].Id" value="@Model.Variacoes[i].Id" />
+                            <input type="hidden" name="Variacoes[@i].Multiplicador" value="1" />
+
+                            <div class="pf2-vari-top">
+                                <div class="pf2-vari-badge">
+                                    <i class="fas fa-bolt"></i>
+                                    <span>Sabor</span>
+                                    <strong class="pod-badge">@(!string.IsNullOrWhiteSpace(saborAtual) ? saborAtual : "—")</strong>
+                                </div>
+
+                                <button type="button" class="pf2-iconbtn pod-remove" title="Remover">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+
+                            <div class="pf2-vari-grid">
+                                <div class="pf2-field pf2-span-2">
+                                    <label>Sabor</label>
+
+                                    <div class="pf2-row">
+                                        <select class="pod-select">
+                                            <option value="">Selecione...</option>
+                                            @foreach (var s in saboresPod)
+                                            {
+                                                <option value="@s.Value">@s.Text</option>
+                                            }
+                                            <option value="__OUTRO__">Outro...</option>
+                                        </select>
+
+                                        <input type="text"
+                                               class="pod-name"
+                                               name="Variacoes[@i].Nome"
+                                               value="@saborAtual"
+                                               maxlength="80"
+                                               placeholder="Ou digite o sabor..." />
+
+                                        <input type="text" class="pod-other hidden" maxlength="80" placeholder="Digite o sabor..." />
+                                    </div>
+                                </div>
+
+                                <div class="pf2-field">
+                                    <label>Estoque</label>
+                                    <input type="number" min="0" class="pod-stock" name="Variacoes[@i].Estoque" value="@Model.Variacoes[i].Estoque" />
+                                </div>
+
+                                <div class="pf2-field">
+                                    <label>Preço *</label>
+                                    <div class="pf2-money">
+                                        <span>R$</span>
+                                        <input type="text" class="pod-price" name="Variacoes[@i].PrecoTexto" value="@Model.Variacoes[i].PrecoTexto" placeholder="0,00" />
+                                    </div>
+                                </div>
+
+                                <div class="pf2-field">
+                                    <label>Promo</label>
+                                    <div class="pf2-money">
+                                        <span>R$</span>
+                                        <input type="text" class="pod-promo" name="Variacoes[@i].PrecoPromocionalTexto" value="@Model.Variacoes[i].PrecoPromocionalTexto" placeholder="0,00" />
+                                    </div>
+                                </div>
+
+                                <div class="pf2-field pf2-switchfield">
+                                    <label>Ativo</label>
+                                    <div class="pf2-switch">
+                                        <input type="checkbox" class="pod-active" name="Variacoes[@i].Ativo" value="true" @(Model.Variacoes[i].Ativo ? "checked" : "") />
+                                        <span></span>
+                                    </div>
+                                    <input type="hidden" name="Variacoes[@i].Ativo" value="false" />
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <template id="podTemplate">
+                    <div class="pf2-vari pod-row" data-index="__i__">
+                        <input type="hidden" name="Variacoes[__i__].Id" value="" />
+                        <input type="hidden" name="Variacoes[__i__].Multiplicador" value="1" />
+
+                        <div class="pf2-vari-top">
+                            <div class="pf2-vari-badge">
+                                <i class="fas fa-bolt"></i>
+                                <span>Sabor</span>
+                                <strong class="pod-badge">—</strong>
+                            </div>
+
+                            <button type="button" class="pf2-iconbtn pod-remove" title="Remover">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+
+                        <div class="pf2-vari-grid">
+                            <div class="pf2-field pf2-span-2">
+                                <label>Sabor</label>
+                                <div class="pf2-row">
+                                    <select class="pod-select">
                                         <option value="">Selecione...</option>
                                         @foreach (var s in saboresPod)
                                         {
@@ -464,40 +568,49 @@
                                         <option value="__OUTRO__">Outro...</option>
                                     </select>
 
-                                    <input type="text"
-                                           class="fl-name"
-                                           name="Sabores[__i__].Sabor"
-                                           maxlength="50"
-                                           placeholder="Ex: Limão, Uva, Ice Mint..." />
-
-                                    <input type="text"
-                                           class="fl-other hidden"
-                                           placeholder="Digite o sabor..."
-                                           maxlength="50" />
+                                    <input type="text" class="pod-name" name="Variacoes[__i__].Nome" maxlength="80" placeholder="Ou digite o sabor..." />
+                                    <input type="text" class="pod-other hidden" maxlength="80" placeholder="Digite o sabor..." />
                                 </div>
-
-                                <span class="pf2-val fl-val hidden">Informe o sabor.</span>
                             </div>
 
                             <div class="pf2-field">
-                                <label>Quantidade (opcional)</label>
-                                <div class="pf2-input">
-                                    <i class="fas fa-boxes-stacked"></i>
-                                    <input type="number"
-                                           min="0"
-                                           class="fl-qty"
-                                           name="Sabores[__i__].Quantidade"
-                                           value="0" />
+                                <label>Estoque</label>
+                                <input type="number" min="0" class="pod-stock" name="Variacoes[__i__].Estoque" value="0" />
+                            </div>
+
+                            <div class="pf2-field">
+                                <label>Preço *</label>
+                                <div class="pf2-money">
+                                    <span>R$</span>
+                                    <input type="text" class="pod-price" name="Variacoes[__i__].PrecoTexto" placeholder="0,00" value="" />
                                 </div>
-                                <div class="pf2-help muted">Se não quiser controlar por sabor, deixe 0.</div>
+                            </div>
+
+                            <div class="pf2-field">
+                                <label>Promo</label>
+                                <div class="pf2-money">
+                                    <span>R$</span>
+                                    <input type="text" class="pod-promo" name="Variacoes[__i__].PrecoPromocionalTexto" placeholder="0,00" value="" />
+                                </div>
+                            </div>
+
+                            <div class="pf2-field pf2-switchfield">
+                                <label>Ativo</label>
+                                <div class="pf2-switch">
+                                    <input type="checkbox" class="pod-active" name="Variacoes[__i__].Ativo" value="true" checked />
+                                    <span></span>
+                                </div>
+                                <input type="hidden" name="Variacoes[__i__].Ativo" value="false" />
                             </div>
                         </div>
                     </div>
                 </template>
             </div>
 
-            <!-- Variações -->
-            <div class="pf2-card">
+            <!-- =======================
+                 VARIAÇÕES (APENAS PADRÃO/BEBIDA)
+                 ======================= -->
+            <div class="pf2-card" id="variacoesPadraoSection">
                 <div class="pf2-vari-head">
                     <div>
                         <h2 class="pf2-vari-title"><i class="fas fa-sparkles"></i> Variações do Produto</h2>
@@ -696,7 +809,7 @@
                     <div class="pf2-totalbox">
                         <label>Estoque Total (unidades)</label>
                         <input type="text" id="totalStockInput" readonly value="0" />
-                        <small class="muted">Soma de (Estoque × Multiplicador) das variações ativas</small>
+                        <small class="muted">Soma do estoque das linhas ativas</small>
                     </div>
 
                     <button type="button" id="clearAllVariations" class="pf2-btn pf2-btn-danger">

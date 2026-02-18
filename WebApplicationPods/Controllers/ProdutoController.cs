@@ -4,13 +4,14 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using WebApplicationPods.Data;
+using WebApplicationPods.Enum;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
 using WebApplicationPods.Services.Interface;
-using WebApplicationPods.Enum;
 
 namespace WebApplicationPods.Controllers
 {
@@ -55,6 +56,9 @@ namespace WebApplicationPods.Controllers
                 throw new InvalidOperationException("Loja atual não definida. Verifique o middleware multi-loja.");
             return _currentLoja.LojaId.Value;
         }
+
+        private static bool IsPod(ProdutoTipo tipo) => tipo == ProdutoTipo.PodVape;
+        private static bool IsBebida(ProdutoTipo tipo) => tipo == ProdutoTipo.BebidaAlcoolica;
 
         // ========= LISTA (painel) =========
         [Authorize(Roles = "Lojista,Admin")]
@@ -120,7 +124,7 @@ namespace WebApplicationPods.Controllers
                 .Take(pageSize)
                 .ToListAsync();
 
-            // ✅ SaboresQuantidadesList depende disso
+            // ✅ sabores JSON -> lista (para cards/Detalhes)
             foreach (var p in itens)
                 p.DeserializarSaboresQuantidades();
 
@@ -143,6 +147,7 @@ namespace WebApplicationPods.Controllers
         {
             var produto = _context.Produtos
                 .AsNoTracking()
+                .Include(p => p.Variacoes)
                 .FirstOrDefault(p => p.Id == id && p.Ativo);
 
             if (produto == null)
@@ -201,12 +206,12 @@ namespace WebApplicationPods.Controllers
                         Estoque = 0,
                         Ativo = true
                     }
+                },
+                Sabores = new List<ProdutoFormViewModel.SaborRow>
+                {
+                    new()
                 }
             };
-
-            // ✅ garante 1 linha de sabor na UI
-            if (vm.Sabores == null) vm.Sabores = new();
-            if (vm.Sabores.Count == 0) vm.Sabores.Add(new ProdutoFormViewModel.SaborQuantidadeRow());
 
             return View(vm);
         }
@@ -218,26 +223,16 @@ namespace WebApplicationPods.Controllers
         {
             CarregarCategorias();
 
-            vm.Variacoes = (vm.Variacoes ?? new())
-                .Where(v => !string.IsNullOrWhiteSpace(v.Nome))
-                .ToList();
-
-            if (vm.Variacoes.Count == 0)
-                ModelState.AddModelError("", "Adicione pelo menos 1 variação (Unidade, Fardo, Caixa...).");
-
-            foreach (var v in vm.Variacoes)
+            // Tipo define se maioridade é obrigatória
+            if (IsPod(vm.TipoProduto) || IsBebida(vm.TipoProduto))
             {
-                var preco = ParseDecimalBR(v.PrecoTexto);
-                var promo = string.IsNullOrWhiteSpace(v.PrecoPromocionalTexto)
-                    ? (decimal?)null
-                    : ParseDecimalBR(v.PrecoPromocionalTexto);
-
-                if (preco <= 0)
-                    ModelState.AddModelError("", $"Preço inválido na variação: {v.Nome}");
-
-                if (promo.HasValue && promo.Value > 0 && promo.Value >= preco)
-                    ModelState.AddModelError("", $"Promo deve ser menor que o preço em: {v.Nome}");
+                vm.RequerMaioridade = true;
             }
+
+            // ✅ valida / normaliza variações conforme tipo
+            NormalizeVmByTipo(vm);
+
+            ValidateVm(vm);
 
             if (!ModelState.IsValid)
                 return View(vm);
@@ -254,7 +249,6 @@ namespace WebApplicationPods.Controllers
                 CodigoBarras = vm.CodigoBarras,
                 CategoriaId = vm.CategoriaId,
 
-                // ✅ tipo no banco
                 TipoProduto = vm.TipoProduto,
 
                 RequerMaioridade = vm.RequerMaioridade,
@@ -264,7 +258,26 @@ namespace WebApplicationPods.Controllers
                 DataCadastro = DateTime.Now
             };
 
-            // ✅ SABORES (salva JSON)
+            // ✅ POD extras (NOVO)
+            if (IsPod(vm.TipoProduto))
+            {
+                produto.PodPuffs = vm.PodPuffs;
+                produto.PodCapacidadeBateria = vm.PodCapacidadeBateria?.Trim();
+                produto.PodTipo = vm.PodTipo?.Trim();
+
+                // (opcional) mantém legado sincronizado
+                produto.Puffs = vm.PodPuffs ?? 0;
+                if (!string.IsNullOrWhiteSpace(vm.PodCapacidadeBateria))
+                {
+                    var digits = new string(vm.PodCapacidadeBateria.Where(char.IsDigit).ToArray());
+                    if (int.TryParse(digits, out var mah))
+                        produto.CapacidadeBateria = mah;
+                }
+            }
+
+            // ✅ SABORES
+            // - POD: não usa lista Sabores, usa Variacoes (Nome=sabor) => salva JSON com Quantidade = Estoque
+            // - PADRÃO/BEBIDA: usa lista Sabores (somente nomes) => salva JSON com Quantidade = 0
             ApplySaboresFromVm(vm, produto);
 
             // ✅ Imagem (upload)
@@ -303,22 +316,23 @@ namespace WebApplicationPods.Controllers
                     Multiplicador = v.Multiplicador <= 0 ? 1 : v.Multiplicador,
                     Preco = preco,
                     PrecoPromocional = (promo.HasValue && promo.Value > 0) ? promo : null,
-                    Estoque = v.Estoque,
+                    Estoque = v.Estoque < 0 ? 0 : v.Estoque,
                     SKU = v.SKU,
                     CodigoBarras = v.CodigoBarras,
                     Ativo = v.Ativo
                 });
             }
 
+            // ✅ Preço/Promo no Produto = menor das variações ativas
+            ApplyPrecoPromoFromVariacoes(produto);
+
             // ✅ Estoque total
-            produto.Estoque = produto.Variacoes
-                .Where(x => x.Ativo)
-                .Sum(x => x.Estoque * x.Multiplicador);
+            produto.Estoque = CalcEstoqueTotal(produto);
 
             _context.Produtos.Add(produto);
             await _context.SaveChangesAsync();
 
-            FlashOk("Produto cadastrado com variações e sabores!");
+            FlashOk("Produto cadastrado!");
             return RedirectToAction(nameof(Index));
         }
 
@@ -338,7 +352,7 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            // ✅ Sabores do banco -> VM + mescla no dropdown
+            // ✅ Sabores do banco -> VM + mescla no dropdown (para POD select)
             produto.DeserializarSaboresQuantidades();
             var saboresDoProduto = (produto.SaboresQuantidadesList ?? new List<ProdutoModel.SaborQuantidade>())
                 .Select(s => s.Sabor);
@@ -363,11 +377,15 @@ namespace WebApplicationPods.Controllers
                 EmPromocao = produto.EmPromocao,
                 ImagemUrl = produto.ImagemUrl,
 
-                // ✅ tipo do banco
                 TipoProduto = produto.TipoProduto,
 
+                // POD extras
+                PodPuffs = produto.PodPuffs,
+                PodCapacidadeBateria = produto.PodCapacidadeBateria,
+                PodTipo = produto.PodTipo,
+
                 Variacoes = produto.Variacoes
-                    .OrderBy(v => v.Multiplicador)
+                    .OrderBy(v => v.Id)
                     .Select(v => new ProdutoFormViewModel.ProdutoVariacaoFormRow
                     {
                         Id = v.Id,
@@ -384,29 +402,27 @@ namespace WebApplicationPods.Controllers
                     })
                     .ToList(),
 
+                // PADRÃO/BEBIDA: sabores somente nome
                 Sabores = (produto.SaboresQuantidadesList ?? new List<ProdutoModel.SaborQuantidade>())
-                    .Select(s => new ProdutoFormViewModel.SaborQuantidadeRow
-                    {
-                        Sabor = s.Sabor,
-                        Quantidade = s.Quantidade
-                    })
+                    .Select(s => new ProdutoFormViewModel.SaborRow { Sabor = s.Sabor })
                     .ToList()
             };
 
             if (vm.Variacoes.Count == 0)
+            {
                 vm.Variacoes.Add(new()
                 {
-                    Nome = "Unidade",
+                    Nome = IsPod(vm.TipoProduto) ? "" : "Unidade",
                     Multiplicador = 1,
-                    PrecoTexto = "0,01",
+                    PrecoTexto = "0,00",
                     PrecoPromocionalTexto = "",
                     Estoque = 0,
                     Ativo = true
                 });
+            }
 
-            // ✅ garante 1 linha pra UI se não tiver sabores
             if (vm.Sabores == null) vm.Sabores = new();
-            if (vm.Sabores.Count == 0) vm.Sabores.Add(new ProdutoFormViewModel.SaborQuantidadeRow());
+            if (vm.Sabores.Count == 0) vm.Sabores.Add(new ProdutoFormViewModel.SaborRow());
 
             return View(vm);
         }
@@ -430,32 +446,23 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            // ✅ carrega categorias + mescla sabores do produto pra dropdown
+            // ✅ TRAVA TIPO NO EDITAR (mantém o do banco)
+            vm.TipoProduto = produto.TipoProduto;
+
+            // ✅ carrega categorias + mescla sabores do produto pro dropdown
             produto.DeserializarSaboresQuantidades();
             var saboresDoProduto = (produto.SaboresQuantidadesList ?? new List<ProdutoModel.SaborQuantidade>())
                 .Select(s => s.Sabor);
             CarregarCategorias(saboresDoProduto);
 
-            vm.Variacoes = (vm.Variacoes ?? new())
-                .Where(v => !string.IsNullOrWhiteSpace(v.Nome))
-                .ToList();
-
-            if (vm.Variacoes.Count == 0)
-                ModelState.AddModelError("", "Adicione pelo menos 1 variação.");
-
-            foreach (var v in vm.Variacoes)
+            // Tipo define se maioridade é obrigatória
+            if (IsPod(vm.TipoProduto) || IsBebida(vm.TipoProduto))
             {
-                var preco = ParseDecimalBR(v.PrecoTexto);
-                var promo = string.IsNullOrWhiteSpace(v.PrecoPromocionalTexto)
-                    ? (decimal?)null
-                    : ParseDecimalBR(v.PrecoPromocionalTexto);
-
-                if (preco <= 0)
-                    ModelState.AddModelError("", $"Preço inválido na variação: {v.Nome}");
-
-                if (promo.HasValue && promo.Value > 0 && promo.Value >= preco)
-                    ModelState.AddModelError("", $"Promo deve ser menor que o preço em: {v.Nome}");
+                vm.RequerMaioridade = true;
             }
+
+            NormalizeVmByTipo(vm);
+            ValidateVm(vm);
 
             if (!ModelState.IsValid)
                 return View(vm);
@@ -471,10 +478,31 @@ namespace WebApplicationPods.Controllers
             produto.MaisVendido = vm.MaisVendido;
             produto.EmPromocao = vm.EmPromocao;
 
-            // ✅ TRAVA TIPO NO EDITAR (mantém o do banco)
-            vm.TipoProduto = produto.TipoProduto;
+            // ✅ POD extras (NOVO)
+            if (IsPod(vm.TipoProduto))
+            {
+                produto.PodPuffs = vm.PodPuffs;
+                produto.PodCapacidadeBateria = vm.PodCapacidadeBateria?.Trim();
+                produto.PodTipo = vm.PodTipo?.Trim();
 
-            // ✅ SABORES (salva JSON)
+                // (opcional) mantém legado sincronizado
+                produto.Puffs = vm.PodPuffs ?? 0;
+                if (!string.IsNullOrWhiteSpace(vm.PodCapacidadeBateria))
+                {
+                    var digits = new string(vm.PodCapacidadeBateria.Where(char.IsDigit).ToArray());
+                    if (int.TryParse(digits, out var mah))
+                        produto.CapacidadeBateria = mah;
+                }
+            }
+            else
+            {
+                // se não é POD, pode limpar os extras (opcional)
+                produto.PodPuffs = null;
+                produto.PodCapacidadeBateria = null;
+                produto.PodTipo = null;
+            }
+
+            // ✅ SABORES (JSON)
             ApplySaboresFromVm(vm, produto);
 
             // ✅ Imagem (upload)
@@ -511,7 +539,7 @@ namespace WebApplicationPods.Controllers
 
             var paraRemover = produto.Variacoes.Where(v => !idsNoForm.Contains(v.Id)).ToList();
             foreach (var r in paraRemover)
-                _context.ProdutoVariacoes.Remove(r);
+                _context.Set<ProdutoVariacaoModel>().Remove(r);
 
             // ✅ upsert variações
             foreach (var row in vm.Variacoes)
@@ -528,7 +556,7 @@ namespace WebApplicationPods.Controllers
                     ent.Multiplicador = row.Multiplicador <= 0 ? 1 : row.Multiplicador;
                     ent.Preco = preco;
                     ent.PrecoPromocional = (promo.HasValue && promo.Value > 0) ? promo : null;
-                    ent.Estoque = row.Estoque;
+                    ent.Estoque = row.Estoque < 0 ? 0 : row.Estoque;
                     ent.SKU = row.SKU;
                     ent.CodigoBarras = row.CodigoBarras;
                     ent.Ativo = row.Ativo;
@@ -541,7 +569,7 @@ namespace WebApplicationPods.Controllers
                         Multiplicador = row.Multiplicador <= 0 ? 1 : row.Multiplicador,
                         Preco = preco,
                         PrecoPromocional = (promo.HasValue && promo.Value > 0) ? promo : null,
-                        Estoque = row.Estoque,
+                        Estoque = row.Estoque < 0 ? 0 : row.Estoque,
                         SKU = row.SKU,
                         CodigoBarras = row.CodigoBarras,
                         Ativo = row.Ativo
@@ -549,14 +577,15 @@ namespace WebApplicationPods.Controllers
                 }
             }
 
+            // ✅ Preço/Promo no Produto = menor das variações ativas
+            ApplyPrecoPromoFromVariacoes(produto);
+
             // ✅ estoque total
-            produto.Estoque = produto.Variacoes
-                .Where(v => v.Ativo)
-                .Sum(v => v.Estoque * v.Multiplicador);
+            produto.Estoque = CalcEstoqueTotal(produto);
 
             await _context.SaveChangesAsync();
 
-            FlashOk("Produto, variações e sabores atualizados!");
+            FlashOk("Produto atualizado!");
             return RedirectToAction(nameof(Index));
         }
 
@@ -642,27 +671,185 @@ namespace WebApplicationPods.Controllers
         // ✅ Centraliza salvar sabores do VM no ProdutoModel (JSON)
         private static void ApplySaboresFromVm(ProdutoFormViewModel vm, ProdutoModel produto)
         {
-            var sabores = (vm.Sabores ?? new List<ProdutoFormViewModel.SaborQuantidadeRow>())
+            if (IsPod(vm.TipoProduto))
+            {
+                // POD: sabores vêm das VARIAÇÕES (Nome = Sabor), Quantidade = Estoque da linha
+                var sabores = (vm.Variacoes ?? new List<ProdutoFormViewModel.ProdutoVariacaoFormRow>())
+                    .Where(v => !string.IsNullOrWhiteSpace(v.Nome))
+                    .Select(v => new ProdutoModel.SaborQuantidade
+                    {
+                        Sabor = v.Nome.Trim(),
+                        Quantidade = v.Estoque < 0 ? 0 : v.Estoque
+                    })
+                    .GroupBy(s => s.Sabor, StringComparer.OrdinalIgnoreCase)
+                    .Select(g => new ProdutoModel.SaborQuantidade
+                    {
+                        Sabor = g.First().Sabor,
+                        Quantidade = g.Sum(x => x.Quantidade)
+                    })
+                    .ToList();
+
+                produto.SaboresQuantidadesList = sabores;
+                produto.SerializarSaboresQuantidades();
+                return;
+            }
+
+            // PADRÃO/BEBIDA: sabores só nome, Quantidade = 0
+            var sabores2 = (vm.Sabores ?? new List<ProdutoFormViewModel.SaborRow>())
                 .Where(s => !string.IsNullOrWhiteSpace(s.Sabor))
                 .Select(s => new ProdutoModel.SaborQuantidade
                 {
                     Sabor = s.Sabor.Trim(),
-                    Quantidade = s.Quantidade < 0 ? 0 : s.Quantidade
+                    Quantidade = 0
                 })
                 .GroupBy(s => s.Sabor, StringComparer.OrdinalIgnoreCase)
                 .Select(g => new ProdutoModel.SaborQuantidade
                 {
                     Sabor = g.First().Sabor,
-                    Quantidade = g.Sum(x => x.Quantidade)
+                    Quantidade = 0
                 })
                 .ToList();
 
-            produto.SaboresQuantidadesList = sabores;
+            produto.SaboresQuantidadesList = sabores2;
             produto.SerializarSaboresQuantidades();
         }
 
-        [HttpGet]
-        private List<SelectListItem> ObterTodosSabores()
+        private static void NormalizeVmByTipo(ProdutoFormViewModel vm)
+        {
+            vm.Variacoes ??= new();
+            vm.Sabores ??= new();
+
+            if (IsPod(vm.TipoProduto))
+            {
+                // POD: Variações = linhas de sabor. Multiplicador fixo 1.
+                vm.Variacoes = vm.Variacoes
+                    .Select(v => new ProdutoFormViewModel.ProdutoVariacaoFormRow
+                    {
+                        Id = v.Id,
+                        Nome = (v.Nome ?? "").Trim(),
+                        Multiplicador = 1,
+                        PrecoTexto = v.PrecoTexto ?? "",
+                        PrecoPromocionalTexto = v.PrecoPromocionalTexto,
+                        Estoque = v.Estoque < 0 ? 0 : v.Estoque,
+                        SKU = v.SKU,
+                        CodigoBarras = v.CodigoBarras,
+                        Ativo = v.Ativo
+                    })
+                    .Where(v => !string.IsNullOrWhiteSpace(v.Nome) || !string.IsNullOrWhiteSpace(v.PrecoTexto))
+                    .ToList();
+
+                // não usa mais sabores “antigos”
+                vm.Sabores = new List<ProdutoFormViewModel.SaborRow>();
+            }
+            else
+            {
+                // PADRÃO/BEBIDA: variações normais
+                vm.Variacoes = vm.Variacoes
+                    .Where(v => !string.IsNullOrWhiteSpace(v.Nome))
+                    .ToList();
+
+                // sabores (somente texto)
+                vm.Sabores = vm.Sabores
+                    .Where(s => !string.IsNullOrWhiteSpace(s.Sabor))
+                    .Select(s => new ProdutoFormViewModel.SaborRow { Sabor = s.Sabor.Trim() })
+                    .ToList();
+
+                // garante pelo menos 1 linha de sabor para UI
+                if (vm.Sabores.Count == 0) vm.Sabores.Add(new ProdutoFormViewModel.SaborRow());
+            }
+
+            // garante pelo menos 1 variação para UI (se veio tudo vazio)
+            if (vm.Variacoes.Count == 0)
+            {
+                vm.Variacoes.Add(new ProdutoFormViewModel.ProdutoVariacaoFormRow
+                {
+                    Nome = IsPod(vm.TipoProduto) ? "" : "Unidade",
+                    Multiplicador = IsPod(vm.TipoProduto) ? 1 : 1,
+                    PrecoTexto = "0,00",
+                    PrecoPromocionalTexto = "",
+                    Estoque = 0,
+                    Ativo = true
+                });
+            }
+        }
+
+        private void ValidateVm(ProdutoFormViewModel vm)
+        {
+            if (vm.Variacoes == null || vm.Variacoes.Count == 0)
+                ModelState.AddModelError("", "Adicione pelo menos 1 variação.");
+
+            foreach (var v in vm.Variacoes ?? new())
+            {
+                // nome é obrigatório (no POD = sabor)
+                if (string.IsNullOrWhiteSpace(v.Nome))
+                    ModelState.AddModelError("", "Informe o nome/sabor da linha.");
+
+                var preco = ParseDecimalBR(v.PrecoTexto);
+                var promo = string.IsNullOrWhiteSpace(v.PrecoPromocionalTexto)
+                    ? (decimal?)null
+                    : ParseDecimalBR(v.PrecoPromocionalTexto);
+
+                if (preco <= 0)
+                    ModelState.AddModelError("", $"Preço inválido na variação: {v.Nome}");
+
+                if (promo.HasValue && promo.Value > 0 && promo.Value >= preco)
+                    ModelState.AddModelError("", $"Promo deve ser menor que o preço em: {v.Nome}");
+
+                if (IsPod(vm.TipoProduto) && v.Multiplicador != 1)
+                    v.Multiplicador = 1;
+            }
+
+            // POD extras (opcional, mas evita lixo)
+            if (IsPod(vm.TipoProduto))
+            {
+                if (vm.PodPuffs.HasValue && vm.PodPuffs.Value < 0)
+                    ModelState.AddModelError(nameof(vm.PodPuffs), "Puffs inválido.");
+
+                if (!string.IsNullOrWhiteSpace(vm.PodCapacidadeBateria) && vm.PodCapacidadeBateria.Length > 40)
+                    ModelState.AddModelError(nameof(vm.PodCapacidadeBateria), "Bateria inválida.");
+
+                if (!string.IsNullOrWhiteSpace(vm.PodTipo) && vm.PodTipo.Length > 40)
+                    ModelState.AddModelError(nameof(vm.PodTipo), "Tipo inválido.");
+            }
+        }
+
+        private static int CalcEstoqueTotal(ProdutoModel produto)
+        {
+            var varsAtivas = produto.Variacoes.Where(v => v.Ativo).ToList();
+
+            if (IsPod(produto.TipoProduto))
+            {
+                // POD: cada linha é sabor, estoque é direto
+                return varsAtivas.Sum(v => v.Estoque);
+            }
+
+            // PADRÃO/BEBIDA: estoque = estoque * mult
+            return varsAtivas.Sum(v => v.Estoque * v.Multiplicador);
+        }
+
+        private static void ApplyPrecoPromoFromVariacoes(ProdutoModel produto)
+        {
+            var varsAtivas = produto.Variacoes.Where(v => v.Ativo).ToList();
+            if (varsAtivas.Count == 0)
+            {
+                produto.Preco = produto.Preco <= 0 ? 0.01m : produto.Preco;
+                produto.PrecoPromocional = null;
+                produto.EmPromocao = false;
+                return;
+            }
+
+            produto.Preco = varsAtivas.Min(v => v.Preco);
+
+            var promosValidas = varsAtivas
+                .Where(v => v.PrecoPromocional.HasValue && v.PrecoPromocional.Value > 0 && v.PrecoPromocional.Value < v.Preco)
+                .Select(v => v.PrecoPromocional!.Value)
+                .ToList();
+
+            produto.PrecoPromocional = promosValidas.Count > 0 ? promosValidas.Min() : null;
+            produto.EmPromocao = produto.PrecoPromocional.HasValue;
+        }
+
+        private static List<SelectListItem> ObterTodosSabores()
         {
             return new List<SelectListItem>
             {
@@ -682,7 +869,7 @@ namespace WebApplicationPods.Controllers
             };
         }
 
-        private List<SelectListItem> MesclarSabores(List<SelectListItem> baseSabores, IEnumerable<string> saboresDoProduto)
+        private static List<SelectListItem> MesclarSabores(List<SelectListItem> baseSabores, IEnumerable<string> saboresDoProduto)
         {
             var set = new HashSet<string>(baseSabores.Select(s => s.Value), StringComparer.OrdinalIgnoreCase);
             var result = new List<SelectListItem>(baseSabores);

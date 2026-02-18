@@ -37,6 +37,23 @@ namespace WebApplicationPods.Models
         public string? ImagemUrl { get; set; }
         public IFormFile? ImagemUpload { get; set; }
 
+        // =========================
+        // CAMPOS EXTRAS (POD/VAPE)
+        // =========================
+        [Range(0, 999999, ErrorMessage = "Puffs inválido.")]
+        public int? PodPuffs { get; set; }
+
+        [StringLength(40)]
+        public string? PodCapacidadeBateria { get; set; } // ex: "600 mAh"
+
+        [StringLength(40)]
+        public string? PodTipo { get; set; } // ex: "Descartável", "Recarregável"
+
+        // =========================
+        // Variações
+        // - Padrão/Bebida: Unidade/Caixa/Fardo etc.
+        // - POD/VAPE: cada linha = 1 sabor (Nome = sabor)
+        // =========================
         public List<ProdutoVariacaoFormRow> Variacoes { get; set; } = new();
 
         public class ProdutoVariacaoFormRow
@@ -67,15 +84,16 @@ namespace WebApplicationPods.Models
             public bool Ativo { get; set; } = true;
         }
 
-        public List<SaborQuantidadeRow> Sabores { get; set; } = new();
+        // =========================
+        // SABORES (APENAS PADRÃO/BEBIDA)
+        // POD/VAPE não usa mais essa lista
+        // =========================
+        public List<SaborRow> Sabores { get; set; } = new();
 
-        public class SaborQuantidadeRow
+        public class SaborRow
         {
             [StringLength(50)]
             public string Sabor { get; set; } = string.Empty;
-
-            [Range(0, int.MaxValue, ErrorMessage = "Quantidade inválida.")]
-            public int Quantidade { get; set; } = 0;
         }
     }
 }

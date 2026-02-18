@@ -1,24 +1,31 @@
 ﻿document.addEventListener('DOMContentLoaded', () => {
-    // ✅ impede inicialização duplicada (causa do "adiciona várias linhas")
     if (window.__pf2ProdutoFormInit) return;
     window.__pf2ProdutoFormInit = true;
 
     const form = document.getElementById('productForm');
     if (!form) return;
 
-    // ===== Variações =====
+    // ===== Variações (Padrão/Bebida) =====
     const variationsList = document.getElementById('variationsList');
     const btnAddVariation = document.getElementById('addVariation');
     const btnClearAllVariations = document.getElementById('clearAllVariations');
     const totalStockEl = document.getElementById('totalStock');
     const totalStockInput = document.getElementById('totalStockInput');
 
-    // ===== Sabores =====
+    // ===== Sabores (Padrão/Bebida) =====
     const saboresSection = document.getElementById('saboresSection');
     const flavorsList = document.getElementById('flavorsList');
     const btnAddFlavor = document.getElementById('addFlavor');
     const btnClearFlavors = document.getElementById('clearAllFlavors');
     const flavorTemplate = document.getElementById('flavorTemplate');
+
+    // ===== POD: infos + lista =====
+    const podInfoSection = document.getElementById('podInfoSection');
+    const podSection = document.getElementById('podSaboresVariacoesSection');
+    const podList = document.getElementById('podList');
+    const podTemplate = document.getElementById('podTemplate');
+    const btnAddPodRow = document.getElementById('addPodRow');
+    const btnClearAllPodRows = document.getElementById('clearAllPodRows');
 
     // ===== Progresso / campos =====
     const progressText = document.getElementById('progressText');
@@ -52,12 +59,12 @@
         const node = document.createElement('div');
         node.className = `pf2-toast is-${type}`;
         node.innerHTML = `
-      <div class="ico"><i class="fas ${iconByType[type] || iconByType.info}"></i></div>
-      <div>
-        <div class="title">${title || ''}</div>
-        ${descText ? `<div class="desc">${descText}</div>` : ``}
-      </div>
-    `;
+          <div class="ico"><i class="fas ${iconByType[type] || iconByType.info}"></i></div>
+          <div>
+            <div class="title">${title || ''}</div>
+            ${descText ? `<div class="desc">${descText}</div>` : ``}
+          </div>
+        `;
         toastHost.appendChild(node);
 
         setTimeout(() => {
@@ -114,6 +121,8 @@
         const checked = tipoRadios.find(r => r.checked);
         return checked ? checked.value : 'padrao';
     };
+    const isPodType = () => getType() === 'pod';
+
     const applyTypeUI = () => {
         const t = getType();
 
@@ -137,9 +146,23 @@
             if (maioridadeCard) maioridadeCard.style.opacity = forced ? '0.92' : '1';
         }
 
-        applyFlavorMode();
+        // ===== SHOW/HIDE por tipo =====
+        const pod = isPodType();
+
+        if (podInfoSection) podInfoSection.style.display = pod ? '' : 'none';
+        if (podSection) podSection.style.display = pod ? '' : 'none';
+
+        // Sabores e Variações antigos (Padrão/Bebida)
+        if (saboresSection) saboresSection.style.display = pod ? 'none' : '';
+        if (variationsList && variationsList.closest('.pf2-card')) {
+            variationsList.closest('.pf2-card').style.display = pod ? 'none' : '';
+        }
+
+        // recalcula estoque total
+        calcTotalStock();
         updateProgress();
     };
+
     const forceTypeFromHidden = () => {
         if (!tipoHidden) return;
         const ui = enumIntToUi(tipoHidden.value);
@@ -149,58 +172,14 @@
     };
 
     /* =========================
-       Sabores
-       - dropdown só POD
-       - outros tipos: texto livre (input fl-name)
+       PADRÃO/BEBIDA - Sabores (texto)
        ========================= */
-    const isPodType = () => getType() === 'pod';
-
     const syncFlavorBadge = (row) => {
         const badge = row.querySelector('.fl-badge');
         const real = row.querySelector('.fl-name');
         if (!badge) return;
         const val = (real?.value || '').trim();
         badge.textContent = val ? val : '—';
-    };
-
-    const applyFlavorMode = () => {
-        if (!flavorsList) return;
-
-        const pod = isPodType();
-
-        // sabores section sempre aparece (você pediu Criar e Editar)
-        if (saboresSection) saboresSection.style.display = '';
-
-        flavorsList.querySelectorAll('.flavor-row').forEach(row => {
-            const sel = row.querySelector('.fl-pod-select');
-            const real = row.querySelector('.fl-name');
-            const other = row.querySelector('.fl-other');
-
-            if (sel) sel.style.display = pod ? '' : 'none';
-
-            if (!pod) {
-                // fora do POD: texto livre
-                if (other) { other.classList.add('hidden'); other.value = ''; }
-                return;
-            }
-
-            // POD: select controla o input real
-            if (!sel || !real) return;
-
-            const v = sel.value || '';
-
-            if (v === '__OUTRO__') {
-                if (other) other.classList.remove('hidden');
-                if (other && other.value && other.value.trim()) real.value = other.value.trim();
-            } else if (v) {
-                if (other) { other.classList.add('hidden'); other.value = ''; }
-                real.value = v;
-            } else {
-                if (other) { other.classList.add('hidden'); other.value = ''; }
-            }
-
-            syncFlavorBadge(row);
-        });
     };
 
     const renumberFlavors = () => {
@@ -224,8 +203,216 @@
         return wrap.firstElementChild;
     };
 
+    if (flavorsList) {
+        flavorsList.addEventListener('click', (e) => {
+            const btn = e.target.closest('.fl-remove');
+            if (!btn) return;
+
+            const row = btn.closest('.flavor-row');
+            if (!row) return;
+
+            const count = flavorsList.querySelectorAll('.flavor-row').length;
+            if (count <= 1) {
+                row.querySelector('.fl-name') && (row.querySelector('.fl-name').value = '');
+                syncFlavorBadge(row);
+                toast('warn', 'Atenção', 'Mantemos pelo menos 1 linha de sabor.');
+                return;
+            }
+
+            row.remove();
+            renumberFlavors();
+            toast('info', 'Sabor removido');
+        });
+
+        flavorsList.addEventListener('input', (e) => {
+            const row = e.target.closest('.flavor-row');
+            if (!row) return;
+            syncFlavorBadge(row);
+        });
+    }
+
+    if (btnAddFlavor && flavorsList) {
+        btnAddFlavor.addEventListener('click', () => {
+            const idx = flavorsList.querySelectorAll('.flavor-row').length;
+            const row = createFlavorRow(idx);
+            if (!row) return;
+
+            flavorsList.appendChild(row);
+            renumberFlavors();
+            toast('ok', 'Sabor adicionado');
+        });
+    }
+
+    if (btnClearFlavors && flavorsList) {
+        btnClearFlavors.addEventListener('click', () => {
+            if (!confirm('Tem certeza que deseja limpar os sabores?')) return;
+
+            flavorsList.innerHTML = '';
+            const row = createFlavorRow(0);
+            if (row) flavorsList.appendChild(row);
+
+            renumberFlavors();
+            toast('warn', 'Sabores limpos', 'Mantivemos 1 linha');
+        });
+    }
+
     /* =========================
-       Variações
+       POD - Sabores e Variações (cada linha = 1 sabor)
+       ========================= */
+    const syncPodBadge = (row) => {
+        const badge = row.querySelector('.pod-badge');
+        const real = row.querySelector('.pod-name');
+        if (!badge) return;
+        const val = (real?.value || '').trim();
+        badge.textContent = val ? val : '—';
+    };
+
+    const applyPodSelectToName = (row) => {
+        const sel = row.querySelector('.pod-select');
+        const name = row.querySelector('.pod-name');
+        const other = row.querySelector('.pod-other');
+        if (!sel || !name) return;
+
+        const v = sel.value || '';
+
+        if (v === '__OUTRO__') {
+            if (other) other.classList.remove('hidden');
+            if (other && other.value && other.value.trim()) name.value = other.value.trim();
+        } else if (v) {
+            if (other) { other.classList.add('hidden'); other.value = ''; }
+            name.value = v;
+        } else {
+            if (other) { other.classList.add('hidden'); other.value = ''; }
+        }
+
+        syncPodBadge(row);
+    };
+
+    const renumberPod = () => {
+        if (!podList) return;
+        const rows = Array.from(podList.querySelectorAll('.pod-row'));
+        rows.forEach((row, idx) => {
+            row.dataset.index = idx;
+            row.querySelectorAll('[name]').forEach(el => {
+                const n = el.getAttribute('name');
+                if (!n) return;
+                el.setAttribute('name', n.replace(/Variacoes\[\d+\]/g, `Variacoes[${idx}]`));
+            });
+        });
+    };
+
+    const createPodRow = (idx) => {
+        if (!podTemplate) return null;
+        const html = podTemplate.innerHTML.replaceAll('__i__', String(idx));
+        const wrap = document.createElement('div');
+        wrap.innerHTML = html.trim();
+        return wrap.firstElementChild;
+    };
+
+    if (podList) {
+        // money mask nos existentes
+        podList.querySelectorAll('.pod-price').forEach(wireMoney);
+        podList.querySelectorAll('.pod-promo').forEach(wireMoney);
+
+        podList.addEventListener('click', (e) => {
+            const btn = e.target.closest('.pod-remove');
+            if (!btn) return;
+
+            const row = btn.closest('.pod-row');
+            if (!row) return;
+
+            const count = podList.querySelectorAll('.pod-row').length;
+            if (count <= 1) {
+                row.querySelector('.pod-name') && (row.querySelector('.pod-name').value = '');
+                row.querySelector('.pod-stock') && (row.querySelector('.pod-stock').value = '0');
+                row.querySelector('.pod-price') && (row.querySelector('.pod-price').value = '');
+                row.querySelector('.pod-promo') && (row.querySelector('.pod-promo').value = '');
+                row.querySelector('.pod-select') && (row.querySelector('.pod-select').value = '');
+                const other = row.querySelector('.pod-other');
+                if (other) { other.value = ''; other.classList.add('hidden'); }
+                syncPodBadge(row);
+                toast('warn', 'Atenção', 'Mantemos pelo menos 1 linha.');
+                calcTotalStock();
+                return;
+            }
+
+            row.remove();
+            renumberPod();
+            toast('info', 'Linha removida');
+            calcTotalStock();
+            updateProgress();
+        });
+
+        podList.addEventListener('change', (e) => {
+            const row = e.target.closest('.pod-row');
+            if (!row) return;
+
+            if (e.target.classList.contains('pod-select')) {
+                applyPodSelectToName(row);
+            }
+
+            if (e.target.classList.contains('pod-active')) {
+                calcTotalStock();
+                updateProgress();
+            }
+        });
+
+        podList.addEventListener('input', (e) => {
+            const row = e.target.closest('.pod-row');
+            if (!row) return;
+
+            if (e.target.classList.contains('pod-other')) {
+                const sel = row.querySelector('.pod-select');
+                const name = row.querySelector('.pod-name');
+                if (sel && sel.value === '__OUTRO__' && name) name.value = e.target.value.trim();
+            }
+
+            if (e.target.classList.contains('pod-name')) syncPodBadge(row);
+
+            if (e.target.classList.contains('pod-stock')) {
+                calcTotalStock();
+                updateProgress();
+            }
+        });
+    }
+
+    if (btnAddPodRow && podList) {
+        btnAddPodRow.addEventListener('click', () => {
+            const idx = podList.querySelectorAll('.pod-row').length;
+            const row = createPodRow(idx);
+            if (!row) return;
+
+            // wire money
+            row.querySelectorAll('.pod-price').forEach(wireMoney);
+            row.querySelectorAll('.pod-promo').forEach(wireMoney);
+
+            podList.appendChild(row);
+            renumberPod();
+            toast('ok', 'Sabor adicionado');
+        });
+    }
+
+    if (btnClearAllPodRows && podList) {
+        btnClearAllPodRows.addEventListener('click', () => {
+            if (!confirm('Tem certeza que deseja limpar?')) return;
+
+            podList.innerHTML = '';
+            const row = createPodRow(0);
+            if (row) {
+                row.querySelectorAll('.pod-price').forEach(wireMoney);
+                row.querySelectorAll('.pod-promo').forEach(wireMoney);
+                podList.appendChild(row);
+            }
+
+            renumberPod();
+            toast('warn', 'Limpo', 'Mantivemos 1 linha');
+            calcTotalStock();
+            updateProgress();
+        });
+    }
+
+    /* =========================
+       Variações PADRÃO/BEBIDA
        ========================= */
     const syncVariationName = (card) => {
         const sel = card.querySelector('.v-name');
@@ -260,23 +447,6 @@
         });
     };
 
-    const calcTotalStock = () => {
-        if (!variationsList) return 0;
-        let total = 0;
-
-        variationsList.querySelectorAll('.pf2-vari').forEach(card => {
-            const stock = parseInt(card.querySelector('.v-stock')?.value, 10) || 0;
-            const mult = parseInt(card.querySelector('.v-mult')?.value, 10) || 1;
-            const active = card.querySelector('.v-active')?.checked ?? true;
-            if (active) total += stock * mult;
-        });
-
-        const txt = total.toLocaleString('pt-BR');
-        if (totalStockEl) totalStockEl.textContent = txt;
-        if (totalStockInput) totalStockInput.value = txt;
-        return total;
-    };
-
     const validateVariationCard = (card) => {
         syncVariationName(card);
 
@@ -295,6 +465,39 @@
         return nomeOkNow && precoOkNow;
     };
 
+    /* =========================
+       Estoque total
+       - POD: soma estoque das linhas ativas
+       - Outros: soma (estoque * mult) das variações ativas
+       ========================= */
+    const calcTotalStock = () => {
+        let total = 0;
+
+        if (isPodType()) {
+            if (podList) {
+                podList.querySelectorAll('.pod-row').forEach(row => {
+                    const stock = parseInt(row.querySelector('.pod-stock')?.value, 10) || 0;
+                    const active = row.querySelector('.pod-active')?.checked ?? true;
+                    if (active) total += stock;
+                });
+            }
+        } else {
+            if (variationsList) {
+                variationsList.querySelectorAll('.pf2-vari').forEach(card => {
+                    const stock = parseInt(card.querySelector('.v-stock')?.value, 10) || 0;
+                    const mult = parseInt(card.querySelector('.v-mult')?.value, 10) || 1;
+                    const active = card.querySelector('.v-active')?.checked ?? true;
+                    if (active) total += stock * mult;
+                });
+            }
+        }
+
+        const txt = total.toLocaleString('pt-BR');
+        if (totalStockEl) totalStockEl.textContent = txt;
+        if (totalStockInput) totalStockInput.value = txt;
+        return total;
+    };
+
     const updateProgress = () => {
         if (!progressText || !progressBar) return;
 
@@ -307,9 +510,22 @@
         const catOkNow = (categoria?.value || '').toString().trim().length > 0 && categoria.value !== "0";
         if (catOkNow) done++;
 
-        const hasValidVar = variationsList
-            ? Array.from(variationsList.querySelectorAll('.pf2-vari')).some(validateVariationCard)
-            : true;
+        let hasValidVar = true;
+
+        if (isPodType()) {
+            // pelo menos 1 linha com sabor e preço
+            hasValidVar = podList
+                ? Array.from(podList.querySelectorAll('.pod-row')).some(r => {
+                    const sabor = (r.querySelector('.pod-name')?.value || '').trim();
+                    const price = (r.querySelector('.pod-price')?.value || '').trim();
+                    return !!sabor && !!price && normalizeMoney(price) !== '0,00';
+                })
+                : true;
+        } else {
+            hasValidVar = variationsList
+                ? Array.from(variationsList.querySelectorAll('.pf2-vari')).some(validateVariationCard)
+                : true;
+        }
 
         if (hasValidVar) done++;
 
@@ -320,90 +536,8 @@
         if (nomeOk) nomeOk.style.display = nomeOkNow ? 'block' : 'none';
     };
 
-    /* =========================
-       Event delegation (não quebra ao adicionar/remover)
-       ========================= */
-
-    // --- sabores ---
-    if (flavorsList) {
-        flavorsList.addEventListener('click', (e) => {
-            const btn = e.target.closest('.fl-remove');
-            if (!btn) return;
-
-            const row = btn.closest('.flavor-row');
-            if (!row) return;
-
-            const count = flavorsList.querySelectorAll('.flavor-row').length;
-            if (count <= 1) {
-                // limpa ao invés de remover
-                row.querySelector('.fl-name') && (row.querySelector('.fl-name').value = '');
-                row.querySelector('.fl-qty') && (row.querySelector('.fl-qty').value = '0');
-                row.querySelector('.fl-pod-select') && (row.querySelector('.fl-pod-select').value = '');
-                const other = row.querySelector('.fl-other');
-                if (other) { other.value = ''; other.classList.add('hidden'); }
-                syncFlavorBadge(row);
-                toast('warn', 'Atenção', 'Mantemos pelo menos 1 linha de sabor.');
-                return;
-            }
-
-            row.remove();
-            renumberFlavors();
-            toast('info', 'Sabor removido');
-        });
-
-        flavorsList.addEventListener('input', (e) => {
-            const row = e.target.closest('.flavor-row');
-            if (!row) return;
-
-            if (e.target.classList.contains('fl-other')) {
-                const sel = row.querySelector('.fl-pod-select');
-                const real = row.querySelector('.fl-name');
-                if (sel && sel.value === '__OUTRO__' && real) real.value = e.target.value.trim();
-            }
-
-            syncFlavorBadge(row);
-        });
-
-        flavorsList.addEventListener('change', (e) => {
-            const row = e.target.closest('.flavor-row');
-            if (!row) return;
-
-            if (e.target.classList.contains('fl-pod-select')) {
-                applyFlavorMode();
-            }
-        });
-    }
-
-    if (btnAddFlavor && flavorsList) {
-        btnAddFlavor.addEventListener('click', () => {
-            const idx = flavorsList.querySelectorAll('.flavor-row').length;
-            const row = createFlavorRow(idx);
-            if (!row) return;
-
-            flavorsList.appendChild(row);
-            renumberFlavors();
-            applyFlavorMode();
-            toast('ok', 'Sabor adicionado');
-        });
-    }
-
-    if (btnClearFlavors && flavorsList) {
-        btnClearFlavors.addEventListener('click', () => {
-            if (!confirm('Tem certeza que deseja limpar os sabores?')) return;
-
-            flavorsList.innerHTML = '';
-            const row = createFlavorRow(0);
-            if (row) flavorsList.appendChild(row);
-
-            renumberFlavors();
-            applyFlavorMode();
-            toast('warn', 'Sabores limpos', 'Mantivemos 1 linha');
-        });
-    }
-
-    // --- variações ---
+    // ===== Eventos das variações (padrão/bebida) - mantém seu fluxo
     if (variationsList) {
-        // money mask nos existentes
         variationsList.querySelectorAll('.v-price').forEach(wireMoney);
         variationsList.querySelectorAll('.v-promo').forEach(wireMoney);
 
@@ -458,19 +592,16 @@
         });
     }
 
-    // botão adicionar variação (cria HTML via clone do primeiro card)
     if (btnAddVariation && variationsList) {
         btnAddVariation.addEventListener('click', () => {
             const idx = variationsList.querySelectorAll('.pf2-vari').length;
 
-            // clona o primeiro card como base (mais seguro do que string enorme)
             const base = variationsList.querySelector('.pf2-vari');
             if (!base) return;
 
             const clone = base.cloneNode(true);
             clone.dataset.index = idx;
 
-            // limpa valores básicos no clone
             clone.querySelectorAll('input[type="hidden"][name$=".Id"]').forEach(h => h.value = '');
             const hiddenName = clone.querySelector('.v-name-hidden');
             if (hiddenName) hiddenName.value = 'Unidade';
@@ -499,7 +630,6 @@
             const active = clone.querySelector('.v-active');
             if (active) active.checked = true;
 
-            // aplica wireMoney nos novos inputs
             clone.querySelectorAll('.v-price').forEach(wireMoney);
             clone.querySelectorAll('.v-promo').forEach(wireMoney);
 
@@ -521,7 +651,6 @@
             variationsList.innerHTML = '';
             const first = base.cloneNode(true);
 
-            // reset
             first.dataset.index = 0;
             first.querySelectorAll('input[type="hidden"][name$=".Id"]').forEach(h => h.value = '');
 
@@ -563,9 +692,7 @@
         });
     }
 
-    /* =========================
-       Tipo (somente se não estiver travado)
-       ========================= */
+    // ===== Tipo (somente se não estiver travado)
     const typeIsLocked = tipoRadios.some(r => r.disabled);
     if (!typeIsLocked) {
         tipoRadios.forEach(r => r.addEventListener('change', applyTypeUI));
@@ -581,9 +708,7 @@
         });
     }
 
-    /* =========================
-       Desc counter + progress
-       ========================= */
+    // ===== Desc counter + progress
     const updateDescCount = () => {
         if (!desc || !descCount) return;
         descCount.textContent = String((desc.value || '').length);
@@ -592,22 +717,37 @@
     if (nome) nome.addEventListener('input', () => { updateProgress(); });
     if (categoria) categoria.addEventListener('change', () => { updateProgress(); });
 
-    /* =========================
-       Submit (normaliza money)
-       ========================= */
+    // ===== Submit: normaliza money (POD e variações)
     form.addEventListener('submit', (e) => {
         let ok = true;
 
-        if (variationsList) {
-            variationsList.querySelectorAll('.pf2-vari').forEach(card => {
-                syncVariationName(card);
-                const p = card.querySelector('.v-price');
-                const pr = card.querySelector('.v-promo');
-                if (p) p.value = normalizeMoney(p.value);
-                if (pr) pr.value = normalizeMoney(pr.value);
+        if (isPodType()) {
+            if (podList) {
+                podList.querySelectorAll('.pod-row').forEach(row => {
+                    const p = row.querySelector('.pod-price');
+                    const pr = row.querySelector('.pod-promo');
+                    if (p) p.value = normalizeMoney(p.value);
+                    if (pr) pr.value = normalizeMoney(pr.value);
 
-                if (!validateVariationCard(card)) ok = false;
-            });
+                    const sabor = (row.querySelector('.pod-name')?.value || '').trim();
+                    if (!sabor) ok = false;
+
+                    const price = (p?.value || '').trim();
+                    if (!price || price === '0,00') ok = false;
+                });
+            }
+        } else {
+            if (variationsList) {
+                variationsList.querySelectorAll('.pf2-vari').forEach(card => {
+                    syncVariationName(card);
+                    const p = card.querySelector('.v-price');
+                    const pr = card.querySelector('.v-promo');
+                    if (p) p.value = normalizeMoney(p.value);
+                    if (pr) pr.value = normalizeMoney(pr.value);
+
+                    if (!validateVariationCard(card)) ok = false;
+                });
+            }
         }
 
         calcTotalStock();
@@ -621,8 +761,7 @@
 
     // INIT
     updateDescCount();
-    forceTypeFromHidden(); // ✅ garante tipo correto no editar
-    applyFlavorMode();
+    forceTypeFromHidden();
     calcTotalStock();
     updateProgress();
 });

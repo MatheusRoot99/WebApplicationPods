@@ -82,6 +82,20 @@ namespace WebApplicationPods.Models
         public ICollection<ProdutoVariacaoModel> Variacoes { get; set; } = new List<ProdutoVariacaoModel>();
 
         // ===== Pods (legado) - mantém, mas não obriga no novo fluxo =====
+        // =========================
+        // POD/VAPE (NOVO fluxo - opcional)
+        // =========================
+        [Display(Name = "Quantidade de Puffs (novo)")]
+        public int? PodPuffs { get; set; }
+
+        [Display(Name = "Bateria (novo)")]
+        [StringLength(40)]
+        public string? PodCapacidadeBateria { get; set; } // ex: "600 mAh"
+
+        [Display(Name = "Tipo (novo)")]
+        [StringLength(40)]
+        public string? PodTipo { get; set; } // ex: "Descartável"
+
         [Display(Name = "Sabor")]
         [StringLength(50)]
         public string Sabor { get; set; } = string.Empty;
