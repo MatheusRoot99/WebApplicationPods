@@ -31,7 +31,7 @@
                 <div>
                     <h1>@ViewData["Title"]</h1>
                     <p class="pf2-sub">
-                        @(isEdit ? $"Editando produto #{Model.Id}" : "Sistema unificado para cadastro de produtos de conveniência, pods eletrônicos, bebidas e muito mais")
+                        @(isEdit ? $"Editando produto #{Model.Id}" : "Sistema unificado para cadastro de produtos")
                     </p>
                 </div>
             </div>
@@ -71,7 +71,7 @@
             <input type="hidden" asp-for="Id" />
             <input type="hidden" asp-for="ImagemUrl" />
 
-            <!-- ✅ hidden REAL (vai pro banco) -->
+            <!-- hidden REAL (vai pro model binder / banco) -->
             <input type="hidden" id="TipoProdutoHidden" name="TipoProduto" value="@((int)Model.TipoProduto)" />
 
             <!-- Tipo de Produto -->
@@ -153,7 +153,7 @@
                     <div class="pf2-field pf2-span-2">
                         <label>Descrição Detalhada</label>
                         <textarea asp-for="Descricao" rows="3" maxlength="1000"
-                                  placeholder="Descreva o produto, suas características e especificações"></textarea>
+                                  placeholder="Descreva o produto"></textarea>
                         <div class="pf2-help"><span id="descCount">0</span>/1000 caracteres</div>
                     </div>
 
@@ -173,7 +173,7 @@
                         <label>Marca</label>
                         <div class="pf2-input">
                             <i class="fas fa-industry"></i>
-                            <input asp-for="Marca" maxlength="80" placeholder="Ex: Coca-Cola, Elf Bar, Absolut" />
+                            <input asp-for="Marca" maxlength="80" placeholder="Ex: Coca-Cola" />
                         </div>
                     </div>
 
@@ -189,7 +189,7 @@
                         <label>Código de Barras (EAN)</label>
                         <div class="pf2-input">
                             <i class="fas fa-barcode"></i>
-                            <input asp-for="CodigoBarras" maxlength="80" placeholder="Ex: 7891234567890" />
+                            <input asp-for="CodigoBarras" maxlength="80" placeholder="Ex: 789123..." />
                         </div>
                     </div>
                 </div>
@@ -210,7 +210,7 @@
                         <label>Upload de imagem</label>
                         <div class="pf2-file">
                             <input type="file" id="imageUpload" name="ImagemUpload" accept="image/*" />
-                            <div class="pf2-file-hint muted">Formatos: JPG/PNG (máx. 5MB)</div>
+                            <div class="pf2-file-hint muted">Formatos: JPG/PNG/WEBP (máx. 2MB)</div>
                         </div>
                     </div>
 
@@ -250,7 +250,7 @@
                         <div class="pf2-status-ico text-green"><i class="fas fa-check-circle"></i></div>
                         <div class="pf2-status-txt">
                             <strong>Produto Ativo</strong>
-                            <span class="muted">Produto disponível para venda</span>
+                            <span class="muted">Disponível para venda</span>
                         </div>
                     </label>
 
@@ -259,7 +259,7 @@
                         <div class="pf2-status-ico text-red"><i class="fas fa-tag"></i></div>
                         <div class="pf2-status-txt">
                             <strong>Em Promoção</strong>
-                            <span class="muted">Produto com preço promocional</span>
+                            <span class="muted">Preço promocional</span>
                         </div>
                     </label>
 
@@ -268,7 +268,7 @@
                         <div class="pf2-status-ico text-blue"><i class="fas fa-chart-line"></i></div>
                         <div class="pf2-status-txt">
                             <strong>Mais Vendido</strong>
-                            <span class="muted">Destaque na lista de produtos</span>
+                            <span class="muted">Destaque na lista</span>
                         </div>
                     </label>
 
@@ -289,7 +289,7 @@
                     <div class="pf2-card-ico"><i class="fas fa-ice-cream"></i></div>
                     <div>
                         <h2>Sabores</h2>
-                        <p class="muted">No POD/VAPE você terá lista fixa + “Outro…”. Nos demais, fica texto livre.</p>
+                        <p class="muted">Dropdown aparece somente quando Tipo = POD/VAPE. Nos outros tipos é texto livre.</p>
                     </div>
                 </div>
 
@@ -311,7 +311,6 @@
                         for (var i = 0; i < Model.Sabores.Count; i++)
                         {
                             var saborAtual = Model.Sabores[i].Sabor ?? "";
-                            var saborEhDaLista = saboresPod.Any(x => string.Equals(x.Value, saborAtual, StringComparison.OrdinalIgnoreCase));
 
                             <div class="pf2-vari flavor-row" data-index="@i">
                                 <div class="pf2-vari-top">
@@ -331,30 +330,28 @@
                                         <label>Nome do Sabor</label>
 
                                         <div class="pf2-row">
-                                            <!-- ✅ Select (só POD mostra; JS controla) -->
+                                            <!-- dropdown aparece só em POD (JS controla) -->
                                             <select class="fl-pod-select" data-role="pod-select">
                                                 <option value="">Selecione...</option>
                                                 @foreach (var s in saboresPod)
                                                 {
-                                                    <option value="@s.Value" selected="@(string.Equals(s.Value, saborAtual, StringComparison.OrdinalIgnoreCase))">@s.Text</option>
+                                                    <option value="@s.Value">@s.Text</option>
                                                 }
-                                                <option value="__OUTRO__" selected="@(!string.IsNullOrWhiteSpace(saborAtual) && !saborEhDaLista)">Outro...</option>
+                                                <option value="__OUTRO__">Outro...</option>
                                             </select>
 
-                                            <!-- ✅ input REAL (vai pro model binder) -->
+                                            <!-- input REAL (vai pro model binder) -->
                                             <input type="text"
                                                    class="fl-name"
                                                    name="Sabores[@i].Sabor"
                                                    value="@saborAtual"
                                                    maxlength="50"
-                                                   placeholder="Ex: Limão, Uva, Honey, Ice Mint..." />
+                                                   placeholder="Ex: Limão, Uva, Ice Mint..." />
 
-                                            <!-- input usado só quando escolher Outro -->
                                             <input type="text"
-                                                   class="fl-other @(!string.IsNullOrWhiteSpace(saborAtual) && !saborEhDaLista ? "" : "hidden")"
+                                                   class="fl-other hidden"
                                                    placeholder="Digite o sabor..."
-                                                   maxlength="50"
-                                                   value="@(!saborEhDaLista ? saborAtual : "")" />
+                                                   maxlength="50" />
                                         </div>
 
                                         <span class="pf2-val fl-val hidden">Informe o sabor.</span>
@@ -410,13 +407,12 @@
                                                name="Sabores[0].Sabor"
                                                value=""
                                                maxlength="50"
-                                               placeholder="Ex: Limão, Uva, Honey, Ice Mint..." />
+                                               placeholder="Ex: Limão, Uva, Ice Mint..." />
 
                                         <input type="text"
                                                class="fl-other hidden"
                                                placeholder="Digite o sabor..."
-                                               maxlength="50"
-                                               value="" />
+                                               maxlength="50" />
                                     </div>
 
                                     <span class="pf2-val fl-val hidden">Informe o sabor.</span>
@@ -439,6 +435,7 @@
                     }
                 </div>
 
+                <!-- template SEM Razor dinâmico além de options já renderizadas -->
                 <template id="flavorTemplate">
                     <div class="pf2-vari flavor-row" data-index="__i__">
                         <div class="pf2-vari-top">
@@ -471,7 +468,7 @@
                                            class="fl-name"
                                            name="Sabores[__i__].Sabor"
                                            maxlength="50"
-                                           placeholder="Ex: Limão, Uva, Honey, Ice Mint..." />
+                                           placeholder="Ex: Limão, Uva, Ice Mint..." />
 
                                     <input type="text"
                                            class="fl-other hidden"
@@ -504,7 +501,7 @@
                 <div class="pf2-vari-head">
                     <div>
                         <h2 class="pf2-vari-title"><i class="fas fa-sparkles"></i> Variações do Produto</h2>
-                        <p class="muted">Variações permitem vender em diferentes quantidades (unidade, caixa, fardo, etc.)</p>
+                        <p class="muted">Unidade, caixa, fardo…</p>
                     </div>
 
                     <div class="pf2-vari-actions">
@@ -699,7 +696,7 @@
                     <div class="pf2-totalbox">
                         <label>Estoque Total (unidades)</label>
                         <input type="text" id="totalStockInput" readonly value="0" />
-                        <small class="muted">Calculado automaticamente: soma de (Estoque × Multiplicador) das variações ativas</small>
+                        <small class="muted">Soma de (Estoque × Multiplicador) das variações ativas</small>
                     </div>
 
                     <button type="button" id="clearAllVariations" class="pf2-btn pf2-btn-danger">

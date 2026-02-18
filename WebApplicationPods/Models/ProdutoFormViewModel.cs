@@ -27,7 +27,6 @@ namespace WebApplicationPods.Models
         [Required(ErrorMessage = "Selecione uma categoria.")]
         public int CategoriaId { get; set; }
 
-        // ✅ Agora é enum (combina com ProdutoModel)
         public ProdutoTipo TipoProduto { get; set; } = ProdutoTipo.Padrao;
 
         public bool Ativo { get; set; } = true;
@@ -78,6 +77,5 @@ namespace WebApplicationPods.Models
             [Range(0, int.MaxValue, ErrorMessage = "Quantidade inválida.")]
             public int Quantidade { get; set; } = 0;
         }
-
     }
 }

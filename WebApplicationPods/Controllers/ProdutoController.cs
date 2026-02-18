@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using WebApplicationPods.Data;
@@ -60,12 +59,12 @@ namespace WebApplicationPods.Controllers
         // ========= LISTA (painel) =========
         [Authorize(Roles = "Lojista,Admin")]
         public async Task<IActionResult> Index(
-             string? q,
-             int? categoriaId,
-             bool? emPromocao,
-             string? sort = "nome",
-             int page = 1,
-             int pageSize = 12)
+            string? q,
+            int? categoriaId,
+            bool? emPromocao,
+            string? sort = "nome",
+            int page = 1,
+            int pageSize = 12)
         {
             // Gate de flash
             var src = TempData.Peek("FlashSource") as string;
@@ -197,7 +196,7 @@ namespace WebApplicationPods.Controllers
                     {
                         Nome = "Unidade",
                         Multiplicador = 1,
-                        PrecoTexto = "0,01",
+                        PrecoTexto = "0,00",
                         PrecoPromocionalTexto = "",
                         Estoque = 0,
                         Ativo = true
@@ -212,18 +211,12 @@ namespace WebApplicationPods.Controllers
             return View(vm);
         }
 
-        // =======================
-        // CRIAR (POST)
-        // =======================
         [Authorize(Roles = "Lojista,Admin")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Criar(ProdutoFormViewModel vm)
         {
             CarregarCategorias();
-
-            // ✅ garante sabores na volta (mesmo se vier null)
-            if (vm.Sabores == null) vm.Sabores = new();
 
             vm.Variacoes = (vm.Variacoes ?? new())
                 .Where(v => !string.IsNullOrWhiteSpace(v.Nome))
@@ -247,11 +240,7 @@ namespace WebApplicationPods.Controllers
             }
 
             if (!ModelState.IsValid)
-            {
-                // ✅ garante 1 linha pra UI
-                if (vm.Sabores.Count == 0) vm.Sabores.Add(new ProdutoFormViewModel.SaborQuantidadeRow());
                 return View(vm);
-            }
 
             var lojaId = GetLojaIdOrFail();
 
@@ -278,16 +267,13 @@ namespace WebApplicationPods.Controllers
             // ✅ SABORES (salva JSON)
             ApplySaboresFromVm(vm, produto);
 
-            // ✅ Imagem
+            // ✅ Imagem (upload)
             if (vm.ImagemUpload is { Length: > 0 })
             {
                 var erroImg = ValidateImage(vm.ImagemUpload, out var extLower);
                 if (erroImg != null)
                 {
                     ModelState.AddModelError(nameof(vm.ImagemUpload), erroImg);
-
-                    // ✅ garante 1 linha de sabores na volta
-                    if (vm.Sabores.Count == 0) vm.Sabores.Add(new ProdutoFormViewModel.SaborQuantidadeRow());
                     return View(vm);
                 }
 
@@ -324,6 +310,7 @@ namespace WebApplicationPods.Controllers
                 });
             }
 
+            // ✅ Estoque total
             produto.Estoque = produto.Variacoes
                 .Where(x => x.Ativo)
                 .Sum(x => x.Estoque * x.Multiplicador);
@@ -335,14 +322,15 @@ namespace WebApplicationPods.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-
         [Authorize(Roles = "Lojista,Admin")]
         [HttpGet]
         public IActionResult Editar(int id)
         {
+            var lojaId = GetLojaIdOrFail();
+
             var produto = _context.Produtos
                 .Include(p => p.Variacoes)
-                .FirstOrDefault(p => p.Id == id && p.Ativo);
+                .FirstOrDefault(p => p.Id == id && p.LojaId == lojaId && p.Ativo);
 
             if (produto == null)
             {
@@ -350,10 +338,12 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            CarregarCategorias();
-
-            // ✅ Sabores do banco -> VM
+            // ✅ Sabores do banco -> VM + mescla no dropdown
             produto.DeserializarSaboresQuantidades();
+            var saboresDoProduto = (produto.SaboresQuantidadesList ?? new List<ProdutoModel.SaborQuantidade>())
+                .Select(s => s.Sabor);
+
+            CarregarCategorias(saboresDoProduto);
 
             var ptbr = CultureInfo.GetCultureInfo("pt-BR");
 
@@ -410,7 +400,8 @@ namespace WebApplicationPods.Controllers
                     Multiplicador = 1,
                     PrecoTexto = "0,01",
                     PrecoPromocionalTexto = "",
-                    Estoque = 0
+                    Estoque = 0,
+                    Ativo = true
                 });
 
             // ✅ garante 1 linha pra UI se não tiver sabores
@@ -420,9 +411,6 @@ namespace WebApplicationPods.Controllers
             return View(vm);
         }
 
-        // =======================
-        // EDITAR (POST)
-        // =======================
         [Authorize(Roles = "Lojista,Admin")]
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -434,7 +422,7 @@ namespace WebApplicationPods.Controllers
 
             var produto = _context.Produtos
                 .Include(p => p.Variacoes)
-                .FirstOrDefault(p => p.Id == vm.Id.Value && p.LojaId == lojaId && p.Ativo);
+                .FirstOrDefault(p => p.Id == vm.Id.Value && p.LojaId == lojaId);
 
             if (produto == null)
             {
@@ -442,10 +430,11 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            CarregarCategorias();
-
-            // ✅ garante sabores na volta (mesmo se vier null)
-            if (vm.Sabores == null) vm.Sabores = new();
+            // ✅ carrega categorias + mescla sabores do produto pra dropdown
+            produto.DeserializarSaboresQuantidades();
+            var saboresDoProduto = (produto.SaboresQuantidadesList ?? new List<ProdutoModel.SaborQuantidade>())
+                .Select(s => s.Sabor);
+            CarregarCategorias(saboresDoProduto);
 
             vm.Variacoes = (vm.Variacoes ?? new())
                 .Where(v => !string.IsNullOrWhiteSpace(v.Nome))
@@ -469,11 +458,7 @@ namespace WebApplicationPods.Controllers
             }
 
             if (!ModelState.IsValid)
-            {
-                // ✅ garante 1 linha pra UI
-                if (vm.Sabores.Count == 0) vm.Sabores.Add(new ProdutoFormViewModel.SaborQuantidadeRow());
                 return View(vm);
-            }
 
             produto.Nome = vm.Nome;
             produto.Descricao = vm.Descricao;
@@ -492,16 +477,13 @@ namespace WebApplicationPods.Controllers
             // ✅ SABORES (salva JSON)
             ApplySaboresFromVm(vm, produto);
 
-            // ✅ Imagem
+            // ✅ Imagem (upload)
             if (vm.ImagemUpload is { Length: > 0 })
             {
                 var erroImg = ValidateImage(vm.ImagemUpload, out var extLower);
                 if (erroImg != null)
                 {
                     ModelState.AddModelError(nameof(vm.ImagemUpload), erroImg);
-
-                    // ✅ garante 1 linha de sabores na volta
-                    if (vm.Sabores.Count == 0) vm.Sabores.Add(new ProdutoFormViewModel.SaborQuantidadeRow());
                     return View(vm);
                 }
 
@@ -510,23 +492,18 @@ namespace WebApplicationPods.Controllers
 
                 if (!string.IsNullOrEmpty(produto.ImagemUrl))
                 {
-                    var oldPath = Path.Combine(
-                        _hostEnvironment.WebRootPath,
-                        produto.ImagemUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)
-                    );
-
-                    if (System.IO.File.Exists(oldPath))
-                        System.IO.File.Delete(oldPath);
+                    var oldPath = Path.Combine(_hostEnvironment.WebRootPath,
+                        produto.ImagemUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
                 }
 
                 var fileName = MakeShortFileName(produto.Nome, extLower);
                 using var fs = System.IO.File.Create(Path.Combine(uploads, fileName));
                 await vm.ImagemUpload.CopyToAsync(fs);
-
                 produto.ImagemUrl = $"/imagens/produtos/{fileName}";
             }
 
-            // ✅ Remove variações que saíram do form
+            // ✅ remove variações que saíram do form
             var idsNoForm = vm.Variacoes
                 .Where(x => x.Id.HasValue && x.Id.Value > 0)
                 .Select(x => x.Id!.Value)
@@ -536,7 +513,7 @@ namespace WebApplicationPods.Controllers
             foreach (var r in paraRemover)
                 _context.ProdutoVariacoes.Remove(r);
 
-            // ✅ Upsert variações
+            // ✅ upsert variações
             foreach (var row in vm.Variacoes)
             {
                 var preco = ParseDecimalBR(row.PrecoTexto);
@@ -572,6 +549,7 @@ namespace WebApplicationPods.Controllers
                 }
             }
 
+            // ✅ estoque total
             produto.Estoque = produto.Variacoes
                 .Where(v => v.Ativo)
                 .Sum(v => v.Estoque * v.Multiplicador);
@@ -581,7 +559,6 @@ namespace WebApplicationPods.Controllers
             FlashOk("Produto, variações e sabores atualizados!");
             return RedirectToAction(nameof(Index));
         }
-
 
         // ========= EXCLUIR (GET - tela de confirmação) =========
         [Authorize(Roles = "Lojista,Admin")]
@@ -645,7 +622,7 @@ namespace WebApplicationPods.Controllers
 
         // ========= Auxiliares =========
 
-        private void CarregarCategorias()
+        private void CarregarCategorias(IEnumerable<string>? saboresDoProduto = null)
         {
             var categorias = _categoriaRepository.ObterTodos()
                 .OrderBy(c => c.Nome)
@@ -653,8 +630,13 @@ namespace WebApplicationPods.Controllers
 
             ViewBag.Categorias = new SelectList(categorias, "Id", "Nome");
 
-            // ✅ sabores fixos só para POD/VAPE (a view decide quando mostrar)
-            ViewBag.SaboresPod = ObterTodosSabores();
+            // ✅ sabores fixos base para POD/VAPE
+            var baseSabores = ObterTodosSabores();
+
+            // ✅ no Editar: mescla sabores do produto pra não "sumir" no dropdown
+            ViewBag.SaboresPod = saboresDoProduto != null
+                ? MesclarSabores(baseSabores, saboresDoProduto)
+                : baseSabores;
         }
 
         // ✅ Centraliza salvar sabores do VM no ProdutoModel (JSON)
