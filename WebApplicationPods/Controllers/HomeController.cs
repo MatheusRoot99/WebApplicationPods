@@ -27,16 +27,18 @@ namespace WebApplicationPods.Controllers
         {
             var loja = _context.LojaConfigs
                 .AsNoTracking()
-                .FirstOrDefault(); // pode ser null
+                .FirstOrDefault();
+
+            var produtos = _produtoRepository.FiltrarProdutos(filtros);
 
             var viewModel = new ProdutoListagemViewModel
             {
-                Produtos = _produtoRepository.FiltrarProdutos(filtros),
+                Produtos = produtos,
 
                 Filtros = new FiltrosModel
                 {
                     CategoriasDisponiveis = _produtoRepository.ObterCategoriasDistintas(),
-                    SaboresDisponiveis = _produtoRepository.ObterSaboresDistintos(),
+                    SaboresDisponiveis = _produtoRepository.ObterSaboresDistintos(), // agora vem das VARIAÇÕES do POD
                     CoresDisponiveis = _produtoRepository.ObterCoresDistintas(),
 
                     Categoria = filtros.Categoria,
@@ -55,7 +57,6 @@ namespace WebApplicationPods.Controllers
 
             return View(viewModel);
         }
-
 
         public IActionResult Privacy() => View();
 

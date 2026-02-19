@@ -1,97 +1,135 @@
 ﻿/* =========================================================
-   Bottom Nav (mobile) — Pods
+   Bottom Nav (mobile) — Pods (FINAL / sem duplicidade)
    ========================================================= */
 
 :root {
-    /* altura do bottom nav */
     --mbn-height: 70px;
-    /* deslocamento opcional quando o teclado abre (definido via JS) */
     --kb-shift: 0px;
 }
 
-/* ======= NAV FIXO NO RODAPÉ DO VIEWPORT ======= */
+/* NAV */
 .mobile-bottom-nav {
-    position: fixed;
+    position: fixed !important;
     left: 0;
     right: 0;
     bottom: 0;
-    height: var(--mbn-height);
-    background: rgba(255,255,255,.97);
-    border-top: 1px solid rgba(0,0,0,.08);
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
     z-index: 1080;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 -4px 20px rgba(0,0,0,.08);
-    /* NÃO usar transform aqui (poderia quebrar o fixed em iOS) */
-    /* transform: translateY(var(--vv-inset, 0px)); */
-    will-change: transform;
+    height: var(--mbn-height);
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: var(--bg-elev);
+    border-top: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 -10px 30px rgba(0,0,0,.12);
 }
 
-    /* ======= ITENS ======= */
+    /* itens iguais (cada um ocupa 1 fatia) */
     .mobile-bottom-nav .mbn-item {
+        flex: 1 1 0;
+        min-width: 0;
         position: relative;
-        display: inline-flex;
+        display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 4px;
-        min-width: 56px;
-        padding: 8px 12px;
-        color: #6c757d;
+        justify-content: center;
+        gap: 6px;
+        padding: 8px 6px;
+        border-radius: 16px;
         text-decoration: none;
-        border-radius: 12px;
+        text-align: center;
+        color: color-mix(in srgb, var(--text) 58%, transparent);
+        transition: background .12s ease, transform .12s ease, color .12s ease;
     }
 
+        /* “caixa” fixa do ícone (isso garante alinhamento) */
         .mobile-bottom-nav .mbn-item i {
-            font-size: 20px;
-            width: 32px;
-            height: 32px;
-            display: inline-grid;
+            width: 36px;
+            height: 36px;
+            display: grid;
             place-items: center;
-            border-radius: 50%;
+            font-size: 20px;
+            line-height: 1;
+            border-radius: 999px;
         }
 
-        .mobile-bottom-nav .mbn-item.active {
-            color: #0d6efd;
+    /* label fixa e sem empurrar */
+    .mobile-bottom-nav .mbn-label {
+        font-size: 11px;
+        line-height: 1;
+        font-weight: 800;
+        opacity: .9;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }
+
+    /* ACTIVE */
+    .mobile-bottom-nav .mbn-item.active {
+        color: var(--primary);
+        background: color-mix(in srgb, var(--primary) 14%, transparent);
+    }
+
+        .mobile-bottom-nav .mbn-item.active i {
+            background: color-mix(in srgb, var(--primary) 16%, transparent);
+            color: var(--primary);
         }
 
-            .mobile-bottom-nav .mbn-item.active i {
-                background: rgba(13,110,253,.12);
-                color: #0d6efd;
-            }
+    /* toque */
+    .mobile-bottom-nav .mbn-item:active {
+        transform: translateY(1px);
+    }
 
-    /* ======= BADGE ======= */
+    /* BADGE (preso no canto do ícone, sem “tortar”) */
     .mobile-bottom-nav .mbn-badge {
         position: absolute;
-        top: 4px;
-        right: 4px;
-        transform: translate(50%,-50%);
+        top: 7px;
+        right: calc(50% - 22px); /* <- isso centraliza em relação ao ícone */
+        transform: translateX(18px);
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         background: #dc3545;
         color: #fff;
         border-radius: 999px;
         font-size: 10px;
-        font-weight: 700;
+        font-weight: 900;
         line-height: 1;
-        padding: 2px 5px;
-        min-width: 16px;
-        text-align: center;
-        box-shadow: 0 0 0 2px rgba(255,255,255,.9);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--bg-elev) 92%, transparent);
     }
 
-/* animação usada no JS */
+    /* dot (se usar) */
+    .mobile-bottom-nav .mbn-dot {
+        position: absolute;
+        top: 10px;
+        right: calc(50% - 22px);
+        transform: translateX(22px);
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--bg-elev) 92%, transparent);
+    }
+
+/* bump */
 @keyframes mbn-bump {
     0% {
-        transform: translate(50%,-50%) scale(1);
+        transform: scale(1);
     }
 
     30% {
-        transform: translate(50%,-50%) scale(1.18);
+        transform: scale(1.18);
     }
 
     100% {
-        transform: translate(50%,-50%) scale(1);
+        transform: scale(1);
     }
 }
 
@@ -99,22 +137,19 @@
     animation: mbn-bump .35s ease;
 }
 
-/* esconde item de auth quando não deve aparecer */
+/* auth (você está escondendo sempre! se quiser mostrar, remova isso) */
 .mbn-item--auth {
     display: none !important;
 }
 
-/* ======= ESCONDE NO DESKTOP ======= */
+/* esconder no desktop */
 @media (min-width: 992px) {
     .mobile-bottom-nav {
         display: none;
     }
 }
 
-/* =========================================================
-   “Respiro” do conteúdo — somente quando o BottomNav existir
-   (o <body> recebe a classe .has-bottom-nav via JS)
-   ========================================================= */
+/* respiro do conteúdo */
 .has-bottom-nav .page-content {
-    padding-bottom: calc( var(--mbn-height) + var(--kb-shift, 0px) + env(safe-area-inset-bottom) + 12px );
+    padding-bottom: calc(var(--mbn-height) + var(--kb-shift, 0px) + env(safe-area-inset-bottom) + 12px);
 }

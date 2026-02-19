@@ -1,0 +1,155 @@
+﻿@using WebApplicationPods.Enum
+@model WebApplicationPods.Models.ProdutoFormSimplesViewModel
+
+@{
+    var isPod = Model.TipoProduto == ProdutoTipo.PodVape;
+    var isBebida = Model.TipoProduto == ProdutoTipo.BebidaAlcoolica;
+
+    // Action correta baseado na tela
+    var action = isPod ? "CriarPod" : (isBebida ? "CriarBebida" : "CriarPadrao");
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<form asp-action="@action" method="post" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
+
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <input type="hidden" asp-for="TipoProduto" />
+
+    <div class="mb-3">
+        <label class="form-label">Nome *</label>
+        <input asp-for="Nome" class="form-control" />
+        <span asp-validation-for="Nome" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Descrição</label>
+        <textarea asp-for="Descricao" class="form-control" rows="3"></textarea>
+        <span asp-validation-for="Descricao" class="text-danger"></span>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Categoria *</label>
+            <select asp-for="CategoriaId" asp-items="ViewBag.Categorias" class="form-select">
+                <option value="">Selecione...</option>
+            </select>
+            <span asp-validation-for="CategoriaId" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Marca</label>
+            <input asp-for="Marca" class="form-control" />
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">SKU</label>
+            <input asp-for="SKU" class="form-control" />
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Código de Barras</label>
+            <input asp-for="CodigoBarras" class="form-control" />
+        </div>
+    </div>
+
+    @* POD extras *@
+    @if (isPod)
+    {
+        <hr />
+        <h5>Informações do POD</h5>
+
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Puffs</label>
+                <input asp-for="PodPuffs" type="number" min="0" class="form-control" />
+                <span asp-validation-for="PodPuffs" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Bateria</label>
+                <input asp-for="PodCapacidadeBateria" class="form-control" placeholder="Ex: 600 mAh" />
+                <span asp-validation-for="PodCapacidadeBateria" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Tipo</label>
+                <input asp-for="PodTipo" class="form-control" placeholder="Descartável/Recarregável" />
+                <span asp-validation-for="PodTipo" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Sabor *</label>
+            <input asp-for="Sabor" class="form-control" />
+            <span asp-validation-for="Sabor" class="text-danger"></span>
+        </div>
+    }
+
+    <hr />
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Preço *</label>
+            <input asp-for="Preco" class="form-control" />
+            <span asp-validation-for="Preco" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Promo</label>
+            <input asp-for="PrecoPromocional" class="form-control" />
+            <span asp-validation-for="PrecoPromocional" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Estoque</label>
+            <input asp-for="Estoque" type="number" min="0" class="form-control" />
+            <span asp-validation-for="Estoque" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Imagem</label>
+        <input asp-for="ImagemUpload" type="file" class="form-control" />
+        <span asp-validation-for="ImagemUpload" class="text-danger"></span>
+    </div>
+
+    <hr />
+    <div class="form-check mb-2">
+        <input asp-for="Ativo" class="form-check-input" />
+        <label class="form-check-label">Ativo</label>
+    </div>
+
+    <div class="form-check mb-2">
+        <input asp-for="MaisVendido" class="form-check-input" />
+        <label class="form-check-label">Mais vendido</label>
+    </div>
+
+    <div class="form-check mb-3">
+        <input asp-for="RequerMaioridade"
+               class="form-check-input"
+               disabled="@(isPod || isBebida)" />
+
+        <input type="hidden" asp-for="RequerMaioridade" />
+        <label class="form-check-label">Requer maioridade</label>
+    </div>
+
+
+    <div class="d-flex gap-2">
+        <button type="submit" name="submit" value="save" class="btn btn-primary">
+            Salvar
+        </button>
+
+        <button type="submit" name="submit" value="save_new" class="btn btn-success">
+            Salvar e adicionar novo
+        </button>
+
+        <a asp-action="Index" class="btn btn-secondary">
+            Cancelar
+        </a>
+    </div>
+</form>
+
+<partial name="_ValidationScriptsPartial" />

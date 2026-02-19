@@ -1,5 +1,5 @@
 ﻿@* Views/Produto/Editar.cshtml *@
-@model WebApplicationPods.Models.ProdutoFormViewModel
+@model WebApplicationPods.Models.ProdutoFormSimplesViewModel
 @{
     ViewData["Title"] = "Editar Produto";
 }
@@ -12,5 +12,5 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script src="~/js/produto-form.js" asp-append-version="true"></script>
+    @* JS não é mais necessário *@
 }

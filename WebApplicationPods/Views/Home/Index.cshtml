@@ -9,7 +9,7 @@
 
 <div class="home-index">
 
-    <!-- Topbar (filtros/ordenação estilo mobile app) -->
+    <!-- Topbar -->
     <div class="topbar container-fluid">
         <div class="topbar-inner container px-0">
             <button class="topbar-btn" type="button"
@@ -21,7 +21,7 @@
 
             <div class="topbar-select">
                 <label for="Filtros_OrdenarPor" class="form-label m-0">Ordenar por</label>
-                <select id="Filtros_OrdenarPor" name="Filtros.OrdenarPor" class="form-select form-select-sm">
+                <select id="Filtros_OrdenarPor" name="OrdenarPor" class="form-select form-select-sm">
                     @foreach (var kv in Model.Filtros.OpcoesOrdenacao)
                     {
                         <option value="@kv.Key" selected="@(Model.Filtros.OrdenarPor == kv.Key)">
@@ -39,46 +39,53 @@
             <h1 class="display-6 fw-bold mb-1">
                 Bem-vindo à @(Model.Loja?.Nome ?? "nossa loja")
             </h1>
-            <p class="lead fs-6 mb-0">Os melhores pods eletrônicos do mercado!</p>
+            <p class="lead fs-6 mb-0">Os melhores produtos do mercado!</p>
         </div>
     </section>
 
-
-    <!-- Filtros (collapse no mobile) -->
+    <!-- Filtros -->
     <div class="container mb-3">
         <div class="collapse d-lg-block" id="filtersCollapse">
             <form asp-action="Index" method="get" class="filters-card card border-0 p-3 mb-3" id="filtersForm">
                 <div class="row g-3">
+
+                    <!-- Busca -->
+                    <div class="col-12 col-lg-4">
+                        <label class="form-label">Buscar</label>
+                        <input name="Termo" value="@(Model.Filtros.Termo ?? "")"
+                               class="form-control" placeholder="Ex: Heineken, Pod, Whisky..." />
+                    </div>
+
+                    <!-- Categoria -->
                     <div class="col-12 col-md-6 col-lg-3">
-                        <label asp-for="Filtros.Categoria" class="form-label">Categoria</label>
-                        <select asp-for="Filtros.Categoria" class="form-select"
+                        <label class="form-label">Categoria</label>
+                        <select name="Categoria" class="form-select"
                                 asp-items="@(new SelectList(Model.Filtros.CategoriasDisponiveis))">
                             <option value="">Todas Categorias</option>
                         </select>
                     </div>
 
-                    <div class="col-12 col-md-6 col-lg-3">
-                        <label asp-for="Filtros.Sabor" class="form-label">Sabor</label>
-                        <select asp-for="Filtros.Sabor" class="form-select"
-                                asp-items="@(new SelectList(Model.Filtros.SaboresDisponiveis))">
-                            <option value="">Todos Sabores</option>
-                        </select>
+                    <div class="col-6 col-lg-2">
+                        <label class="form-label">Preço mín</label>
+                        <input name="PrecoMin" value="@(Model.Filtros.PrecoMin?.ToString() ?? "")"
+                               type="number" step="0.01" min="0" class="form-control" placeholder="R$">
                     </div>
 
                     <div class="col-6 col-lg-2">
-                        <label asp-for="Filtros.PrecoMin" class="form-label">Preço mín</label>
-                        <input asp-for="Filtros.PrecoMin" type="number" step="0.01" min="0" class="form-control" placeholder="R$">
+                        <label class="form-label">Preço máx</label>
+                        <input name="PrecoMax" value="@(Model.Filtros.PrecoMax?.ToString() ?? "")"
+                               type="number" step="0.01" min="0" class="form-control" placeholder="R$">
                     </div>
 
-                    <div class="col-6 col-lg-2">
-                        <label asp-for="Filtros.PrecoMax" class="form-label">Preço máx</label>
-                        <input asp-for="Filtros.PrecoMax" type="number" step="0.01" min="0" class="form-control" placeholder="R$">
-                    </div>
-
-                    <div class="col-12 col-lg-2 d-none d-lg-block">
-                        <label asp-for="Filtros.OrdenarPor" class="form-label">Ordenar por</label>
-                        <select asp-for="Filtros.OrdenarPor" class="form-select"
-                                asp-items="@(new SelectList(Model.Filtros.OpcoesOrdenacao, "Key", "Value"))">
+                    <div class="col-12 col-lg-1 d-none d-lg-block">
+                        <label class="form-label">Ord.</label>
+                        <select name="OrdenarPor" class="form-select">
+                            @foreach (var kv in Model.Filtros.OpcoesOrdenacao)
+                            {
+                                <option value="@kv.Key" selected="@(Model.Filtros.OrdenarPor == kv.Key)">
+                                    @kv.Value
+                                </option>
+                            }
                         </select>
                     </div>
 
@@ -86,14 +93,17 @@
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                             <div>
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" asp-for="Filtros.ApenasPromocoes" id="ckPromo">
+                                    <input class="form-check-input" type="checkbox" name="ApenasPromocoes"
+                                           value="true" @(Model.Filtros.ApenasPromocoes ? "checked" : "") id="ckPromo">
                                     <label class="form-check-label" for="ckPromo">Promoções</label>
                                 </div>
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" asp-for="Filtros.ApenasEstoque" id="ckEstoque">
+                                    <input class="form-check-input" type="checkbox" name="ApenasEstoque"
+                                           value="true" @(Model.Filtros.ApenasEstoque ? "checked" : "") id="ckEstoque">
                                     <label class="form-check-label" for="ckEstoque">Em estoque</label>
                                 </div>
                             </div>
+
                             <div class="d-flex gap-2">
                                 <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-filter me-1"></i> Filtrar
@@ -110,17 +120,22 @@
         </div>
     </div>
 
-    <!-- Grade de Produtos (2 colunas no mobile) -->
+    <!-- Grade de Produtos -->
     <div class="container mb-4">
         @if (Model.Produtos != null && Model.Produtos.Any())
         {
             <div class="product-grid">
                 @foreach (var produto in Model.Produtos)
                 {
-                    var temPromo = produto.EmPromocao && produto.PrecoPromocional.HasValue;
-                    var precoBase = temPromo ? produto.PrecoPromocional!.Value : produto.Preco;
+                    var promoOk = produto.EmPromocao
+                    && produto.PrecoPromocional.HasValue
+                    && produto.PrecoPromocional.Value > 0
+                    && produto.PrecoPromocional.Value < produto.Preco;
+
+                    var precoAtual = promoOk ? produto.PrecoPromocional!.Value : produto.Preco;
+
                     <article class="produto-card h-100">
-                        <!-- Capa (clique leva aos detalhes) -->
+
                         <a asp-controller="Produto" asp-action="DetalhesProdutos" asp-route-id="@produto.Id"
                            class="thumb-link" aria-label="@produto.Nome">
                             <div class="product-thumb">
@@ -139,14 +154,13 @@
                                 {
                                     <span class="badge badge-top-right bg-danger">ESGOTADO</span>
                                 }
-                                else if (produto.EmPromocao)
+                                else if (promoOk)
                                 {
                                     <span class="badge badge-top-right bg-success">PROMOÇÃO</span>
                                 }
                             </div>
                         </a>
 
-                        <!-- Conteúdo -->
                         <div class="card-body">
                             <a asp-controller="Produto" asp-action="DetalhesProdutos" asp-route-id="@produto.Id"
                                class="stretched-link text-decoration-none">
@@ -160,18 +174,18 @@
                             </div>
 
                             <div class="price-line">
-                                @if (temPromo)
+                                @if (promoOk)
                                 {
                                     <span class="old">@produto.Preco.ToString("C")</span>
-                                    <span class="current">@precoBase.ToString("C")</span>
+                                    <span class="current">@precoAtual.ToString("C")</span>
                                 }
                                 else
                                 {
-                                    <span class="current">@precoBase.ToString("C")</span>
+                                    <span class="current">@precoAtual.ToString("C")</span>
                                 }
                             </div>
                         </div>
-                        <!-- Ação rápida (POST direto p/ AdicionarItem) -->
+
                         <form asp-controller="Carrinho" asp-action="AdicionarItem" method="post" class="quick-add-form">
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="produtoId" value="@produto.Id" />
@@ -185,16 +199,12 @@
                                     aria-disabled="@(produto.Estoque <= 0)"
                                     title="Adicionar ao carrinho"
                                     aria-label="Adicionar @produto.Nome ao carrinho">
-
-                                <!-- ícone normal -->
                                 <i class="fa-solid fa-cart-plus qa-icon" aria-hidden="true"></i>
-                                <!-- spinner (fica escondido até loading) -->
                                 <i class="fa-solid fa-spinner fa-spin qa-spin" aria-hidden="true"></i>
-                                <!-- check (fica escondido até sucesso) -->
                                 <i class="fa-solid fa-check qa-done" aria-hidden="true"></i>
-
                             </button>
                         </form>
+
                     </article>
                 }
             </div>
@@ -212,25 +222,26 @@
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-          // ---- Ordenação & filtros (mantidos) ----
           const topbarSelect = document.getElementById('Filtros_OrdenarPor');
           const form = document.getElementById('filtersForm');
 
           if (topbarSelect && form) {
             topbarSelect.addEventListener('change', function () {
-              const formSelect = form.querySelector('[name="Filtros.OrdenarPor"]');
+              const formSelect = form.querySelector('[name="OrdenarPor"]');
               if (formSelect) formSelect.value = this.value;
               form.submit();
             });
           }
+
           if (form) {
-            const filterElements = form.querySelectorAll('select, input[type="number"], input[type="checkbox"]');
+            const filterElements = form.querySelectorAll('select, input[type="number"], input[type="checkbox"], input[name="Termo"]');
             filterElements.forEach(el => {
               if (el.id !== 'Filtros_OrdenarPor') {
                 el.addEventListener('change', () => form.submit());
               }
             });
           }
+
           const filtersCollapse = document.getElementById('filtersCollapse');
           if (filtersCollapse) {
             const syncCollapse = () => {
@@ -240,102 +251,6 @@
             syncCollapse();
             window.addEventListener('resize', syncCollapse);
           }
-
-          // ---- QUICK ADD via AJAX ----
-          function getAntiForgeryTokenFromForm(f) {
-            return f.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
-          }
-
-          async function postQuickAdd(formEl) {
-            const url = formEl.getAttribute('action') || '/Carrinho/AdicionarItem';
-            const token = getAntiForgeryTokenFromForm(formEl);
-
-            const body = new URLSearchParams(new FormData(formEl));
-            const resp = await fetch(url, {
-              method: 'POST',
-              headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'RequestVerificationToken': token
-              },
-              body,
-              credentials: 'same-origin'
-            });
-            if (!resp.ok) throw new Error('Falha na requisição');
-            return await resp.json(); // { ok, count, nome } | { ok:false, error }
-          }
-
-          // SUBMIT dos botões de adicionar rápido
-          document.querySelectorAll('.quick-add-form').forEach(formEl => {
-            formEl.addEventListener('submit', async function (e) {
-              e.preventDefault();
-              const btn = formEl.querySelector('.quick-add');
-              if (!btn || btn.classList.contains('disabled')) return;
-
-              // estado: loading
-              btn.classList.add('is-loading');
-              btn.setAttribute('aria-busy', 'true');
-              btn.disabled = true;
-
-              // micro-toast preso ao card
-              let tip = formEl.parentElement.querySelector('.quick-toast');
-              if (!tip) {
-                tip = document.createElement('div');
-                tip.className = 'quick-toast';
-                formEl.parentElement.appendChild(tip);
-              }
-
-              try {
-                const result = await postQuickAdd(formEl);
-                if (result.ok) {
-                  if (typeof result.count !== 'undefined' && window.updateCartBadges) {
-                    window.updateCartBadges(result.count);
-                  } else {
-                    const qtd = parseInt(formEl.querySelector('input[name="quantidade"]')?.value || '1', 10) || 1;
-                    window.bumpCartCount && window.bumpCartCount(qtd, true);
-                  }
-                  window.cartMarkUnseen && window.cartMarkUnseen();
-
-                  tip.textContent = 'Adicionado';
-                  tip.classList.add('show');
-
-                  btn.classList.remove('is-loading');
-                  btn.classList.add('is-done');
-
-                  window.showToast && window.showToast(`${result.nome || 'Item'} adicionado ao carrinho!`, true);
-
-                  setTimeout(() => {
-                    tip.classList.remove('show');
-                    btn.classList.remove('is-done');
-                  }, 900);
-                } else {
-                  tip.textContent = 'Erro';
-                  tip.classList.add('show');
-                  setTimeout(() => tip.classList.remove('show'), 900);
-                  window.showToast && window.showToast(result.error || 'Não foi possível adicionar ao carrinho.', false);
-                }
-              } catch {
-                tip.textContent = 'Falha de rede';
-                tip.classList.add('show');
-                setTimeout(() => tip.classList.remove('show'), 1100);
-                window.showToast && window.showToast('Erro de rede ao adicionar ao carrinho.', false);
-              } finally {
-                btn.classList.remove('is-loading');
-                btn.removeAttribute('aria-busy');
-                btn.disabled = false;
-              }
-            });
-          });
-
-          // ---- sincroniza contador ao abrir a Home ----
-          (async function syncCountOnLoad(){
-            try {
-              const r = await fetch('/Carrinho/Count', { cache: 'no-store', credentials: 'same-origin' });
-              if (!r.ok) return;
-              const data = await r.json();
-              if (typeof data.count !== 'undefined' && window.updateCartBadges) window.updateCartBadges(data.count);
-            } catch {}
-          })();
         });
     </script>
 }
-

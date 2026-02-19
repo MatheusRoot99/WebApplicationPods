@@ -74,6 +74,25 @@
     };
 
     /* =========================
+       ✅ NOVO: desabilita inputs de seções escondidas
+       (evita ModelState quebrar por campos duplicados/invisíveis)
+       ========================= */
+    const setSectionEnabled = (rootEl, enabled) => {
+        if (!rootEl) return;
+
+        const nodes = rootEl.querySelectorAll('input, select, textarea, button');
+        nodes.forEach(el => {
+            // NÃO desabilitar botões principais do form geral
+            // aqui só entram botões dentro da própria seção
+            if (enabled) {
+                el.disabled = false;
+            } else {
+                el.disabled = true;
+            }
+        });
+    };
+
+    /* =========================
        Money mask (pt-BR)
        ========================= */
     const onlyDigits = (s) => (s || '').replace(/\D/g, '');
@@ -146,19 +165,25 @@
             if (maioridadeCard) maioridadeCard.style.opacity = forced ? '0.92' : '1';
         }
 
-        // ===== SHOW/HIDE por tipo =====
+        // ===== SHOW/HIDE + ✅ ENABLE/DISABLE por tipo =====
         const pod = isPodType();
 
+        // POD sections
         if (podInfoSection) podInfoSection.style.display = pod ? '' : 'none';
         if (podSection) podSection.style.display = pod ? '' : 'none';
+        setSectionEnabled(podInfoSection, pod);
+        setSectionEnabled(podSection, pod);
 
-        // Sabores e Variações antigos (Padrão/Bebida)
+        // Padrão/Bebida sections
         if (saboresSection) saboresSection.style.display = pod ? 'none' : '';
-        if (variationsList && variationsList.closest('.pf2-card')) {
-            variationsList.closest('.pf2-card').style.display = pod ? 'none' : '';
-        }
+        // O card de variações padrão é o ".pf2-card" que envolve variationsList
+        const variacoesCard = (variationsList && variationsList.closest('.pf2-card')) ? variationsList.closest('.pf2-card') : null;
+        if (variacoesCard) variacoesCard.style.display = pod ? 'none' : '';
 
-        // recalcula estoque total
+        setSectionEnabled(saboresSection, !pod);
+        setSectionEnabled(variacoesCard, !pod);
+
+        // recalcula
         calcTotalStock();
         updateProgress();
     };
@@ -310,7 +335,6 @@
     };
 
     if (podList) {
-        // money mask nos existentes
         podList.querySelectorAll('.pod-price').forEach(wireMoney);
         podList.querySelectorAll('.pod-promo').forEach(wireMoney);
 
@@ -382,7 +406,6 @@
             const row = createPodRow(idx);
             if (!row) return;
 
-            // wire money
             row.querySelectorAll('.pod-price').forEach(wireMoney);
             row.querySelectorAll('.pod-promo').forEach(wireMoney);
 
@@ -467,8 +490,6 @@
 
     /* =========================
        Estoque total
-       - POD: soma estoque das linhas ativas
-       - Outros: soma (estoque * mult) das variações ativas
        ========================= */
     const calcTotalStock = () => {
         let total = 0;
@@ -513,7 +534,6 @@
         let hasValidVar = true;
 
         if (isPodType()) {
-            // pelo menos 1 linha com sabor e preço
             hasValidVar = podList
                 ? Array.from(podList.querySelectorAll('.pod-row')).some(r => {
                     const sabor = (r.querySelector('.pod-name')?.value || '').trim();
@@ -536,7 +556,7 @@
         if (nomeOk) nomeOk.style.display = nomeOkNow ? 'block' : 'none';
     };
 
-    // ===== Eventos das variações (padrão/bebida) - mantém seu fluxo
+    // ===== Eventos das variações (padrão/bebida)
     if (variationsList) {
         variationsList.querySelectorAll('.v-price').forEach(wireMoney);
         variationsList.querySelectorAll('.v-promo').forEach(wireMoney);
@@ -717,7 +737,7 @@
     if (nome) nome.addEventListener('input', () => { updateProgress(); });
     if (categoria) categoria.addEventListener('change', () => { updateProgress(); });
 
-    // ===== Submit: normaliza money (POD e variações)
+    // ===== Submit: normaliza money
     form.addEventListener('submit', (e) => {
         let ok = true;
 
