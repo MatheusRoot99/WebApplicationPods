@@ -565,3 +565,21 @@ html[data-theme="dark"] #mobileMenu .btn-close {
 #mobileMenu.offcanvas {
     padding-bottom: calc(var(--mbn-height) + env(safe-area-inset-bottom));
 }
+#mobileMenu.offcanvas {
+    background: var(--sidebar-bg) !important;
+    color: var(--sidebar-text) !important;
+    border-right: 1px solid var(--sidebar-border) !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+#mobileMenu .list-group-item {
+    background: transparent !important;
+    color: var(--sidebar-text) !important;
+    border: 1px solid color-mix(in srgb, var(--sidebar-border) 60%, transparent) !important;
+    border-radius: 14px !important;
+}
+
+    #mobileMenu .list-group-item:hover {
+        background: var(--sidebar-hover) !important;
+    }

@@ -1,93 +1,54 @@
-﻿/* ===========================
-   Produtos - Index (Figma-like) - Tema Dark/Light
-   Arquivo: wwwroot/css/produtos-index.css
-   =========================== */
+﻿/* =========================================================
+   Produtos - Index (ALINHADO) — usa tokens do site.css
+   Depende de: --bg, --bg-elev, --bg-elev-2, --text, --muted,
+              --border, --primary, --primary-dark, --primary-grad,
+              --shadow-1, --radius-lg
+   ========================================================= */
 
-:root {
-    --px-page: 16px;
-    --radius-lg: 18px;
-    --radius-md: 14px;
-    --radius-sm: 12px;
-    /* defaults seguros (caso não exista data-theme) */
-    --bg-1: #eff6ff;
-    --bg-2: #ffffff;
-    --bg-3: #faf5ff;
-    --card: #ffffff;
-    --stroke: rgba(15, 23, 42, .10);
-    --stroke-2: rgba(15, 23, 42, .08);
-    --text: rgba(15, 23, 42, .92);
-    --muted: rgba(15, 23, 42, .60);
-    --muted-light: rgba(15, 23, 42, .35);
-    --blue: #2563eb;
-    --purple: #7c3aed;
-    --success: #16a34a;
-    --warn: #f59e0b;
-    --danger: #ef4444;
-    --shadow: 0 18px 45px rgba(2, 6, 23, .08);
-    --shadow-2: 0 10px 25px rgba(2, 6, 23, .08);
-    --shadow-3: 0 4px 12px rgba(0, 0, 0, 0.05);
-    --gradient-primary: linear-gradient(90deg, var(--blue), var(--purple));
-}
-
-    /* Tema Light */
-    :root[data-theme="light"] {
-        --bg-1: #eff6ff;
-        --bg-2: #ffffff;
-        --bg-3: #faf5ff;
-        --card: #ffffff;
-        --stroke: rgba(15, 23, 42, .10);
-        --stroke-2: rgba(15, 23, 42, .08);
-        --text: rgba(15, 23, 42, .92);
-        --muted: rgba(15, 23, 42, .60);
-        --muted-light: rgba(15, 23, 42, .35);
-        --blue: #2563eb;
-        --purple: #7c3aed;
-        --success: #16a34a;
-        --warn: #f59e0b;
-        --danger: #ef4444;
-        --shadow: 0 18px 45px rgba(2, 6, 23, .08);
-        --shadow-2: 0 10px 25px rgba(2, 6, 23, .08);
-        --shadow-3: 0 4px 12px rgba(0, 0, 0, 0.05);
-        --gradient-primary: linear-gradient(90deg, var(--blue), var(--purple));
-    }
-
-    /* Tema Dark */
-    :root[data-theme="dark"] {
-        --bg-1: #0f172a;
-        --bg-2: #1e293b;
-        --bg-3: #334155;
-        --card: #1e293b;
-        --stroke: rgba(255, 255, 255, .10);
-        --stroke-2: rgba(255, 255, 255, .08);
-        --text: rgba(255, 255, 255, .92);
-        --muted: rgba(255, 255, 255, .60);
-        --muted-light: rgba(255, 255, 255, .35);
-        --blue: #60a5fa;
-        --purple: #a78bfa;
-        --success: #4ade80;
-        --warn: #fbbf24;
-        --danger: #f87171;
-        --shadow: 0 18px 45px rgba(0, 0, 0, .25);
-        --shadow-2: 0 10px 25px rgba(0, 0, 0, .20);
-        --shadow-3: 0 4px 12px rgba(0, 0, 0, .15);
-        --gradient-primary: linear-gradient(90deg, var(--blue), var(--purple));
-    }
-
-/* ===== Page Container ===== */
 .produtos-page {
     min-height: 100vh;
     width: 100%;
-    background: radial-gradient(1200px 600px at 15% 0%, var(--bg-1), transparent 55%), radial-gradient(1200px 600px at 85% 0%, var(--bg-3), transparent 55%), linear-gradient(180deg, var(--bg-1), var(--bg-2) 40%, var(--bg-3));
     color: var(--text);
-}
-.hidden {
-    display: none !important;
+    background: var(--bg);
+    overflow-x: hidden;
 }
 
-/* ===== Header gradiente ===== */
+    /* “hero” suave por trás (usa o token global) */
+    .produtos-page::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        background: var(--page-hero);
+        pointer-events: none;
+    }
+
+/* container full alinhado */
+.container-full-lg {
+    max-width: 1200px;
+}
+
+.produtos-page .container-full-lg,
+.produtos-page .container.container-full-lg {
+    max-width: none !important;
+    width: 100% !important;
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+}
+
+@media (min-width: 1200px) {
+    .produtos-page .container-full-lg {
+        padding-left: 28px !important;
+        padding-right: 28px !important;
+    }
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
 .gradient-header {
-    background: var(--gradient-primary);
-    border-bottom: 1px solid var(--stroke);
+    background: var(--primary-grad);
+    border-bottom: 1px solid color-mix(in srgb, #000 12%, transparent);
 }
 
     .gradient-header .display-6 {
@@ -96,63 +57,74 @@
 
     .gradient-header .btn {
         border: 0;
-        background: rgba(255, 255, 255, 0.95);
-        color: var(--blue);
-        transition: all 0.2s ease;
+        border-radius: 12px;
+        font-weight: 900;
+        background: rgba(255,255,255,.92);
+        color: color-mix(in srgb, var(--text) 90%, #000);
+        transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
     }
 
         .gradient-header .btn:hover {
             background: #fff;
             transform: translateY(-1px);
-            box-shadow: var(--shadow-3);
+            box-shadow: 0 10px 20px rgba(0,0,0,.10);
         }
 
-        .gradient-header .btn i {
-            font-size: 1.05rem;
-        }
-
-/* ===== Containers ===== */
-.container-full-lg {
-    max-width: 1200px;
+/* seu botão roxo (btn-purple) */
+.btn-purple {
+    background: rgba(255,255,255,.92);
+    color: #6a11cb;
+    border: 0;
+    border-radius: 12px;
+    font-weight: 900;
 }
 
-/* ===== Stats ===== */
+    .btn-purple:hover {
+        background: #fff;
+        transform: translateY(-1px);
+        box-shadow: 0 10px 20px rgba(0,0,0,.10);
+    }
+
+/* =========================================================
+   STATS
+   ========================================================= */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(1, minmax(0, 1fr));
+    grid-template-columns: repeat(1,minmax(0,1fr));
     gap: 14px;
     margin-bottom: 18px;
 }
 
 @media (min-width: 768px) {
     .stats-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(4,minmax(0,1fr));
     }
 }
 
 .stats-card {
-    background: var(--card);
-    border: 1px solid var(--stroke-2);
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-2);
-    padding: 18px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: var(--shadow-1);
+    padding: 16px 16px;
+    transition: transform .12s ease, box-shadow .12s ease;
 }
 
     .stats-card:hover {
         transform: translateY(-2px);
-        box-shadow: var(--shadow);
+        box-shadow: 0 18px 45px rgba(0,0,0,.10);
     }
 
     .stats-card .label {
         font-size: .86rem;
         color: var(--muted);
         margin-bottom: 6px;
+        font-weight: 800;
     }
 
     .stats-card .value {
         font-size: 2rem;
-        font-weight: 800;
+        font-weight: 1000;
         line-height: 1;
         letter-spacing: -0.02em;
     }
@@ -163,254 +135,165 @@
         border-radius: 999px;
         display: grid;
         place-items: center;
-        border: 1px solid var(--stroke);
+        border: 1px solid var(--border);
+        background: color-mix(in srgb, var(--primary) 10%, transparent);
+        color: var(--primary);
     }
 
-        .stats-card .icon i {
-            font-size: 1.05rem;
-        }
-
-    /* Stats card colors */
-    .stats-card.total .icon {
-        background: rgba(37, 99, 235, .12);
-        color: var(--blue);
-    }
-
-    .stats-card.total .value {
-        color: var(--text);
-    }
-
+    /* variações de cor (mantém coerência no dark) */
     .stats-card.instock .icon {
-        background: rgba(22, 163, 74, .12);
-        color: var(--success);
-    }
-
-    .stats-card.instock .value {
-        color: var(--success);
+        background: color-mix(in srgb, #22c55e 16%, transparent);
+        color: #22c55e;
     }
 
     .stats-card.low .icon {
-        background: rgba(245, 158, 11, .14);
-        color: var(--warn);
-    }
-
-    .stats-card.low .value {
-        color: var(--warn);
+        background: color-mix(in srgb, #f59e0b 18%, transparent);
+        color: #f59e0b;
     }
 
     .stats-card.active .icon {
-        background: rgba(37, 99, 235, .12);
-        color: var(--blue);
+        background: color-mix(in srgb, var(--primary) 14%, transparent);
+        color: var(--primary);
     }
 
-    .stats-card.active .value {
-        color: var(--blue);
-    }
-
-/* Tema dark adjustments (mantém contraste) */
-:root[data-theme="dark"] .stats-card.total .icon {
-    background: rgba(96, 165, 250, .15);
-}
-
-:root[data-theme="dark"] .stats-card.instock .icon {
-    background: rgba(74, 222, 128, .15);
-}
-
-:root[data-theme="dark"] .stats-card.low .icon {
-    background: rgba(251, 191, 36, .15);
-}
-
-:root[data-theme="dark"] .stats-card.active .icon {
-    background: rgba(96, 165, 250, .15);
-}
-
-/* ===== Card barra de filtros ===== */
+/* =========================================================
+   FILTROS / SEARCH / TOGGLE
+   ========================================================= */
 .filters-card {
-    background: var(--card);
-    border: 1px solid var(--stroke-2);
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-2);
-    padding: 16px;
+    box-shadow: var(--shadow-1);
+    padding: 14px;
     margin-bottom: 18px;
 }
 
+/* search “pill” */
 .search-box {
     overflow: hidden;
     border-radius: 999px;
-    border: 1px solid var(--stroke);
-    background: var(--card);
+    border: 1px solid var(--border);
+    background: var(--bg-elev);
 }
 
     .search-box .input-group-text {
-        background: var(--card);
+        background: transparent !important;
         color: var(--muted);
-        border: none;
+        border: 0 !important;
     }
 
-/* ✅ remove bg-white do seu HTML no dark */
-:root[data-theme="dark"] .search-box .input-group-text.bg-white {
-    background: var(--card) !important;
-}
-
-.search-box input {
-    height: 46px;
-    font-size: .98rem;
-    background: var(--card);
-    color: var(--text);
-    border: none;
-}
-
-    .search-box input:focus {
-        background: var(--card);
-        color: var(--text);
-        box-shadow: none;
+    .search-box input.form-control {
+        height: 46px;
+        background: transparent !important;
+        color: var(--text) !important;
+        border: 0 !important;
     }
 
-    .search-box input::placeholder {
-        color: var(--muted-light);
-    }
+        .search-box input.form-control::placeholder {
+            color: color-mix(in srgb, var(--muted) 80%, transparent);
+        }
 
-/* ===== Pills filtros ===== */
+        .search-box input.form-control:focus {
+            box-shadow: none !important;
+        }
+
+/* pills filtros */
 .filter-btn {
     border-radius: 999px !important;
-    border: 1px solid rgba(37, 99, 235, .18);
-    padding: 10px 14px;
-    font-weight: 700;
-    color: rgba(37, 99, 235, .95);
-    background: rgba(37, 99, 235, .06);
-    transition: all 0.2s ease;
+    border: 1px solid color-mix(in srgb, var(--primary) 28%, transparent) !important;
+    padding: 9px 12px;
+    font-weight: 900;
+    color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 8%, transparent);
+    transition: transform .12s ease, background .12s ease, color .12s ease;
 }
 
     .filter-btn:hover {
-        background: rgba(37, 99, 235, .10);
+        background: color-mix(in srgb, var(--primary) 12%, transparent);
     }
 
     .filter-btn.active {
-        background: var(--blue);
-        border-color: var(--blue);
+        background: var(--primary);
+        border-color: var(--primary) !important;
         color: #fff;
-        box-shadow: 0 10px 18px rgba(37, 99, 235, .25);
+        box-shadow: 0 10px 18px color-mix(in srgb, var(--primary) 28%, transparent);
     }
 
-/* Tema dark para filtros */
-:root[data-theme="dark"] .filter-btn {
-    border: 1px solid rgba(96, 165, 250, .30);
-    color: rgba(96, 165, 250, .95);
-    background: rgba(96, 165, 250, .08);
-}
-
-    :root[data-theme="dark"] .filter-btn:hover {
-        background: rgba(96, 165, 250, .12);
-    }
-
-    :root[data-theme="dark"] .filter-btn.active {
-        background: var(--blue);
-        border-color: var(--blue);
-        color: #1e293b;
-        box-shadow: 0 10px 18px rgba(96, 165, 250, .25);
-    }
-
-/* ===== Toggle view (grade/tabela) ===== */
+/* toggle view */
 .view-toggle {
-    background: rgba(15, 23, 42, .06);
+    background: color-mix(in srgb, var(--text) 6%, transparent);
     border-radius: 12px;
     padding: 4px;
     display: inline-flex;
     gap: 4px;
 }
 
-:root[data-theme="dark"] .view-toggle {
-    background: rgba(255, 255, 255, .06);
-}
-
-.view-toggle .view-btn {
-    border: 0;
-    background: transparent;
-    border-radius: 10px;
-    width: 42px;
-    height: 38px;
-    display: grid;
-    place-items: center;
-    color: var(--muted);
-    transition: all 0.2s ease;
-}
-
-    .view-toggle .view-btn:hover {
-        color: var(--text);
+    .view-toggle .view-btn {
+        border: 0;
+        background: transparent;
+        border-radius: 10px;
+        width: 42px;
+        height: 38px;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
     }
 
-    .view-toggle .view-btn.active {
-        background: var(--card);
-        color: var(--blue);
-        box-shadow: var(--shadow-3);
-    }
+        .view-toggle .view-btn:hover {
+            color: var(--text);
+        }
 
-    .view-toggle .view-btn i {
-        font-size: 1.0rem;
-    }
+        .view-toggle .view-btn.active {
+            background: var(--bg-elev-2);
+            color: var(--primary);
+            box-shadow: 0 4px 12px rgba(0,0,0,.08);
+        }
 
-/* ===== Wrapper da tabela ===== */
+/* =========================================================
+   TABELA
+   ========================================================= */
 .table-shell {
-    background: var(--card);
-    border: 1px solid var(--stroke-2);
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-2);
+    box-shadow: var(--shadow-1);
     overflow: hidden;
 }
 
 .produtos-table {
-    background: var(--card);
+    background: var(--bg-elev-2);
     color: var(--text);
 }
 
-    /* ✅ header coerente em ambos temas */
-    .produtos-table thead th {
-        font-size: .86rem;
-        color: var(--muted);
-        padding-top: 16px !important;
-        padding-bottom: 16px !important;
-        border-bottom: 1px solid var(--stroke) !important;
-        background: var(--card) !important;
+    /* tira o table-light “fixo” e padroniza no tema */
+    .produtos-table thead,
+    .produtos-table thead.table-light {
+        background: var(--table-head) !important;
     }
 
-/* ✅ Força header no dark mesmo com table-light do bootstrap */
-:root[data-theme="dark"] .produtos-table thead.table-light,
-:root[data-theme="dark"] .produtos-table thead,
-:root[data-theme="dark"] .produtos-table thead th {
-    background: var(--card) !important;
-    color: var(--muted) !important;
-    border-bottom: 1px solid var(--stroke) !important;
-}
+        .produtos-table thead th {
+            background: var(--table-head) !important;
+            color: var(--muted) !important;
+            font-size: .86rem;
+            font-weight: 900;
+            padding-top: 16px !important;
+            padding-bottom: 16px !important;
+            border-bottom: 1px solid var(--border) !important;
+            white-space: nowrap;
+        }
 
-/* body */
-.produtos-table tbody td {
-    padding-top: 18px !important;
-    padding-bottom: 18px !important;
-    border-top: 1px solid var(--stroke-2);
-    background: var(--card);
-}
+    .produtos-table tbody td {
+        padding-top: 18px !important;
+        padding-bottom: 18px !important;
+        border-top: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+        background: transparent;
+    }
 
-.produtos-table tbody tr:hover {
-    background: rgba(37, 99, 235, .03);
-}
+    .produtos-table tbody tr:hover {
+        background: color-mix(in srgb, var(--primary) 5%, transparent);
+    }
 
-:root[data-theme="dark"] .produtos-table tbody tr:hover {
-    background: rgba(96, 165, 250, .05);
-}
-
-/* ✅ garante que bg-light/text-dark do bootstrap não “apague” no dark */
-:root[data-theme="dark"] .produtos-table .bg-light {
-    background: rgba(255,255,255,.06) !important;
-}
-
-:root[data-theme="dark"] .produtos-table .text-dark {
-    color: var(--text) !important;
-}
-
-:root[data-theme="dark"] .produtos-table .border {
-    border-color: var(--stroke) !important;
-}
-
+/* colunas */
 .col-produto {
     min-width: 280px;
 }
@@ -423,17 +306,17 @@
     min-width: 170px;
 }
 
-/* ===== Imagem produto ===== */
+/* thumb */
 .product-img-container {
     width: 56px;
     height: 56px;
     border-radius: 14px;
-    background: var(--bg-2);
-    border: 1px solid var(--stroke-2);
+    border: 1px solid var(--border);
     overflow: hidden;
     flex: 0 0 auto;
     display: grid;
     place-items: center;
+    background: var(--bg-elev);
 }
 
 .product-img {
@@ -447,30 +330,25 @@
     height: 100%;
     display: grid;
     place-items: center;
-    color: var(--muted-light);
-    background: var(--bg-2);
+    color: color-mix(in srgb, var(--muted) 80%, transparent);
 }
 
-    .product-img-placeholder i {
-        font-size: 1.1rem;
-    }
-
-/* ===== Preços ===== */
+/* preços */
 .price-old {
     color: var(--muted);
     text-decoration: line-through;
-    font-weight: 700;
+    font-weight: 800;
     font-size: .92rem;
 }
 
 .price-normal {
     color: var(--text);
-    font-weight: 800;
+    font-weight: 1000;
 }
 
 .price-new {
-    color: var(--success);
-    font-weight: 900;
+    color: #22c55e;
+    font-weight: 1000;
 }
 
 .discount-badge {
@@ -478,186 +356,116 @@
     margin-left: 8px;
     padding: 6px 10px;
     border-radius: 10px;
-    background: var(--danger);
+    background: #ef4444;
     color: #fff;
-    font-weight: 900;
+    font-weight: 1000;
     font-size: .78rem;
     line-height: 1;
 }
 
-/* ===== Estoque bar ===== */
-.progress {
-    background: var(--stroke-2);
-    border-radius: 999px;
+/* badge categoria/estoque: neutraliza bg-light/text-dark no dark */
+.produtos-table .bg-light {
+    background: color-mix(in srgb, var(--text) 6%, transparent) !important;
 }
 
-.progress-bar {
-    border-radius: 999px;
+.produtos-table .text-dark {
+    color: var(--text) !important;
 }
 
-.estoque-valor {
-    letter-spacing: -0.01em;
+.produtos-table .border {
+    border-color: var(--border) !important;
 }
 
-/* ===== Chips sabores ===== */
+/* chips */
 .flavor-chip {
-    background: rgba(124, 58, 237, .08);
-    color: rgba(124, 58, 237, .92);
-    border: 1px solid rgba(124, 58, 237, .12);
+    background: color-mix(in srgb, #8b5cf6 10%, transparent);
+    color: color-mix(in srgb, #8b5cf6 92%, #000);
+    border: 1px solid color-mix(in srgb, #8b5cf6 18%, transparent);
     border-radius: 999px;
     padding: 8px 12px;
-    font-weight: 800;
+    font-weight: 900;
     display: inline-flex;
     align-items: center;
     gap: 6px;
 }
 
-:root[data-theme="dark"] .flavor-chip {
-    background: rgba(167, 139, 250, .12);
-    color: rgba(167, 139, 250, .95);
-    border: 1px solid rgba(167, 139, 250, .20);
-}
+    .flavor-chip .chip-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #8b5cf6;
+    }
 
-.flavor-chip .chip-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 999px;
-    background: rgba(124, 58, 237, .80);
-    display: inline-block;
-}
+    .flavor-chip .chip-qty {
+        opacity: .85;
+        font-weight: 1000;
+    }
 
-:root[data-theme="dark"] .flavor-chip .chip-dot {
-    background: var(--purple);
-}
-
-.flavor-chip .chip-qty {
-    color: rgba(124, 58, 237, .70);
-    font-weight: 900;
-}
-
-:root[data-theme="dark"] .flavor-chip .chip-qty {
-    color: rgba(167, 139, 250, .80);
-}
-
-/* ===== Botões ações ===== */
+/* botões */
 .btn-action {
     border-radius: 12px !important;
     padding: 10px 14px;
-    font-weight: 800;
-    transition: all 0.2s ease;
+    font-weight: 900;
+    transition: transform .12s ease, box-shadow .12s ease;
 }
 
     .btn-action:hover {
         transform: translateY(-1px);
-        box-shadow: var(--shadow-3);
+        box-shadow: 0 10px 18px rgba(0,0,0,.10);
     }
 
-    .btn-action.btn-outline-primary {
-        border-color: rgba(37, 99, 235, .25);
-        color: var(--blue);
-    }
-
-:root[data-theme="dark"] .btn-action.btn-outline-primary {
-    border-color: rgba(96, 165, 250, .30);
-    color: var(--blue);
+/* inativo */
+.row-inativo {
+    opacity: .78;
 }
 
-.btn-action.btn-outline-primary:hover {
-    background: var(--blue);
-    border-color: var(--blue);
-    color: #fff;
+html[data-theme="dark"] .row-inativo {
+    opacity: .72;
+    background: color-mix(in srgb, #fff 3%, transparent) !important;
 }
 
-.btn-action.btn-outline-danger {
-    border-color: rgba(239, 68, 68, .25);
-    color: var(--danger);
-}
-
-:root[data-theme="dark"] .btn-action.btn-outline-danger {
-    border-color: rgba(248, 113, 113, .30);
-    color: var(--danger);
-}
-
-.btn-action.btn-outline-danger:hover {
-    background: var(--danger);
-    border-color: var(--danger);
-    color: #fff;
-}
-
-/* ===== Cards (Grade) ===== */
+/* =========================================================
+   GRADE (cards)
+   ========================================================= */
 .cards-grid {
     display: grid;
-    grid-template-columns: repeat(1, minmax(0, 1fr));
+    grid-template-columns: repeat(1,minmax(0,1fr));
     gap: 14px;
 }
 
 @media (min-width: 768px) {
     .cards-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(2,minmax(0,1fr));
     }
 }
 
 @media (min-width: 1200px) {
     .cards-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(3,minmax(0,1fr));
     }
 }
 
 .product-card {
     border-radius: var(--radius-lg);
-    border: 1px solid var(--stroke-2);
-    box-shadow: var(--shadow-2);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-1);
     overflow: hidden;
-    background: var(--card);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background: var(--bg-elev-2);
+    transition: transform .12s ease, box-shadow .12s ease;
 }
 
     .product-card:hover {
-        transform: translateY(-4px);
-        box-shadow: var(--shadow);
+        transform: translateY(-3px);
+        box-shadow: 0 18px 45px rgba(0,0,0,.12);
     }
 
     .product-card .card-body {
         padding: 16px;
-        background: var(--card);
+        background: transparent;
         color: var(--text);
     }
 
-    .product-card .card-title {
-        letter-spacing: -0.01em;
-        color: var(--text);
-    }
-
-    .product-card .btn {
-        border-radius: 12px;
-        font-weight: 800;
-    }
-
-/* ===== Estado vazio ===== */
-.empty-state {
-    background: var(--card);
-    border: 2px dashed var(--stroke);
-    border-radius: var(--radius-lg);
-    padding: 60px 40px;
-    text-align: center;
-    color: var(--text);
-}
-
-.empty-state-icon {
-    font-size: 64px;
-    color: var(--muted-light);
-    margin-bottom: 20px;
-}
-
-.empty-state h3 {
-    color: var(--text);
-}
-
-.empty-state p {
-    color: var(--muted);
-}
-
-/* ===== Footer count ===== */
+/* footer count */
 .results-count {
     color: var(--muted);
     font-size: .92rem;
@@ -665,81 +473,35 @@
     padding: 8px 0 18px;
 }
 
-/* ===== Badges ===== */
-.badge-category {
-    background: var(--bg-2);
-    color: var(--text);
-    border: 1px solid var(--stroke-2);
-}
-
-.badge-status {
-    color: #fff;
-}
-
-    .badge-status.bg-success {
-        background: var(--success) !important;
-    }
-
-    .badge-status.bg-secondary {
-        background: rgba(148,163,184,.55) !important;
-    }
-
-/* ✅ badge “Sim/Não” (você usa bg-success/bg-secondary) não sumir no dark */
-:root[data-theme="dark"] .badge.bg-secondary {
-    background: rgba(148,163,184,.35) !important;
-    color: var(--text) !important;
-}
-
-/* ===== Modalidades de exibição (IDs corretos: viewTable/viewGrid) ===== */
-#viewTable.d-none,
-#viewGrid.d-none {
-    display: none !important;
-}
-
-/* ===== Responsividade ===== */
+/* =========================================================
+   MOBILE ajustes
+   ========================================================= */
 @media (max-width: 767.98px) {
-    .produtos-page {
-        padding: 0;
-    }
-
-    .container-full-lg {
-        padding: 0 12px;
-    }
-
-    .stats-grid {
-        gap: 12px;
+    .produtos-page .container-full-lg {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
     }
 
     .stats-card {
-        padding: 16px;
-    }
-
-    .filters-card {
         padding: 14px;
     }
 
+    .filters-card {
+        padding: 12px;
+    }
+
     .filter-btn {
-        padding: 8px 12px;
-        font-size: 0.9rem;
+        padding: 8px 11px;
+        font-size: .92rem;
     }
 
-    .search-box input {
+    .search-box input.form-control {
         height: 42px;
-        font-size: 0.95rem;
-    }
-
-    .table-shell {
-        border-radius: var(--radius-md);
-        overflow-x: auto;
-    }
-
-    .produtos-table th,
-    .produtos-table td {
-        padding: 12px 8px !important;
+        font-size: .95rem;
     }
 
     .col-produto {
-        min-width: 200px;
+        min-width: 220px;
     }
 
     .product-img-container {
@@ -749,118 +511,6 @@
 
     .btn-action {
         padding: 8px 12px;
-        font-size: 0.9rem;
+        font-size: .92rem;
     }
-
-    .empty-state {
-        padding: 40px 20px;
-        margin: 20px;
-    }
-}
-
-/* ===== Correções de altura / layout ===== */
-html, body {
-    height: 100%;
-    overflow-x: hidden;
-}
-
-:root {
-    --kb-shift: 0px;
-    --mbn-height: 0px;
-}
-
-#page-content {
-    padding-bottom: calc(16px + var(--mbn-height, 0px));
-}
-
-/* Suporte para bottom nav */
-.has-bottom-nav .produtos-page {
-    padding-bottom: var(--mbn-height, 68px);
-}
-
-/* Animações suaves */
-.stats-card,
-.product-card,
-.filter-btn,
-.view-btn,
-.btn-action {
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.app-shell {
-    min-height: 100%;
-    width: 100%;
-}
-
-#wrapper {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
-
-#page-content-wrapper {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.page-content {
-    flex: 1;
-    width: 100%;
-}
-
-.page-hero {
-    flex: 1;
-    width: 100%;
-}
-
-/* Banner (seu) */
-#rt-audio-banner {
-    position: fixed;
-    right: 16px;
-    bottom: calc(16px + env(safe-area-inset-bottom));
-    z-index: 2000;
-    background: #111;
-    color: #fff;
-    border-radius: 999px;
-    display: none;
-    align-items: center;
-    gap: .5rem;
-    padding: .55rem .9rem;
-    box-shadow: 0 8px 24px rgba(0,0,0,.2);
-    cursor: pointer;
-    font-weight: 700;
-}
-
-    #rt-audio-banner i {
-        opacity: .9;
-    }
-
-/* ===== FULL WIDTH nesta tela ===== */
-.produtos-page .container-full-lg,
-.produtos-page .container.container-full-lg {
-    max-width: none !important;
-    width: 100% !important;
-}
-
-.produtos-page .container-full-lg {
-    padding-left: 24px !important;
-    padding-right: 24px !important;
-}
-
-@media (min-width: 1200px) {
-    .produtos-page .container-full-lg {
-        padding-left: 32px !important;
-        padding-right: 32px !important;
-    }
-}
-
-/* ===== Linha inativa (sem sumir no dark) ===== */
-.row-inativo {
-    opacity: .75;
-}
-
-:root[data-theme="dark"] .row-inativo {
-    opacity: .72;
-    background: rgba(255,255,255,.03) !important;
 }

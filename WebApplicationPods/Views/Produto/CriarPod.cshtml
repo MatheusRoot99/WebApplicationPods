@@ -2,4 +2,11 @@
 @{
     ViewData["Title"] = "Novo Pod / Vape";
 }
+@section Styles {
+    <link rel="stylesheet" href="~/css/produto-simples-form.css" asp-append-version="true" />
+}
 <partial name="_FormSimples" model="Model" />
+@section Scripts {
+    <script src="~/js/produto-simples-form.js" asp-append-version="true"></script>
+    <partial name="_ValidationScriptsPartial" />
+}
