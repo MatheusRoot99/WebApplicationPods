@@ -205,14 +205,18 @@
 
                                 var estoqueClass = estoqueTotal <= 5 ? "text-warning" : "text-dark";
 
-                                var sabores = (item.SaboresQuantidadesList ?? new List<ProdutoModel.SaborQuantidade>())
+                                // LEGADO (chips com quantidade)
+                                var saboresLegacy = (item.SaboresQuantidadesList ?? new List<ProdutoModel.SaborQuantidade>())
                                 .Where(sq => !string.IsNullOrWhiteSpace(sq.Sabor))
                                 .OrderByDescending(sq => sq.Quantidade)
                                 .ThenBy(sq => sq.Sabor)
                                 .ToList();
 
-                                var topChips = sabores.Take(4).ToList();
-                                var hiddenChips = sabores.Skip(4).ToList();
+                                // NOVO (produto simples: string Sabor)
+                                var saborSimples = (item.Sabor ?? "").Trim();
+
+                                var topChips = saboresLegacy.Take(4).ToList();
+                                var hiddenChips = saboresLegacy.Skip(4).ToList();
                                 var temMais = hiddenChips.Any();
                                 var popoverText = string.Join(", ", hiddenChips.Select(sq => $"{sq.Sabor} ({sq.Quantidade})"));
 
@@ -297,6 +301,7 @@
 
                                     <!-- Sabores -->
                                     <td class="text-start">
+                                        @* 1) Se tem sabores LEGADO, mostra chips *@
                                         @if (topChips.Any())
                                         {
                                             <div class="d-flex flex-wrap gap-2 align-items-center">
@@ -307,6 +312,7 @@
                                                         @s.Sabor <span class="chip-qty">(@s.Quantidade)</span>
                                                     </span>
                                                 }
+
                                                 @if (temMais)
                                                 {
                                                     <button type="button"
@@ -321,6 +327,15 @@
                                                 }
                                             </div>
                                         }
+                                        @* 2) Senão, se tem Sabor simples, mostra ele *@
+                                        else if (!string.IsNullOrWhiteSpace(saborSimples))
+                                        {
+                                            <span class="badge flavor-chip">
+                                                <span class="chip-dot"></span>
+                                                @saborSimples
+                                            </span>
+                                        }
+                                        @* 3) Senão, traço *@
                                         else
                                         {
                                             <span class="text-muted">—</span>
@@ -340,7 +355,7 @@
                                     <!-- Ações -->
                                     <td class="text-end pe-4">
                                         <div class="btn-group">
-                                            <a asp-action="Editar" asp-route-id="@item.Id" class="btn btn-outline-primary btn-action">
+                                            <a asp-action="EditarSimples" asp-route-id="@item.Id" class="btn btn-outline-primary btn-action">
                                                 <i class="fas fa-edit me-1"></i> Editar
                                             </a>
                                             <a asp-action="Excluir" asp-route-id="@item.Id" class="btn btn-outline-danger btn-action">
@@ -456,7 +471,7 @@
                                 </div>
 
                                 <div class="d-flex justify-content-end gap-2 pt-3 border-top mt-3">
-                                    <a asp-action="Editar" asp-route-id="@item.Id" class="btn btn-outline-primary btn-action">
+                                    <a asp-action="EditarSimples" asp-route-id="@item.Id" class="btn btn-outline-primary btn-action">
                                         <i class="fas fa-edit me-1"></i> Editar
                                     </a>
                                     <a asp-action="Excluir" asp-route-id="@item.Id" class="btn btn-outline-danger btn-action">

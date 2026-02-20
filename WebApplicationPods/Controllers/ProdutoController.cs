@@ -292,6 +292,22 @@ namespace WebApplicationPods.Controllers
             return await SalvarSimplesUpdate(vm, "EditarSimples");
         }
 
+        // ========= ALIAS: EDITAR (compatibilidade com links antigos / Index antigo) =========
+        [Authorize(Roles = "Lojista,Admin")]
+        [HttpGet]
+        public IActionResult Editar(int id)
+        {
+            return RedirectToAction(nameof(EditarSimples), new { id });
+        }
+
+        [Authorize(Roles = "Lojista,Admin")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public Task<IActionResult> Editar(int id, ProdutoFormSimplesViewModel vm, string? SaborSelect, string? SaborOutro)
+        {
+            return EditarSimples(id, vm, SaborSelect, SaborOutro);
+        }
+
         // ========= SALVAR CREATE =========
         private async Task<IActionResult> SalvarSimplesCreate(ProdutoFormSimplesViewModel vm, string submit, string viewName, string redirectNewAction)
         {

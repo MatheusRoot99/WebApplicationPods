@@ -23,7 +23,11 @@
 <div class="ps-page">
     <div class="ps-container">
 
-        <!-- Header (igual ao figma) -->
+        <!-- enums pro JS (sem hardcode) -->
+        <div id="psEnums"
+             data-pod="@((int)ProdutoTipo.PodVape)"
+             data-bebida="@((int)ProdutoTipo.BebidaAlcoolica)"></div>
+
         <div class="ps-header">
             <div class="ps-header-left">
                 <div class="ps-app-icon">
@@ -42,7 +46,6 @@
             </a>
         </div>
 
-        <!-- Card do Form -->
         <div class="ps-card">
             <form class="ps-form"
                   asp-action="@action"
@@ -57,7 +60,6 @@
 
                 <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
 
-                <!-- linha 1 -->
                 <div class="ps-grid ps-grid-2">
                     <div class="ps-field">
                         <label class="ps-label">Tipo de Produto</label>
@@ -77,21 +79,18 @@
                     </div>
                 </div>
 
-                <!-- Nome -->
                 <div class="ps-field">
                     <label class="ps-label">Nome do Produto <span class="ps-req">*</span></label>
                     <input asp-for="Nome" class="ps-input" maxlength="120" placeholder="@phNome" />
                     <span asp-validation-for="Nome" class="text-danger small"></span>
                 </div>
 
-                <!-- Descrição -->
                 <div class="ps-field">
                     <label class="ps-label">Descrição</label>
                     <textarea asp-for="Descricao" class="ps-input ps-textarea" rows="4" placeholder="Descreva o produto..."></textarea>
                     <small class="ps-counter">0/1000 caracteres</small>
                 </div>
 
-                <!-- Marca / SKU / Barras -->
                 <div class="ps-grid ps-grid-3">
                     <div class="ps-field">
                         <label class="ps-label">Marca</label>
@@ -109,7 +108,6 @@
                     </div>
                 </div>
 
-                <!-- Preço / Promo / Estoque -->
                 <div class="ps-grid ps-grid-3">
                     <div class="ps-field">
                         <label class="ps-label">Preço <span class="ps-req">*</span></label>
@@ -137,9 +135,7 @@
                     </div>
                 </div>
 
-                <!-- Imagem + Sabor/Cor -->
                 <div class="ps-grid ps-grid-2">
-                    <!-- Upload estilo figma -->
                     <div class="ps-field">
                         <label class="ps-label">Imagem do Produto</label>
 
@@ -151,7 +147,7 @@
                             </div>
                             <div class="ps-dropzone-text">
                                 <div class="ps-dropzone-title">Clique para fazer upload</div>
-                                <div class="ps-dropzone-sub">PNG, JPG até 5MB</div>
+                                <div class="ps-dropzone-sub">PNG, JPG até 2MB</div>
                             </div>
                         </label>
 
@@ -169,12 +165,11 @@
                         </div>
                     </div>
 
-                    <!-- direita -->
                     <div class="ps-right-stack">
                         <div class="ps-field">
                             <label class="ps-label">Sabor @(isPod ? "*" : "(opcional)")</label>
 
-                            <!-- POD: select + outro + hidden -->
+                            <!-- POD -->
                             <div id="podSaborBox" style="@(isPod ? "" : "display:none;")">
                                 <select class="ps-input ps-select mb-2" id="SaborSelect" name="SaborSelect">
                                     <option value="">Selecione um sabor...</option>
@@ -188,14 +183,18 @@
                                 </select>
 
                                 <input type="text" class="ps-input" id="SaborOutro" name="SaborOutro" placeholder="Ou escreva um novo sabor..." />
+
+                                <!-- campo real do model (POD) -->
                                 <input type="hidden" asp-for="Sabor" id="Sabor" />
+
                                 <span asp-validation-for="Sabor" class="text-danger small"></span>
                                 <small class="ps-hint">Se preencher “Outro sabor”, ele será usado no lugar do selecionado.</small>
                             </div>
 
-                            <!-- não-POD: input simples -->
+                            <!-- NÃO POD -->
                             <div id="saborSimplesBox" style="@(isPod ? "display:none;" : "")">
                                 <input asp-for="Sabor" class="ps-input" placeholder="Se quiser usar como atributo simples" />
+                                <span asp-validation-for="Sabor" class="text-danger small"></span>
                             </div>
                         </div>
 
@@ -204,7 +203,6 @@
                             <input asp-for="Cor" class="ps-input" placeholder="Ex: Azul, Vermelho" />
                         </div>
 
-                        <!-- Pod details -->
                         <div id="podDetailsBox" class="ps-pod-card" style="@(isPod ? "" : "display:none;")">
                             <div class="ps-pod-head">
                                 <div class="ps-pod-title">
@@ -234,7 +232,6 @@
                     </div>
                 </div>
 
-                <!-- Checks em cards (igual figma) -->
                 <div class="ps-check-row">
                     <label class="ps-check-card">
                         <input class="ps-check" type="checkbox" asp-for="Ativo" />
@@ -270,7 +267,6 @@
                     </label>
                 </div>
 
-                <!-- Botões (igual figma) -->
                 <div class="ps-actions">
                     <a asp-action="Index" class="ps-btn ps-btn-ghost">
                         <i class="fa-solid fa-xmark"></i>
@@ -288,10 +284,6 @@
                     </button>
                 </div>
 
-                <!-- Config de enums para o JS (sem hardcode) -->
-                <div id="psEnums"
-                     data-pod="@((int)ProdutoTipo.PodVape)"
-                     data-bebida="@((int)ProdutoTipo.BebidaAlcoolica)"></div>
             </form>
         </div>
     </div>
