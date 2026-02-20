@@ -46,7 +46,7 @@
     <!-- Filtros -->
     <div class="container mb-3">
         <div class="collapse d-lg-block" id="filtersCollapse">
-            <form asp-action="Index" method="get" class="filters-card card border-0 p-3 mb-3" id="filtersForm">
+            <form asp-area="" asp-action="Index" method="get" class="filters-card card border-0 p-3 mb-3" id="filtersForm">
                 <div class="row g-3 align-items-end">
 
                     <!-- Busca -->
@@ -82,9 +82,14 @@
                         <select name="OrdenarPor" class="form-select">
                             @foreach (var kv in Model.Filtros.OpcoesOrdenacao)
                             {
-                                <option value="@kv.Key" selected="@(Model.Filtros.OrdenarPor == kv.Key)">
-                                    @kv.Value
-                                </option>
+                                if (Model.Filtros.OrdenarPor == kv.Key)
+                                {
+                                    <option value="@kv.Key" selected="selected">@kv.Value</option>
+                                }
+                                else
+                                {
+                                    <option value="@kv.Key">@kv.Value</option>
+                                }
                             }
                         </select>
                     </div>
@@ -136,7 +141,10 @@
 
                     <article class="produto-card h-100">
 
-                        <a asp-controller="Produto" asp-action="DetalhesProdutos" asp-route-id="@produto.Id"
+                        <a asp-area=""
+                           asp-controller="Produto"
+                           asp-action="Detalhes"
+                           asp-route-id="@produto.Id"
                            class="thumb-link" aria-label="@produto.Nome">
                             <div class="product-thumb">
                                 @if (!string.IsNullOrEmpty(produto.ImagemUrl))
@@ -162,7 +170,10 @@
                         </a>
 
                         <div class="card-body">
-                            <a asp-controller="Produto" asp-action="DetalhesProdutos" asp-route-id="@produto.Id"
+                            <a asp-area=""
+                               asp-controller="Produto"
+                               asp-action="Detalhes"
+                               asp-route-id="@produto.Id"
                                class="stretched-link text-decoration-none">
                                 <h6 class="title text-truncate-2">@produto.Nome</h6>
                             </a>
