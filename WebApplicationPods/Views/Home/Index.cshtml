@@ -47,7 +47,7 @@
     <div class="container mb-3">
         <div class="collapse d-lg-block" id="filtersCollapse">
             <form asp-action="Index" method="get" class="filters-card card border-0 p-3 mb-3" id="filtersForm">
-                <div class="row g-3">
+                <div class="row g-3 align-items-end">
 
                     <!-- Busca -->
                     <div class="col-12 col-lg-4">
@@ -60,8 +60,8 @@
                     <div class="col-12 col-md-6 col-lg-3">
                         <label class="form-label">Categoria</label>
                         <select name="Categoria" class="form-select"
-                                asp-items="@(new SelectList(Model.Filtros.CategoriasDisponiveis))">
-                            <option value="">Todas Categorias</option>
+                                asp-items="@(new SelectList(Model.Filtros.CategoriasDisponiveis, Model.Filtros.Categoria))">
+                            <option value="" selected="@(string.IsNullOrWhiteSpace(Model.Filtros.Categoria))">Todas Categorias</option>
                         </select>
                     </div>
 
@@ -167,11 +167,31 @@
                                 <h6 class="title text-truncate-2">@produto.Nome</h6>
                             </a>
 
-                            <div class="specs small text-muted">
-                                <span><i class="fa-solid fa-smoking me-1"></i>@produto.Puffs puffs</span>
-                                <span>•</span>
-                                <span><i class="fa-solid fa-battery-three-quarters me-1"></i>@produto.CapacidadeBateria mAh</span>
-                            </div>
+                            @{
+                                bool puffOk = produto.PodPuffs > 0;
+                                bool batOk = int.TryParse(produto.PodCapacidadeBateria, out var bat) && bat > 0;
+                                bool temSpecsPod = puffOk || batOk;
+                            }
+
+                            @if (temSpecsPod)
+                            {
+                                <div class="specs small text-muted">
+                                    @if (puffOk)
+                                    {
+                                        <span><i class="fa-solid fa-smoking me-1"></i>@produto.PodPuffs puffs</span>
+                                    }
+
+                                    @if (puffOk && batOk)
+                                    {
+                                        <span>•</span>
+                                    }
+
+                                    @if (batOk)
+                                    {
+                                        <span><i class="fa-solid fa-battery-three-quarters me-1"></i>@bat mAh</span>
+                                    }
+                                </div>
+                            }
 
                             <div class="price-line">
                                 @if (promoOk)

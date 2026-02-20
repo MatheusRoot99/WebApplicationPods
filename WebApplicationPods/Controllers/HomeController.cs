@@ -25,6 +25,18 @@ namespace WebApplicationPods.Controllers
 
         public IActionResult Index(FiltrosModel filtros)
         {
+            // ? Evita NullReference se vier null
+            filtros ??= new FiltrosModel();
+
+            // ? normaliza campos string (vazio => null)
+            filtros.Categoria = string.IsNullOrWhiteSpace(filtros.Categoria) ? null : filtros.Categoria;
+            filtros.Sabor = string.IsNullOrWhiteSpace(filtros.Sabor) ? null : filtros.Sabor;
+            filtros.Cor = string.IsNullOrWhiteSpace(filtros.Cor) ? null : filtros.Cor;
+            filtros.Termo = string.IsNullOrWhiteSpace(filtros.Termo) ? null : filtros.Termo;
+
+            // ? fallback de ordenação (se vier vazio)
+            filtros.OrdenarPor = string.IsNullOrWhiteSpace(filtros.OrdenarPor) ? "Populares" : filtros.OrdenarPor;
+
             var loja = _context.LojaConfigs
                 .AsNoTracking()
                 .FirstOrDefault();
@@ -44,6 +56,7 @@ namespace WebApplicationPods.Controllers
                     Categoria = filtros.Categoria,
                     Sabor = filtros.Sabor,
                     Cor = filtros.Cor,
+                    Termo = filtros.Termo,
                     PrecoMin = filtros.PrecoMin,
                     PrecoMax = filtros.PrecoMax,
                     AvaliacaoMin = filtros.AvaliacaoMin,

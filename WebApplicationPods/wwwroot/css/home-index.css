@@ -702,3 +702,33 @@
         display: block !important;
     }
 }
+/* ===== Alinhamento dos filtros ===== */
+.filters-card .form-label {
+    font-size: .85rem;
+    opacity: .85;
+    margin-bottom: .35rem;
+}
+
+.filters-card .form-control,
+.filters-card .form-select {
+    height: 40px;
+    border-radius: 10px;
+}
+
+.filters-card input.form-control {
+    padding-top: .45rem;
+    padding-bottom: .45rem;
+}
+
+.filters-card .btn {
+    height: 40px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+}
+
+/* Linha dos checkboxes + botões */
+.filters-card .form-check {
+    margin-bottom: 0;
+}
