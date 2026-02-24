@@ -179,9 +179,62 @@
                             </a>
 
                             @{
+                                // ---------- POD ----------
                                 bool puffOk = produto.PodPuffs > 0;
                                 bool batOk = int.TryParse(produto.PodCapacidadeBateria, out var bat) && bat > 0;
                                 bool temSpecsPod = puffOk || batOk;
+
+                                // ---------- BEBIDA ----------
+                                bool volumeOk = produto.BebidaVolumeMl.HasValue && produto.BebidaVolumeMl.Value > 0;
+
+                                bool teorOk = false;
+                                string teorTxt = "";
+                                if (produto.BebidaTeorAlcoolico.HasValue && produto.BebidaTeorAlcoolico.Value > 0)
+                                {
+                                    teorOk = true;
+                                    teorTxt = produto.BebidaTeorAlcoolico.Value.ToString("0.##") + "%";
+                                }
+
+                                bool embalagemOk = produto.BebidaEmbalagem.HasValue
+                                && produto.BebidaEmbalagem.Value != WebApplicationPods.Enum.BebidaEmbalagemTipo.NaoInformado;
+
+                                bool qtdEmbOk = produto.BebidaQtdPorEmbalagem.HasValue && produto.BebidaQtdPorEmbalagem.Value > 0;
+
+                                string embalagemTxt = "";
+                                if (embalagemOk)
+                                {
+                                    embalagemTxt = produto.BebidaEmbalagem!.Value switch
+                                    {
+                                        WebApplicationPods.Enum.BebidaEmbalagemTipo.Unidade => "Unidade",
+                                        WebApplicationPods.Enum.BebidaEmbalagemTipo.Lata => "Lata",
+                                        WebApplicationPods.Enum.BebidaEmbalagemTipo.LongNeck => "Long Neck",
+                                        WebApplicationPods.Enum.BebidaEmbalagemTipo.Garrafa => "Garrafa",
+                                        WebApplicationPods.Enum.BebidaEmbalagemTipo.Fardo => "Fardo",
+                                        WebApplicationPods.Enum.BebidaEmbalagemTipo.Caixa => "Caixa",
+                                        WebApplicationPods.Enum.BebidaEmbalagemTipo.Pack => "Pack",
+                                        _ => ""
+                                    };
+                                }
+
+                                // Se for pack/fardo/caixa, fica melhor mostrar junto com a quantidade
+                                string embalagemResumo = "";
+                                if (embalagemOk)
+                                {
+                                    var emb = produto.BebidaEmbalagem!.Value;
+                                    bool embMultipla = emb == WebApplicationPods.Enum.BebidaEmbalagemTipo.Fardo
+                                    || emb == WebApplicationPods.Enum.BebidaEmbalagemTipo.Caixa
+                                    || emb == WebApplicationPods.Enum.BebidaEmbalagemTipo.Pack;
+
+                                    if (embMultipla && qtdEmbOk)
+                                        embalagemResumo = $"{embalagemTxt} {produto.BebidaQtdPorEmbalagem}un";
+                                    else
+                                        embalagemResumo = embalagemTxt;
+                                }
+
+                                bool temSpecsBebida = volumeOk || teorOk || !string.IsNullOrWhiteSpace(embalagemResumo);
+
+                                // (opcional) detectar bebida por dados preenchidos, sem depender do TipoProduto na listagem
+                                bool pareceBebida = temSpecsBebida || !string.IsNullOrWhiteSpace(produto.BebidaTipo);
                             }
 
                             @if (temSpecsPod)
@@ -200,6 +253,35 @@
                                     @if (batOk)
                                     {
                                         <span><i class="fa-solid fa-battery-three-quarters me-1"></i>@bat mAh</span>
+                                    }
+                                </div>
+                            }
+                            else if (pareceBebida)
+                            {
+                                <div class="specs small text-muted">
+                                    @if (volumeOk)
+                                    {
+                                        <span><i class="fa-solid fa-glass-water me-1"></i>@produto.BebidaVolumeMl ml</span>
+                                    }
+
+                                    @if (volumeOk && !string.IsNullOrWhiteSpace(embalagemResumo))
+                                    {
+                                        <span>•</span>
+                                    }
+
+                                    @if (!string.IsNullOrWhiteSpace(embalagemResumo))
+                                    {
+                                        <span><i class="fa-solid fa-box me-1"></i>@embalagemResumo</span>
+                                    }
+
+                                    @if ((volumeOk || !string.IsNullOrWhiteSpace(embalagemResumo)) && teorOk)
+                                    {
+                                        <span>•</span>
+                                    }
+
+                                    @if (teorOk)
+                                    {
+                                        <span><i class="fa-solid fa-percent me-1"></i>@teorTxt</span>
                                     }
                                 </div>
                             }

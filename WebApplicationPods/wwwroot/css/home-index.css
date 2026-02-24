@@ -732,3 +732,17 @@
 .filters-card .form-check {
     margin-bottom: 0;
 }
+.specs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    min-height: 20px; /* ajuda a manter altura igual entre cards */
+    margin-bottom: 6px;
+}
+
+    .specs span {
+        display: inline-flex;
+        align-items: center;
+        line-height: 1;
+    }

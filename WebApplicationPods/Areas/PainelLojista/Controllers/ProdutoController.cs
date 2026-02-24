@@ -15,15 +15,15 @@ namespace WebApplicationPods.Areas.PainelLojista.Controllers
         }
 
         [HttpGet]
-        public IActionResult Detalhes(int id)
+        public async Task<IActionResult> Visualizar(int id)
         {
-            var produto = _context.Produtos
+            var produto = await _context.Produtos
                 .AsNoTracking()
-                .FirstOrDefault(p => p.Id == id);
+                .FirstOrDefaultAsync(p => p.Id == id);
 
             if (produto == null) return NotFound();
 
-            return View(produto);
+            return View(produto); // Areas/PainelLojista/Views/Produto/Visualizar.cshtml
         }
     }
 }

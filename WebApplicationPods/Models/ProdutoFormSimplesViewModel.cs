@@ -45,16 +45,34 @@ namespace WebApplicationPods.Models
         public string? ImagemUrl { get; set; }
         public IFormFile? ImagemUpload { get; set; }
 
-        // POD extras (opcional)
+        // ===== POD extras (opcional) =====
         public int? PodPuffs { get; set; }
+
         [StringLength(40)]
         public string? PodCapacidadeBateria { get; set; }
+
         [StringLength(40)]
         public string? PodTipo { get; set; }
 
-        // Se você quiser continuar usando sabor/cor como “atributo simples”
+        // ===== BEBIDA extras (opcional) =====
+        [Range(1, 100000, ErrorMessage = "Volume em ml inválido.")]
+        public int? BebidaVolumeMl { get; set; }
+
+        [StringLength(40)]
+        public string? BebidaTipo { get; set; } // Ex.: Cerveja, Whisky, Vodka, Gin, Vinho
+
+        public BebidaEmbalagemTipo BebidaEmbalagem { get; set; } = BebidaEmbalagemTipo.NaoInformado;
+
+        [Range(1, 1000, ErrorMessage = "Quantidade por embalagem inválida.")]
+        public int? BebidaQtdPorEmbalagem { get; set; } // Ex.: 6, 12, 24
+
+        [Range(0, 100, ErrorMessage = "Teor alcoólico inválido.")]
+        public decimal? BebidaTeorAlcoolico { get; set; } // Ex.: 4,7%
+
+        // Atributos simples
         [StringLength(50)]
         public string? Sabor { get; set; }
+
         [StringLength(30)]
         public string? Cor { get; set; }
     }

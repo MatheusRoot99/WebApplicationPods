@@ -12,10 +12,11 @@
            : "CriarPadrao");
 
     var isPod = Model?.TipoProduto == ProdutoTipo.PodVape;
+    var isBebida = Model?.TipoProduto == ProdutoTipo.BebidaAlcoolica;
 
     var phNome = isPod
         ? "Ex: Ignite Sex Addict 28000 puffs"
-        : (Model?.TipoProduto == ProdutoTipo.BebidaAlcoolica
+        : (isBebida
             ? "Ex: Heineken 330ml (Unidade)"
             : "Ex: Chocolate Lacta 90g");
 }
@@ -135,7 +136,8 @@
                     </div>
                 </div>
 
-                <div class="ps-grid ps-grid-2">
+                <!-- BLOCO IMAGEM + COLUNA DIREITA (layout estável) -->
+                <div class="ps-media-row">
                     <div class="ps-field">
                         <label class="ps-label">Imagem do Produto</label>
 
@@ -166,7 +168,9 @@
                     </div>
 
                     <div class="ps-right-stack">
-                        <div class="ps-field">
+
+                        <!-- Sabor (Padrão/Pod). Bebida NÃO mostra -->
+                        <div class="ps-field" id="saborFieldWrap" style="@(isBebida ? "display:none;" : "")">
                             <label class="ps-label">Sabor @(isPod ? "*" : "(opcional)")</label>
 
                             <!-- POD -->
@@ -191,18 +195,85 @@
                                 <small class="ps-hint">Se preencher “Outro sabor”, ele será usado no lugar do selecionado.</small>
                             </div>
 
-                            <!-- NÃO POD -->
+                            <!-- PADRÃO -->
                             <div id="saborSimplesBox" style="@(isPod ? "display:none;" : "")">
                                 <input asp-for="Sabor" class="ps-input" placeholder="Se quiser usar como atributo simples" />
                                 <span asp-validation-for="Sabor" class="text-danger small"></span>
                             </div>
                         </div>
 
-                        <div class="ps-field">
+                        <!-- Cor (Padrão/Pod). Bebida NÃO mostra -->
+                        <div class="ps-field" id="corFieldWrap" style="@(isBebida ? "display:none;" : "")">
                             <label class="ps-label">Cor (opcional)</label>
                             <input asp-for="Cor" class="ps-input" placeholder="Ex: Azul, Vermelho" />
                         </div>
 
+                        <!-- DETALHES DA BEBIDA -->
+                        <div id="bebidaDetailsBox" class="ps-bebida-card" style="@(isBebida ? "" : "display:none;")">
+                            <div class="ps-bebida-head">
+                                <div class="ps-bebida-title">
+                                    <i class="fa-solid fa-wine-bottle"></i>
+                                    <strong>Detalhes da Bebida</strong>
+                                </div>
+                                <small>opcional</small>
+                            </div>
+
+                            <div class="ps-grid ps-grid-2">
+                                <div class="ps-field">
+                                    <label class="ps-label">Tipo da Bebida</label>
+                                    <input asp-for="BebidaTipo" class="ps-input" placeholder="Ex: Cerveja, Whisky, Vodka, Gin..." />
+                                </div>
+
+                                <div class="ps-field">
+                                    <label class="ps-label">Volume (ml)</label>
+                                    <input asp-for="BebidaVolumeMl" class="ps-input" type="number" min="1" placeholder="Ex: 330" />
+                                    <span asp-validation-for="BebidaVolumeMl" class="text-danger small"></span>
+                                </div>
+                            </div>
+
+                            <div class="ps-grid ps-grid-2">
+                                <div class="ps-field">
+                                    <label class="ps-label">Embalagem</label>
+                                    <select asp-for="BebidaEmbalagem" class="ps-input ps-select" id="BebidaEmbalagem">
+                                        <option value="@((int)WebApplicationPods.Enum.BebidaEmbalagemTipo.NaoInformado)">Não informado</option>
+                                        <option value="@((int)WebApplicationPods.Enum.BebidaEmbalagemTipo.Unidade)">Unidade</option>
+                                        <option value="@((int)WebApplicationPods.Enum.BebidaEmbalagemTipo.Lata)">Lata</option>
+                                        <option value="@((int)WebApplicationPods.Enum.BebidaEmbalagemTipo.LongNeck)">Long Neck</option>
+                                        <option value="@((int)WebApplicationPods.Enum.BebidaEmbalagemTipo.Garrafa)">Garrafa</option>
+                                        <option value="@((int)WebApplicationPods.Enum.BebidaEmbalagemTipo.Fardo)">Fardo</option>
+                                        <option value="@((int)WebApplicationPods.Enum.BebidaEmbalagemTipo.Caixa)">Caixa</option>
+                                        <option value="@((int)WebApplicationPods.Enum.BebidaEmbalagemTipo.Pack)">Pack</option>
+                                    </select>
+                                </div>
+
+                                <div class="ps-field">
+                                    <label class="ps-label">Qtd. por Embalagem</label>
+                                    <input asp-for="BebidaQtdPorEmbalagem" class="ps-input" type="number" min="1" placeholder="Ex: 6, 12, 24" />
+                                    <span asp-validation-for="BebidaQtdPorEmbalagem" class="text-danger small"></span>
+                                    <small class="ps-hint">Use para fardo/caixa/pack. Ex.: caixa com 12 unidades.</small>
+                                </div>
+                            </div>
+
+                            <div class="ps-grid ps-grid-2">
+                                <div class="ps-field">
+                                    <label class="ps-label">Teor Alcoólico (%)</label>
+                                    <input asp-for="BebidaTeorAlcoolico"
+                                           class="ps-input js-alcool"
+                                           inputmode="decimal"
+                                           autocomplete="off"
+                                           placeholder="Ex: 4,7" />
+                                    <span asp-validation-for="BebidaTeorAlcoolico" class="text-danger small"></span>
+                                </div>
+
+                                <div class="ps-field">
+                                    <label class="ps-label">Observação de nome (sugestão)</label>
+                                    <input type="text" class="ps-input" id="BebidaNomeSugestao" readonly placeholder="Ex: Heineken 330ml Long Neck" />
+                                    <small class="ps-hint">Só visual. O nome do produto é o campo acima.</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- DETALHES DO POD -->
                         <div id="podDetailsBox" class="ps-pod-card" style="@(isPod ? "" : "display:none;")">
                             <div class="ps-pod-head">
                                 <div class="ps-pod-title">

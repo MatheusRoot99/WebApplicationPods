@@ -69,12 +69,15 @@
     }
 
     function attachMoneyMask(input, onChange) {
+        if (!input) return;
+
         function apply() {
             const digits = onlyDigits(input.value);
             input.value = formatMoneyBRFromDigits(digits);
             input.dataset.rawDigits = digits;
-            onChange && onChange();
+            if (onChange) onChange();
         }
+
         input.addEventListener("input", apply);
         input.addEventListener("blur", apply);
     }
@@ -87,18 +90,33 @@
     // elements
     let formEl;
     let precoEl, promoEl, promoHintEl;
+
     let tipoEl, maioridadeEl;
+    let nomeEl;
+
     let imgEl, imgPreviewEl, imgPreviewEmptyEl;
 
+    let saborFieldWrap, corFieldWrap;
     let podSaborBox, saborSelectEl, saborOutroEl, saborHiddenEl;
-    let saborSimplesBox, podDetailsBox;
-    let nomeEl;
+    let saborSimplesBox, podDetailsBox, bebidaDetailsBox;
+
+    let bebidaTipoEl, bebidaVolumeEl, bebidaEmbalagemEl, bebidaNomeSugestaoEl;
 
     function getEnumVals() {
         const cfg = document.getElementById("psEnums");
         const POD = cfg ? cfg.getAttribute("data-pod") : null;
         const BEBIDA = cfg ? cfg.getAttribute("data-bebida") : null;
         return { POD, BEBIDA };
+    }
+
+    function isTipoPod() {
+        const { POD } = getEnumVals();
+        return !!tipoEl && POD !== null && String(tipoEl.value || "") === String(POD);
+    }
+
+    function isTipoBebida() {
+        const { BEBIDA } = getEnumVals();
+        return !!tipoEl && BEBIDA !== null && String(tipoEl.value || "") === String(BEBIDA);
     }
 
     function validatePromo() {
@@ -127,22 +145,37 @@
     function syncSaborHidden() {
         if (!saborHiddenEl) return;
 
+        // Se for bebida, não usa sabor
+        if (isTipoBebida()) {
+            saborHiddenEl.value = "";
+            return;
+        }
+
         const outro = (saborOutroEl?.value || "").trim();
         const sel = (saborSelectEl?.value || "").trim();
+        const simples = qs('input[name="Sabor"]:not([type="hidden"])');
 
-        saborHiddenEl.value = outro.length > 0 ? outro : sel;
+        if (isTipoPod()) {
+            saborHiddenEl.value = outro.length > 0 ? outro : sel;
+        } else {
+            // Padrão -> campo simples
+            if (simples) saborHiddenEl.value = (simples.value || "").trim();
+        }
     }
 
     function initSaborPod() {
-        if (!podSaborBox) return;
-
         if (saborSelectEl) saborSelectEl.addEventListener("change", syncSaborHidden);
         if (saborOutroEl) saborOutroEl.addEventListener("input", syncSaborHidden);
 
-        // em edição: tenta preencher combo ou "outro"
+        const saborSimplesInput = qs('#saborSimplesBox input[name="Sabor"]');
+        if (saborSimplesInput) saborSimplesInput.addEventListener("input", syncSaborHidden);
+
+        // em edição: tenta preencher combo ou "outro" (quando for pod)
         const current = (saborHiddenEl?.value || "").trim();
         if (current && saborSelectEl) {
-            const opt = Array.from(saborSelectEl.options).find(o => (o.value || "").trim().toLowerCase() === current.toLowerCase());
+            const opt = Array.from(saborSelectEl.options)
+                .find(o => (o.value || "").trim().toLowerCase() === current.toLowerCase());
+
             if (opt) saborSelectEl.value = opt.value;
             else if (saborOutroEl) saborOutroEl.value = current;
         }
@@ -153,47 +186,66 @@
     function syncNomePlaceholder() {
         if (!tipoEl || !nomeEl) return;
 
-        const { POD, BEBIDA } = getEnumVals();
-        const tipo = String(tipoEl.value || "");
-
-        if (POD !== null && tipo === String(POD)) {
+        if (isTipoPod()) {
             nomeEl.placeholder = "Ex: Ignite Sex Addict 28000 puffs";
             return;
         }
-        if (BEBIDA !== null && tipo === String(BEBIDA)) {
+
+        if (isTipoBebida()) {
             nomeEl.placeholder = "Ex: Heineken 330ml (Unidade)";
             return;
         }
+
         nomeEl.placeholder = "Ex: Chocolate Lacta 90g";
     }
 
     function syncMaioridadeUI() {
-        if (!tipoEl || !maioridadeEl) return;
+        if (!maioridadeEl) return;
 
-        const { POD, BEBIDA } = getEnumVals();
-        const tipo = String(tipoEl.value || "");
+        const pod = isTipoPod();
+        const bebida = isTipoBebida();
 
-        const isPod = POD !== null && tipo === String(POD);
-        const isBebida = BEBIDA !== null && tipo === String(BEBIDA);
-
-        if (isPod || isBebida) {
+        if (pod || bebida) {
             maioridadeEl.checked = true;
             maioridadeEl.disabled = true;
-            const checkDiv = maioridadeEl.closest(".form-check") || maioridadeEl.closest(".produto-simples-checks div");
-            if (checkDiv) checkDiv.classList.add("opacity-75");
         } else {
             maioridadeEl.disabled = false;
-            const checkDiv = maioridadeEl.closest(".form-check") || maioridadeEl.closest(".produto-simples-checks div");
-            if (checkDiv) checkDiv.classList.remove("opacity-75");
+        }
+    }
+
+    function syncTypeBlocks() {
+        const pod = isTipoPod();
+        const bebida = isTipoBebida();
+
+        // wrappers gerais
+        if (saborFieldWrap) saborFieldWrap.style.display = bebida ? "none" : "";
+        if (corFieldWrap) corFieldWrap.style.display = bebida ? "none" : "";
+
+        // dentro do sabor
+        if (podSaborBox) podSaborBox.style.display = pod ? "block" : "none";
+        if (saborSimplesBox) saborSimplesBox.style.display = (!pod && !bebida) ? "block" : "none";
+
+        // cards detalhes
+        if (podDetailsBox) podDetailsBox.style.display = pod ? "block" : "none";
+        if (bebidaDetailsBox) bebidaDetailsBox.style.display = bebida ? "block" : "none";
+
+        // bebida não usa sabor/cor
+        if (bebida) {
+            if (saborHiddenEl) saborHiddenEl.value = "";
+            const saborSimplesInput = qs('#saborSimplesBox input[name="Sabor"]');
+            if (saborSimplesInput) saborSimplesInput.value = "";
+
+            if (saborSelectEl) saborSelectEl.value = "";
+            if (saborOutroEl) saborOutroEl.value = "";
+
+            const corInput = qs('input[name="Cor"]');
+            if (corInput) corInput.value = "";
         }
 
-        // Mostrar/ocultar blocos do POD
-        if (podSaborBox) podSaborBox.style.display = isPod ? "block" : "none";
-        if (podDetailsBox) podDetailsBox.style.display = isPod ? "block" : "none";
-        if (saborSimplesBox) saborSimplesBox.style.display = isPod ? "none" : "block";
-
-        // quando vira Pod, garantir sync do hidden
-        if (isPod) syncSaborHidden();
+        syncSaborHidden();
+        syncMaioridadeUI();
+        syncNomePlaceholder();
+        updateBebidaNomeSugestao();
     }
 
     function previewImagem() {
@@ -215,7 +267,6 @@
         qsa(".js-money").forEach(function (el) {
             attachMoneyMask(el, validatePromo);
 
-            // formata valor inicial (se veio do server)
             if (el.value) {
                 const inv = normalizeMoneyToInvariant(el.value);
                 const digits = onlyDigits(inv.replace(".", ""));
@@ -227,31 +278,75 @@
         validatePromo();
     }
 
+    function initAlcoolField() {
+        const alcoolEl = qs(".js-alcool");
+        if (!alcoolEl) return;
+
+        alcoolEl.addEventListener("input", function () {
+            let v = alcoolEl.value || "";
+            v = v.replace(/[^\d,.\-]/g, "");
+
+            // normaliza para vírgula visual
+            if (v.includes(".") && !v.includes(",")) v = v.replace(".", ",");
+
+            // mantém apenas a primeira vírgula
+            const firstComma = v.indexOf(",");
+            if (firstComma >= 0) {
+                v = v.slice(0, firstComma + 1) + v.slice(firstComma + 1).replace(/,/g, "");
+            }
+
+            alcoolEl.value = v;
+        });
+    }
+
+    function updateBebidaNomeSugestao() {
+        if (!bebidaNomeSugestaoEl) return;
+
+        if (!isTipoBebida()) {
+            bebidaNomeSugestaoEl.value = "";
+            return;
+        }
+
+        const nome = (nomeEl?.value || "").trim();
+        const volume = (bebidaVolumeEl?.value || "").trim();
+        const embalagemTxt = bebidaEmbalagemEl
+            ? (bebidaEmbalagemEl.options[bebidaEmbalagemEl.selectedIndex]?.text || "").trim()
+            : "";
+
+        let partes = [];
+        if (nome) partes.push(nome);
+        if (volume) partes.push(`${volume}ml`);
+
+        if (embalagemTxt && embalagemTxt.toLowerCase() !== "não informado") {
+            partes.push(embalagemTxt);
+        }
+
+        bebidaNomeSugestaoEl.value = partes.join(" ").replace(/\s+/g, " ").trim();
+    }
+
     function beforeSubmitNormalizeMoney() {
         if (precoEl) precoEl.value = normalizeMoneyToInvariant(precoEl.value);
         if (promoEl) promoEl.value = normalizeMoneyToInvariant(promoEl.value);
+
+        // teor alcoólico -> normaliza vírgula para ponto
+        const alcoolEl = qs(".js-alcool");
+        if (alcoolEl && alcoolEl.value) {
+            alcoolEl.value = normalizeMoneyToInvariant(alcoolEl.value);
+        }
+
         syncSaborHidden();
     }
 
     function validatePodRequired() {
-        const { POD } = getEnumVals();
-        if (!tipoEl) return true;
+        if (!isTipoPod()) return true;
 
-        const tipo = String(tipoEl.value || "");
-        const isPod = POD !== null && tipo === String(POD);
-
-        if (!isPod) return true;
-
-        // para Pod: sabor obrigatório (via hidden)
         const sabor = (saborHiddenEl?.value || "").trim();
         if (!sabor) {
-            // dá um feedback simples
-            if (podSaborBox) {
-                const sel = saborSelectEl || saborOutroEl;
-                if (sel) sel.focus();
-            }
+            const foco = saborSelectEl || saborOutroEl;
+            if (foco) foco.focus();
             return false;
         }
+
         return true;
     }
 
@@ -264,10 +359,14 @@
 
         tipoEl = document.getElementById("TipoProduto") || qs('select[name="TipoProduto"]');
         maioridadeEl = document.getElementById("RequerMaioridade") || qs('input[name="RequerMaioridade"]');
+        nomeEl = qs('input[name="Nome"]');
 
         imgEl = qs('input[type="file"][name="ImagemUpload"]');
         imgPreviewEl = document.getElementById("imgPreview");
         imgPreviewEmptyEl = document.getElementById("imgPreviewEmpty");
+
+        saborFieldWrap = document.getElementById("saborFieldWrap");
+        corFieldWrap = document.getElementById("corFieldWrap");
 
         podSaborBox = document.getElementById("podSaborBox");
         saborSelectEl = document.getElementById("SaborSelect");
@@ -276,22 +375,32 @@
 
         saborSimplesBox = document.getElementById("saborSimplesBox");
         podDetailsBox = document.getElementById("podDetailsBox");
+        bebidaDetailsBox = document.getElementById("bebidaDetailsBox");
 
-        nomeEl = qs('input[name="Nome"]');
+        bebidaTipoEl = qs('input[name="BebidaTipo"]');
+        bebidaVolumeEl = qs('input[name="BebidaVolumeMl"]');
+        bebidaEmbalagemEl = document.getElementById("BebidaEmbalagem") || qs('select[name="BebidaEmbalagem"]');
+        bebidaNomeSugestaoEl = document.getElementById("BebidaNomeSugestao");
 
         initMoneyFields();
+        initAlcoolField();
         previewImagem();
         initSaborPod();
 
+        [nomeEl, bebidaTipoEl, bebidaVolumeEl, bebidaEmbalagemEl].forEach(function (el) {
+            if (!el) return;
+            el.addEventListener("input", updateBebidaNomeSugestao);
+            el.addEventListener("change", updateBebidaNomeSugestao);
+        });
+
         if (tipoEl) {
             tipoEl.addEventListener("change", function () {
-                syncMaioridadeUI();
-                syncNomePlaceholder();
+                syncTypeBlocks();
             });
-
-            syncMaioridadeUI();
-            syncNomePlaceholder();
         }
+
+        // estado inicial
+        syncTypeBlocks();
 
         if (formEl) {
             formEl.addEventListener("submit", function (e) {
@@ -303,13 +412,9 @@
                     return false;
                 }
 
-                // valida pod sabor obrigatório (client-side)
                 if (!validatePodRequired()) {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (promoHintEl) {
-                        // reutiliza o hint se quiser
-                    }
                     return false;
                 }
 

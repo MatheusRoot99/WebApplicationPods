@@ -22,6 +22,18 @@ namespace WebApplicationPods.Models
         [StringLength(100)]
         public string Nome { get; set; } = string.Empty;
 
+        public int? BebidaVolumeMl { get; set; }
+
+        [StringLength(40)]
+        public string? BebidaTipo { get; set; }
+
+        public BebidaEmbalagemTipo? BebidaEmbalagem { get; set; }
+
+        public int? BebidaQtdPorEmbalagem { get; set; }
+
+        [Column(TypeName = "decimal(5,2)")]
+        public decimal? BebidaTeorAlcoolico { get; set; }
+
         public bool RequerMaioridade { get; set; } = false;
 
         [StringLength(2000)]
