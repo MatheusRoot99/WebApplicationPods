@@ -21,9 +21,8 @@ using WebApplicationPods.Services.service;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ==================== FLAG: MODO LOCALHOST (MVP) ====================
-// Enquanto for MVP, deixa TRUE. Quando voltar multi-loja/subdomínio, muda pra FALSE.
-var MVP_LOCALHOST = builder.Environment.IsDevelopment();
+// ==================== MODO LOCALHOST ====================
+var LOCALHOST_ONLY = true;
 
 // ==================== Cultura global pt-BR ====================
 var ptBR = new CultureInfo("pt-BR");
@@ -37,7 +36,8 @@ builder.Services.Configure<RequestLocalizationOptions>(opts =>
     opts.DefaultRequestCulture = new RequestCulture(ptBR);
     opts.SupportedCultures = new[] { ptBR };
     opts.SupportedUICultures = new[] { ptBR };
-    opts.RequestCultureProviders = new IRequestCultureProvider[] {
+    opts.RequestCultureProviders = new IRequestCultureProvider[]
+    {
         new QueryStringRequestCultureProvider(),
         new CookieRequestCultureProvider(),
         new AcceptLanguageHeaderRequestCultureProvider()
@@ -66,9 +66,7 @@ builder.Services.AddAntiforgery(o =>
     o.Cookie.Name = "Pods.AntiForgery";
     o.Cookie.HttpOnly = true;
     o.Cookie.SameSite = SameSiteMode.Lax;
-    o.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
-        ? CookieSecurePolicy.SameAsRequest
-        : CookieSecurePolicy.Always;
+    o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     o.HeaderName = "RequestVerificationToken";
 });
 
@@ -109,21 +107,10 @@ builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
     options.Cookie.Name = "Pods.Auth";
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 
-    // ✅ LOCALHOST MVP: NÃO setar Domain (senão localhost quebra)
-    if (!MVP_LOCALHOST)
-    {
-        // multi-subdomínio (quando você voltar)
-        options.Cookie.Domain = ".lvh.me";
-        options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-    }
-    else
-    {
-        options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-    }
-
+    // localhost: não definir Domain
     options.LoginPath = "/Conta/Login";
     options.AccessDeniedPath = "/Conta/AcessoNegado";
     options.ExpireTimeSpan = TimeSpan.FromHours(2);
@@ -139,6 +126,7 @@ builder.Services.ConfigureApplicationCookie(options =>
                 ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 return Task.CompletedTask;
             }
+
             ctx.Response.Redirect(ctx.RedirectUri);
             return Task.CompletedTask;
         },
@@ -149,6 +137,7 @@ builder.Services.ConfigureApplicationCookie(options =>
                 ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
                 return Task.CompletedTask;
             }
+
             ctx.Response.Redirect(ctx.RedirectUri);
             return Task.CompletedTask;
         }
@@ -180,26 +169,16 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
     options.Cookie.Name = "SitePods.Session";
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 
-    // ✅ LOCALHOST MVP: NÃO setar Domain
-    if (!MVP_LOCALHOST)
-    {
-        options.Cookie.Domain = ".lvh.me";
-        options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-    }
-    else
-    {
-        options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-    }
+    // localhost: não definir Domain
 });
 
-// ==================== HttpContext + StoreUrlBuilder ====================
+// ==================== HttpContext + Serviços ====================
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<WebApplicationPods.Services.Interface.IStoreUrlBuilder, WebApplicationPods.Services.service.StoreUrlBuilder>();
+builder.Services.AddScoped<IStoreUrlBuilder, StoreUrlBuilder>();
 
-// ==================== HTTP Client ViaCEP ====================
 builder.Services.AddHttpClient<ICepService, CepService>(client =>
 {
     client.BaseAddress = new Uri("https://viacep.com.br/ws/");
@@ -249,7 +228,7 @@ builder.Services.AddDataProtection();
 builder.Services.AddSingleton<IClienteRememberService, ClienteRememberService>();
 
 builder.Services.AddScoped<ICurrentLojaService, CurrentLojaService>();
-builder.Services.AddScoped<ITenantResolver, SubdomainTenantResolver>(); // ok manter, mas amanhã a gente simplifica se necessário
+builder.Services.AddScoped<ITenantResolver, SubdomainTenantResolver>();
 
 builder.Services.AddHostedService<IdentitySeedHostedService>();
 builder.Services.AddSignalR();
@@ -274,8 +253,10 @@ else
 {
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
-    app.UseHttpsRedirection();
 }
+
+// para localhost também pode usar HTTPS se estiver configurado
+app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 app.UseRouting();
@@ -285,19 +266,18 @@ app.UseMiddleware<ClienteAutoLoginMiddleware>();
 
 app.UseAuthentication();
 
-// ✅ LOCALHOST MVP: DESLIGA os redirects por subdomínio/role
-if (!MVP_LOCALHOST)
+// localhost only: desliga middlewares de subdomínio
+if (!LOCALHOST_ONLY)
 {
     app.UseMiddleware<RoleSubdomainEnforcerMiddleware>();
     app.UseMiddleware<PortalEntryRedirectMiddleware>();
 }
 
-// ✅ Resolve LojaId na sessão
 app.UseMiddleware<LojaContextMiddleware>();
 
 app.UseAuthorization();
 
-// ===== Endpoints =====
+// ==================== Endpoints ====================
 app.MapControllers();
 
 app.MapControllerRoute(
@@ -306,7 +286,7 @@ app.MapControllerRoute(
 
 app.MapControllerRoute(
     name: "painel_prefix",
-    pattern: "PainelLojista/{controller=Dashboard}/{action=Index}/{id?}");
+    pattern: "PainelLojista/{controller=PainelLojista}/{action=Dashboard}/{id?}");
 
 app.MapControllerRoute(
     name: "default",

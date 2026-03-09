@@ -5,8 +5,8 @@ namespace WebApplicationPods.Models
 {
     public class LoginViewModel
     {
-        [Required(ErrorMessage = "Informe Telefone ou CPF")]
-        [Display(Name = "Telefone ou CPF")]
+        [Required(ErrorMessage = "Informe Telefone, CPF ou e-mail")]
+        [Display(Name = "Telefone, CPF ou e-mail")]
         public string TelefoneOuCpf { get; set; }
 
         [Required(ErrorMessage = "Informe a senha")]
@@ -17,8 +17,7 @@ namespace WebApplicationPods.Models
         [Display(Name = "Lembrar-me")]
         public bool LembrarMe { get; set; }
 
-
-        [ValidateNever] // <- não validar esse campo
+        [ValidateNever]
         public string ReturnUrl { get; set; }
     }
 }
