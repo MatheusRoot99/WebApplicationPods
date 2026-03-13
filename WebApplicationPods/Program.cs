@@ -278,7 +278,20 @@ app.UseMiddleware<LojaContextMiddleware>();
 app.UseAuthorization();
 
 // ==================== Endpoints ====================
+// ==================== Endpoints ====================
 app.MapControllers();
+
+// FORÇA /PainelLojista/Produto/* a usar o controller Produto da RAIZ
+app.MapControllerRoute(
+    name: "painellojista_produto_root",
+    pattern: "PainelLojista/Produto/{action=Index}/{id?}",
+    defaults: new { controller = "Produto", area = "" });
+
+// opcional: se também quiser forçar /PainelLojista/Produto sem action
+app.MapControllerRoute(
+    name: "painellojista_produto_root_index",
+    pattern: "PainelLojista/Produto",
+    defaults: new { controller = "Produto", action = "Index", area = "" });
 
 app.MapControllerRoute(
     name: "areas",

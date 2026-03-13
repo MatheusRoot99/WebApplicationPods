@@ -15,6 +15,43 @@ namespace WebApplicationPods.Areas.PainelLojista.Controllers
         }
 
         [HttpGet]
+        public IActionResult Index()
+        {
+            return RedirectToAction("Index", "Produto", new { area = "" });
+        }
+
+       
+        [HttpGet]
+        public IActionResult CriarPadrao()
+        {
+            return RedirectToAction("CriarPadrao", "Produto", new { area = "" });
+        }
+
+        [HttpGet]
+        public IActionResult CriarBebida()
+        {
+            return RedirectToAction("CriarBebida", "Produto", new { area = "" });
+        }
+
+        [HttpGet]
+        public IActionResult CriarPod()
+        {
+            return RedirectToAction("CriarPod", "Produto", new { area = "" });
+        }
+
+        [HttpGet]
+        public IActionResult EditarSimples(int id)
+        {
+            return RedirectToAction("EditarSimples", "Produto", new { area = "", id });
+        }
+
+        [HttpGet]
+        public IActionResult Excluir(int id)
+        {
+            return RedirectToAction("Excluir", "Produto", new { area = "", id });
+        }
+
+        [HttpGet]
         public async Task<IActionResult> Visualizar(int id)
         {
             var produto = await _context.Produtos

@@ -57,7 +57,6 @@ namespace WebApplicationPods.Controllers
             return _currentLoja.LojaId.Value;
         }
 
-        // ✅ helper seguro para páginas públicas
         private int? GetLojaIdOrNull()
         {
             if (_currentLoja.HasLoja && _currentLoja.LojaId.HasValue && _currentLoja.LojaId.Value > 0)
@@ -69,7 +68,6 @@ namespace WebApplicationPods.Controllers
         private static bool IsPod(ProdutoTipo tipo) => tipo == ProdutoTipo.PodVape;
         private static bool IsBebida(ProdutoTipo tipo) => tipo == ProdutoTipo.BebidaAlcoolica;
 
-        // ========= LISTA (painel) =========
         [Authorize(Roles = "Lojista,Admin")]
         public async Task<IActionResult> Index(string? q, int? categoriaId, bool? emPromocao, string? sort = "nome", int page = 1, int pageSize = 12)
         {
@@ -88,7 +86,8 @@ namespace WebApplicationPods.Controllers
             IQueryable<ProdutoModel> query = _context.Produtos
                 .AsNoTracking()
                 .Where(p => p.LojaId == lojaId && p.Ativo)
-                .Include(p => p.Categoria);
+                .Include(p => p.Categoria)
+                .Include(p => p.Variacoes);
 
             if (!string.IsNullOrWhiteSpace(q))
             {
@@ -136,17 +135,14 @@ namespace WebApplicationPods.Controllers
             return View(itens);
         }
 
-        // ========= DETALHES (PÚBLICO / CLIENTE) =========
         [AllowAnonymous]
         [HttpGet]
         public async Task<IActionResult> Detalhes(int id)
         {
-            // ✅ NÃO usa GetLojaIdOrFail() aqui
             IQueryable<ProdutoModel> query = _context.Produtos
                 .AsNoTracking()
                 .Where(p => p.Id == id && p.Ativo);
 
-            // Se houver loja no contexto (subdomínio/middleware), restringe.
             var lojaIdAtual = GetLojaIdOrNull();
             if (lojaIdAtual.HasValue)
             {
@@ -168,7 +164,6 @@ namespace WebApplicationPods.Controllers
 
             var sabores = new List<SaborQuantidade>();
 
-            // Se for POD, expõe o sabor do próprio produto (simples)
             if (IsPod(produto.TipoProduto) && !string.IsNullOrWhiteSpace(produto.Sabor))
             {
                 sabores.Add(new SaborQuantidade
@@ -185,17 +180,15 @@ namespace WebApplicationPods.Controllers
                 ProdutosRelacionados = relacionados
             };
 
-            // Procura primeiro na raiz (Views/Produto/Detalhes.cshtml)
             return View("Detalhes", vm);
         }
 
-        // ========= CRIAR PADRÃO =========
         [Authorize(Roles = "Lojista,Admin")]
         [HttpGet]
         public IActionResult CriarPadrao()
         {
             CarregarCategoriasEnum();
-            ViewBag.Sabores = new List<SelectListItem>(); // não usado no padrão (só POD usa combo)
+            ViewBag.Sabores = new List<SelectListItem>();
 
             return View(new ProdutoFormSimplesViewModel
             {
@@ -213,20 +206,18 @@ namespace WebApplicationPods.Controllers
             vm.TipoProduto = ProdutoTipo.Padrao;
             vm.RequerMaioridade = false;
 
-            // ✅ padrão pode usar sabor/cor opcionais
             vm.Sabor = (vm.Sabor ?? "").Trim();
             vm.Cor = string.IsNullOrWhiteSpace(vm.Cor) ? vm.Cor : vm.Cor.Trim();
 
             return await SalvarSimplesCreate(vm, submit, "CriarPadrao", nameof(CriarPadrao));
         }
 
-        // ========= CRIAR BEBIDA =========
         [Authorize(Roles = "Lojista,Admin")]
         [HttpGet]
         public IActionResult CriarBebida()
         {
             CarregarCategoriasEnum();
-            ViewBag.Sabores = new List<SelectListItem>(); // não usado
+            ViewBag.Sabores = new List<SelectListItem>();
 
             return View(new ProdutoFormSimplesViewModel
             {
@@ -244,14 +235,12 @@ namespace WebApplicationPods.Controllers
             vm.TipoProduto = ProdutoTipo.BebidaAlcoolica;
             vm.RequerMaioridade = true;
 
-            // ✅ bebida não usa sabor/cor
             vm.Sabor = "";
             vm.Cor = "";
 
             return await SalvarSimplesCreate(vm, submit, "CriarBebida", nameof(CriarBebida));
         }
 
-        // ========= CRIAR POD =========
         [Authorize(Roles = "Lojista,Admin")]
         [HttpGet]
         public IActionResult CriarPod()
@@ -275,7 +264,6 @@ namespace WebApplicationPods.Controllers
             vm.TipoProduto = ProdutoTipo.PodVape;
             vm.RequerMaioridade = true;
 
-            // prioriza "Outro sabor"
             var saborFinal = !string.IsNullOrWhiteSpace(SaborOutro) ? SaborOutro.Trim()
                             : !string.IsNullOrWhiteSpace(SaborSelect) ? SaborSelect.Trim()
                             : (vm.Sabor ?? "").Trim();
@@ -296,7 +284,6 @@ namespace WebApplicationPods.Controllers
             return await SalvarSimplesCreate(vm, submit, "CriarPod", nameof(CriarPod));
         }
 
-        // ========= EDITAR =========
         [Authorize(Roles = "Lojista,Admin")]
         [HttpGet]
         public IActionResult EditarSimples(int id)
@@ -337,18 +324,13 @@ namespace WebApplicationPods.Controllers
                 Ativo = produto.Ativo,
                 MaisVendido = produto.MaisVendido,
                 RequerMaioridade = produto.RequerMaioridade,
-
                 Sabor = produto.Sabor,
                 Cor = produto.Cor,
-
-                // Bebida
                 BebidaVolumeMl = produto.BebidaVolumeMl,
                 BebidaTipo = produto.BebidaTipo,
                 BebidaEmbalagem = produto.BebidaEmbalagem ?? BebidaEmbalagemTipo.NaoInformado,
                 BebidaQtdPorEmbalagem = produto.BebidaQtdPorEmbalagem,
                 BebidaTeorAlcoolico = produto.BebidaTeorAlcoolico,
-
-                // Pod
                 PodPuffs = produto.PodPuffs,
                 PodCapacidadeBateria = produto.PodCapacidadeBateria,
                 PodTipo = produto.PodTipo
@@ -364,7 +346,6 @@ namespace WebApplicationPods.Controllers
         {
             if (vm.Id != id) vm.Id = id;
 
-            // ✅ Regras por tipo
             if (IsPod(vm.TipoProduto))
             {
                 var saborFinal = !string.IsNullOrWhiteSpace(SaborOutro) ? SaborOutro.Trim()
@@ -379,13 +360,11 @@ namespace WebApplicationPods.Controllers
             }
             else if (IsBebida(vm.TipoProduto))
             {
-                // ✅ bebida não usa sabor/cor
                 vm.Sabor = "";
                 vm.Cor = "";
             }
             else
             {
-                // ✅ padrão mantém sabor/cor opcionais
                 vm.Sabor = (vm.Sabor ?? "").Trim();
                 vm.Cor = string.IsNullOrWhiteSpace(vm.Cor) ? vm.Cor : vm.Cor.Trim();
             }
@@ -393,7 +372,6 @@ namespace WebApplicationPods.Controllers
             return await SalvarSimplesUpdate(vm, "EditarSimples");
         }
 
-        // ========= ALIAS: EDITAR (compatibilidade com links antigos / Index antigo) =========
         [Authorize(Roles = "Lojista,Admin")]
         [HttpGet]
         public IActionResult Editar(int id)
@@ -409,7 +387,6 @@ namespace WebApplicationPods.Controllers
             return EditarSimples(id, vm, SaborSelect, SaborOutro);
         }
 
-        // ========= SALVAR CREATE =========
         private async Task<IActionResult> SalvarSimplesCreate(ProdutoFormSimplesViewModel vm, string submit, string viewName, string redirectNewAction)
         {
             CarregarCategoriasEnum();
@@ -418,7 +395,6 @@ namespace WebApplicationPods.Controllers
             else
                 ViewBag.Sabores = new List<SelectListItem>();
 
-            // CONVERTER OS VALORES RECEBIDOS DO FORMULÁRIO (pt-BR)
             if (Request.Form["Preco"].ToString().Contains(",") || Request.Form["PrecoPromocional"].ToString().Contains(","))
             {
                 ModelState.Remove(nameof(vm.Preco));
@@ -427,17 +403,14 @@ namespace WebApplicationPods.Controllers
 
             NormalizeMoneyServerSide(vm);
 
-            // Regras fixas por tipo
             if (IsPod(vm.TipoProduto) || IsBebida(vm.TipoProduto))
                 vm.RequerMaioridade = true;
 
             if (IsBebida(vm.TipoProduto))
             {
-                // ✅ bebida não usa sabor/cor
                 vm.Sabor = "";
                 vm.Cor = "";
 
-                // Se embalagem for fardo/caixa/pack, exige quantidade
                 var emb = vm.BebidaEmbalagem;
                 var exigeQtd = emb == BebidaEmbalagemTipo.Caixa
                             || emb == BebidaEmbalagemTipo.Fardo
@@ -461,42 +434,31 @@ namespace WebApplicationPods.Controllers
             {
                 LojaId = lojaId,
                 TipoProduto = vm.TipoProduto,
-
                 Nome = vm.Nome,
                 Descricao = vm.Descricao,
                 Marca = vm.Marca,
                 SKU = vm.SKU,
                 CodigoBarras = vm.CodigoBarras,
                 CategoriaId = vm.CategoriaId,
-
-                // Bebida
                 BebidaVolumeMl = IsBebida(vm.TipoProduto) ? vm.BebidaVolumeMl : null,
                 BebidaTipo = IsBebida(vm.TipoProduto) ? vm.BebidaTipo?.Trim() : null,
                 BebidaEmbalagem = IsBebida(vm.TipoProduto) ? vm.BebidaEmbalagem : null,
                 BebidaQtdPorEmbalagem = IsBebida(vm.TipoProduto) ? vm.BebidaQtdPorEmbalagem : null,
                 BebidaTeorAlcoolico = IsBebida(vm.TipoProduto) ? vm.BebidaTeorAlcoolico : null,
-
                 Preco = vm.Preco,
                 PrecoPromocional = (vm.PrecoPromocional.HasValue && vm.PrecoPromocional.Value > 0) ? vm.PrecoPromocional : null,
                 EmPromocao = vm.PrecoPromocional.HasValue && vm.PrecoPromocional.Value > 0 && vm.PrecoPromocional.Value < vm.Preco,
-
                 Estoque = vm.Estoque < 0 ? 0 : vm.Estoque,
-
                 Ativo = vm.Ativo,
                 MaisVendido = vm.MaisVendido,
                 RequerMaioridade = vm.RequerMaioridade,
                 DataCadastro = DateTime.Now,
-
-                // Pod
                 PodPuffs = IsPod(vm.TipoProduto) ? vm.PodPuffs : null,
                 PodCapacidadeBateria = IsPod(vm.TipoProduto) ? vm.PodCapacidadeBateria?.Trim() : null,
                 PodTipo = IsPod(vm.TipoProduto) ? vm.PodTipo?.Trim() : null,
-
-                // Campos simples
                 Sabor = IsPod(vm.TipoProduto) ? (vm.Sabor ?? "").Trim()
                       : IsBebida(vm.TipoProduto) ? ""
                       : (vm.Sabor ?? "").Trim(),
-
                 Cor = IsBebida(vm.TipoProduto) ? "" : (string.IsNullOrWhiteSpace(vm.Cor) ? vm.Cor : vm.Cor!.Trim())
             };
 
@@ -523,7 +485,6 @@ namespace WebApplicationPods.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // ========= SALVAR UPDATE =========
         private async Task<IActionResult> SalvarSimplesUpdate(ProdutoFormSimplesViewModel vm, string viewName)
         {
             CarregarCategoriasEnum();
@@ -532,7 +493,6 @@ namespace WebApplicationPods.Controllers
             else
                 ViewBag.Sabores = new List<SelectListItem>();
 
-            // ajuda quando vier preço com vírgula e model binding reclamar
             if (Request.Form["Preco"].ToString().Contains(",") || Request.Form["PrecoPromocional"].ToString().Contains(","))
             {
                 ModelState.Remove(nameof(vm.Preco));
@@ -546,11 +506,9 @@ namespace WebApplicationPods.Controllers
 
             if (IsBebida(vm.TipoProduto))
             {
-                // ✅ bebida não usa sabor/cor
                 vm.Sabor = "";
                 vm.Cor = "";
 
-                // Se embalagem for fardo/caixa/pack, exige quantidade
                 var emb = vm.BebidaEmbalagem;
                 var exigeQtd = emb == BebidaEmbalagemTipo.Caixa
                             || emb == BebidaEmbalagemTipo.Fardo
@@ -581,40 +539,29 @@ namespace WebApplicationPods.Controllers
 
             produto.TipoProduto = vm.TipoProduto;
             produto.CategoriaId = vm.CategoriaId;
-
             produto.Nome = vm.Nome;
             produto.Descricao = vm.Descricao;
             produto.Marca = vm.Marca;
             produto.SKU = vm.SKU;
             produto.CodigoBarras = vm.CodigoBarras;
-
             produto.Preco = vm.Preco;
             produto.PrecoPromocional = (vm.PrecoPromocional.HasValue && vm.PrecoPromocional.Value > 0) ? vm.PrecoPromocional : null;
             produto.EmPromocao = produto.PrecoPromocional.HasValue && produto.PrecoPromocional.Value > 0 && produto.PrecoPromocional.Value < produto.Preco;
-
             produto.Estoque = vm.Estoque < 0 ? 0 : vm.Estoque;
-
-            // Bebida
             produto.BebidaVolumeMl = IsBebida(vm.TipoProduto) ? vm.BebidaVolumeMl : null;
             produto.BebidaTipo = IsBebida(vm.TipoProduto) ? vm.BebidaTipo?.Trim() : null;
             produto.BebidaEmbalagem = IsBebida(vm.TipoProduto) ? vm.BebidaEmbalagem : null;
             produto.BebidaQtdPorEmbalagem = IsBebida(vm.TipoProduto) ? vm.BebidaQtdPorEmbalagem : null;
             produto.BebidaTeorAlcoolico = IsBebida(vm.TipoProduto) ? vm.BebidaTeorAlcoolico : null;
-
             produto.Ativo = vm.Ativo;
             produto.MaisVendido = vm.MaisVendido;
             produto.RequerMaioridade = vm.RequerMaioridade;
-
-            // Pod
             produto.PodPuffs = IsPod(vm.TipoProduto) ? vm.PodPuffs : null;
             produto.PodCapacidadeBateria = IsPod(vm.TipoProduto) ? vm.PodCapacidadeBateria?.Trim() : null;
             produto.PodTipo = IsPod(vm.TipoProduto) ? vm.PodTipo?.Trim() : null;
-
-            // Campos simples
             produto.Sabor = IsPod(vm.TipoProduto) ? (vm.Sabor ?? "").Trim()
                          : IsBebida(vm.TipoProduto) ? ""
                          : (vm.Sabor ?? "").Trim();
-
             produto.Cor = IsBebida(vm.TipoProduto) ? "" : (string.IsNullOrWhiteSpace(vm.Cor) ? vm.Cor : vm.Cor!.Trim());
 
             if (vm.ImagemUpload is { Length: > 0 })
@@ -635,7 +582,6 @@ namespace WebApplicationPods.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // ========= EXCLUIR =========
         [Authorize(Roles = "Lojista,Admin")]
         [HttpGet]
         public IActionResult Excluir(int id)
@@ -687,7 +633,6 @@ namespace WebApplicationPods.Controllers
             }
         }
 
-        // ========= CATEGORIAS =========
         private void CarregarCategoriasEnum()
         {
             var categorias = _categoriaRepository.ObterTodos()
@@ -697,7 +642,6 @@ namespace WebApplicationPods.Controllers
             ViewBag.Categorias = new SelectList(categorias, "Id", "Nome");
         }
 
-        // ========= SABORES POD =========
         private void CarregarSaboresPod(string? saborAtual)
         {
             var baseSabores = ObterTodosSabores();
@@ -744,7 +688,6 @@ namespace WebApplicationPods.Controllers
                 .ToList();
         }
 
-        // ========= IMAGEM =========
         private static string? ValidateImage(IFormFile file, out string extLower)
         {
             extLower = Path.GetExtension(file.FileName).ToLowerInvariant();
@@ -789,7 +732,6 @@ namespace WebApplicationPods.Controllers
             return slug.ToLowerInvariant();
         }
 
-        // ========= MONEY =========
         private void NormalizeMoneyServerSide(ProdutoFormSimplesViewModel vm)
         {
             var precoRaw = GetRawFromModelState(nameof(vm.Preco));
@@ -799,11 +741,6 @@ namespace WebApplicationPods.Controllers
             var promoRaw = GetRawFromModelState(nameof(vm.PrecoPromocional));
             if (!string.IsNullOrWhiteSpace(promoRaw))
                 vm.PrecoPromocional = ParseNullableDecimalBR(promoRaw);
-
-            // Se BebidaTeorAlcoolico for decimal? e vier com vírgula:
-            // var teorRaw = GetRawFromModelState(nameof(vm.BebidaTeorAlcoolico));
-            // if (!string.IsNullOrWhiteSpace(teorRaw))
-            //     vm.BebidaTeorAlcoolico = ParseNullableDecimalBR(teorRaw);
         }
 
         private string? GetRawFromModelState(string key)
@@ -838,7 +775,6 @@ namespace WebApplicationPods.Controllers
         }
     }
 
-    // EXEMPLO: enum de categoria (troque pelo seu, se já existir em outro lugar)
     public enum ProdutoCategoriaEnum
     {
         Bebidas = 1,
