@@ -1,33 +1,46 @@
 ﻿/* =========================================================
-   Bottom Nav (mobile) — Pods (FINAL / sem duplicidade)
+   Bottom Nav (mobile) — versão estável p/ Chrome mobile
+   Com SVG inline no lugar de font icons
    ========================================================= */
 
 :root {
-    --mbn-height: 70px;
+    --mbn-height: 74px;
+    --mbn-side: 10px;
+    --mbn-gap: 8px;
+    --mbn-radius: 16px;
+    --mbn-icon-size: 32px;
+    --mbn-icon-stroke: 1.9;
     --kb-shift: 0px;
 }
 
-/* NAV */
+/* ---------------------------------------------------------
+   NAV
+--------------------------------------------------------- */
 .mobile-bottom-nav {
-    position: fixed !important;
+    position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 1080;
     height: var(--mbn-height);
-    padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+  /*  padding: 8px var(--mbn-side) 10px;*/
     display: flex;
-    align-items: center;
+    align-items: stretch;
     justify-content: space-between;
-    gap: 10px;
-    background: var(--bg-elev);
-    border-top: 1px solid var(--border);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    box-shadow: 0 -10px 30px rgba(0,0,0,.12);
+    gap: var(--mbn-gap);
+    background: rgba(10, 10, 10, 0.94);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 -8px 22px rgba(0, 0, 0, 0.16);
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    will-change: transform;
 }
 
-    /* itens iguais (cada um ocupa 1 fatia) */
+    /* ---------------------------------------------------------
+   ITEM
+--------------------------------------------------------- */
     .mobile-bottom-nav .mbn-item {
         flex: 1 1 0;
         min-width: 0;
@@ -36,60 +49,86 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 6px;
-        padding: 8px 6px;
-        border-radius: 16px;
+        gap: 4px;
+        padding: 6px 4px 8px;
+        border-radius: var(--mbn-radius);
         text-decoration: none;
         text-align: center;
-        color: color-mix(in srgb, var(--text) 58%, transparent);
-        transition: background .12s ease, transform .12s ease, color .12s ease;
+        color: rgba(255, 255, 255, 0.70);
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+        transition: color .18s ease, background-color .18s ease;
     }
 
-        /* “caixa” fixa do ícone (isso garante alinhamento) */
-        .mobile-bottom-nav .mbn-item i {
-            width: 36px;
-            height: 36px;
-            display: grid;
-            place-items: center;
-            font-size: 20px;
-            line-height: 1;
-            border-radius: 999px;
+        /* toque */
+        .mobile-bottom-nav .mbn-item:active {
+            background: rgba(255, 255, 255, 0.04);
         }
 
-    /* label fixa e sem empurrar */
+    /* ---------------------------------------------------------
+   ÍCONE SVG
+--------------------------------------------------------- */
+    .mobile-bottom-nav .mbn-icon {
+        width: var(--mbn-icon-size);
+        height: var(--mbn-icon-size);
+        min-width: var(--mbn-icon-size);
+        min-height: var(--mbn-icon-size);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        flex-shrink: 0;
+        transition: color .18s ease, background-color .18s ease;
+    }
+
+        .mobile-bottom-nav .mbn-icon svg {
+            width: 22px;
+            height: 22px;
+            display: block;
+            stroke: currentColor;
+            stroke-width: var(--mbn-icon-stroke);
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            vector-effect: non-scaling-stroke;
+        }
+
+    /* ---------------------------------------------------------
+   LABEL
+--------------------------------------------------------- */
     .mobile-bottom-nav .mbn-label {
-        font-size: 11px;
+        display: block;
+        max-width: 100%;
+        font-size: 10px;
         line-height: 1;
         font-weight: 800;
-        opacity: .9;
+        letter-spacing: 0.01em;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 100%;
+        opacity: 0.96;
     }
 
-    /* ACTIVE */
+    /* ---------------------------------------------------------
+   ACTIVE
+--------------------------------------------------------- */
     .mobile-bottom-nav .mbn-item.active {
-        color: var(--primary);
-        background: color-mix(in srgb, var(--primary) 14%, transparent);
+        color: #3b82f6;
+        background: rgba(59, 130, 246, 0.10);
     }
 
-        .mobile-bottom-nav .mbn-item.active i {
-            background: color-mix(in srgb, var(--primary) 16%, transparent);
-            color: var(--primary);
+        .mobile-bottom-nav .mbn-item.active .mbn-icon {
+            color: #3b82f6;
+            background: rgba(59, 130, 246, 0.16);
         }
 
-    /* toque */
-    .mobile-bottom-nav .mbn-item:active {
-        transform: translateY(1px);
-    }
-
-    /* BADGE (preso no canto do ícone, sem “tortar”) */
+    /* ---------------------------------------------------------
+   BADGE
+--------------------------------------------------------- */
     .mobile-bottom-nav .mbn-badge {
         position: absolute;
         top: 7px;
-        right: calc(50% - 22px); /* <- isso centraliza em relação ao ícone */
-        transform: translateX(18px);
+        left: 50%;
+        margin-left: 9px;
         min-width: 18px;
         height: 18px;
         padding: 0 5px;
@@ -102,30 +141,36 @@
         font-size: 10px;
         font-weight: 900;
         line-height: 1;
-        box-shadow: 0 0 0 2px color-mix(in srgb, var(--bg-elev) 92%, transparent);
+        box-shadow: 0 0 0 2px rgba(10, 10, 10, 0.94);
+        pointer-events: none;
     }
 
-    /* dot (se usar) */
+    /* ---------------------------------------------------------
+   DOT
+--------------------------------------------------------- */
     .mobile-bottom-nav .mbn-dot {
         position: absolute;
-        top: 10px;
-        right: calc(50% - 22px);
-        transform: translateX(22px);
+        top: 9px;
+        left: 50%;
+        margin-left: 17px;
         width: 8px;
         height: 8px;
         border-radius: 999px;
         background: #22c55e;
-        box-shadow: 0 0 0 2px color-mix(in srgb, var(--bg-elev) 92%, transparent);
+        box-shadow: 0 0 0 2px rgba(10, 10, 10, 0.94);
+        pointer-events: none;
     }
 
-/* bump */
+/* ---------------------------------------------------------
+   BADGE BUMP
+--------------------------------------------------------- */
 @keyframes mbn-bump {
     0% {
         transform: scale(1);
     }
 
     30% {
-        transform: scale(1.18);
+        transform: scale(1.10);
     }
 
     100% {
@@ -137,19 +182,27 @@
     animation: mbn-bump .35s ease;
 }
 
-/* auth (você está escondendo sempre! se quiser mostrar, remova isso) */
+/* ---------------------------------------------------------
+   PERFIL / ENTRAR
+--------------------------------------------------------- */
 .mbn-item--auth {
     display: none !important;
 }
 
-/* esconder no desktop */
+/* ---------------------------------------------------------
+   DESKTOP
+--------------------------------------------------------- */
 @media (min-width: 992px) {
     .mobile-bottom-nav {
-        display: none;
+        display: none !important;
     }
 }
 
-/* respiro do conteúdo */
-.has-bottom-nav .page-content {
-    padding-bottom: calc(var(--mbn-height) + var(--kb-shift, 0px) + env(safe-area-inset-bottom) + 12px);
+/* ---------------------------------------------------------
+   RESPIRO DO CONTEÚDO
+--------------------------------------------------------- */
+.has-bottom-nav .page-content,
+.has-bottom-nav main,
+.has-bottom-nav .main-content {
+    padding-bottom: calc(var(--mbn-height) + 14px);
 }
