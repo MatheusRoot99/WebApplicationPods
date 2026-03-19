@@ -1547,3 +1547,9 @@ html[data-theme="dark"] .pdp-mobile-bar-inner {
         min-height: 32px;
     }
 }
+
+.pdp-btn:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+    pointer-events: none;
+}

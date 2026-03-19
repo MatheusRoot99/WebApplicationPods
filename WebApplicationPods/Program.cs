@@ -273,7 +273,10 @@ if (!LOCALHOST_ONLY)
     app.UseMiddleware<PortalEntryRedirectMiddleware>();
 }
 
-app.UseMiddleware<LojaContextMiddleware>();
+if (!LOCALHOST_ONLY)
+{
+    app.UseMiddleware<LojaContextMiddleware>();
+}
 
 app.UseAuthorization();
 

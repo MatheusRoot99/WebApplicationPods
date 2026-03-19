@@ -2,6 +2,7 @@
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
+
 @section Styles {
     <link rel="stylesheet" href="~/css/home-index.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
@@ -9,7 +10,6 @@
 
 <div class="home-index">
 
-    <!-- Topbar -->
     <div class="topbar container-fluid">
         <div class="topbar-inner container px-0">
             <button class="topbar-btn" type="button"
@@ -33,7 +33,6 @@
         </div>
     </div>
 
-    <!-- Hero -->
     <section class="hero-section text-center text-white mb-3">
         <div class="container">
             <h1 class="display-6 fw-bold mb-1">
@@ -43,20 +42,17 @@
         </div>
     </section>
 
-    <!-- Filtros -->
     <div class="container mb-3">
         <div class="collapse d-lg-block" id="filtersCollapse">
             <form asp-area="" asp-action="Index" method="get" class="filters-card card border-0 p-3 mb-3" id="filtersForm">
                 <div class="row g-3 align-items-end">
 
-                    <!-- Busca -->
                     <div class="col-12 col-lg-4">
                         <label class="form-label">Buscar</label>
                         <input name="Termo" value="@(Model.Filtros.Termo ?? "")"
                                class="form-control" placeholder="Ex: Heineken, Pod, Whisky..." />
                     </div>
 
-                    <!-- Categoria -->
                     <div class="col-12 col-md-6 col-lg-3">
                         <label class="form-label">Categoria</label>
                         <select name="Categoria" class="form-select"
@@ -125,7 +121,6 @@
         </div>
     </div>
 
-    <!-- Grade de Produtos -->
     <div class="container mb-4">
         @if (Model.Produtos != null && Model.Produtos.Any())
         {
@@ -139,13 +134,18 @@
 
                     var precoAtual = promoOk ? produto.PrecoPromocional!.Value : produto.Preco;
 
+                    var exigeSelecaoDeSabor =
+                    produto.SaboresQuantidadesList != null &&
+                    produto.SaboresQuantidadesList.Any(s => s.Quantidade > 0);
+
                     <article class="produto-card h-100">
 
                         <a asp-area=""
                            asp-controller="Produto"
                            asp-action="Detalhes"
                            asp-route-id="@produto.Id"
-                           class="thumb-link" aria-label="@produto.Nome">
+                           class="thumb-link"
+                           aria-label="@produto.Nome">
                             <div class="product-thumb">
                                 @if (!string.IsNullOrEmpty(produto.ImagemUrl))
                                 {
@@ -174,17 +174,15 @@
                                asp-controller="Produto"
                                asp-action="Detalhes"
                                asp-route-id="@produto.Id"
-                               class="stretched-link text-decoration-none">
+                               class="text-decoration-none product-title-link">
                                 <h6 class="title text-truncate-2">@produto.Nome</h6>
                             </a>
 
                             @{
-                                // ---------- POD ----------
                                 bool puffOk = produto.PodPuffs > 0;
                                 bool batOk = int.TryParse(produto.PodCapacidadeBateria, out var bat) && bat > 0;
                                 bool temSpecsPod = puffOk || batOk;
 
-                                // ---------- BEBIDA ----------
                                 bool volumeOk = produto.BebidaVolumeMl.HasValue && produto.BebidaVolumeMl.Value > 0;
 
                                 bool teorOk = false;
@@ -216,7 +214,6 @@
                                     };
                                 }
 
-                                // Se for pack/fardo/caixa, fica melhor mostrar junto com a quantidade
                                 string embalagemResumo = "";
                                 if (embalagemOk)
                                 {
@@ -232,8 +229,6 @@
                                 }
 
                                 bool temSpecsBebida = volumeOk || teorOk || !string.IsNullOrWhiteSpace(embalagemResumo);
-
-                                // (opcional) detectar bebida por dados preenchidos, sem depender do TipoProduto na listagem
                                 bool pareceBebida = temSpecsBebida || !string.IsNullOrWhiteSpace(produto.BebidaTipo);
                             }
 
@@ -299,24 +294,39 @@
                             </div>
                         </div>
 
-                        <form asp-controller="Carrinho" asp-action="AdicionarItem" method="post" class="quick-add-form">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="produtoId" value="@produto.Id" />
-                            <input type="hidden" name="quantidade" value="1" />
-                            <input type="hidden" name="sabor" value="" />
-                            <input type="hidden" name="observacoes" value="" />
-
-                            <button type="submit"
-                                    class="quick-add @(produto.Estoque <= 0 ? "disabled" : "")"
-                                    @(produto.Estoque <= 0 ? "disabled" : null)
-                                    aria-disabled="@(produto.Estoque <= 0)"
-                                    title="Adicionar ao carrinho"
-                                    aria-label="Adicionar @produto.Nome ao carrinho">
+                        @if (exigeSelecaoDeSabor)
+                        {
+                            <a asp-controller="Produto"
+                               asp-action="Detalhes"
+                               asp-route-id="@produto.Id"
+                               class="quick-add @(produto.Estoque <= 0 ? "disabled" : "")"
+                               title="Escolher sabor"
+                               aria-label="Escolher sabor de @produto.Nome">
                                 <i class="fa-solid fa-cart-plus qa-icon" aria-hidden="true"></i>
-                                <i class="fa-solid fa-spinner fa-spin qa-spin" aria-hidden="true"></i>
-                                <i class="fa-solid fa-check qa-done" aria-hidden="true"></i>
-                            </button>
-                        </form>
+                            </a>
+                        }
+                        else
+                        {
+                            <form asp-controller="Carrinho" asp-action="AdicionarItem" method="post" class="quick-add-form">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="produtoId" value="@produto.Id" />
+                                <input type="hidden" name="quantidade" value="1" />
+                                <input type="hidden" name="sabor" value="" />
+                                <input type="hidden" name="observacoes" value="" />
+                                <input type="hidden" name="buyNow" value="false" />
+
+                                <button type="submit"
+                                        class="quick-add @(produto.Estoque <= 0 ? "disabled" : "")"
+                                        @(produto.Estoque <= 0 ? "disabled" : null)
+                                        aria-disabled="@(produto.Estoque <= 0)"
+                                        title="Adicionar ao carrinho"
+                                        aria-label="Adicionar @produto.Nome ao carrinho">
+                                    <i class="fa-solid fa-cart-plus qa-icon" aria-hidden="true"></i>
+                                    <i class="fa-solid fa-spinner fa-spin qa-spin" aria-hidden="true"></i>
+                                    <i class="fa-solid fa-check qa-done" aria-hidden="true"></i>
+                                </button>
+                            </form>
+                        }
 
                     </article>
                 }
@@ -335,35 +345,50 @@
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-          const topbarSelect = document.getElementById('Filtros_OrdenarPor');
-          const form = document.getElementById('filtersForm');
+            const topbarSelect = document.getElementById('Filtros_OrdenarPor');
+            const form = document.getElementById('filtersForm');
 
-          if (topbarSelect && form) {
-            topbarSelect.addEventListener('change', function () {
-              const formSelect = form.querySelector('[name="OrdenarPor"]');
-              if (formSelect) formSelect.value = this.value;
-              form.submit();
+            if (topbarSelect && form) {
+                topbarSelect.addEventListener('change', function () {
+                    const formSelect = form.querySelector('[name="OrdenarPor"]');
+                    if (formSelect) formSelect.value = this.value;
+                    form.submit();
+                });
+            }
+
+            if (form) {
+                const filterElements = form.querySelectorAll('select, input[type="number"], input[type="checkbox"], input[name="Termo"]');
+                filterElements.forEach(el => {
+                    if (el.id !== 'Filtros_OrdenarPor') {
+                        el.addEventListener('change', () => form.submit());
+                    }
+                });
+            }
+
+            const filtersCollapse = document.getElementById('filtersCollapse');
+            if (filtersCollapse) {
+                const syncCollapse = () => {
+                    if (window.innerWidth >= 992) filtersCollapse.classList.add('show');
+                    else filtersCollapse.classList.remove('show');
+                };
+                syncCollapse();
+                window.addEventListener('resize', syncCollapse);
+            }
+
+            document.querySelectorAll('.quick-add-form').forEach(form => {
+                form.addEventListener('submit', function () {
+                    const btn = form.querySelector('.quick-add');
+                    if (!btn) return;
+
+                    const icon = btn.querySelector('.qa-icon');
+                    const spin = btn.querySelector('.qa-spin');
+
+                    btn.classList.add('is-loading');
+
+                    if (icon) icon.style.display = 'none';
+                    if (spin) spin.style.display = 'inline-block';
+                });
             });
-          }
-
-          if (form) {
-            const filterElements = form.querySelectorAll('select, input[type="number"], input[type="checkbox"], input[name="Termo"]');
-            filterElements.forEach(el => {
-              if (el.id !== 'Filtros_OrdenarPor') {
-                el.addEventListener('change', () => form.submit());
-              }
-            });
-          }
-
-          const filtersCollapse = document.getElementById('filtersCollapse');
-          if (filtersCollapse) {
-            const syncCollapse = () => {
-              if (window.innerWidth >= 992) filtersCollapse.classList.add('show');
-              else filtersCollapse.classList.remove('show');
-            };
-            syncCollapse();
-            window.addEventListener('resize', syncCollapse);
-          }
         });
     </script>
 }

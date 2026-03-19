@@ -68,7 +68,6 @@
             }
             else if (temPromocao)
             {
-                @* <span class="pdp-chip pdp-chip-promo">Promoção</span> *@
             }
             else
             {
@@ -124,7 +123,7 @@
         <aside class="pdp-summary-card">
             <header class="pdp-header">
                 <div class="pdp-header-main">
-                    <h1 class="pdp-title" itemprop="name">@produto.Nome </h1>
+                    <h1 class="pdp-title" itemprop="name">@produto.Nome</h1>
 
                     <div class="pdp-subline">
                         @if (!string.IsNullOrWhiteSpace(produto.Marca))
@@ -178,37 +177,9 @@
             </section>
 
             <section class="pdp-highlights">
-                @* <div class="pdp-section-head">
-                    <h3>Destaques</h3>
-                </div> *@
-
                 <div class="pdp-highlight-grid">
                     @if (isPod)
                     {
-                        @if (!string.IsNullOrWhiteSpace(produto.Sabor))
-                        {
-                            @* <div class="pdp-info-card is-wide">
-                                <span>Sabor</span>
-                                <strong>@produto.Sabor</strong>
-                            </div> *@
-                        }
-
-                        @if (produto.PodPuffs.HasValue)
-                        {
-                            @* <div class="pdp-info-card">
-                                <span>Puffs</span>
-                                <strong>@produto.PodPuffs.Value</strong>
-                            </div> *@
-                        }
-
-                        @if (!string.IsNullOrWhiteSpace(produto.PodCapacidadeBateria))
-                        {
-                            @* <div class="pdp-info-card">
-                                <span>Bateria</span>
-                                <strong>@produto.PodCapacidadeBateria</strong>
-                            </div> *@
-                        }
-
                         @if (!string.IsNullOrWhiteSpace(produto.PodTipo))
                         {
                             <div class="pdp-info-card is-wide">
@@ -348,9 +319,11 @@
                     <input type="hidden" name="quantidade" id="quantidadeHidden" value="1" />
                     <input type="hidden" name="sabor" id="saborSelecionado" value="" />
                     <input type="hidden" name="observacoes" id="observacoesProduto" value="" />
+                    <input type="hidden" name="buyNow" id="buyNowHidden" value="false" />
 
                     <div class="pdp-buy-actions">
                         <button type="submit"
+                                id="addToCartBtn"
                                 class="pdp-btn pdp-btn-primary"
                                 @(produto.Estoque <= 0 ? "disabled" : null)>
                             <i class="fas fa-shopping-cart"></i>
@@ -358,6 +331,7 @@
                         </button>
 
                         <button type="button"
+                                id="buyNowBtn"
                                 class="pdp-btn pdp-btn-secondary"
                                 @(produto.Estoque <= 0 ? "disabled" : null)>
                             <i class="fas fa-bolt"></i>
@@ -365,34 +339,9 @@
                         </button>
                     </div>
                 </form>
-
-                @if (produto.RequerMaioridade)
-                {
-                   @*  <div class="pdp-age-alert">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span>Produto destinado a maiores de 18 anos.</span>
-                    </div> *@
-                }
             </section>
         </aside>
     </section>
-
-    @* <div class="pdp-mobile-bar">
-        <div class="pdp-mobile-bar-inner">
-            <div class="pdp-mobile-bar-price">
-                <small>Preço</small>
-                <strong>@precoAtual.ToString("C")</strong>
-            </div>
-
-            <button type="button"
-                    class="pdp-btn pdp-btn-primary"
-                    id="mobileAddToCartBtn"
-                    @(produto.Estoque <= 0 ? "disabled" : null)>
-                <i class="fas fa-shopping-cart"></i>
-                Comprar
-            </button>
-        </div>
-    </div> *@
 
     <section class="pdp-tabs-section">
         <div class="pdp-tabs-header" role="tablist">
@@ -622,15 +571,48 @@
             const plus = document.querySelector('.pdp-qty-btn.plus');
             const mobileAdd = document.getElementById('mobileAddToCartBtn');
             const form = document.getElementById('addToCartForm');
+            const addToCartBtn = document.getElementById('addToCartBtn');
+            const buyNowBtn = document.getElementById('buyNowBtn');
+            const buyNowHidden = document.getElementById('buyNowHidden');
+            const flavorRadios = document.querySelectorAll('.pdp-flavor-radio');
             const max = parseInt(qtd?.max || '1', 10);
 
             function normalizeQty() {
                 if (!qtd) return;
+
                 let value = parseInt(qtd.value || '1', 10);
                 if (isNaN(value) || value < 1) value = 1;
                 if (value > max) value = max;
+
                 qtd.value = value;
                 if (qtdHidden) qtdHidden.value = value;
+            }
+
+            function hasFlavorOptions() {
+                return flavorRadios.length > 0;
+            }
+
+            function getSelectedFlavor() {
+                return document.querySelector('.pdp-flavor-radio:checked');
+            }
+
+            function flavorIsRequiredAndMissing() {
+                if (!hasFlavorOptions()) return false;
+                return !getSelectedFlavor();
+            }
+
+            function updateButtonsState() {
+                const missingFlavor = flavorIsRequiredAndMissing();
+
+                if (addToCartBtn) {
+                    addToCartBtn.disabled = missingFlavor;
+                    addToCartBtn.title = missingFlavor ? 'Selecione um sabor antes de continuar.' : '';
+                }
+
+                if (buyNowBtn) {
+                    buyNowBtn.disabled = missingFlavor;
+                    buyNowBtn.title = missingFlavor ? 'Selecione um sabor antes de continuar.' : '';
+                }
             }
 
             minus?.addEventListener('click', function () {
@@ -646,13 +628,57 @@
             });
 
             qtd?.addEventListener('input', normalizeQty);
+            qtd?.addEventListener('change', normalizeQty);
 
             mobileAdd?.addEventListener('click', function () {
                 if (!form) return;
+
+                normalizeQty();
+
+                if (flavorIsRequiredAndMissing()) {
+                    alert('Selecione um sabor antes de continuar.');
+                    return;
+                }
+
+                if (buyNowHidden) buyNowHidden.value = 'false';
                 form.requestSubmit();
             });
 
+            buyNowBtn?.addEventListener('click', function () {
+                if (!form) return;
+
+                normalizeQty();
+
+                if (flavorIsRequiredAndMissing()) {
+                    alert('Selecione um sabor antes de continuar.');
+                    return;
+                }
+
+                if (buyNowHidden) buyNowHidden.value = 'true';
+                form.requestSubmit();
+            });
+
+            form?.addEventListener('submit', function (event) {
+                normalizeQty();
+
+                if (flavorIsRequiredAndMissing()) {
+                    event.preventDefault();
+                    alert('Selecione um sabor antes de continuar.');
+                    return;
+                }
+
+                const active = document.activeElement;
+                if (!active || active.id !== 'buyNowBtn') {
+                    if (buyNowHidden) buyNowHidden.value = 'false';
+                }
+            });
+
+            flavorRadios.forEach(radio => {
+                radio.addEventListener('change', updateButtonsState);
+            });
+
             normalizeQty();
+            updateButtonsState();
         })();
 
         (function () {

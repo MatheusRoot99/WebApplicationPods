@@ -24,6 +24,7 @@ namespace WebApplicationPods.Controllers
         private readonly ILojaConfigRepository _lojaRepo;
         private readonly IHubContext<PedidosHub> _hub;
         private readonly ICurrentLojaService _currentLoja;
+        private readonly IWebHostEnvironment _env;
 
         public CarrinhoController(
             ICarrinhoRepository carrinhoRepository,
@@ -33,7 +34,8 @@ namespace WebApplicationPods.Controllers
             IClienteRememberService remember,
             ILojaConfigRepository lojaRepo,
             IHubContext<PedidosHub> hub,
-            ICurrentLojaService currentLoja)
+            ICurrentLojaService currentLoja,
+            IWebHostEnvironment env)
         {
             _carrinhoRepository = carrinhoRepository;
             _produtoRepository = produtoRepository;
@@ -43,19 +45,23 @@ namespace WebApplicationPods.Controllers
             _lojaRepo = lojaRepo;
             _hub = hub;
             _currentLoja = currentLoja;
+            _env = env;
         }
-
-        // =================== Guards / Helpers ===================
 
         private bool IsAjax()
             => string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
 
+        private bool IgnorarLojaNoAmbienteAtual()
+            => _env.IsDevelopment();
+
         private IActionResult? EnsureLojaOrRedirect()
         {
+            if (IgnorarLojaNoAmbienteAtual())
+                return null;
+
             if (_currentLoja?.HasLoja == true && _currentLoja.LojaId.GetValueOrDefault() > 0)
                 return null;
 
-            // AJAX: devolve JSON amigável
             if (IsAjax())
                 return Json(new { ok = false, error = "Nenhuma loja selecionada. Acesse pelo subdomínio da loja (ex.: loja-1.lvh.me)." });
 
@@ -63,10 +69,22 @@ namespace WebApplicationPods.Controllers
             return RedirectToAction("Index", "Home");
         }
 
+        private int? TryGetLojaId()
+        {
+            if (_currentLoja?.LojaId is int lojaId && lojaId > 0)
+                return lojaId;
+
+            return null;
+        }
+
         private int GetLojaIdOrFail()
         {
+            if (IgnorarLojaNoAmbienteAtual())
+                return 0;
+
             if (_currentLoja?.LojaId is not int lojaId || lojaId <= 0)
                 throw new InvalidOperationException("Loja atual não definida. Verifique o middleware multi-loja.");
+
             return lojaId;
         }
 
@@ -146,8 +164,6 @@ namespace WebApplicationPods.Controllers
 
         private static bool CarrinhoRequerMaioridade(CarrinhoModel carrinho)
             => carrinho.Itens.Any(i => i.Produto?.RequerMaioridade == true);
-
-        // =================== Actions ===================
 
         public IActionResult Index()
         {
@@ -237,8 +253,8 @@ namespace WebApplicationPods.Controllers
                 (novoId.HasValue ? enderecos.FirstOrDefault(e => e.Id == novoId.Value) : null)
                 ?? enderecos.FirstOrDefault(e => e.Principal);
 
-            // ✅ AQUI o correto é pegar a loja da sessão (loja pública), não "do lojista atual"
-            ViewBag.Loja = _lojaRepo.ObterPorLojaId(GetLojaIdOrFail());
+            var lojaId = TryGetLojaId();
+            ViewBag.Loja = lojaId.HasValue ? _lojaRepo.ObterPorLojaId(lojaId.Value) : null;
 
             var skipConfirm = string.Equals(Convert.ToString(TempData["SkipConfirm"]), "1", StringComparison.Ordinal);
             var vm = new ResumoPedidoViewModel
@@ -317,6 +333,18 @@ namespace WebApplicationPods.Controllers
 
                 produto.DeserializarSaboresQuantidades();
 
+                var exigeSabor =
+                    produto.SaboresQuantidadesList != null &&
+                    produto.SaboresQuantidadesList.Any(s => s.Quantidade > 0);
+
+                if (exigeSabor && string.IsNullOrWhiteSpace(sabor))
+                {
+                    if (IsAjax()) return Json(new { ok = false, error = "Selecione um sabor antes de continuar." });
+
+                    TempData["Erro"] = "Selecione um sabor antes de continuar.";
+                    return RedirectToAction("Detalhes", "Produto", new { id = produtoId });
+                }
+
                 if (!ValidarEstoqueAoAdicionar(produto, quantidade, sabor ?? string.Empty, out var mensagemErro))
                 {
                     if (IsAjax()) return Json(new { ok = false, error = mensagemErro });
@@ -332,7 +360,9 @@ namespace WebApplicationPods.Controllers
                 if (IsAjax()) return Json(new { ok = true, count, nome = produto.Nome, buyNow });
 
                 TempData["Sucesso"] = "Adicionado ao carrinho!";
-                return buyNow ? RedirectToAction("Resumo", "Carrinho") : RedirectToAction("Index", "Home");
+                return buyNow
+                    ? RedirectToAction("Resumo", "Carrinho")
+                    : RedirectToAction("Index", "Home");
             }
             catch (Exception ex)
             {
@@ -592,7 +622,7 @@ namespace WebApplicationPods.Controllers
                 }
             }
 
-            var lojaId = GetLojaIdOrFail();
+            var lojaId = TryGetLojaId() ?? 0;
 
             var pedido = new PedidoModel
             {
@@ -622,7 +652,7 @@ namespace WebApplicationPods.Controllers
                 }).ToList()
             };
 
-            if (model.RetiradaNoLocal)
+            if (model.RetiradaNoLocal && lojaId > 0)
             {
                 var loja = _lojaRepo.ObterPorLojaId(lojaId);
                 if (loja != null)
