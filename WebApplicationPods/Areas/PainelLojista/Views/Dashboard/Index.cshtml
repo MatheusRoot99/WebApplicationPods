@@ -81,6 +81,7 @@
     </div>
 
     <!-- Colunas principais -->
+    <!-- Colunas principais -->
     <div class="row g-3 g-md-4">
         <!-- Atalhos rápidos -->
         <div class="col-12 col-lg-6">
@@ -96,7 +97,7 @@
                 </div>
                 <div class="ld-card-body">
                     <div class="ld-quick-links">
-                        <a asp-controller="Pedido" asp-action="Index" class="ld-quick-link">
+                        <a asp-area="" asp-controller="PedidosAdmin" asp-action="Index" class="ld-quick-link">
                             <div class="ld-quick-icon">
                                 <i class="fa-solid fa-receipt"></i>
                             </div>
@@ -106,7 +107,7 @@
                             </div>
                         </a>
 
-                        <a asp-controller="Produto" asp-action="Index" class="ld-quick-link">
+                        <a asp-area="PainelLojista" asp-controller="Produto" asp-action="Index" class="ld-quick-link">
                             <div class="ld-quick-icon">
                                 <i class="fa-solid fa-boxes-stacked"></i>
                             </div>
@@ -116,7 +117,7 @@
                             </div>
                         </a>
 
-                        <a asp-controller="Categoria" asp-action="Index" class="ld-quick-link">
+                        <a asp-area="" asp-controller="Categoria" asp-action="Index" class="ld-quick-link">
                             <div class="ld-quick-icon">
                                 <i class="fa-solid fa-tags"></i>
                             </div>
@@ -126,7 +127,7 @@
                             </div>
                         </a>
 
-                        <a asp-controller="Loja" asp-action="Editar" class="ld-quick-link">
+                        <a asp-area="PainelLojista" asp-controller="Loja" asp-action="Editar" class="ld-quick-link">
                             <div class="ld-quick-icon">
                                 <i class="fa-solid fa-gear"></i>
                             </div>
@@ -136,7 +137,7 @@
                             </div>
                         </a>
 
-                        <a asp-controller="ConfiguracaoPagamento" asp-action="Index" class="ld-quick-link">
+                        <a asp-area="PainelLojista" asp-controller="PaymentConfig" asp-action="Edit" asp-route-provider="Stripe" class="ld-quick-link">
                             <div class="ld-quick-icon">
                                 <i class="fa-solid fa-credit-card"></i>
                             </div>

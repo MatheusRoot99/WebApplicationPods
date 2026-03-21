@@ -49,20 +49,16 @@ namespace WebApplicationPods.Controllers
             TempData["FlashSource"] = "Produto";
         }
 
+        private const int LOJA_FIXA_ID = 9;
+
         private int GetLojaIdOrFail()
         {
-            if (!_currentLoja.HasLoja || !_currentLoja.LojaId.HasValue || _currentLoja.LojaId.Value <= 0)
-                throw new InvalidOperationException("Loja atual não definida. Verifique o middleware multi-loja.");
-
-            return _currentLoja.LojaId.Value;
+            return LOJA_FIXA_ID;
         }
 
         private int? GetLojaIdOrNull()
         {
-            if (_currentLoja.HasLoja && _currentLoja.LojaId.HasValue && _currentLoja.LojaId.Value > 0)
-                return _currentLoja.LojaId.Value;
-
-            return null;
+            return LOJA_FIXA_ID;
         }
 
         private static bool IsPod(ProdutoTipo tipo) => tipo == ProdutoTipo.PodVape;

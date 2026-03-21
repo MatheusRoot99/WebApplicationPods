@@ -719,4 +719,34 @@
             });
         })();
     </script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const form = document.getElementById("addToCartForm");
+            const buyNowBtn = document.getElementById("buyNowBtn");
+            const addToCartBtn = document.getElementById("addToCartBtn");
+            const buyNowHidden = document.getElementById("buyNowHidden");
+
+            if (!form || !buyNowBtn || !buyNowHidden) return;
+
+            buyNowBtn.addEventListener("click", function () {
+                buyNowHidden.value = "true";
+                form.submit();
+            });
+
+            if (addToCartBtn) {
+                addToCartBtn.addEventListener("click", function () {
+                    buyNowHidden.value = "false";
+                });
+            }
+
+            form.addEventListener("submit", function () {
+                if (document.activeElement && document.activeElement.id !== "buyNowBtn") {
+                    if (buyNowHidden.value !== "true") {
+                        buyNowHidden.value = "false";
+                    }
+                }
+            });
+        });
+    </script>
 }

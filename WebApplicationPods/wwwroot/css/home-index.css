@@ -18,18 +18,14 @@
     --danger: #ef4444;
     --warning: #f59e0b;
     --info: #3b82f6;
-    /* Gradientes */
     --primary-grad: linear-gradient(135deg, var(--secondary), var(--primary));
     --primary-grad-reverse: linear-gradient(135deg, var(--primary), var(--secondary));
-    /* Sombras */
     --shadow-1: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-2: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --shadow-3: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    /* Espaçamentos */
-    --mbn-height: 68px; /* Altura da bottom navigation */
+    --mbn-height: 68px;
 }
 
-/* Reset de container padrão */
 .home-index .container,
 .home-index .container-fluid {
     padding-right: var(--bs-gutter-x, 0.75rem);
@@ -73,7 +69,6 @@
     }
 }
 
-/* ---------- Topbar (estilo app) ---------- */
 .topbar {
     position: sticky;
     top: 0;
@@ -145,7 +140,6 @@
         color: var(--dark);
     }
 
-/* ---------- Hero Section ---------- */
 .home-index .hero-section {
     position: relative;
     margin-top: 0.8rem;
@@ -199,7 +193,6 @@
     }
 }
 
-/* ---------- Filtros ---------- */
 .filters-card {
     background-color: white;
     border: 1px solid var(--gray-200);
@@ -278,7 +271,35 @@
     }
 }
 
-/* ---------- Grade de Produtos ---------- */
+.filters-card .form-label {
+    font-size: .85rem;
+    opacity: .85;
+    margin-bottom: .35rem;
+}
+
+.filters-card .form-control,
+.filters-card .form-select {
+    height: 40px;
+    border-radius: 10px;
+}
+
+.filters-card input.form-control {
+    padding-top: .45rem;
+    padding-bottom: .45rem;
+}
+
+.filters-card .btn {
+    height: 40px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+}
+
+.filters-card .form-check {
+    margin-bottom: 0;
+}
+
 .product-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -313,7 +334,6 @@
     }
 }
 
-/* ---------- Card de Produto ---------- */
 .produto-card {
     position: relative;
     background: white;
@@ -391,7 +411,6 @@
         color: white;
     }
 
-/* Corpo do card */
 .produto-card .card-body {
     padding: 0.75rem;
     flex-grow: 1;
@@ -457,7 +476,6 @@
         font-size: 1.1rem;
     }
 
-/* ---------- Botão de Adicionar ao Carrinho ---------- */
 .quick-add-form {
     margin-top: auto;
     padding: 0.75rem;
@@ -466,20 +484,21 @@
 }
 
 .quick-add {
-    width: 100%;
-    height: 36px;
-    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+    transition: transform .15s ease, box-shadow .2s ease, background-color .2s ease, color .2s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    width: 100%;
+    height: 36px;
+    border-radius: 8px;
     background: var(--primary-grad);
     color: white;
     border: none;
     box-shadow: var(--shadow-1);
     font-weight: 700;
     font-size: 0.875rem;
-    transition: all 0.2s ease;
     cursor: pointer;
 }
 
@@ -493,35 +512,49 @@
         transform: translateY(0);
     }
 
-    .quick-add i {
-        font-size: 1rem;
-        transition: opacity 0.2s ease;
-    }
-
     .quick-add .qa-spin,
     .quick-add .qa-done {
         display: none;
     }
 
-    /* Loading state */
-    .quick-add.is-loading .qa-icon {
-        display: none;
+    .quick-add.is-loading {
+        pointer-events: none;
     }
 
-    .quick-add.is-loading .qa-spin {
-        display: inline-block;
+        .quick-add.is-loading .qa-icon {
+            display: none;
+        }
+
+        .quick-add.is-loading .qa-spin {
+            display: inline-block;
+        }
+
+    .quick-add.is-success {
+        background: #22c55e !important;
+        border-color: #22c55e !important;
+        color: #fff !important;
+        box-shadow: 0 8px 18px rgba(34, 197, 94, .28);
     }
 
-    /* Success state */
-    .quick-add.is-done .qa-icon {
-        display: none;
-    }
+        .quick-add.is-success:hover {
+            background: #22c55e !important;
+            border-color: #22c55e !important;
+            color: #fff !important;
+        }
 
-    .quick-add.is-done .qa-done {
-        display: inline-block;
-    }
+        .quick-add.is-success .qa-icon {
+            display: none;
+        }
 
-    /* Disabled state */
+        .quick-add.is-success .qa-spin {
+            display: none;
+        }
+
+        .quick-add.is-success .qa-done {
+            display: inline-block;
+            animation: checkPulse 0.35s ease;
+        }
+
     .quick-add.disabled,
     .quick-add[disabled] {
         pointer-events: none;
@@ -529,32 +562,37 @@
         background: var(--gray-400);
     }
 
-/* ---------- Micro Toast ---------- */
-.quick-toast {
-    position: absolute;
-    right: 0.75rem;
-    bottom: 46px;
-    background: var(--dark);
-    color: white;
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 0.375rem 0.75rem;
-    border-radius: 999px;
-    box-shadow: var(--shadow-3);
-    opacity: 0;
-    transform: translateY(8px) scale(0.95);
-    pointer-events: none;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    z-index: 10;
-    white-space: nowrap;
-}
-
-    .quick-toast.show {
-        opacity: 1;
-        transform: translateY(0) scale(1);
+@keyframes checkPulse {
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
     }
 
-/* ---------- Alert de produtos não encontrados ---------- */
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.cart-badge-animation {
+    animation: badgePulse 0.3s ease;
+}
+
+@keyframes badgePulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.2);
+        background-color: #28a745;
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
 .alert-info {
     border-radius: 12px;
     border: none;
@@ -569,7 +607,6 @@
         margin-right: 0.5rem;
     }
 
-/* ---------- Responsividade Adicional ---------- */
 @media (max-width: 575.98px) {
     .product-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -605,7 +642,6 @@
     }
 }
 
-/* ---------- Acessibilidade ---------- */
 .home-index a:focus,
 .home-index button:focus,
 .home-index select:focus,
@@ -614,9 +650,9 @@
     box-shadow: 0 0 0 3px rgba(37, 117, 252, 0.5);
 }
 
-/* ---------- Espaço para Bottom Navigation (se houver) ---------- */
 .home-index {
     padding-bottom: calc(var(--mbn-height) + env(safe-area-inset-bottom, 0px) + 16px);
+    scroll-behavior: smooth;
 }
 
 @supports (padding-bottom: max(0px)) {
@@ -625,7 +661,6 @@
     }
 }
 
-/* ---------- Animações ---------- */
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -675,20 +710,6 @@
         animation-delay: 0.4s;
     }
 
-/* ---------- Scroll suave ---------- */
-.home-index {
-    scroll-behavior: smooth;
-}
-
-/* ---------- Utilitários ---------- */
-.text-truncate-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
 .d-none {
     display: none !important;
 }
@@ -702,47 +723,80 @@
         display: block !important;
     }
 }
-/* ===== Alinhamento dos filtros ===== */
-.filters-card .form-label {
-    font-size: .85rem;
-    opacity: .85;
-    margin-bottom: .35rem;
-}
-
-.filters-card .form-control,
-.filters-card .form-select {
-    height: 40px;
-    border-radius: 10px;
-}
-
-.filters-card input.form-control {
-    padding-top: .45rem;
-    padding-bottom: .45rem;
-}
-
-.filters-card .btn {
-    height: 40px;
-    border-radius: 10px;
+/* Botão de adicionar ao carrinho - CORREÇÃO FINAL */
+.quick-add {
+    position: relative;
+    width: 100%;
+    height: 36px;
+    border-radius: 8px;
     display: inline-flex;
     align-items: center;
-    gap: .4rem;
+    justify-content: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
+    color: white;
+    border: none;
+    font-weight: 700;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
 
-/* Linha dos checkboxes + botões */
-.filters-card .form-check {
-    margin-bottom: 0;
-}
-.specs {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-    min-height: 20px; /* ajuda a manter altura igual entre cards */
-    margin-bottom: 6px;
-}
-
-    .specs span {
-        display: inline-flex;
-        align-items: center;
-        line-height: 1;
+    .quick-add i {
+        font-size: 1rem;
     }
+
+    /* Esconder todos os ícones por padrão, exceto o do carrinho */
+    .quick-add .fa-spinner,
+    .quick-add .fa-check {
+        display: none;
+    }
+
+    /* Estado de loading - mostra o spinner */
+    .quick-add.is-loading .fa-cart-plus {
+        display: none;
+    }
+
+    .quick-add.is-loading .fa-spinner {
+        display: inline-block;
+    }
+
+    /* Estado de sucesso - mostra o check */
+    .quick-add.is-success {
+        background: #22c55e !important;
+    }
+
+        .quick-add.is-success .fa-cart-plus {
+            display: none;
+        }
+
+        .quick-add.is-success .fa-spinner {
+            display: none;
+        }
+
+        .quick-add.is-success .fa-check {
+            display: inline-block;
+            animation: checkPulse 0.5s ease;
+        }
+
+@keyframes checkPulse {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+
+    50% {
+        transform: scale(1.2);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.quick-add.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #6c757d;
+}
