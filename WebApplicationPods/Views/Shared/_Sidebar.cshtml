@@ -5,22 +5,31 @@
     var isAdmin = User.IsInRole("Admin");
     var isLojista = User.IsInRole("Lojista");
 
-    string currentArea = (ViewContext.RouteData.Values["area"]?.ToString() ?? "");
-    string currentCtrl = (ViewContext.RouteData.Values["controller"]?.ToString() ?? "");
+    string currentArea = ViewContext.RouteData.Values["area"]?.ToString() ?? "";
+    string currentCtrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
 
     string Active(string area, string controller)
     {
-        bool sameArea = string.Equals(currentArea ?? "", area ?? "", StringComparison.OrdinalIgnoreCase);
-        bool sameCtrl = string.Equals(currentCtrl ?? "", controller ?? "", StringComparison.OrdinalIgnoreCase);
+        bool sameArea = string.Equals(currentArea, area ?? "", StringComparison.OrdinalIgnoreCase);
+        bool sameCtrl = string.Equals(currentCtrl, controller ?? "", StringComparison.OrdinalIgnoreCase);
         return (sameArea && sameCtrl) ? "is-active" : "";
     }
 
+    var produtosArea = AppAreas.Lojista;
     var isProdutoMenuOpen =
-        string.Equals(currentArea ?? "", AppAreas.Lojista ?? "", StringComparison.OrdinalIgnoreCase)
-        && string.Equals(currentCtrl ?? "", "Produto", StringComparison.OrdinalIgnoreCase);
+        string.Equals(currentArea, produtosArea, StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(currentCtrl, "Produto", StringComparison.OrdinalIgnoreCase);
 
     var produtoCollapseShow = isProdutoMenuOpen ? "show" : "";
     var produtoExpanded = isProdutoMenuOpen ? "true" : "false";
+
+    var dashboardClass = Active(AppAreas.Lojista, "Dashboard");
+    var relatoriosClass = Active("", "PedidosAdmin");
+    var estoqueClass = Active("", "Estoque");
+    var pedidosClass = Active("", "PedidosAdmin");
+    var categoriasClass = Active("", "Categoria");
+    var pagamentoClass = Active(AppAreas.Lojista, "PaymentConfig");
+    var lojaClass = Active(AppAreas.Lojista, "Loja");
 }
 
 <div class="border-right d-none d-lg-block" id="sidebar-wrapper">
@@ -37,8 +46,6 @@
     </div>
 
     <div class="list-group list-group-flush">
-
-        <!-- NAVEGAÇÃO -->
         <div class="sidebar-section">
             <div class="sidebar-section-title">Navegação</div>
 
@@ -48,7 +55,6 @@
             </a>
         </div>
 
-        <!-- CLIENTE -->
         @if (!isAdmin && !isLojista)
         {
             <div class="sidebar-section">
@@ -61,38 +67,36 @@
             </div>
         }
 
-        <!-- LOJISTA -->
         @if (isLojista)
         {
             <div class="sidebar-section">
                 <div class="sidebar-section-title">Lojista</div>
 
                 <a asp-area="PainelLojista" asp-controller="Dashboard" asp-action="Index"
-                   class="list-group-item list-group-item-action @Active("PainelLojista", "Dashboard")">
+                   class="list-group-item list-group-item-action @dashboardClass">
                     <i class="fas fa-gauge"></i> Dashboard
                 </a>
 
-                <a asp-area="@AppAreas.Lojista" asp-controller="PedidosAdmin" asp-action="Relatorio"
-                   class="list-group-item list-group-item-action @Active(AppAreas.Lojista, "PedidosAdmin")">
+                <a asp-area="" asp-controller="PedidosAdmin" asp-action="Relatorio"
+                   class="list-group-item list-group-item-action @relatoriosClass">
                     <i class="fas fa-chart-line"></i> Relatórios
                 </a>
 
-                <a asp-area="@AppAreas.Lojista" asp-controller="Estoque" asp-action="Index"
-                   class="list-group-item list-group-item-action @Active(AppAreas.Lojista, "Estoque")">
+                <a asp-area="" asp-controller="Estoque" asp-action="Index"
+                   class="list-group-item list-group-item-action @estoqueClass">
                     <i class="fas fa-boxes"></i> Estoque
                 </a>
 
-                <a asp-area="@AppAreas.Lojista" asp-controller="PedidosAdmin" asp-action="Index"
-                   class="list-group-item list-group-item-action @Active(AppAreas.Lojista, "PedidosAdmin")">
+                <a asp-area="" asp-controller="PedidosAdmin" asp-action="Index"
+                   class="list-group-item list-group-item-action @pedidosClass">
                     <i class="fas fa-clipboard-list"></i> Pedidos
                 </a>
 
-                <a asp-area="@AppAreas.Lojista" asp-controller="Categoria" asp-action="Index"
-                   class="list-group-item list-group-item-action @Active(AppAreas.Lojista, "Categoria")">
+                <a asp-area="" asp-controller="Categoria" asp-action="Index"
+                   class="list-group-item list-group-item-action @categoriasClass">
                     <i class="fas fa-tags"></i> Categorias
                 </a>
 
-                <!-- Produtos (submenu) -->
                 <a class="list-group-item list-group-item-action nav-parent @(isProdutoMenuOpen ? "has-sub-active" : "")"
                    data-bs-toggle="collapse"
                    href="#menuProdutos"
@@ -130,18 +134,17 @@
                 </div>
 
                 <a asp-area="@AppAreas.Lojista" asp-controller="PaymentConfig" asp-action="Edit" asp-route-provider="Stripe"
-                   class="list-group-item list-group-item-action @Active(AppAreas.Lojista, "PaymentConfig")">
+                   class="list-group-item list-group-item-action @pagamentoClass">
                     <i class="fas fa-credit-card"></i> Pagamento
                 </a>
 
                 <a asp-area="@AppAreas.Lojista" asp-controller="Loja" asp-action="Editar"
-                   class="list-group-item list-group-item-action @Active(AppAreas.Lojista, "Loja")">
+                   class="list-group-item list-group-item-action @lojaClass">
                     <i class="fas fa-store"></i> Configurações da Loja
                 </a>
             </div>
         }
 
-        <!-- ADMIN -->
         @if (isAdmin)
         {
             <div class="sidebar-section">
@@ -164,7 +167,6 @@
             </div>
         }
 
-        <!-- USUÁRIO -->
         <div class="sidebar-section">
             <div class="sidebar-section-title">Usuário</div>
 
@@ -191,6 +193,5 @@
                 </a>
             }
         </div>
-
     </div>
 </div>

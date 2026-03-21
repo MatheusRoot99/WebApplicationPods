@@ -5,11 +5,11 @@
     var isAdmin = User.IsInRole("Admin");
     var isLojista = User.IsInRole("Lojista");
 
-    var currentArea = (ViewContext.RouteData.Values["area"]?.ToString() ?? "");
-    var currentCtrl = (ViewContext.RouteData.Values["controller"]?.ToString() ?? "");
+    var currentArea = ViewContext.RouteData.Values["area"]?.ToString() ?? "";
+    var currentCtrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
 
-    var isProdutoArea = string.Equals(currentArea ?? "", AppAreas.Lojista ?? "", StringComparison.OrdinalIgnoreCase);
-    var isProdutoCtrl = string.Equals(currentCtrl ?? "", "Produto", StringComparison.OrdinalIgnoreCase);
+    var isProdutoArea = string.Equals(currentArea, AppAreas.Lojista, StringComparison.OrdinalIgnoreCase);
+    var isProdutoCtrl = string.Equals(currentCtrl, "Produto", StringComparison.OrdinalIgnoreCase);
 
     var produtoMenuOpen = (isProdutoArea && isProdutoCtrl) ? "show" : "";
     var produtoMenuExpanded = (isProdutoArea && isProdutoCtrl) ? "true" : "false";
@@ -25,7 +25,6 @@
 
     <div class="offcanvas-body">
         <div class="list-group list-group-flush">
-
             <div class="sidebar-section">
                 <div class="sidebar-section-title">Navegação</div>
                 <a asp-area="" asp-controller="Home" asp-action="Index"
@@ -50,27 +49,31 @@
                 <div class="sidebar-section">
                     <div class="sidebar-section-title">Lojista</div>
 
-                    <a asp-area="@AppAreas.Lojista" asp-controller="PedidosAdmin" asp-action="Relatorio"
+                    <a asp-area="PainelLojista" asp-controller="Dashboard" asp-action="Index"
+                       class="list-group-item list-group-item-action">
+                        <i class="fas fa-gauge"></i> Dashboard
+                    </a>
+
+                    <a asp-area="" asp-controller="PedidosAdmin" asp-action="Relatorio"
                        class="list-group-item list-group-item-action">
                         <i class="fas fa-chart-line"></i> Relatórios
                     </a>
 
-                    <a asp-area="@AppAreas.Lojista" asp-controller="Estoque" asp-action="Index"
+                    <a asp-area="" asp-controller="Estoque" asp-action="Index"
                        class="list-group-item list-group-item-action">
                         <i class="fas fa-boxes"></i> Estoque
                     </a>
 
-                    <a asp-area="@AppAreas.Lojista" asp-controller="PedidosAdmin" asp-action="Index"
+                    <a asp-area="" asp-controller="PedidosAdmin" asp-action="Index"
                        class="list-group-item list-group-item-action">
                         <i class="fas fa-clipboard-list"></i> Pedidos
                     </a>
 
-                    <a asp-area="@AppAreas.Lojista" asp-controller="Categoria" asp-action="Index"
+                    <a asp-area="" asp-controller="Categoria" asp-action="Index"
                        class="list-group-item list-group-item-action">
                         <i class="fas fa-tags"></i> Categorias
                     </a>
 
-                    <!-- Produtos -->
                     <a class="list-group-item list-group-item-action nav-parent d-flex justify-content-between align-items-center"
                        data-bs-toggle="collapse"
                        href="#mobileProdutosMenu"
@@ -165,7 +168,6 @@
                     </a>
                 }
             </div>
-
         </div>
     </div>
 </div>

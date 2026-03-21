@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using WebApplicationPods.DTO;
 using WebApplicationPods.Hubs;
+using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
 using static WebApplicationPods.DTO.ReportsDTO;
 
@@ -22,18 +24,15 @@ namespace WebApplicationPods.Controllers
         private static readonly Dictionary<string, string[]> AllowedTransitions =
             new(StringComparer.OrdinalIgnoreCase)
             {
-                ["Pendente"] = new[] { "Cancelado" },
-
-                ["Aguardando Pagamento"] = new[] { "Pago", "Cancelado" },
-                ["Aguardando Pagamento (Entrega)"] = new[] { "Pago", "Cancelado" },
-                ["Aguardando Confirmação (Dinheiro)"] = new[] { "Pago", "Cancelado" },
-
+                ["Aguardando Confirmação (Dinheiro)"] = new[] { "Em Preparação", "Cancelado" },
                 ["Pago"] = new[] { "Em Preparação", "Cancelado" },
                 ["Em Preparação"] = new[] { "Pronto", "Cancelado" },
-                ["Pronto"] = new[] { "Saiu p/ Entrega", "Cancelado" },
-                ["Saiu p/ Entrega"] = new[] { "Entregue", "Cancelado" },
-
-                ["Pagamento Falhou"] = new[] { "Cancelado" }
+                ["Pronto"] = new[] { "Saiu p/ Entrega", "Concluído", "Cancelado" },
+                ["Saiu p/ Entrega"] = new[] { "Concluído", "Cancelado" },
+                ["Aguardando Pagamento (Entrega)"] = new[] { "Pago", "Cancelado" },
+                ["Aguardando Pagamento"] = new[] { "Pago", "Cancelado" },
+                ["Concluído"] = Array.Empty<string>(),
+                ["Cancelado"] = Array.Empty<string>()
             };
 
         [HttpGet]
@@ -45,7 +44,8 @@ namespace WebApplicationPods.Controllers
 
             ViewBag.Filtro = filtro;
             ViewBag.Allowed = AllowedTransitions;
-            return View(lista);
+
+            return View("~/Views/PedidosAdmin/Index.cshtml", lista);
         }
 
         [HttpGet]
@@ -56,8 +56,10 @@ namespace WebApplicationPods.Controllers
                 ? _pedidos.ObterDoDia()
                 : _pedidos.ObterAbertos();
 
+            ViewBag.Filtro = filtro;
             ViewBag.Allowed = AllowedTransitions;
-            return PartialView("_PedidosTableBody", lista);
+
+            return PartialView("~/Views/PedidosAdmin/_PedidosTableBody.cshtml", lista);
         }
 
         [HttpPost]
@@ -129,10 +131,11 @@ namespace WebApplicationPods.Controllers
                 TopClientes = _pedidos.ObterTopClientes(inicio, fim, 5).ToList()
             };
 
-            return View(vm);
+            return View("~/Views/PedidosAdmin/Relatorio.cshtml", vm);
         }
 
-        [HttpPost, ValidateAntiForgeryToken]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Excluir(int id)
         {
             var pedido = _pedidos.ObterPorId(id);
