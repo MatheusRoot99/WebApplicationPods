@@ -304,8 +304,14 @@ namespace WebApplicationPods.Controllers
             {
                 p.Status = PaymentStatus.Canceled;
                 p.CanceledAt = DateTime.UtcNow;
+
+                if (p.Pedido != null)
+                {
+                    p.Pedido.Status = "Cancelado";
+                    p.Pedido.DataCancelado = DateTime.UtcNow;
+                }
+
                 await _db.SaveChangesAsync();
-                _pedidos.AtualizarStatus(p.PedidoId, "Cancelado");
             }
 
             return Json(new { ok = true, redirect = Url.Action("Index", "Carrinho") });

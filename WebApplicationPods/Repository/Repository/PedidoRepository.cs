@@ -44,8 +44,11 @@ namespace WebApplicationPods.Repository.Repository
 
         private int? LojaIdContext()
         {
-            if (IsAdmin()) return null;
-            if (_currentLoja?.LojaId is int lojaId && lojaId > 0) return lojaId;
+            // Multi-loja desativado por enquanto.
+            // Futuramente, pode voltar com:
+            // if (IsAdmin()) return null;
+            // if (_currentLoja?.LojaId is int lojaId && lojaId > 0) return lojaId;
+
             return null;
         }
 
@@ -60,7 +63,6 @@ namespace WebApplicationPods.Repository.Repository
             return q;
         }
 
-        // Usada fora de GroupBy
         private static readonly Expression<Func<PedidoModel, bool>> PagoExpr =
             p => p.Status != null
                  && p.Status != "Cancelado"
@@ -103,13 +105,11 @@ namespace WebApplicationPods.Repository.Repository
 
         public void Adicionar(PedidoModel pedido)
         {
-            if (pedido == null) throw new ArgumentNullException(nameof(pedido));
+            if (pedido == null)
+                throw new ArgumentNullException(nameof(pedido));
+
             if (pedido.PedidoItens == null || !pedido.PedidoItens.Any())
                 throw new ArgumentException("Pedido deve conter itens");
-
-            // 🔒 Cinturão: loja obrigatória
-            if (pedido.LojaId <= 0)
-                throw new ArgumentException("Pedido precisa de LojaId válido (multi-loja).");
 
             pedido.DataPedido = DateTime.Now;
 
@@ -126,7 +126,6 @@ namespace WebApplicationPods.Repository.Repository
         {
             if (string.IsNullOrWhiteSpace(status)) return;
 
-            // respeita loja quando for lojista
             var pedido = BaseQuery().FirstOrDefault(p => p.Id == pedidoId);
             if (pedido == null) return;
 
@@ -314,12 +313,11 @@ namespace WebApplicationPods.Repository.Repository
         {
             var limite = DateTime.UtcNow.AddDays(-dias);
 
-            // Purga não deve aplicar filtro de loja se Admin quiser limpar global,
-            // mas para Lojista, mantém loja.
             var q = _context.Pedidos.IgnoreQueryFilters().AsQueryable();
 
             var lojaId = LojaIdContext();
-            if (lojaId.HasValue) q = q.Where(p => p.LojaId == lojaId.Value);
+            if (lojaId.HasValue)
+                q = q.Where(p => p.LojaId == lojaId.Value);
 
             var antigos = q
                 .Include(p => p.PedidoItens)
@@ -340,7 +338,8 @@ namespace WebApplicationPods.Repository.Repository
             var q = _context.Pedidos.IgnoreQueryFilters().AsQueryable();
 
             var lojaId = LojaIdContext();
-            if (lojaId.HasValue) q = q.Where(p => p.LojaId == lojaId.Value);
+            if (lojaId.HasValue)
+                q = q.Where(p => p.LojaId == lojaId.Value);
 
             var p = q.FirstOrDefault(x => x.Id == id);
             if (p == null) return;
