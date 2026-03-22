@@ -1,4 +1,5 @@
-﻿@model WebApplicationPods.Models.ProdutoListagemViewModel
+﻿@using System.Text.Json
+@model WebApplicationPods.Models.ProdutoListagemViewModel
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
@@ -197,7 +198,7 @@
                                asp-route-id="@produto.Id"
                                class="text-decoration-none">
                                 <h6 class="title text-truncate-2">@produto.Nome</h6>
-                            </a>
+                            
 
                             @{
                                 bool puffOk = produto.PodPuffs > 0;
@@ -315,7 +316,7 @@
                                 }
                                 <span class="current">@precoAtual.ToString("C")</span>
                             </div>
-
+                            </a>
                             @if (produto.Estoque > 0)
                             {
                                 if (exigeSelecaoDeSabor)
@@ -368,7 +369,9 @@
                                     </button>
                                 </div>
                             }
+
                         </div>
+
                     </article>
                 }
             </div>
@@ -387,131 +390,96 @@
     <script>
         (function () {
             const STORAGE_KEY = 'produtos_adicionados_carrinho';
+            const produtosNoCarrinhoServidor = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                            (Model.ProdutosNoCarrinho ?? new List<int>()).Select(x => x.ToString())
+                    ));
 
-            function getProdutosAdicionados() {
-                try {
-                    const dados = localStorage.getItem(STORAGE_KEY);
-                    if (!dados) return [];
-                    const produtos = JSON.parse(dados);
-                    return Array.isArray(produtos) ? produtos.map(String) : [];
-                } catch (erro) {
-                    console.error('Erro ao ler localStorage:', erro);
-                    return [];
+        function getStorage() {
+            try {
+                const data = localStorage.getItem(STORAGE_KEY);
+                if (!data) return [];
+                const parsed = JSON.parse(data);
+                return Array.isArray(parsed) ? parsed.map(String) : [];
+            } catch {
+                return [];
+            }
+        }
+
+            function saveStorage(ids) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify([...new Set(ids.map(String))]));
+            }
+
+            function addStorage(id) {
+                const ids = getStorage();
+                id = String(id);
+                if (!ids.includes(id)) {
+                    ids.push(id);
+                    saveStorage(ids);
                 }
             }
 
-            function salvarProdutosAdicionados(produtos) {
-                try {
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(produtos));
-                } catch (erro) {
-                    console.error('Erro ao salvar localStorage:', erro);
+            function setButtonState(button, state) {
+                if (!button) return;
+
+                const cart = button.querySelector('.qa-icon');
+                const spin = button.querySelector('.qa-spin');
+                const done = button.querySelector('.qa-done');
+
+                button.classList.remove('is-loading', 'is-success');
+
+                if (cart) cart.style.display = 'none';
+                if (spin) spin.style.display = 'none';
+                if (done) done.style.display = 'none';
+
+                if (state === 'loading') {
+                    button.classList.add('is-loading');
+                    if (spin) spin.style.display = 'inline-block';
+                    return;
                 }
+
+                if (state === 'success') {
+                    button.classList.add('is-success');
+                    if (done) done.style.display = 'inline-block';
+                    return;
+                }
+
+                if (cart) cart.style.display = 'inline-block';
             }
 
-            function adicionarProdutoNaLista(productId) {
-                if (!productId) return;
+            function restoreButtons() {
+                const ids = [...new Set([...(produtosNoCarrinhoServidor || []), ...getStorage()])];
+                saveStorage(ids);
 
-                const produtos = getProdutosAdicionados();
-                const id = String(productId);
-
-                if (!produtos.includes(id)) {
-                    produtos.push(id);
-                    salvarProdutosAdicionados(produtos);
-                }
-            }
-
-            function removerProdutoDaLista(productId) {
-                if (!productId) return;
-
-                const id = String(productId);
-                let produtos = getProdutosAdicionados();
-
-                produtos = produtos.filter(p => p !== id);
-                salvarProdutosAdicionados(produtos);
-
-                const botao = document.querySelector(`button.quick-add[data-product-id="${id}"]`);
-                if (botao) {
-                    setEstadoBotao(botao, 'default');
-                }
-            }
-
-            function setEstadoBotao(botao, estado) {
-                if (!botao) return;
-
-                const iconeCarrinho = botao.querySelector('.qa-icon');
-                const iconeLoading = botao.querySelector('.qa-spin');
-                const iconeCheck = botao.querySelector('.qa-done');
-
-                botao.classList.remove('is-loading', 'is-success');
-
-                if (iconeCarrinho) iconeCarrinho.style.display = '';
-                if (iconeLoading) iconeLoading.style.display = '';
-                if (iconeCheck) iconeCheck.style.display = '';
-
-                switch (estado) {
-                    case 'loading':
-                        botao.classList.add('is-loading');
-                        if (iconeCarrinho) iconeCarrinho.style.display = 'none';
-                        if (iconeLoading) iconeLoading.style.display = 'inline-block';
-                        if (iconeCheck) iconeCheck.style.display = 'none';
-                        break;
-
-                    case 'success':
-                        botao.classList.add('is-success');
-                        if (iconeCarrinho) iconeCarrinho.style.display = 'none';
-                        if (iconeLoading) iconeLoading.style.display = 'none';
-                        if (iconeCheck) iconeCheck.style.display = 'inline-block';
-                        break;
-
-                    default:
-                        if (iconeCarrinho) iconeCarrinho.style.display = 'inline-block';
-                        if (iconeLoading) iconeLoading.style.display = 'none';
-                        if (iconeCheck) iconeCheck.style.display = 'none';
-                        break;
-                }
-            }
-
-            function restaurarBotoes() {
-                const produtosAdicionados = getProdutosAdicionados();
-                const botoes = document.querySelectorAll('button.quick-add[data-product-id]');
-
-                botoes.forEach(botao => {
-                    const productId = String(botao.dataset.productId || '');
-
-                    if (produtosAdicionados.includes(productId)) {
-                        setEstadoBotao(botao, 'success');
+                document.querySelectorAll('.quick-add').forEach(button => {
+                    const id = String(button.dataset.productId || '');
+                    if (ids.includes(id)) {
+                        setButtonState(button, 'success');
                     } else {
-                        setEstadoBotao(botao, 'default');
+                        setButtonState(button, 'default');
                     }
                 });
             }
 
-            function atualizarContadorCarrinho(quantidade) {
-                if (typeof window.updateCartBadges === 'function') {
-                    window.updateCartBadges(quantidade);
-                    return;
-                }
-
-                const contadores = document.querySelectorAll('[data-cart-count], .cart-count, #cartCount');
-                contadores.forEach(el => {
-                    el.textContent = quantidade;
-                    el.classList.add('cart-badge-animation');
-                    setTimeout(() => el.classList.remove('cart-badge-animation'), 300);
-                });
+            function updateCartCount(count) {
+                const els = document.querySelectorAll('[data-cart-count], .cart-count, #cartCount');
+                els.forEach(el => el.textContent = count);
             }
 
-            async function adicionarAoCarrinho(formulario, botao) {
-                const productId = botao.dataset.productId;
+            async function submitQuickAdd(form) {
+                const button = form.querySelector('.quick-add');
+                if (!button) return;
 
+                const productId = button.dataset.productId;
                 if (!productId) return;
-                if (botao.classList.contains('is-success')) return;
 
-                setEstadoBotao(botao, 'loading');
+                if (button.classList.contains('is-success')) return;
+
+                setButtonState(button, 'loading');
 
                 try {
-                    const response = await fetch(formulario.action, {
+                    const response = await fetch(form.action, {
                         method: 'POST',
-                        body: new FormData(formulario),
+                        body: new FormData(form),
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest',
                             'Accept': 'application/json'
@@ -520,90 +488,49 @@
                     });
 
                     if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        throw new Error('Erro ao adicionar produto.');
                     }
 
-                    let data = null;
                     const contentType = response.headers.get('content-type') || '';
+                    let data = null;
 
                     if (contentType.includes('application/json')) {
                         data = await response.json();
                     }
 
-                    adicionarProdutoNaLista(productId);
-                    setEstadoBotao(botao, 'success');
+                    if (data && data.ok === false) {
+                        throw new Error(data.error || 'Não foi possível adicionar.');
+                    }
+
+                    addStorage(productId);
+                    setButtonState(button, 'success');
 
                     if (data && typeof data.count !== 'undefined') {
-                        atualizarContadorCarrinho(data.count);
+                        updateCartCount(data.count);
                     }
-
-                    const card = botao.closest('.produto-card');
-                    if (card) {
-                        card.style.transition = 'transform 0.2s ease';
-                        card.style.transform = 'scale(1.02)';
-                        setTimeout(() => {
-                            card.style.transform = '';
-                        }, 200);
-                    }
-                } catch (erro) {
-                    console.error('Erro ao adicionar produto:', erro);
-                    setEstadoBotao(botao, 'default');
-                    alert('Não foi possível adicionar o produto ao carrinho. Tente novamente.');
+                } catch (e) {
+                    console.error(e);
+                    setButtonState(button, 'default');
                 }
             }
 
+            document.addEventListener('submit', function (e) {
+                const form = e.target.closest('.quick-add-form');
+                if (!form) return;
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                submitQuickAdd(form);
+            });
+
             document.addEventListener('DOMContentLoaded', function () {
-                const topbarSelect = document.getElementById('Filtros_OrdenarPor');
-                const filtersForm = document.getElementById('filtersForm');
-
-                if (topbarSelect && filtersForm) {
-                    topbarSelect.addEventListener('change', function () {
-                        const formSelect = filtersForm.querySelector('[name="OrdenarPor"]');
-                        if (formSelect) formSelect.value = this.value;
-                        filtersForm.submit();
-                    });
-                }
-
-                if (filtersForm) {
-                    const elementosFiltro = filtersForm.querySelectorAll('select, input[type="number"], input[type="checkbox"]');
-                    elementosFiltro.forEach(el => {
-                        if (el.id !== 'Filtros_OrdenarPor') {
-                            el.addEventListener('change', () => filtersForm.submit());
-                        }
-                    });
-                }
-
-                restaurarBotoes();
+                restoreButtons();
             });
 
             window.addEventListener('pageshow', function () {
-                setTimeout(restaurarBotoes, 100);
+                restoreButtons();
             });
-
-            document.addEventListener('submit', async function (event) {
-                const formulario = event.target;
-
-                if (!formulario.matches('form.quick-add-form')) return;
-
-                event.preventDefault();
-                event.stopPropagation();
-
-                const botao = formulario.querySelector('button.quick-add');
-                if (!botao || botao.disabled || botao.classList.contains('disabled')) {
-                    return;
-                }
-
-                await adicionarAoCarrinho(formulario, botao);
-            }, true);
-
-            window.produtosCarrinho = {
-                listar: () => getProdutosAdicionados(),
-                limpar: () => {
-                    localStorage.removeItem(STORAGE_KEY);
-                    restaurarBotoes();
-                },
-                remover: (productId) => removerProdutoDaLista(productId)
-            };
         })();
     </script>
 }

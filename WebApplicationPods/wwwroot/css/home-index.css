@@ -721,3 +721,12 @@
         display: block !important;
     }
 }
+.quick-add .qa-spin,
+.quick-add .qa-done {
+    display: none;
+}
+
+.quick-add.is-success {
+    background: #16a34a !important;
+    border-color: #16a34a !important;
+}

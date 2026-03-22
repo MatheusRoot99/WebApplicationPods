@@ -11,11 +11,16 @@ namespace WebApplicationPods.Controllers
     {
         private readonly IProdutoRepository _produtoRepository;
         private readonly BancoContext _context;
+        private readonly ICarrinhoRepository _carrinhoRepository;
 
-        public HomeController(IProdutoRepository produtoRepository, BancoContext context)
+        public HomeController(
+            IProdutoRepository produtoRepository,
+            BancoContext context,
+            ICarrinhoRepository carrinhoRepository)
         {
             _produtoRepository = produtoRepository;
             _context = context;
+            _carrinhoRepository = carrinhoRepository;
         }
 
         public IActionResult Landing()
@@ -25,16 +30,12 @@ namespace WebApplicationPods.Controllers
 
         public IActionResult Index(FiltrosModel filtros)
         {
-            // ? Evita NullReference se vier null
             filtros ??= new FiltrosModel();
 
-            // ? normaliza campos string (vazio => null)
             filtros.Categoria = string.IsNullOrWhiteSpace(filtros.Categoria) ? null : filtros.Categoria;
             filtros.Sabor = string.IsNullOrWhiteSpace(filtros.Sabor) ? null : filtros.Sabor;
             filtros.Cor = string.IsNullOrWhiteSpace(filtros.Cor) ? null : filtros.Cor;
             filtros.Termo = string.IsNullOrWhiteSpace(filtros.Termo) ? null : filtros.Termo;
-
-            // ? fallback de ordenação (se vier vazio)
             filtros.OrdenarPor = string.IsNullOrWhiteSpace(filtros.OrdenarPor) ? "Populares" : filtros.OrdenarPor;
 
             var loja = _context.LojaConfigs
@@ -43,6 +44,13 @@ namespace WebApplicationPods.Controllers
 
             var produtos = _produtoRepository.FiltrarProdutos(filtros);
 
+            var carrinho = _carrinhoRepository.ObterCarrinho();
+            var produtosNoCarrinho = carrinho?.Itens?
+                .Where(i => i.ProdutoId > 0)
+                .Select(i => i.ProdutoId)
+                .Distinct()
+                .ToList() ?? new List<int>();
+
             var viewModel = new ProdutoListagemViewModel
             {
                 Produtos = produtos,
@@ -50,7 +58,7 @@ namespace WebApplicationPods.Controllers
                 Filtros = new FiltrosModel
                 {
                     CategoriasDisponiveis = _produtoRepository.ObterCategoriasDistintas(),
-                    SaboresDisponiveis = _produtoRepository.ObterSaboresDistintos(), // agora vem das VARIAÇÕES do POD
+                    SaboresDisponiveis = _produtoRepository.ObterSaboresDistintos(),
                     CoresDisponiveis = _produtoRepository.ObterCoresDistintas(),
 
                     Categoria = filtros.Categoria,
@@ -65,7 +73,8 @@ namespace WebApplicationPods.Controllers
                     OrdenarPor = filtros.OrdenarPor
                 },
 
-                Loja = loja
+                Loja = loja,
+                ProdutosNoCarrinho = produtosNoCarrinho
             };
 
             return View(viewModel);
