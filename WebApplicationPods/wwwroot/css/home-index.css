@@ -1,6 +1,4 @@
-﻿/* home-index.css - CSS específico para a página Home/Index */
-
-:root {
+﻿:root {
     --primary: #2575fc;
     --primary-dark: #1a5fd8;
     --secondary: #6a11cb;
@@ -514,7 +512,7 @@
 
     .quick-add .qa-spin,
     .quick-add .qa-done {
-        display: none;
+        display: none !important;
     }
 
     .quick-add.is-loading {
@@ -522,11 +520,11 @@
     }
 
         .quick-add.is-loading .qa-icon {
-            display: none;
+            display: none !important;
         }
 
         .quick-add.is-loading .qa-spin {
-            display: inline-block;
+            display: inline-block !important;
         }
 
     .quick-add.is-success {
@@ -543,15 +541,15 @@
         }
 
         .quick-add.is-success .qa-icon {
-            display: none;
+            display: none !important;
         }
 
         .quick-add.is-success .qa-spin {
-            display: none;
+            display: none !important;
         }
 
         .quick-add.is-success .qa-done {
-            display: inline-block;
+            display: inline-block !important;
             animation: checkPulse 0.35s ease;
         }
 
@@ -722,81 +720,4 @@
     .d-lg-block {
         display: block !important;
     }
-}
-/* Botão de adicionar ao carrinho - CORREÇÃO FINAL */
-.quick-add {
-    position: relative;
-    width: 100%;
-    height: 36px;
-    border-radius: 8px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    background: linear-gradient(135deg, #6a11cb, #2575fc);
-    color: white;
-    border: none;
-    font-weight: 700;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-    .quick-add i {
-        font-size: 1rem;
-    }
-
-    /* Esconder todos os ícones por padrão, exceto o do carrinho */
-    .quick-add .fa-spinner,
-    .quick-add .fa-check {
-        display: none;
-    }
-
-    /* Estado de loading - mostra o spinner */
-    .quick-add.is-loading .fa-cart-plus {
-        display: none;
-    }
-
-    .quick-add.is-loading .fa-spinner {
-        display: inline-block;
-    }
-
-    /* Estado de sucesso - mostra o check */
-    .quick-add.is-success {
-        background: #22c55e !important;
-    }
-
-        .quick-add.is-success .fa-cart-plus {
-            display: none;
-        }
-
-        .quick-add.is-success .fa-spinner {
-            display: none;
-        }
-
-        .quick-add.is-success .fa-check {
-            display: inline-block;
-            animation: checkPulse 0.5s ease;
-        }
-
-@keyframes checkPulse {
-    0% {
-        transform: scale(0);
-        opacity: 0;
-    }
-
-    50% {
-        transform: scale(1.2);
-    }
-
-    100% {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
-.quick-add.disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    background: #6c757d;
 }

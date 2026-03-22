@@ -386,89 +386,170 @@
 @section Scripts {
     <script>
         (function () {
-            const ADDED_PRODUCTS_KEY = 'home_added_products';
+            const STORAGE_KEY = 'produtos_adicionados_carrinho';
 
-            function getAddedProducts() {
+            function getProdutosAdicionados() {
                 try {
-                    const raw = localStorage.getItem(ADDED_PRODUCTS_KEY);
-                    const parsed = raw ? JSON.parse(raw) : [];
-                    return Array.isArray(parsed) ? parsed.map(String) : [];
-                } catch {
+                    const dados = localStorage.getItem(STORAGE_KEY);
+                    if (!dados) return [];
+                    const produtos = JSON.parse(dados);
+                    return Array.isArray(produtos) ? produtos.map(String) : [];
+                } catch (erro) {
+                    console.error('Erro ao ler localStorage:', erro);
                     return [];
                 }
             }
 
-            function saveAddedProducts(items) {
-                localStorage.setItem(ADDED_PRODUCTS_KEY, JSON.stringify(items));
+            function salvarProdutosAdicionados(produtos) {
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(produtos));
+                } catch (erro) {
+                    console.error('Erro ao salvar localStorage:', erro);
+                }
             }
 
-            function addAddedProduct(productId) {
+            function adicionarProdutoNaLista(productId) {
                 if (!productId) return;
-                const items = getAddedProducts();
+
+                const produtos = getProdutosAdicionados();
                 const id = String(productId);
-                if (!items.includes(id)) {
-                    items.push(id);
-                    saveAddedProducts(items);
+
+                if (!produtos.includes(id)) {
+                    produtos.push(id);
+                    salvarProdutosAdicionados(produtos);
                 }
             }
 
-            function setButtonVisualState(btn, state) {
-                if (!btn) return;
+            function removerProdutoDaLista(productId) {
+                if (!productId) return;
 
-                const icon = btn.querySelector('.qa-icon');
-                const spin = btn.querySelector('.qa-spin');
-                const done = btn.querySelector('.qa-done');
+                const id = String(productId);
+                let produtos = getProdutosAdicionados();
 
-                btn.classList.remove('is-loading', 'is-success');
+                produtos = produtos.filter(p => p !== id);
+                salvarProdutosAdicionados(produtos);
 
-                if (state === 'loading') {
-                    btn.classList.add('is-loading');
-                    btn.dataset.added = 'false';
-                    if (icon) icon.style.display = 'none';
-                    if (spin) spin.style.display = 'inline-block';
-                    if (done) done.style.display = 'none';
-                    return;
+                const botao = document.querySelector(`button.quick-add[data-product-id="${id}"]`);
+                if (botao) {
+                    setEstadoBotao(botao, 'default');
                 }
-
-                if (state === 'success') {
-                    btn.classList.add('is-success');
-                    btn.dataset.added = 'true';
-                    if (icon) icon.style.display = 'none';
-                    if (spin) spin.style.display = 'none';
-                    if (done) done.style.display = 'inline-block';
-                    return;
-                }
-
-                btn.dataset.added = 'false';
-                if (icon) icon.style.display = 'inline-block';
-                if (spin) spin.style.display = 'none';
-                if (done) done.style.display = 'none';
             }
 
-            function restoreAddedButtons() {
-                const items = getAddedProducts();
+            function setEstadoBotao(botao, estado) {
+                if (!botao) return;
 
-                document.querySelectorAll('button.quick-add[data-product-id]').forEach(function (btn) {
-                    const id = String(btn.dataset.productId || '');
-                    if (items.includes(id)) {
-                        setButtonVisualState(btn, 'success');
+                const iconeCarrinho = botao.querySelector('.qa-icon');
+                const iconeLoading = botao.querySelector('.qa-spin');
+                const iconeCheck = botao.querySelector('.qa-done');
+
+                botao.classList.remove('is-loading', 'is-success');
+
+                if (iconeCarrinho) iconeCarrinho.style.display = '';
+                if (iconeLoading) iconeLoading.style.display = '';
+                if (iconeCheck) iconeCheck.style.display = '';
+
+                switch (estado) {
+                    case 'loading':
+                        botao.classList.add('is-loading');
+                        if (iconeCarrinho) iconeCarrinho.style.display = 'none';
+                        if (iconeLoading) iconeLoading.style.display = 'inline-block';
+                        if (iconeCheck) iconeCheck.style.display = 'none';
+                        break;
+
+                    case 'success':
+                        botao.classList.add('is-success');
+                        if (iconeCarrinho) iconeCarrinho.style.display = 'none';
+                        if (iconeLoading) iconeLoading.style.display = 'none';
+                        if (iconeCheck) iconeCheck.style.display = 'inline-block';
+                        break;
+
+                    default:
+                        if (iconeCarrinho) iconeCarrinho.style.display = 'inline-block';
+                        if (iconeLoading) iconeLoading.style.display = 'none';
+                        if (iconeCheck) iconeCheck.style.display = 'none';
+                        break;
+                }
+            }
+
+            function restaurarBotoes() {
+                const produtosAdicionados = getProdutosAdicionados();
+                const botoes = document.querySelectorAll('button.quick-add[data-product-id]');
+
+                botoes.forEach(botao => {
+                    const productId = String(botao.dataset.productId || '');
+
+                    if (produtosAdicionados.includes(productId)) {
+                        setEstadoBotao(botao, 'success');
                     } else {
-                        setButtonVisualState(btn, 'default');
+                        setEstadoBotao(botao, 'default');
                     }
                 });
             }
 
-            function updateCartBadges(count) {
-                if (typeof window.updateCartCount === 'function') {
-                    window.updateCartCount(count);
+            function atualizarContadorCarrinho(quantidade) {
+                if (typeof window.updateCartBadges === 'function') {
+                    window.updateCartBadges(quantidade);
                     return;
                 }
 
-                document.querySelectorAll('[data-cart-count], .cart-count, #cartCount').forEach(function (el) {
-                    el.textContent = count;
+                const contadores = document.querySelectorAll('[data-cart-count], .cart-count, #cartCount');
+                contadores.forEach(el => {
+                    el.textContent = quantidade;
                     el.classList.add('cart-badge-animation');
                     setTimeout(() => el.classList.remove('cart-badge-animation'), 300);
                 });
+            }
+
+            async function adicionarAoCarrinho(formulario, botao) {
+                const productId = botao.dataset.productId;
+
+                if (!productId) return;
+                if (botao.classList.contains('is-success')) return;
+
+                setEstadoBotao(botao, 'loading');
+
+                try {
+                    const response = await fetch(formulario.action, {
+                        method: 'POST',
+                        body: new FormData(formulario),
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        },
+                        credentials: 'same-origin'
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    let data = null;
+                    const contentType = response.headers.get('content-type') || '';
+
+                    if (contentType.includes('application/json')) {
+                        data = await response.json();
+                    }
+
+                    adicionarProdutoNaLista(productId);
+                    setEstadoBotao(botao, 'success');
+
+                    if (data && typeof data.count !== 'undefined') {
+                        atualizarContadorCarrinho(data.count);
+                    }
+
+                    const card = botao.closest('.produto-card');
+                    if (card) {
+                        card.style.transition = 'transform 0.2s ease';
+                        card.style.transform = 'scale(1.02)';
+                        setTimeout(() => {
+                            card.style.transform = '';
+                        }, 200);
+                    }
+                } catch (erro) {
+                    console.error('Erro ao adicionar produto:', erro);
+                    setEstadoBotao(botao, 'default');
+                    alert('Não foi possível adicionar o produto ao carrinho. Tente novamente.');
+                }
             }
 
             document.addEventListener('DOMContentLoaded', function () {
@@ -484,66 +565,45 @@
                 }
 
                 if (filtersForm) {
-                    const filterElements = filtersForm.querySelectorAll('select, input[type="number"], input[type="checkbox"]');
-                    filterElements.forEach(el => {
+                    const elementosFiltro = filtersForm.querySelectorAll('select, input[type="number"], input[type="checkbox"]');
+                    elementosFiltro.forEach(el => {
                         if (el.id !== 'Filtros_OrdenarPor') {
                             el.addEventListener('change', () => filtersForm.submit());
                         }
                     });
                 }
 
-                restoreAddedButtons();
+                restaurarBotoes();
             });
 
-            window.addEventListener('pageshow', restoreAddedButtons);
+            window.addEventListener('pageshow', function () {
+                setTimeout(restaurarBotoes, 100);
+            });
 
-            document.addEventListener('submit', async function (e) {
-                const formEl = e.target;
+            document.addEventListener('submit', async function (event) {
+                const formulario = event.target;
 
-                if (!formEl.matches('form.quick-add-form')) return;
+                if (!formulario.matches('form.quick-add-form')) return;
 
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
+                event.preventDefault();
+                event.stopPropagation();
 
-                const btn = formEl.querySelector('.quick-add');
-                if (!btn || btn.disabled || btn.classList.contains('disabled')) return;
-
-                const productId = btn.dataset.productId;
-                setButtonVisualState(btn, 'loading');
-
-                try {
-                    const response = await fetch(formEl.action, {
-                        method: 'POST',
-                        body: new FormData(formEl),
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'Accept': 'application/json'
-                        }
-                    });
-
-                    if (!response.ok) {
-                        throw new Error('Erro ao adicionar');
-                    }
-
-                    const data = await response.json();
-
-                    if (!data || data.ok !== true) {
-                        throw new Error((data && data.error) ? data.error : 'Erro ao adicionar');
-                    }
-
-                    addAddedProduct(productId);
-                    setButtonVisualState(btn, 'success');
-
-                    if (typeof data.count !== 'undefined') {
-                        updateCartBadges(data.count);
-                    }
-                } catch (err) {
-                    console.error(err);
-                    setButtonVisualState(btn, 'default');
-                    alert('Não foi possível adicionar o produto ao carrinho.');
+                const botao = formulario.querySelector('button.quick-add');
+                if (!botao || botao.disabled || botao.classList.contains('disabled')) {
+                    return;
                 }
+
+                await adicionarAoCarrinho(formulario, botao);
             }, true);
+
+            window.produtosCarrinho = {
+                listar: () => getProdutosAdicionados(),
+                limpar: () => {
+                    localStorage.removeItem(STORAGE_KEY);
+                    restaurarBotoes();
+                },
+                remover: (productId) => removerProdutoDaLista(productId)
+            };
         })();
     </script>
 }
