@@ -14,7 +14,6 @@
 }
 
 <div class="carrinho-container">
-    <!-- Alerts -->
     <div id="carrinho-alerts">
         @if (TempData["Sucesso"] is string ok && !string.IsNullOrWhiteSpace(ok))
         {
@@ -35,7 +34,6 @@
     @if (Model?.Carrinho?.Itens?.Any() == true)
     {
         <div class="cart-grid">
-            <!-- LISTA DE ITENS -->
             <div>
                 <div class="table-responsive">
                     <table class="carrinho-table">
@@ -66,21 +64,20 @@
                                 {
                                     maxPermitido = item.Produto?.Estoque ?? 1;
                                 }
+
                                 if (maxPermitido < 1) maxPermitido = 1;
 
-                                // ===== PREÇOS (definidos UMA ÚNICA VEZ por item) =====
                                 var temPromo = item.Produto?.EstaEmPromocao() == true;
                                 var precoNormal = item.Produto?.Preco ?? 0m;
                                 decimal? precoPromo = temPromo ? item.Produto!.PrecoPromocional : null;
 
                                 <tr class="linha-item">
-                                    <!-- PRODUTO -->
                                     <td data-label="Produto">
                                         <div class="produto-info">
                                             <img src="@(item.Produto?.ImagemUrl ?? "https://via.placeholder.com/120x120?text=%20")"
                                                  alt="@(item.Produto?.Nome ?? "Produto")"
                                                  class="produto-imagem" />
-                                            <div>
+                                            <div class="produto-meta">
                                                 <h5 class="produto-nome">@item.Produto?.Nome</h5>
 
                                                 @if (!string.IsNullOrEmpty(item.Sabor))
@@ -89,6 +86,7 @@
                                                         <strong>Sabor:</strong> @item.Sabor
                                                     </div>
                                                 }
+
                                                 @if (!string.IsNullOrEmpty(item.Observacoes))
                                                 {
                                                     <div class="produto-observacoes">
@@ -97,7 +95,7 @@
                                                 }
 
                                                 <div class="produto-estoque">
-                                                    <small class="text-muted">
+                                                    <small>
                                                         Estoque disponível: <strong>@maxPermitido</strong>
                                                     </small>
                                                 </div>
@@ -105,15 +103,16 @@
                                         </div>
                                     </td>
 
-                                    <!-- QUANTIDADE -->
-                                    <td data-label="">
+                                    <td data-label="Quantidade">
                                         <form asp-action="AtualizarItem" method="post" class="quantidade-form">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="produtoId" value="@item.Produto!.Id" />
                                             <input type="hidden" name="sabor" value="@item.Sabor" />
 
                                             <div class="input-group">
-                                                <button type="submit" name="op" value="dec"
+                                                <button type="submit"
+                                                        name="op"
+                                                        value="dec"
                                                         class="btn btn-outline btn-outline-secondary"
                                                         aria-label="Diminuir">
                                                     <i class="fas fa-minus"></i>
@@ -127,7 +126,9 @@
                                                        class="form-control text-center quantidade-input"
                                                        inputmode="numeric" />
 
-                                                <button type="submit" name="op" value="inc"
+                                                <button type="submit"
+                                                        name="op"
+                                                        value="inc"
                                                         class="btn btn-outline btn-outline-secondary"
                                                         aria-label="Aumentar">
                                                     <i class="fas fa-plus"></i>
@@ -140,15 +141,16 @@
                                         </form>
                                     </td>
 
-                                    <!-- PREÇOS -->
-                                    <td data-label="Preço Normal">@precoNormal.ToString("C", ptBR)</td>
+                                    <td data-label="Preço Normal" class="preco-normal">
+                                        @precoNormal.ToString("C", ptBR)
+                                    </td>
 
                                     <td data-label="Preço com Desconto"
+                                        class="preco-promo"
                                         data-has-discount="@(precoPromo.HasValue ? "true" : "false")">
                                         @(precoPromo.HasValue? precoPromo.Value.ToString("C", ptBR) : "")
                                     </td>
 
-                                    <!-- AÇÕES -->
                                     <td data-label="Ações">
                                         <form asp-action="RemoverItem" method="post" class="remove-form">
                                             @Html.AntiForgeryToken()
@@ -166,7 +168,6 @@
                 </div>
             </div>
 
-            <!-- RESUMO -->
             <aside>
                 <div id="resumo-card" class="total-card">
                     <div class="total-label">Total:</div>
@@ -189,7 +190,6 @@
     }
     else
     {
-        <!-- ESTADO VAZIO + POPULARES -->
         <div id="empty-state" class="carrinho-vazio">
             <h4>Seu carrinho está vazio</h4>
             <p>Adicione produtos ao seu carrinho para continuar.</p>
@@ -205,7 +205,6 @@
                 @foreach (var p in Model.Populares)
                 {
                     <article class="pop-card">
-                        <!-- Imagem sem <a>; o overlay abaixo cobre o card todo -->
                         <div class="pop-img">
                             <img src="@p.ImagemUrl" alt="@p.Nome" loading="lazy" />
                         </div>
@@ -235,7 +234,6 @@
                             </form>
                         </div>
 
-                        <!-- Link esticado: torna o card inteiro clicável (detalhes) -->
                         <a class="stretched-link"
                            asp-controller="Produto"
                            asp-action="DetalhesProdutos"
@@ -256,48 +254,4 @@
 
 @section Scripts {
     <script src="~/js/Carrinho-form.js" asp-append-version="true"></script>
-    <script>
-        setTimeout(() => {
-            document.querySelectorAll('#carrinho-alerts .alert').forEach(a => {
-                a.style.transition = 'opacity .5s';
-                a.style.opacity = '0';
-                setTimeout(() => a.remove(), 500);
-            });
-        }, 5000);
-    </script>
-
-    <script>
-        (function () {
-            const STORAGE_KEY = 'produtos_adicionados_carrinho';
-
-            function getStorage() {
-                try {
-                    const data = localStorage.getItem(STORAGE_KEY);
-                    if (!data) return [];
-                    const parsed = JSON.parse(data);
-                    return Array.isArray(parsed) ? parsed.map(String) : [];
-                } catch {
-                    return [];
-                }
-            }
-
-            function saveStorage(ids) {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify([...new Set(ids.map(String))]));
-            }
-
-            function removeFromStorage(produtoId) {
-                if (!produtoId) return;
-                const ids = getStorage().filter(x => x !== String(produtoId));
-                saveStorage(ids);
-            }
-
-            document.addEventListener('submit', function (e) {
-                const form = e.target.closest('form.remove-form');
-                if (!form) return;
-
-                const produtoId = form.querySelector('input[name="produtoId"]')?.value;
-                removeFromStorage(produtoId);
-            });
-        })();
-    </script>
 }
