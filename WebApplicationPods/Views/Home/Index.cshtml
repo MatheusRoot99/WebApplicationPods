@@ -390,7 +390,7 @@
     <script>
         (function () {
             const STORAGE_KEY = 'produtos_adicionados_carrinho';
-            const produtosNoCarrinhoServidor = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            const produtosNoCarrinhoServidor = @Html.Raw(JsonSerializer.Serialize(
                             (Model.ProdutosNoCarrinho ?? new List<int>()).Select(x => x.ToString())
                     ));
 
@@ -406,16 +406,29 @@
         }
 
             function saveStorage(ids) {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify([...new Set(ids.map(String))]));
+                localStorage.setItem(
+                    STORAGE_KEY,
+                    JSON.stringify([ ...new Set((ids || []).map(String)) ])
+                );
             }
 
             function addStorage(id) {
+                id = String(id || '');
+                if (!id) return;
+
                 const ids = getStorage();
-                id = String(id);
                 if (!ids.includes(id)) {
                     ids.push(id);
                     saveStorage(ids);
                 }
+            }
+
+            function removeStorage(id) {
+                id = String(id || '');
+                if (!id) return;
+
+                const ids = getStorage().filter(x => x !== id);
+                saveStorage(ids);
             }
 
             function setButtonState(button, state) {
@@ -446,11 +459,19 @@
                 if (cart) cart.style.display = 'inline-block';
             }
 
-            function restoreButtons() {
-                const ids = [...new Set([...(produtosNoCarrinhoServidor || []), ...getStorage()])];
-                saveStorage(ids);
+            function sincronizarStorageComServidor() {
+                const idsServidor = Array.isArray(produtosNoCarrinhoServidor)
+                    ? produtosNoCarrinhoServidor.map(String)
+                    : [];
 
-                document.querySelectorAll('.quick-add').forEach(button => {
+                saveStorage(idsServidor);
+                return idsServidor;
+            }
+
+            function restoreButtons() {
+                const ids = sincronizarStorageComServidor();
+
+                document.querySelectorAll('button.quick-add[data-product-id]').forEach(button => {
                     const id = String(button.dataset.productId || '');
                     if (ids.includes(id)) {
                         setButtonState(button, 'success');
@@ -466,7 +487,7 @@
             }
 
             async function submitQuickAdd(form) {
-                const button = form.querySelector('.quick-add');
+                const button = form.querySelector('button.quick-add');
                 if (!button) return;
 
                 const productId = button.dataset.productId;
@@ -515,8 +536,11 @@
             }
 
             document.addEventListener('submit', function (e) {
-                const form = e.target.closest('.quick-add-form');
+                const form = e.target.closest('form.quick-add-form');
                 if (!form) return;
+
+                const button = form.querySelector('button.quick-add');
+                if (!button) return;
 
                 e.preventDefault();
                 e.stopPropagation();
@@ -531,6 +555,20 @@
             window.addEventListener('pageshow', function () {
                 restoreButtons();
             });
+
+            window.produtosCarrinho = {
+                listar: () => getStorage(),
+                limpar: () => {
+                    localStorage.removeItem(STORAGE_KEY);
+                    restoreButtons();
+                },
+                remover: (productId) => {
+                    removeStorage(productId);
+                },
+                sincronizar: () => {
+                    restoreButtons();
+                }
+            };
         })();
     </script>
 }
