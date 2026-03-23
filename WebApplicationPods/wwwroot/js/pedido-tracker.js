@@ -11,12 +11,33 @@
 
     function statusToStep(text) {
         var s = (text || '').toLowerCase();
-        if (s.indexOf('cancel') >= 0) return -1;
-        if (s.indexOf('entreg') >= 0 || s.indexOf('concl') >= 0) return 5;
-        if (s.indexOf('rota') >= 0 || s.indexOf('saiu') >= 0 || s.indexOf('entrega') >= 0 || s.indexOf('retirada') >= 0) return 4;
-        if (s.indexOf('prepar') >= 0 || s.indexOf('produção') >= 0 || s.indexOf('producao') >= 0) return 3;
-        if (s.indexOf('pago') >= 0 || s.indexOf('aprov') >= 0) return 2;
-        if (s.indexOf('aguard') >= 0 && s.indexOf('pag') >= 0) return 1;
+
+        if (s.indexOf('cancel') >= 0 || s.indexOf('falhou') >= 0) return -1;
+
+        if (s.indexOf('concl') >= 0 || s.indexOf('entregue') >= 0 || s.indexOf('entreg') >= 0) return 5;
+
+        if (
+            s.indexOf('rota') >= 0 ||
+            s.indexOf('saiu') >= 0 ||
+            s.indexOf('retirada') >= 0 ||
+            s.indexOf('pronto') >= 0
+        ) return 4;
+
+        if (
+            s.indexOf('prepar') >= 0 ||
+            s.indexOf('produção') >= 0 ||
+            s.indexOf('producao') >= 0
+        ) return 3;
+
+        if (
+            s.indexOf('pago') >= 0 ||
+            s.indexOf('aprov') >= 0
+        ) return 2;
+
+        if (
+            s.indexOf('aguard') >= 0 && s.indexOf('pag') >= 0
+        ) return 1;
+
         return 0;
     }
 
@@ -78,16 +99,25 @@
 
     function paintSteps(step) {
         if (typeof step === 'number') __currentStep = step;
+
         var nodes = qsa('.vstep');
         for (var i = 0; i < nodes.length; i++) {
             nodes[i].classList.remove('done');
             nodes[i].classList.remove('active');
+            nodes[i].classList.remove('cancelled');
+
             if (__currentStep >= 0) {
                 if (i < __currentStep) nodes[i].classList.add('done');
                 if (i === __currentStep) nodes[i].classList.add('active');
             }
         }
-        updateFilledLine(__currentStep);
+
+        if (__currentStep === -1 && nodes.length) {
+            nodes[0].classList.add('active');
+            nodes[0].classList.add('cancelled');
+        }
+
+        updateFilledLine(__currentStep >= 0 ? __currentStep : 0);
     }
 
     function buildNoCacheUrl(url) {

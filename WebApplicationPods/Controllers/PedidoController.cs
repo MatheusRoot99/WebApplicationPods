@@ -48,59 +48,160 @@ namespace WebApplicationPods.Controllers
 
         // GET /Pedido/Acompanhar/123?t=TOKEN
         [HttpGet]
-        [AllowAnonymous]
-        public IActionResult Acompanhar(int id, string? t)
+        [HttpGet]
+        public IActionResult Acompanhar(int id, string? t = null)
         {
+            if (id <= 0)
+                return RedirectToAction("Index", "Home");
+
             var pedido = _pedidoRepository.ObterPorId(id);
-            if (pedido == null) return NotFound();
+            if (pedido == null)
+                return RedirectToAction("Index", "Home");
 
-            if (!CanViewPedido(pedido, HttpContext.User, t))
+            // Se existir token de rastreio no pedido, valida quando vier na URL
+            if (!string.IsNullOrWhiteSpace(pedido.RastreioToken))
             {
-                TempData["Erro"] = "Não foi possível identificar seu pedido.";
-                return RedirectToAction(nameof(Buscar));
-            }
-
-            IEnumerable<PedidoModel> ultimos = new[] { pedido };
-
-            var user = HttpContext.User;
-            if (user?.Identity?.IsAuthenticated == true)
-            {
-                if (user.IsInRole("Lojista") || user.IsInRole("Admin"))
+                if (string.IsNullOrWhiteSpace(t) ||
+                    !string.Equals(pedido.RastreioToken, t, StringComparison.OrdinalIgnoreCase))
                 {
-                    ultimos = _pedidoRepository.ObterPorCliente(pedido.ClienteId)
-                        .OrderByDescending(x => x.DataPedido)
-                        .Take(10)
-                        .ToList();
-                }
-                else
-                {
-                    var cidStr = user.FindFirstValue("ClienteId");
-                    if (int.TryParse(cidStr, out var cid) && cid > 0)
-                    {
-                        ultimos = _pedidoRepository.ObterPorCliente(cid)
-                            .OrderByDescending(x => x.DataPedido)
-                            .Take(10)
-                            .ToList();
-                    }
-                }
-            }
-            else
-            {
-                var cookieToken = Request.Cookies["last_order_token"];
-                if (!string.IsNullOrEmpty(cookieToken) &&
-                    string.Equals(cookieToken, pedido.RastreioToken, StringComparison.Ordinal))
-                {
-                    ultimos = _pedidoRepository.ObterPorCliente(pedido.ClienteId)
-                        .OrderByDescending(x => x.DataPedido)
-                        .Take(10)
-                        .ToList();
+                    return RedirectToAction("Index", "Home");
                 }
             }
 
-            ViewBag.Ultimos = ultimos;
-            ViewBag.StatusUrl = Url.Action("Status", "Pedido", new { id = pedido.Id, t = pedido.RastreioToken });
+            var ultimosPedidos = Enumerable.Empty<PedidoModel>();
+
+            if (pedido.ClienteId > 0)
+            {
+                ultimosPedidos = _pedidoRepository
+                    .ObterPorCliente(pedido.ClienteId)
+                    .Where(x => x.Id != pedido.Id)
+                    .OrderByDescending(x => x.DataPedido)
+                    .Take(10)
+                    .ToList();
+            }
+
+            var historico = _pedidoRepository
+                .ObterHistorico(pedido.Id)
+                .OrderByDescending(x => x.DataCadastro)
+                .ToList();
+
+            ViewBag.Ultimos = ultimosPedidos;
+            ViewBag.Historico = historico;
 
             return View(pedido);
+        }
+
+        [HttpGet]
+        public IActionResult StatusJson(int id, string? t = null)
+        {
+            if (id <= 0)
+            {
+                return Json(new
+                {
+                    ok = false,
+                    message = "Pedido inválido."
+                });
+            }
+
+            var pedido = _pedidoRepository.ObterPorId(id);
+            if (pedido == null)
+            {
+                return Json(new
+                {
+                    ok = false,
+                    message = "Pedido não encontrado."
+                });
+            }
+
+            if (!string.IsNullOrWhiteSpace(pedido.RastreioToken))
+            {
+                if (string.IsNullOrWhiteSpace(t) ||
+                    !string.Equals(pedido.RastreioToken, t, StringComparison.OrdinalIgnoreCase))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        message = "Token de rastreio inválido."
+                    });
+                }
+            }
+
+            int step = ObterStepPedido(pedido);
+
+            var times = new Dictionary<string, string?>()
+            {
+                ["0"] = pedido.DataPedido != default ? pedido.DataPedido.ToString("o") : null,
+                ["1"] = pedido.DataAguardandoPagamento?.ToString("o"),
+                ["2"] = pedido.DataPagamentoAprovado?.ToString("o"),
+                ["3"] = pedido.DataInicioPreparo?.ToString("o"),
+                ["4"] = pedido.DataSaiuParaEntregaOuRetirada?.ToString("o"),
+                ["5"] = pedido.DataConcluido?.ToString("o")
+            };
+
+            return Json(new
+            {
+                ok = true,
+                id = pedido.Id,
+                status = pedido.Status,
+                step = step,
+                times = times,
+                dataPedido = pedido.DataPedido,
+                dataAguardandoPagamento = pedido.DataAguardandoPagamento,
+                dataPagamentoAprovado = pedido.DataPagamentoAprovado,
+                dataInicioPreparo = pedido.DataInicioPreparo,
+                dataSaiuParaEntregaOuRetirada = pedido.DataSaiuParaEntregaOuRetirada,
+                dataConcluido = pedido.DataConcluido,
+                dataCancelado = pedido.DataCancelado,
+                retiradaNoLocal = pedido.RetiradaNoLocal
+            });
+        }
+
+        private static int ObterStepPedido(PedidoModel pedido)
+        {
+            var status = pedido?.Status?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(status))
+                return 0;
+
+            if (status.Contains("Cancel", StringComparison.OrdinalIgnoreCase) ||
+                status.Contains("Falhou", StringComparison.OrdinalIgnoreCase))
+            {
+                return -1;
+            }
+
+            if (status.Contains("Concl", StringComparison.OrdinalIgnoreCase) ||
+                status.Contains("Entregue", StringComparison.OrdinalIgnoreCase))
+            {
+                return 5;
+            }
+
+            if (status.Contains("Saiu", StringComparison.OrdinalIgnoreCase) ||
+                status.Contains("Entrega", StringComparison.OrdinalIgnoreCase) ||
+                status.Contains("Retirada", StringComparison.OrdinalIgnoreCase) ||
+                status.Contains("Pronto", StringComparison.OrdinalIgnoreCase))
+            {
+                return 4;
+            }
+
+            if (status.Contains("Prepar", StringComparison.OrdinalIgnoreCase) ||
+                status.Contains("Produ", StringComparison.OrdinalIgnoreCase))
+            {
+                return 3;
+            }
+
+            if (status.Contains("Pago", StringComparison.OrdinalIgnoreCase) ||
+                status.Contains("Aprov", StringComparison.OrdinalIgnoreCase))
+            {
+                return 2;
+            }
+
+            if (status.Contains("Aguard", StringComparison.OrdinalIgnoreCase) &&
+                status.Contains("Pag", StringComparison.OrdinalIgnoreCase))
+            {
+                return 1;
+            }
+
+            return 0;
         }
 
         [HttpGet("Pedido/ResumoPedidoCliente/{id:int}")]
@@ -115,7 +216,7 @@ namespace WebApplicationPods.Controllers
                 TempData["Erro"] = "Não foi possível identificar seu pedido.";
                 return RedirectToAction(nameof(Buscar));
             }
-
+            ViewBag.Historico = _pedidoRepository.ObterHistorico(pedido.Id);
             return View("ResumoPedidoCliente", pedido);
         }
 

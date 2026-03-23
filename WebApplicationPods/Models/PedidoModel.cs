@@ -75,5 +75,6 @@ namespace WebApplicationPods.Models
 
         public ICollection<PedidoItemModel> PedidoItens { get; set; } = new List<PedidoItemModel>();
         public ICollection<PaymentModel> Pagamentos { get; set; } = new List<PaymentModel>();
+        public ICollection<PedidoHistoricoModel> Historico { get; set; } = new List<PedidoHistoricoModel>();
     }
 }

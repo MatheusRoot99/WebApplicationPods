@@ -693,6 +693,52 @@ namespace WebApplicationPods.Migrations
                     b.ToTable("Pagamentos");
                 });
 
+            modelBuilder.Entity("WebApplicationPods.Models.PedidoHistoricoModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("DataCadastro")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("NomeResponsavel")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("NovoStatus")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Observacao")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Origem")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<int>("PedidoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StatusAnterior")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("UsuarioResponsavelId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PedidoId", "DataCadastro");
+
+                    b.ToTable("PedidoHistoricos", (string)null);
+                });
+
             modelBuilder.Entity("WebApplicationPods.Models.PedidoItemModel", b =>
                 {
                     b.Property<int>("Id")
@@ -1218,6 +1264,17 @@ namespace WebApplicationPods.Migrations
                     b.Navigation("Pedido");
                 });
 
+            modelBuilder.Entity("WebApplicationPods.Models.PedidoHistoricoModel", b =>
+                {
+                    b.HasOne("WebApplicationPods.Models.PedidoModel", "Pedido")
+                        .WithMany("Historico")
+                        .HasForeignKey("PedidoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Pedido");
+                });
+
             modelBuilder.Entity("WebApplicationPods.Models.PedidoItemModel", b =>
                 {
                     b.HasOne("WebApplicationPods.Models.PedidoModel", "Pedido")
@@ -1312,6 +1369,8 @@ namespace WebApplicationPods.Migrations
 
             modelBuilder.Entity("WebApplicationPods.Models.PedidoModel", b =>
                 {
+                    b.Navigation("Historico");
+
                     b.Navigation("Pagamentos");
 
                     b.Navigation("PedidoItens");

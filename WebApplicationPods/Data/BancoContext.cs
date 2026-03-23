@@ -45,6 +45,7 @@ namespace WebApplicationPods.Data
         public DbSet<UsuarioModel> Usuarios => Set<UsuarioModel>();
         public DbSet<CarrinhoModel> Carrinhos => Set<CarrinhoModel>();
         public DbSet<PaymentModel> Pagamentos => Set<PaymentModel>();
+        public DbSet<PedidoHistoricoModel> PedidoHistoricos => Set<PedidoHistoricoModel>();
         public DbSet<ProdutoVariacaoModel> ProdutoVariacoes { get; set; }
 
 
@@ -196,6 +197,25 @@ namespace WebApplicationPods.Data
                 .WithMany(p => p.Variacoes)
                 .HasForeignKey(v => v.ProdutoId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PedidoHistoricoModel>(b =>
+            {
+                b.ToTable("PedidoHistoricos");
+
+                b.Property(x => x.NovoStatus).HasMaxLength(64).IsRequired();
+                b.Property(x => x.StatusAnterior).HasMaxLength(64);
+                b.Property(x => x.Observacao).HasMaxLength(500);
+                b.Property(x => x.UsuarioResponsavelId).HasMaxLength(100);
+                b.Property(x => x.NomeResponsavel).HasMaxLength(120);
+                b.Property(x => x.Origem).HasMaxLength(60);
+
+                b.HasOne(x => x.Pedido)
+                    .WithMany(p => p.Historico)
+                    .HasForeignKey(x => x.PedidoId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                b.HasIndex(x => new { x.PedidoId, x.DataCadastro });
+            });
 
         }
     }

@@ -6,6 +6,8 @@ using WebApplicationPods.Hubs;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
 using static WebApplicationPods.DTO.ReportsDTO;
+using System.Security.Claims;
+using WebApplicationPods.Helper;
 
 namespace WebApplicationPods.Controllers
 {
@@ -21,19 +23,19 @@ namespace WebApplicationPods.Controllers
             _hub = hub;
         }
 
-        private static readonly Dictionary<string, string[]> AllowedTransitions =
-            new(StringComparer.OrdinalIgnoreCase)
-            {
-                ["Aguardando Confirmação (Dinheiro)"] = new[] { "Em Preparação", "Cancelado" },
-                ["Pago"] = new[] { "Em Preparação", "Cancelado" },
-                ["Em Preparação"] = new[] { "Pronto", "Cancelado" },
-                ["Pronto"] = new[] { "Saiu p/ Entrega", "Concluído", "Cancelado" },
-                ["Saiu p/ Entrega"] = new[] { "Concluído", "Cancelado" },
-                ["Aguardando Pagamento (Entrega)"] = new[] { "Pago", "Cancelado" },
-                ["Aguardando Pagamento"] = new[] { "Pago", "Cancelado" },
-                ["Concluído"] = Array.Empty<string>(),
-                ["Cancelado"] = Array.Empty<string>()
-            };
+        //private static readonly Dictionary<string, string[]> AllowedTransitions =
+        //    new(StringComparer.OrdinalIgnoreCase)
+        //    {
+        //        ["Aguardando Confirmação (Dinheiro)"] = new[] { "Em Preparação", "Cancelado" },
+        //        ["Pago"] = new[] { "Em Preparação", "Cancelado" },
+        //        ["Em Preparação"] = new[] { "Pronto", "Cancelado" },
+        //        ["Pronto"] = new[] { "Saiu p/ Entrega", "Concluído", "Cancelado" },
+        //        ["Saiu p/ Entrega"] = new[] { "Concluído", "Cancelado" },
+        //        ["Aguardando Pagamento (Entrega)"] = new[] { "Pago", "Cancelado" },
+        //        ["Aguardando Pagamento"] = new[] { "Pago", "Cancelado" },
+        //        ["Concluído"] = Array.Empty<string>(),
+        //        ["Cancelado"] = Array.Empty<string>()
+        //    };
 
         [HttpGet]
         public IActionResult Index(string? filtro = "abertos")
@@ -43,7 +45,7 @@ namespace WebApplicationPods.Controllers
                 : _pedidos.ObterAbertos();
 
             ViewBag.Filtro = filtro;
-            ViewBag.Allowed = AllowedTransitions;
+            ViewBag.Allowed = PedidoStatusRules.AllowedTransitions;
 
             return View("~/Views/PedidosAdmin/Index.cshtml", lista);
         }
@@ -57,7 +59,7 @@ namespace WebApplicationPods.Controllers
                 : _pedidos.ObterAbertos();
 
             ViewBag.Filtro = filtro;
-            ViewBag.Allowed = AllowedTransitions;
+            ViewBag.Allowed = PedidoStatusRules.AllowedTransitions;
 
             return PartialView("~/Views/PedidosAdmin/_PedidosTableBody.cshtml", lista);
         }
@@ -78,8 +80,7 @@ namespace WebApplicationPods.Controllers
 
             var atual = pedido.Status ?? string.Empty;
 
-            if (!AllowedTransitions.TryGetValue(atual, out var nexts) ||
-                !nexts.Contains(status, StringComparer.OrdinalIgnoreCase))
+            if (!PedidoStatusRules.PodeTransicionar(atual, status))
             {
                 if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                     return BadRequest(new { ok = false, error = $"Transição inválida de '{atual}' para '{status}'." });
@@ -88,8 +89,15 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            _pedidos.AtualizarStatus(id, status);
-            await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged", new { id, status });
+            var usuarioId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            _pedidos.AtualizarStatus(
+                id,
+                status,
+                nomeResponsavel: User.Identity?.Name,
+                usuarioResponsavelId: usuarioId,
+                observacao: null,
+                origem: "PainelLojista");
 
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 return Json(new { ok = true });

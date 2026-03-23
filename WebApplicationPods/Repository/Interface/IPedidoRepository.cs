@@ -9,7 +9,17 @@ namespace WebApplicationPods.Repository.Interface
         PedidoModel ObterPorId(int id);
         IEnumerable<PedidoModel> ObterPorCliente(int clienteId);
         void Adicionar(PedidoModel pedido);
-        void AtualizarStatus(int pedidoId, string status);
+
+        void AtualizarStatus(
+            int pedidoId,
+            string status,
+            string? nomeResponsavel = null,
+            string? usuarioResponsavelId = null,
+            string? observacao = null,
+            string? origem = null);
+
+        IEnumerable<PedidoHistoricoModel> ObterHistorico(int pedidoId);
+
         decimal ObterTotalVendasHoje();
         PedidoModel? ObterPorToken(string token);
 
