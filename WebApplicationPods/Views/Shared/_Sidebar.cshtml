@@ -17,6 +17,7 @@
     }
 
     var produtosArea = AppAreas.Lojista;
+
     var isProdutoMenuOpen =
         string.Equals(currentArea, produtosArea, StringComparison.OrdinalIgnoreCase) &&
         string.Equals(currentCtrl, "Produto", StringComparison.OrdinalIgnoreCase);
@@ -29,7 +30,7 @@
     var estoqueClass = Active("", "Estoque");
     var pedidosClass = Active("", "PedidosAdmin");
     var categoriasClass = Active("", "Categoria");
-    var entregadoresClass = Active("PainelLojista", "Entregadores");
+    var entregadoresClass = Active(AppAreas.Lojista, "Entregadores");
     var pagamentoClass = Active("", "PaymentConfig");
     var lojaClass = Active(AppAreas.Lojista, "Loja");
     var entregadorPainelClass = Active("", "Entregador");
@@ -98,6 +99,11 @@
                 <a asp-area="PainelLojista" asp-controller="Entregadores" asp-action="Index"
                    class="list-group-item list-group-item-action @entregadoresClass">
                     <i class="fas fa-motorcycle"></i> Entregadores
+                </a>
+
+                <a asp-area="" asp-controller="Entregador" asp-action="Index"
+                   class="list-group-item list-group-item-action @entregadorPainelClass">
+                    <i class="fas fa-route"></i> Minhas entregas
                 </a>
 
                 <a asp-area="" asp-controller="Categoria" asp-action="Index"

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using WebApplicationPods.Data;
+using WebApplicationPods.Enum;
 using WebApplicationPods.Hubs;
 using WebApplicationPods.Models;
 using WebApplicationPods.Services.Interface;
@@ -27,6 +28,7 @@ namespace WebApplicationPods.Services.service
         {
             var pedido = await _context.Pedidos
                 .Include(x => x.Cliente)
+                .Include(x => x.Entrega)
                 .FirstOrDefaultAsync(x => x.Id == pedidoId);
 
             if (pedido == null)
@@ -39,7 +41,32 @@ namespace WebApplicationPods.Services.service
             if (entregador == null)
                 return false;
 
-            pedido.EntregadorId = entregadorId;
+            if (pedido.Entrega == null)
+            {
+                pedido.Entrega = new EntregaModel
+                {
+                    PedidoId = pedido.Id,
+                    EntregadorId = entregador.Id,
+                    Status = EntregaStatus.Atribuida,
+                    DataAtribuicao = DateTime.Now,
+                    DataCadastro = DateTime.Now,
+                    DataAtualizacao = DateTime.Now,
+                    Observacao = $"Entregador atribuído: {entregador.Nome}"
+                };
+
+                _context.Entregas.Add(pedido.Entrega);
+            }
+            else
+            {
+                pedido.Entrega.EntregadorId = entregador.Id;
+                pedido.Entrega.Status = EntregaStatus.Atribuida;
+                pedido.Entrega.DataAtribuicao = DateTime.Now;
+                pedido.Entrega.DataAtualizacao = DateTime.Now;
+                pedido.Entrega.Observacao = $"Entregador atribuído: {entregador.Nome}";
+            }
+
+            // manter compatibilidade temporária
+            pedido.EntregadorId = entregador.Id;
             pedido.DataAtribuicaoEntregador = DateTime.Now;
 
             await _context.SaveChangesAsync();
@@ -58,34 +85,89 @@ namespace WebApplicationPods.Services.service
                     pedidoId = pedido.Id,
                     cliente = pedido.Cliente?.Nome,
                     total = pedido.ValorTotal,
-                    status = PedidoEntregaStatus.Atribuido
+                    status = EntregaStatus.Atribuida
                 });
             }
 
             return true;
         }
 
+        public async Task<bool> AceitarEntregaAsync(int pedidoId, int entregadorUserId)
+        {
+            var pedido = await ObterPedidoComEntregaAsync(pedidoId);
+            if (pedido == null || !EntregaPertenceAoUsuario(pedido, entregadorUserId))
+                return false;
+
+            if (pedido.Entrega == null)
+                return false;
+
+            pedido.Entrega.Status = EntregaStatus.Aceita;
+            pedido.Entrega.DataAceite = DateTime.Now;
+            pedido.Entrega.DataAtualizacao = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+
+            await _pedidoAppService.AtualizarStatusAsync(
+                pedido.Id,
+                PedidoEntregaStatus.Atribuido,
+                nomeResponsavel: pedido.Entregador?.Nome,
+                usuarioResponsavelId: entregadorUserId.ToString(),
+                observacao: "Entrega aceita pelo entregador.",
+                origem: "PainelEntregador");
+
+            return true;
+        }
+
+        public async Task<bool> MarcarColetadaAsync(int pedidoId, int entregadorUserId)
+        {
+            var pedido = await ObterPedidoComEntregaAsync(pedidoId);
+            if (pedido == null || !EntregaPertenceAoUsuario(pedido, entregadorUserId))
+                return false;
+
+            if (pedido.Entrega == null)
+                return false;
+
+            pedido.Entrega.Status = EntregaStatus.Coletada;
+            pedido.Entrega.DataColeta = DateTime.Now;
+            pedido.Entrega.DataAtualizacao = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+
+            await _pedidoAppService.AtualizarStatusAsync(
+                pedido.Id,
+                PedidoEntregaStatus.Atribuido,
+                nomeResponsavel: pedido.Entregador?.Nome,
+                usuarioResponsavelId: entregadorUserId.ToString(),
+                observacao: "Pedido coletado pelo entregador.",
+                origem: "PainelEntregador");
+
+            return true;
+        }
+
         public async Task<bool> MarcarSaiuParaEntregaAsync(int pedidoId, int entregadorUserId)
         {
-            var pedido = await _context.Pedidos
-                .Include(x => x.Entregador)
-                .ThenInclude(x => x!.Usuario)
-                .FirstOrDefaultAsync(x => x.Id == pedidoId);
-
-            if (pedido == null || pedido.Entregador?.Usuario == null)
+            var pedido = await ObterPedidoComEntregaAsync(pedidoId);
+            if (pedido == null || !EntregaPertenceAoUsuario(pedido, entregadorUserId))
                 return false;
 
-            if (pedido.Entregador.Usuario.Id != entregadorUserId)
+            if (pedido.Entrega == null)
                 return false;
 
+            pedido.Entrega.Status = EntregaStatus.EmRota;
+            pedido.Entrega.DataSaidaParaEntrega = DateTime.Now;
+            pedido.Entrega.DataAtualizacao = DateTime.Now;
+
+            // compatibilidade temporária
             pedido.DataSaiuParaEntrega = DateTime.Now;
+
             await _context.SaveChangesAsync();
 
             await _pedidoAppService.AtualizarStatusAsync(
                 pedido.Id,
                 PedidoEntregaStatus.SaiuParaEntrega,
-                nomeResponsavel: pedido.Entregador.Nome,
+                nomeResponsavel: pedido.Entregador?.Nome,
                 usuarioResponsavelId: entregadorUserId.ToString(),
+                observacao: "Entregador saiu para entrega.",
                 origem: "PainelEntregador");
 
             return true;
@@ -93,28 +175,74 @@ namespace WebApplicationPods.Services.service
 
         public async Task<bool> MarcarEntregueAsync(int pedidoId, int entregadorUserId)
         {
-            var pedido = await _context.Pedidos
-                .Include(x => x.Entregador)
-                .ThenInclude(x => x!.Usuario)
-                .FirstOrDefaultAsync(x => x.Id == pedidoId);
-
-            if (pedido == null || pedido.Entregador?.Usuario == null)
+            var pedido = await ObterPedidoComEntregaAsync(pedidoId);
+            if (pedido == null || !EntregaPertenceAoUsuario(pedido, entregadorUserId))
                 return false;
 
-            if (pedido.Entregador.Usuario.Id != entregadorUserId)
+            if (pedido.Entrega == null)
                 return false;
 
+            pedido.Entrega.Status = EntregaStatus.Entregue;
+            pedido.Entrega.DataConclusao = DateTime.Now;
+            pedido.Entrega.DataAtualizacao = DateTime.Now;
+
+            // compatibilidade temporária
             pedido.DataEntregue = DateTime.Now;
+
             await _context.SaveChangesAsync();
 
             await _pedidoAppService.AtualizarStatusAsync(
                 pedido.Id,
                 PedidoEntregaStatus.Entregue,
-                nomeResponsavel: pedido.Entregador.Nome,
+                nomeResponsavel: pedido.Entregador?.Nome,
                 usuarioResponsavelId: entregadorUserId.ToString(),
+                observacao: "Pedido entregue com sucesso.",
                 origem: "PainelEntregador");
 
             return true;
+        }
+
+        public async Task<bool> MarcarNaoEntregueAsync(int pedidoId, int entregadorUserId, string? motivo = null)
+        {
+            var pedido = await ObterPedidoComEntregaAsync(pedidoId);
+            if (pedido == null || !EntregaPertenceAoUsuario(pedido, entregadorUserId))
+                return false;
+
+            if (pedido.Entrega == null)
+                return false;
+
+            pedido.Entrega.Status = EntregaStatus.NaoEntregue;
+            pedido.Entrega.DataAtualizacao = DateTime.Now;
+            pedido.Entrega.Observacao = string.IsNullOrWhiteSpace(motivo)
+                ? "Entrega não concluída."
+                : motivo;
+
+            await _context.SaveChangesAsync();
+
+            await _pedidoAppService.AtualizarStatusAsync(
+                pedido.Id,
+                PedidoEntregaStatus.Atribuido,
+                nomeResponsavel: pedido.Entregador?.Nome,
+                usuarioResponsavelId: entregadorUserId.ToString(),
+                observacao: $"Entrega não concluída. Motivo: {motivo}",
+                origem: "PainelEntregador");
+
+            return true;
+        }
+
+        private async Task<PedidoModel?> ObterPedidoComEntregaAsync(int pedidoId)
+        {
+            return await _context.Pedidos
+                .Include(x => x.Entrega)
+                .Include(x => x.Entregador)
+                    .ThenInclude(x => x!.Usuario)
+                .FirstOrDefaultAsync(x => x.Id == pedidoId);
+        }
+
+        private static bool EntregaPertenceAoUsuario(PedidoModel pedido, int entregadorUserId)
+        {
+            return pedido.Entregador?.Usuario != null &&
+                   pedido.Entregador.Usuario.Id == entregadorUserId;
         }
     }
 }

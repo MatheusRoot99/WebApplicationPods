@@ -8,7 +8,7 @@ using WebApplicationPods.Services.Interface;
 
 namespace WebApplicationPods.Controllers
 {
-    [Authorize(Roles = "Lojista")]
+    [Authorize(Roles = "Entregador,Lojista")]
     public class EntregadorController : Controller
     {
         private readonly BancoContext _context;
@@ -36,6 +36,7 @@ namespace WebApplicationPods.Controllers
                 .Include(x => x.Endereco)
                 .Include(x => x.Entregador)
                     .ThenInclude(x => x!.Usuario)
+                .Include(x => x.Entrega)
                 .Where(x => x.Entregador != null &&
                             x.Entregador.Usuario != null &&
                             x.Entregador.Usuario.Id == user.Id)
@@ -43,6 +44,40 @@ namespace WebApplicationPods.Controllers
                 .ToListAsync();
 
             return View(pedidos);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Aceitar(int id)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Challenge();
+
+            var ok = await _entregaAppService.AceitarEntregaAsync(id, user.Id);
+
+            TempData[ok ? "Sucesso" : "Erro"] = ok
+                ? "Entrega aceita com sucesso."
+                : "Não foi possível aceitar a entrega.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Coletada(int id)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Challenge();
+
+            var ok = await _entregaAppService.MarcarColetadaAsync(id, user.Id);
+
+            TempData[ok ? "Sucesso" : "Erro"] = ok
+                ? "Pedido marcado como coletado."
+                : "Não foi possível marcar a coleta.";
+
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]
@@ -75,6 +110,23 @@ namespace WebApplicationPods.Controllers
             TempData[ok ? "Sucesso" : "Erro"] = ok
                 ? "Pedido marcado como entregue."
                 : "Não foi possível concluir a entrega.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> NaoEntregue(int id, string? motivo)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Challenge();
+
+            var ok = await _entregaAppService.MarcarNaoEntregueAsync(id, user.Id, motivo);
+
+            TempData[ok ? "Sucesso" : "Erro"] = ok
+                ? "Entrega marcada como não concluída."
+                : "Não foi possível atualizar a entrega.";
 
             return RedirectToAction(nameof(Index));
         }

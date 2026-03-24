@@ -8,11 +8,10 @@ namespace WebApplicationPods.Data
 {
     public class BancoContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>
     {
-        private readonly int _lojaId;      // nunca null
-        private readonly bool _hasLoja;    // indica se tem loja
-        private readonly bool _designTime; // migrations
+        private readonly int _lojaId;
+        private readonly bool _hasLoja;
+        private readonly bool _designTime;
 
-        // ✅ Runtime
         public BancoContext(DbContextOptions<BancoContext> options, ICurrentLojaService currentLoja)
             : base(options)
         {
@@ -22,7 +21,6 @@ namespace WebApplicationPods.Data
             _lojaId = loja ?? 0;
         }
 
-        // ✅ Design-time (migrations)
         public BancoContext(DbContextOptions<BancoContext> options)
             : base(options)
         {
@@ -33,7 +31,6 @@ namespace WebApplicationPods.Data
 
         public DbSet<LojaModel> Lojas => Set<LojaModel>();
         public DbSet<LojaConfig> LojaConfigs => Set<LojaConfig>();
-
         public DbSet<MerchantPaymentConfig> MerchantPaymentConfigs => Set<MerchantPaymentConfig>();
         public DbSet<CategoriaModel> Categorias => Set<CategoriaModel>();
         public DbSet<ProdutoModel> Produtos => Set<ProdutoModel>();
@@ -47,14 +44,13 @@ namespace WebApplicationPods.Data
         public DbSet<PaymentModel> Pagamentos => Set<PaymentModel>();
         public DbSet<PedidoHistoricoModel> PedidoHistoricos => Set<PedidoHistoricoModel>();
         public DbSet<EntregadorModel> Entregadores => Set<EntregadorModel>();
+        public DbSet<EntregaModel> Entregas => Set<EntregaModel>();
         public DbSet<ProdutoVariacaoModel> ProdutoVariacoes { get; set; }
-
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // ===== Identity / ApplicationUser =====
             modelBuilder.Entity<ApplicationUser>(b =>
             {
                 b.HasIndex(u => u.CPF)
@@ -65,14 +61,12 @@ namespace WebApplicationPods.Data
                     .IsUnique()
                     .HasFilter("[PhoneNumber] IS NOT NULL");
 
-                // FK opcional do usuário para a loja
                 b.HasOne(u => u.Loja)
                     .WithMany()
                     .HasForeignKey(u => u.LojaId)
                     .OnDelete(DeleteBehavior.SetNull);
             });
 
-            // ===== LojaModel =====
             modelBuilder.Entity<LojaModel>(b =>
             {
                 b.ToTable("Lojas");
@@ -92,7 +86,6 @@ namespace WebApplicationPods.Data
                     .HasForeignKey(x => x.DonoUserId)
                     .OnDelete(DeleteBehavior.SetNull);
 
-                // ✅ 1:1 Loja <-> LojaConfig
                 b.HasOne(x => x.Config)
                     .WithOne(c => c.Loja)
                     .HasForeignKey<LojaConfig>(c => c.LojaId)
@@ -109,23 +102,18 @@ namespace WebApplicationPods.Data
                     .HasForeignKey(x => x.LojistaUserId)
                     .OnDelete(DeleteBehavior.SetNull);
 
-                // ✅ CORRIGIDO: se NÃO tem loja definida, NÃO filtra (admin/landing)
                 b.HasQueryFilter(x => _designTime || (!_hasLoja || x.LojaId == _lojaId));
             });
 
-            // ===== Categoria =====
             modelBuilder.Entity<CategoriaModel>(b =>
             {
                 b.ToTable("Categorias");
                 b.Property(x => x.Nome).HasMaxLength(50).IsRequired();
                 b.Property(x => x.Descricao).HasMaxLength(200);
                 b.HasIndex(x => new { x.LojaId, x.Nome }).IsUnique(false);
-
-                // ✅ CORRIGIDO
                 b.HasQueryFilter(x => _designTime || (!_hasLoja || x.LojaId == _lojaId));
             });
 
-            // ===== Produto =====
             modelBuilder.Entity<ProdutoModel>(b =>
             {
                 b.ToTable("Produtos");
@@ -143,7 +131,6 @@ namespace WebApplicationPods.Data
                     .HasForeignKey(a => a.ProdutoId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                // ✅ CORRIGIDO
                 b.HasQueryFilter(x => _designTime || (!_hasLoja || x.LojaId == _lojaId));
             });
 
@@ -155,7 +142,6 @@ namespace WebApplicationPods.Data
                 b.HasIndex(x => new { x.ProdutoId, x.Chave });
             });
 
-            // ===== Pedido / Payment =====
             modelBuilder.Entity<PedidoModel>()
                 .HasOne(p => p.Endereco)
                 .WithMany()
@@ -168,7 +154,6 @@ namespace WebApplicationPods.Data
                 .HasForeignKey(p => p.PedidoId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // ===== Endereco =====
             modelBuilder.Entity<EnderecoModel>()
                 .HasIndex(e => e.ClienteId)
                 .HasDatabaseName("IX_Enderecos_ClienteId");
@@ -185,7 +170,6 @@ namespace WebApplicationPods.Data
                 b.Property(e => e.Ativo).HasDefaultValue(true).IsRequired();
             });
 
-            // ===== Soft delete / ativos =====
             modelBuilder.Entity<EnderecoModel>().HasQueryFilter(e => e.Ativo);
 
             modelBuilder.Entity<PedidoModel>()
@@ -224,6 +208,11 @@ namespace WebApplicationPods.Data
                     .WithMany()
                     .HasForeignKey(x => x.EntregadorId)
                     .OnDelete(DeleteBehavior.SetNull);
+
+                b.HasOne(x => x.Entrega)
+                    .WithOne(x => x.Pedido)
+                    .HasForeignKey<EntregaModel>(x => x.PedidoId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             modelBuilder.Entity<EntregadorModel>(b =>
@@ -252,6 +241,27 @@ namespace WebApplicationPods.Data
                 b.HasQueryFilter(x => _designTime || (!_hasLoja || x.LojaId == _lojaId));
             });
 
+            modelBuilder.Entity<EntregaModel>(b =>
+            {
+                b.ToTable("Entregas");
+
+                b.Property(x => x.Status).HasMaxLength(40).IsRequired();
+                b.Property(x => x.Observacao).HasMaxLength(500);
+                b.Property(x => x.ComprovanteEntregaUrl).HasMaxLength(500);
+
+                b.HasOne(x => x.Pedido)
+                    .WithOne(x => x.Entrega)
+                    .HasForeignKey<EntregaModel>(x => x.PedidoId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                b.HasOne(x => x.Entregador)
+                    .WithMany()
+                    .HasForeignKey(x => x.EntregadorId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                b.HasIndex(x => x.PedidoId).IsUnique();
+                b.HasIndex(x => new { x.EntregadorId, x.Status });
+            });
         }
     }
 }

@@ -76,6 +76,12 @@ namespace WebApplicationPods.Controllers
         }
 
         [HttpGet]
+        public IActionResult VoltarPedidos()
+        {
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpGet]
         public async Task<IActionResult> AtribuirEntregador(int id)
         {
             var pedido = await _context.Pedidos
@@ -138,11 +144,11 @@ namespace WebApplicationPods.Controllers
             if (!ok)
             {
                 TempData["Erro"] = "Não foi possível atribuir o entregador.";
-                return RedirectToAction("Detalhes", new { id = vm.PedidoId });
+                return RedirectToAction(nameof(Index));
             }
 
             TempData["Sucesso"] = "Entregador atribuído com sucesso.";
-            return RedirectToAction("Detalhes", new { id = vm.PedidoId });
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]

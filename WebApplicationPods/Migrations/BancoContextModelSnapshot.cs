@@ -459,6 +459,64 @@ namespace WebApplicationPods.Migrations
                     b.ToTable("Enderecos");
                 });
 
+            modelBuilder.Entity("WebApplicationPods.Models.EntregaModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ComprovanteEntregaUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("DataAceite")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataAtribuicao")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataAtualizacao")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DataCadastro")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataColeta")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataConclusao")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataSaidaParaEntrega")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("EntregadorId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Observacao")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("PedidoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PedidoId")
+                        .IsUnique();
+
+                    b.HasIndex("EntregadorId", "Status");
+
+                    b.ToTable("Entregas", (string)null);
+                });
+
             modelBuilder.Entity("WebApplicationPods.Models.EntregadorModel", b =>
                 {
                     b.Property<int>("Id")
@@ -1292,6 +1350,24 @@ namespace WebApplicationPods.Migrations
                     b.Navigation("Cliente");
                 });
 
+            modelBuilder.Entity("WebApplicationPods.Models.EntregaModel", b =>
+                {
+                    b.HasOne("WebApplicationPods.Models.EntregadorModel", "Entregador")
+                        .WithMany()
+                        .HasForeignKey("EntregadorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("WebApplicationPods.Models.PedidoModel", "Pedido")
+                        .WithOne("Entrega")
+                        .HasForeignKey("WebApplicationPods.Models.EntregaModel", "PedidoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Entregador");
+
+                    b.Navigation("Pedido");
+                });
+
             modelBuilder.Entity("WebApplicationPods.Models.EntregadorModel", b =>
                 {
                     b.HasOne("WebApplicationPods.Models.LojaModel", "Loja")
@@ -1461,6 +1537,8 @@ namespace WebApplicationPods.Migrations
 
             modelBuilder.Entity("WebApplicationPods.Models.PedidoModel", b =>
                 {
+                    b.Navigation("Entrega");
+
                     b.Navigation("Historico");
 
                     b.Navigation("Pagamentos");
