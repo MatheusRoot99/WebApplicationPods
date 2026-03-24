@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using WebApplicationPods.Data;
 using WebApplicationPods.Models;
 using WebApplicationPods.Services.Interface;
@@ -29,17 +30,27 @@ namespace WebApplicationPods.Areas.PainelLojista.Controllers
             _currentLoja = currentLoja;
         }
 
-        private int GetLojaIdOrFail()
+        private async Task<int> GetLojaIdOrFailAsync()
         {
-            if (_currentLoja?.LojaId is not int lojaId || lojaId <= 0)
-                throw new InvalidOperationException("Loja atual não identificada.");
+            if (_currentLoja?.LojaId is int lojaIdAtual && lojaIdAtual > 0)
+                return lojaIdAtual;
 
-            return lojaId;
+            var user = await _userManager.GetUserAsync(User);
+            if (user?.LojaId is int lojaIdUsuario && lojaIdUsuario > 0)
+                return lojaIdUsuario;
+
+            var claimLojaId = User.FindFirst("LojaId")?.Value
+                              ?? User.FindFirst("lojaId")?.Value;
+
+            if (int.TryParse(claimLojaId, out var lojaIdClaim) && lojaIdClaim > 0)
+                return lojaIdClaim;
+
+            throw new InvalidOperationException("Loja atual não identificada.");
         }
 
         public async Task<IActionResult> Index()
         {
-            var lojaId = GetLojaIdOrFail();
+            var lojaId = await GetLojaIdOrFailAsync();
 
             var entregadores = await _context.Entregadores
                 .Include(x => x.Usuario)
@@ -61,7 +72,7 @@ namespace WebApplicationPods.Areas.PainelLojista.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(EntregadorCreateViewModel vm)
         {
-            var lojaId = GetLojaIdOrFail();
+            var lojaId = await GetLojaIdOrFailAsync();
 
             if (!ModelState.IsValid)
                 return View(vm);
@@ -140,7 +151,7 @@ namespace WebApplicationPods.Areas.PainelLojista.Controllers
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
-            var lojaId = GetLojaIdOrFail();
+            var lojaId = await GetLojaIdOrFailAsync();
 
             var entregador = await _context.Entregadores
                 .Include(x => x.Usuario)
@@ -170,7 +181,7 @@ namespace WebApplicationPods.Areas.PainelLojista.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(EntregadorEditViewModel vm)
         {
-            var lojaId = GetLojaIdOrFail();
+            var lojaId = await GetLojaIdOrFailAsync();
 
             if (!ModelState.IsValid)
                 return View(vm);
@@ -244,7 +255,7 @@ namespace WebApplicationPods.Areas.PainelLojista.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleAtivo(int id)
         {
-            var lojaId = GetLojaIdOrFail();
+            var lojaId = await GetLojaIdOrFailAsync();
 
             var entregador = await _context.Entregadores
                 .FirstOrDefaultAsync(x => x.Id == id && x.LojaId == lojaId);
@@ -266,7 +277,7 @@ namespace WebApplicationPods.Areas.PainelLojista.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
-            var lojaId = GetLojaIdOrFail();
+            var lojaId = await GetLojaIdOrFailAsync();
 
             var entregador = await _context.Entregadores
                 .Include(x => x.Usuario)

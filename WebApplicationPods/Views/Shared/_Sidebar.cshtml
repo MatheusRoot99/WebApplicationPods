@@ -4,6 +4,7 @@
     var isAuth = User.Identity?.IsAuthenticated == true;
     var isAdmin = User.IsInRole("Admin");
     var isLojista = User.IsInRole("Lojista");
+    var isEntregador = User.IsInRole("Entregador");
 
     string currentArea = ViewContext.RouteData.Values["area"]?.ToString() ?? "";
     string currentCtrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
@@ -28,8 +29,10 @@
     var estoqueClass = Active("", "Estoque");
     var pedidosClass = Active("", "PedidosAdmin");
     var categoriasClass = Active("", "Categoria");
+    var entregadoresClass = Active("PainelLojista", "Entregadores");
     var pagamentoClass = Active(AppAreas.Lojista, "PaymentConfig");
     var lojaClass = Active(AppAreas.Lojista, "Loja");
+    var entregadorPainelClass = Active("", "Entregador");
 }
 
 <div class="border-right d-none d-lg-block" id="sidebar-wrapper">
@@ -55,7 +58,7 @@
             </a>
         </div>
 
-        @if (!isAdmin && !isLojista)
+        @if (!isAdmin && !isLojista && !isEntregador)
         {
             <div class="sidebar-section">
                 <div class="sidebar-section-title">Cliente</div>
@@ -90,6 +93,11 @@
                 <a asp-area="" asp-controller="PedidosAdmin" asp-action="Index"
                    class="list-group-item list-group-item-action @pedidosClass">
                     <i class="fas fa-clipboard-list"></i> Pedidos
+                </a>
+
+                <a asp-area="PainelLojista" asp-controller="Entregadores" asp-action="Index"
+                   class="list-group-item list-group-item-action @entregadoresClass">
+                    <i class="fas fa-motorcycle"></i> Entregadores
                 </a>
 
                 <a asp-area="" asp-controller="Categoria" asp-action="Index"
@@ -141,6 +149,18 @@
                 <a asp-area="@AppAreas.Lojista" asp-controller="Loja" asp-action="Editar"
                    class="list-group-item list-group-item-action @lojaClass">
                     <i class="fas fa-store"></i> Configurações da Loja
+                </a>
+            </div>
+        }
+
+        @if (isEntregador)
+        {
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Entregador</div>
+
+                <a asp-area="" asp-controller="Entregador" asp-action="Index"
+                   class="list-group-item list-group-item-action @entregadorPainelClass">
+                    <i class="fas fa-route"></i> Minhas entregas
                 </a>
             </div>
         }

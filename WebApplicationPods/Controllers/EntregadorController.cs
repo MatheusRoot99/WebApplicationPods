@@ -8,7 +8,7 @@ using WebApplicationPods.Services.Interface;
 
 namespace WebApplicationPods.Controllers
 {
-    [Authorize(Roles = "Entregador")]
+    [Authorize(Roles = "Lojista")]
     public class EntregadorController : Controller
     {
         private readonly BancoContext _context;

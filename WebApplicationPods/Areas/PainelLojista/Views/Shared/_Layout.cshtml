@@ -18,7 +18,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>@ViewData["Title"] - Painel do Lojista</title>
 
-    <!-- aplica tema antes de pintar -->
     <script>
         (function () {
             try {
@@ -31,20 +30,15 @@
         })();
     </script>
 
-    <!-- libs -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 
-    <!-- css global -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-
-    <!-- css específico do painel (layout/shell) -->
     <link rel="stylesheet" href="~/css/painel-lojista.css" asp-append-version="true" />
 
     @await RenderSectionAsync("Styles", required: false)
 
     <style>
-        /* fallback pra garantir espaçamento */
         :root {
             --mbn-height: 70px;
             --kb-shift: 0px;
@@ -59,7 +53,6 @@
 <body class="has-bottom-nav">
     <div class="pl-shell">
 
-        <!-- SIDEBAR -->
         <aside class="pl-sidebar">
             <div class="pl-brand">
                 <div class="pl-brand-logo">
@@ -92,34 +85,28 @@
                     <i class="fa-solid fa-motorcycle me-2"></i> Entregadores
                 </a>
 
-                <a asp-controller="PedidosAdmin"
-                   asp-action="AtribuirEntregador"
-                   asp-route-id="@Model.Id"
-                   class="btn btn-outline-info btn-sm">
-                    Atribuir entregador
-                </a>
-
                 <a asp-area="PainelLojista" asp-controller="Loja" asp-action="Editar"
                    class="@(currentController == "Loja" ? "active" : "")">
                     <i class="fa-solid fa-gear me-2"></i> Configurações da Loja
                 </a>
 
-                <!-- Se esses controllers ainda estão fora da Area, mantenha asp-area="" -->
-                <a asp-area="" asp-controller="Produto" asp-action="Index">
+                <a asp-area="" asp-controller="Produto" asp-action="Index"
+                   class="@(currentController == "Produto" ? "active" : "")">
                     <i class="fa-solid fa-boxes-stacked me-2"></i> Produtos
                 </a>
 
-                <a asp-area="" asp-controller="Pedido" asp-action="Index">
+                <a asp-area="" asp-controller="PedidosAdmin" asp-action="Index"
+                   class="@(currentController == "PedidosAdmin" ? "active" : "")">
                     <i class="fa-solid fa-receipt me-2"></i> Pedidos
                 </a>
 
-
-
-                <a asp-area="" asp-controller="Categoria" asp-action="Index">
+                <a asp-area="" asp-controller="Categoria" asp-action="Index"
+                   class="@(currentController == "Categoria" ? "active" : "")">
                     <i class="fa-solid fa-tags me-2"></i> Categorias
                 </a>
 
-                <a asp-area="" asp-controller="PaymentConfig" asp-action="Index">
+                <a asp-area="" asp-controller="PaymentConfig" asp-action="Index"
+                   class="@(currentController == "PaymentConfig" ? "active" : "")">
                     <i class="fa-solid fa-credit-card me-2"></i> Pagamentos
                 </a>
             </nav>
@@ -137,7 +124,6 @@
             </div>
         </aside>
 
-        <!-- MAIN -->
         <div class="pl-main">
             <header class="pl-topbar">
                 <div class="d-flex align-items-center gap-2">
@@ -166,7 +152,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- theme toggle -->
     <script>
         (function () {
             function currentTheme() {
@@ -192,7 +177,6 @@
         })();
     </script>
 
-    <!-- mobile sidebar toggle -->
     <script>
         (function () {
             const shell = document.querySelector('.pl-shell');
