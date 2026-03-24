@@ -30,7 +30,7 @@
     var pedidosClass = Active("", "PedidosAdmin");
     var categoriasClass = Active("", "Categoria");
     var entregadoresClass = Active("PainelLojista", "Entregadores");
-    var pagamentoClass = Active(AppAreas.Lojista, "PaymentConfig");
+    var pagamentoClass = Active("", "PaymentConfig");
     var lojaClass = Active(AppAreas.Lojista, "Loja");
     var entregadorPainelClass = Active("", "Entregador");
 }
@@ -141,7 +141,7 @@
                     </div>
                 </div>
 
-                <a asp-area="@AppAreas.Lojista" asp-controller="PaymentConfig" asp-action="Edit" asp-route-provider="Stripe"
+                <a asp-area="" asp-controller="PaymentConfig" asp-action="Edit" asp-route-provider="Stripe"
                    class="list-group-item list-group-item-action @pagamentoClass">
                     <i class="fas fa-credit-card"></i> Pagamento
                 </a>
