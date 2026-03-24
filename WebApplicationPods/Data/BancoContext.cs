@@ -46,6 +46,7 @@ namespace WebApplicationPods.Data
         public DbSet<CarrinhoModel> Carrinhos => Set<CarrinhoModel>();
         public DbSet<PaymentModel> Pagamentos => Set<PaymentModel>();
         public DbSet<PedidoHistoricoModel> PedidoHistoricos => Set<PedidoHistoricoModel>();
+        public DbSet<EntregadorModel> Entregadores => Set<EntregadorModel>();
         public DbSet<ProdutoVariacaoModel> ProdutoVariacoes { get; set; }
 
 
@@ -215,6 +216,40 @@ namespace WebApplicationPods.Data
                     .OnDelete(DeleteBehavior.Cascade);
 
                 b.HasIndex(x => new { x.PedidoId, x.DataCadastro });
+            });
+
+            modelBuilder.Entity<PedidoModel>(b =>
+            {
+                b.HasOne(x => x.Entregador)
+                    .WithMany()
+                    .HasForeignKey(x => x.EntregadorId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<EntregadorModel>(b =>
+            {
+                b.ToTable("Entregadores");
+
+                b.Property(x => x.Nome).HasMaxLength(150).IsRequired();
+                b.Property(x => x.Telefone).HasMaxLength(20).IsRequired();
+                b.Property(x => x.Veiculo).HasMaxLength(80);
+                b.Property(x => x.PlacaVeiculo).HasMaxLength(20);
+                b.Property(x => x.Observacoes).HasMaxLength(500);
+
+                b.HasOne(x => x.Loja)
+                    .WithMany()
+                    .HasForeignKey(x => x.LojaId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                b.HasOne(x => x.Usuario)
+                    .WithMany()
+                    .HasForeignKey(x => x.UserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                b.HasIndex(x => new { x.LojaId, x.Nome });
+                b.HasIndex(x => x.UserId).IsUnique().HasFilter("[UserId] IS NOT NULL");
+
+                b.HasQueryFilter(x => _designTime || (!_hasLoja || x.LojaId == _lojaId));
             });
 
         }

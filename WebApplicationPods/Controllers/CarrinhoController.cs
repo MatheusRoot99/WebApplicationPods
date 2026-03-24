@@ -12,6 +12,7 @@ using WebApplicationPods.Repository.Interface;
 using WebApplicationPods.Services;
 using WebApplicationPods.Services.Interface;
 
+
 namespace WebApplicationPods.Controllers
 {
     public class CarrinhoController : Controller
@@ -21,6 +22,7 @@ namespace WebApplicationPods.Controllers
         private readonly IClienteRepository _clienteRepository;
         private readonly IPedidoRepository _pedidoRepository;
         private readonly IClienteRememberService _remember;
+        private readonly IPedidoAppService _pedidoAppService;
         private readonly ILojaConfigRepository _lojaRepo;
         private readonly IHubContext<PedidosHub> _hub;
         private readonly ICurrentLojaService _currentLoja;
@@ -31,6 +33,7 @@ namespace WebApplicationPods.Controllers
             IProdutoRepository produtoRepository,
             IClienteRepository clienteRepository,
             IPedidoRepository pedidoRepository,
+            IPedidoAppService pedidoAppService,
             IClienteRememberService remember,
             ILojaConfigRepository lojaRepo,
             IHubContext<PedidosHub> hub,
@@ -41,6 +44,7 @@ namespace WebApplicationPods.Controllers
             _produtoRepository = produtoRepository;
             _clienteRepository = clienteRepository;
             _pedidoRepository = pedidoRepository;
+            _pedidoAppService = pedidoAppService;
             _remember = remember;
             _lojaRepo = lojaRepo;
             _hub = hub;
@@ -668,17 +672,7 @@ namespace WebApplicationPods.Controllers
             if (pagaNaEntrega)
             {
                 pedido.Status = "Aguardando Pagamento (Entrega)";
-                _pedidoRepository.Adicionar(pedido);
-
-                await _hub.Clients.Group("lojistas").SendAsync("NewOrder", new
-                {
-                    id = pedido.Id,
-                    status = pedido.Status,
-                    total = pedido.ValorTotal,
-                    metodo = pedido.MetodoPagamento,
-                    data = pedido.DataPedido,
-                    cliente = new { id = cliente.Id, nome = cliente.Nome }
-                });
+                pedido = await _pedidoAppService.CriarPedidoAsync(pedido, "CheckoutCliente");
 
                 SetLastOrderCookie(pedido.RastreioToken);
                 _carrinhoRepository.LimparCarrinho();
@@ -689,17 +683,7 @@ namespace WebApplicationPods.Controllers
             }
 
             pedido.Status = "Pendente";
-            _pedidoRepository.Adicionar(pedido);
-
-            await _hub.Clients.Group("lojistas").SendAsync("NewOrder", new
-            {
-                id = pedido.Id,
-                status = pedido.Status,
-                total = pedido.ValorTotal,
-                metodo = pedido.MetodoPagamento,
-                data = pedido.DataPedido,
-                cliente = new { id = cliente.Id, nome = cliente.Nome }
-            });
+            pedido = await _pedidoAppService.CriarPedidoAsync(pedido, "CheckoutCliente");
 
             SetLastOrderCookie(pedido.RastreioToken);
             HttpContext.Session.Remove("ClienteConfirmado");

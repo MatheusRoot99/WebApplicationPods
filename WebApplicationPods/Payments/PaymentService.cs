@@ -11,6 +11,7 @@ using WebApplicationPods.Enum;
 using WebApplicationPods.Hubs;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
+using WebApplicationPods.Services.Interface;
 
 namespace WebApplicationPods.Payments
 {
@@ -20,6 +21,7 @@ namespace WebApplicationPods.Payments
         private readonly IPedidoRepository _pedidos;
         private readonly BancoContext _db;
         private readonly IHubContext<PedidosHub> _hub;
+        private readonly IPedidoAppService _pedidoAppService;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IPaymentCredentialsResolver _creds;
 
@@ -29,7 +31,8 @@ namespace WebApplicationPods.Payments
             BancoContext db,
             IHubContext<PedidosHub> hub,
             IHttpContextAccessor httpContextAccessor,
-            IPaymentCredentialsResolver creds)
+            IPaymentCredentialsResolver creds,
+            IPedidoAppService pedidoAppService)
         {
             _gatewayFactory = gatewayFactory;
             _pedidos = pedidos;
@@ -37,6 +40,7 @@ namespace WebApplicationPods.Payments
             _hub = hub;
             _httpContextAccessor = httpContextAccessor;
             _creds = creds;
+            _pedidoAppService = pedidoAppService;
         }
 
         // ===== Helpers de provedor =====
@@ -138,11 +142,12 @@ namespace WebApplicationPods.Payments
             }
             else if (metodo == PaymentMethod.Cash)
             {
-                _pedidos.AtualizarStatus(pedido.Id, "Aguardando Confirmação (Dinheiro)");
-                payment.Status = PaymentStatus.Pending;
+                await _pedidoAppService.AtualizarStatusAsync(
+                     pedido.Id,
+                     "Aguardando Confirmação (Dinheiro)",
+                     origem: "PaymentService.StartPayment");
 
-                await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged",
-                    new { id = pedido.Id, status = "Aguardando Confirmação (Dinheiro)" });
+                payment.Status = PaymentStatus.Pending;
             }
 
             await _db.SaveChangesAsync();
@@ -170,10 +175,10 @@ namespace WebApplicationPods.Payments
             var pedido = _pedidos.ObterPorId(payment.PedidoId);
             if (pedido != null)
             {
-                _pedidos.AtualizarStatus(pedido.Id, result.Success ? "Pago" : "Pagamento Falhou");
-
-                await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged",
-                    new { id = pedido.Id, status = result.Success ? "Pago" : "Pagamento Falhou" });
+                await _pedidoAppService.AtualizarStatusAsync(
+                    pedido.Id,
+                    result.Success ? "Pago" : "Pagamento Falhou",
+                    origem: "PaymentService.ConfirmCard");
             }
 
             return result.Success;
@@ -209,10 +214,10 @@ namespace WebApplicationPods.Payments
                 parsed.newStatus == PaymentStatus.Canceled ? "Cancelado" :
                                                              "Pendente";
 
-            _pedidos.AtualizarStatus(payment.PedidoId, statusTexto);
-
-            await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged",
-                new { id = payment.PedidoId, status = statusTexto });
+            await _pedidoAppService.AtualizarStatusAsync(
+                     payment.PedidoId,
+                     statusTexto,
+                     origem: "PaymentService.Webhook");
         }
     }
 }

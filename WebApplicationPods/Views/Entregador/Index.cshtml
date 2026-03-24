@@ -1,0 +1,92 @@
+﻿@model IEnumerable<WebApplicationPods.Models.PedidoModel>
+
+@{
+    ViewData["Title"] = "Meus pedidos";
+}
+
+<div class="container py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-1">Minhas entregas</h2>
+            <p class="text-muted mb-0">Pedidos atribuídos ao entregador logado.</p>
+        </div>
+    </div>
+
+    @if (TempData["Sucesso"] is string okMsg)
+    {
+        <div class="alert alert-success">@okMsg</div>
+    }
+    @if (TempData["Erro"] is string errMsg)
+    {
+        <div class="alert alert-danger">@errMsg</div>
+    }
+
+    <div class="row g-3">
+        @if (!Model.Any())
+        {
+            <div class="col-12">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body text-center text-muted py-5">
+                        Nenhum pedido atribuído no momento.
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            foreach (var item in Model)
+            {
+                <div class="col-12">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body">
+                            <div class="d-flex flex-wrap justify-content-between gap-3">
+                                <div>
+                                    <div class="fw-bold">Pedido #@item.Id</div>
+                                    <div class="text-muted small">Cliente: @(item.Cliente?.Nome ?? "-")</div>
+                                    <div class="text-muted small">Status: @item.Status</div>
+                                    <div class="text-muted small">Valor: @item.ValorTotal.ToString("C")</div>
+                                </div>
+
+                                <div>
+                                    <div class="fw-semibold">Endereço</div>
+                                    <div class="small text-muted">
+                                        @(
+                                                                        item.Endereco == null
+                                                                        ? "-"
+                                                                        : "Endereço cadastrado"
+                                                                        )
+                            </div>
+                        </div>
+
+                                <div class="d-flex flex-wrap gap-2 align-items-start">
+                            @if (item.Status != WebApplicationPods.Models.PedidoEntregaStatus.SaiuParaEntrega
+                                                        && item.Status != WebApplicationPods.Models.PedidoEntregaStatus.Entregue)
+                                    {
+                                        <form asp-action="SaiuParaEntrega" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button type="submit" class="btn btn-warning btn-sm">
+                                                Saiu para entrega
+                                            </button>
+                                        </form>
+                                    }
+
+                                    @if (item.Status != WebApplicationPods.Models.PedidoEntregaStatus.Entregue)
+                                    {
+                                        <form asp-action="Entregue" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button type="submit" class="btn btn-success btn-sm">
+                                                Marcar entregue
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>

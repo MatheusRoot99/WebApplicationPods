@@ -87,6 +87,18 @@
                     <i class="fa-solid fa-gauge-high me-2"></i> Dashboard
                 </a>
 
+                <a asp-area="PainelLojista" asp-controller="Entregadores" asp-action="Index"
+                   class="@(currentController == "Entregadores" ? "active" : "")">
+                    <i class="fa-solid fa-motorcycle me-2"></i> Entregadores
+                </a>
+
+                <a asp-controller="PedidosAdmin"
+                   asp-action="AtribuirEntregador"
+                   asp-route-id="@Model.Id"
+                   class="btn btn-outline-info btn-sm">
+                    Atribuir entregador
+                </a>
+
                 <a asp-area="PainelLojista" asp-controller="Loja" asp-action="Editar"
                    class="@(currentController == "Loja" ? "active" : "")">
                     <i class="fa-solid fa-gear me-2"></i> Configurações da Loja
@@ -100,6 +112,8 @@
                 <a asp-area="" asp-controller="Pedido" asp-action="Index">
                     <i class="fa-solid fa-receipt me-2"></i> Pedidos
                 </a>
+
+
 
                 <a asp-area="" asp-controller="Categoria" asp-action="Index">
                     <i class="fa-solid fa-tags me-2"></i> Categorias

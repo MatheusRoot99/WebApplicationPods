@@ -1,13 +1,17 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+using WebApplicationPods.Data;
 using WebApplicationPods.DTO;
+using WebApplicationPods.Helper;
 using WebApplicationPods.Hubs;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
+using WebApplicationPods.Services.Interface;
 using static WebApplicationPods.DTO.ReportsDTO;
-using System.Security.Claims;
-using WebApplicationPods.Helper;
 
 namespace WebApplicationPods.Controllers
 {
@@ -16,11 +20,18 @@ namespace WebApplicationPods.Controllers
     {
         private readonly IPedidoRepository _pedidos;
         private readonly IHubContext<PedidosHub> _hub;
+        private readonly IPedidoAppService _pedidoAppService;
+        private readonly IEntregaAppService _entregaAppService;
+        private readonly BancoContext _context;
 
-        public PedidosAdminController(IPedidoRepository pedidos, IHubContext<PedidosHub> hub)
+        public PedidosAdminController(IPedidoRepository pedidos, IHubContext<PedidosHub> hub, IPedidoAppService pedidoAppService, IEntregaAppService entregaAppService,
+        BancoContext context)
         {
             _pedidos = pedidos;
             _hub = hub;
+            _pedidoAppService = pedidoAppService;
+            _entregaAppService = entregaAppService;
+            _context = context;
         }
 
         //private static readonly Dictionary<string, string[]> AllowedTransitions =
@@ -64,6 +75,76 @@ namespace WebApplicationPods.Controllers
             return PartialView("~/Views/PedidosAdmin/_PedidosTableBody.cshtml", lista);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> AtribuirEntregador(int id)
+        {
+            var pedido = await _context.Pedidos
+                .Include(x => x.Cliente)
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (pedido == null)
+                return NotFound();
+
+            var entregadores = await _context.Entregadores
+                .Where(x => x.Ativo && x.LojaId == pedido.LojaId)
+                .OrderBy(x => x.Nome)
+                .ToListAsync();
+
+            var vm = new PedidoAtribuirEntregadorViewModel
+            {
+                PedidoId = pedido.Id,
+                ClienteNome = pedido.Cliente?.Nome ?? "-",
+                StatusAtual = pedido.Status ?? "-",
+                ValorTotal = pedido.ValorTotal,
+                EntregadorId = pedido.EntregadorId,
+                Entregadores = entregadores.Select(x => new SelectListItem
+                {
+                    Value = x.Id.ToString(),
+                    Text = $"{x.Nome} - {x.Telefone}"
+                }).ToList()
+            };
+
+            return View(vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AtribuirEntregador(PedidoAtribuirEntregadorViewModel vm)
+        {
+            if (!ModelState.IsValid)
+            {
+                var pedidoReload = await _context.Pedidos.FirstOrDefaultAsync(x => x.Id == vm.PedidoId);
+                if (pedidoReload != null)
+                {
+                    vm.Entregadores = await _context.Entregadores
+                        .Where(x => x.Ativo && x.LojaId == pedidoReload.LojaId)
+                        .OrderBy(x => x.Nome)
+                        .Select(x => new SelectListItem
+                        {
+                            Value = x.Id.ToString(),
+                            Text = x.Nome + " - " + x.Telefone
+                        })
+                        .ToListAsync();
+                }
+
+                return View(vm);
+            }
+
+            var ok = await _entregaAppService.AtribuirEntregadorAsync(
+                vm.PedidoId,
+                vm.EntregadorId!.Value,
+                User.Identity?.Name);
+
+            if (!ok)
+            {
+                TempData["Erro"] = "Não foi possível atribuir o entregador.";
+                return RedirectToAction("Detalhes", new { id = vm.PedidoId });
+            }
+
+            TempData["Sucesso"] = "Entregador atribuído com sucesso.";
+            return RedirectToAction("Detalhes", new { id = vm.PedidoId });
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AtualizarStatus(int id, string status)
@@ -91,13 +172,13 @@ namespace WebApplicationPods.Controllers
 
             var usuarioId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            _pedidos.AtualizarStatus(
-                id,
-                status,
-                nomeResponsavel: User.Identity?.Name,
-                usuarioResponsavelId: usuarioId,
-                observacao: null,
-                origem: "PainelLojista");
+            await _pedidoAppService.AtualizarStatusAsync(
+                    id,
+                    status,
+                    nomeResponsavel: User.Identity?.Name,
+                    usuarioResponsavelId: usuarioId,
+                    observacao: null,
+                    origem: "PainelLojista");
 
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 return Json(new { ok = true });

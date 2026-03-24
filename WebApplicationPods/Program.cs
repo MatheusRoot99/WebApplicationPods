@@ -219,9 +219,11 @@ builder.Services.AddScoped<ICarrinhoRepository, CarrinhoRepository>();
 builder.Services.AddScoped<ICarrinhoService, CarrinhoService>();
 builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
 builder.Services.AddScoped<IPedidoRepository, PedidoRepository>();
+builder.Services.AddScoped<IPedidoAppService, PedidoAppService>();
 builder.Services.AddScoped<IEmailSenderService, GmailEmailSenderService>();
 builder.Services.AddScoped<ILojaConfigService, LojaConfigService>();
 builder.Services.AddScoped<IEstoqueService, EstoqueService>();
+builder.Services.AddScoped<IEntregaAppService, EntregaAppService>();
 builder.Services.AddScoped<ILojaConfigRepository, LojaConfigRepository>();
 
 builder.Services.AddDataProtection();

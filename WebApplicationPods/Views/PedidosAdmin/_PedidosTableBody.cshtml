@@ -121,6 +121,13 @@
                     </form>
                 }
 
+                <a asp-controller="PedidosAdmin"
+                   asp-action="AtribuirEntregador"
+                   asp-route-id="@p.Id"
+                   class="btn btn-sm btn-outline-info">
+                    Entregador
+                </a>
+
                 @* Excluir só para cancelados *@
                 @if (string.Equals(p.Status, "Cancelado", StringComparison.OrdinalIgnoreCase))
                 {

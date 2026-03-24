@@ -60,6 +60,15 @@ namespace WebApplicationPods.Models
         [StringLength(500)]
         public string? LojaMapsUrl { get; set; }
 
+        public int? EntregadorId { get; set; }
+
+        [ForeignKey(nameof(EntregadorId))]
+        public EntregadorModel? Entregador { get; set; }
+
+        public DateTime? DataAtribuicaoEntregador { get; set; }
+        public DateTime? DataSaiuParaEntrega { get; set; }
+        public DateTime? DataEntregue { get; set; }
+
         public DateTime? DataAguardandoPagamento { get; set; }
         public DateTime? DataPagamentoAprovado { get; set; }
         public DateTime? DataInicioPreparo { get; set; }

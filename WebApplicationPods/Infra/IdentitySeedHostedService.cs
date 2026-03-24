@@ -24,7 +24,7 @@ namespace WebApplicationPods.Infra
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
             // 1) Roles
-            string[] roles = new[] { "Admin", "Lojista", "Cliente" };
+            string[] roles = new[] { "Admin", "Lojista", "Cliente", "Entregador" };
             foreach (var role in roles)
                 if (!await roleManager.RoleExistsAsync(role))
                     await roleManager.CreateAsync(new IdentityRole<int>(role));

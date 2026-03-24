@@ -459,6 +459,59 @@ namespace WebApplicationPods.Migrations
                     b.ToTable("Enderecos");
                 });
 
+            modelBuilder.Entity("WebApplicationPods.Models.EntregadorModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("DataCadastro")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("LojaId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Observacoes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("PlacaVeiculo")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Telefone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Veiculo")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasFilter("[UserId] IS NOT NULL");
+
+                    b.HasIndex("LojaId", "Nome");
+
+                    b.ToTable("Entregadores", (string)null);
+                });
+
             modelBuilder.Entity("WebApplicationPods.Models.LojaConfig", b =>
                 {
                     b.Property<int>("Id")
@@ -804,10 +857,16 @@ namespace WebApplicationPods.Migrations
                     b.Property<DateTime?>("DataAguardandoPagamento")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DataAtribuicaoEntregador")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("DataCancelado")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("DataConcluido")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataEntregue")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("DataInicioPreparo")
@@ -817,6 +876,9 @@ namespace WebApplicationPods.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("DataPedido")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataSaiuParaEntrega")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("DataSaiuParaEntregaOuRetirada")
@@ -829,6 +891,9 @@ namespace WebApplicationPods.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("EnderecoId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("EntregadorId")
                         .HasColumnType("int");
 
                     b.Property<bool>("IsDeleted")
@@ -881,6 +946,8 @@ namespace WebApplicationPods.Migrations
                     b.HasIndex("ClienteId");
 
                     b.HasIndex("EnderecoId");
+
+                    b.HasIndex("EntregadorId");
 
                     b.ToTable("Pedidos");
                 });
@@ -1225,6 +1292,24 @@ namespace WebApplicationPods.Migrations
                     b.Navigation("Cliente");
                 });
 
+            modelBuilder.Entity("WebApplicationPods.Models.EntregadorModel", b =>
+                {
+                    b.HasOne("WebApplicationPods.Models.LojaModel", "Loja")
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WebApplicationPods.Models.ApplicationUser", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Loja");
+
+                    b.Navigation("Usuario");
+                });
+
             modelBuilder.Entity("WebApplicationPods.Models.LojaConfig", b =>
                 {
                     b.HasOne("WebApplicationPods.Models.LojaModel", "Loja")
@@ -1307,9 +1392,16 @@ namespace WebApplicationPods.Migrations
                         .HasForeignKey("EnderecoId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("WebApplicationPods.Models.EntregadorModel", "Entregador")
+                        .WithMany()
+                        .HasForeignKey("EntregadorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Cliente");
 
                     b.Navigation("Endereco");
+
+                    b.Navigation("Entregador");
                 });
 
             modelBuilder.Entity("WebApplicationPods.Models.ProdutoAtributoModel", b =>
