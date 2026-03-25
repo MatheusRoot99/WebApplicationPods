@@ -1,5 +1,6 @@
 ﻿@using WebApplicationPods.Enum
 @using WebApplicationPods.Models
+@using WebApplicationPods.Constants
 @model IEnumerable<PedidoModel>
 
 @{
@@ -11,12 +12,10 @@
 {
     var statusAtual = p.Status ?? string.Empty;
 
-    // Próximos estados possíveis conforme o mapa
     var proximas = Array.Empty<string>();
     if (allowed != null && allowed.TryGetValue(statusAtual, out var arr) && arr != null)
         proximas = arr;
 
-    // Pagamento PIX manual pendente
     var pagamentoPixManualPendente = p.Pagamentos?
         .OrderByDescending(pg => pg.Id)
         .FirstOrDefault(pg =>
@@ -24,12 +23,20 @@
             string.Equals(pg.Provider, "PixManual", StringComparison.OrdinalIgnoreCase) &&
             pg.Status == PaymentStatus.Pending);
 
-    // Dinheiro / Cartão de Débito (na entrega)
     var metodo = (p.MetodoPagamento ?? string.Empty).ToLowerInvariant();
     var isDinheiroOuDebito = metodo == "dinheiro" || metodo == "cartão de débito" || metodo == "cartao de debito";
     var podeAprovarNaEntrega =
         isDinheiroOuDebito &&
         string.Equals(p.Status, "Aguardando Pagamento (Entrega)", StringComparison.OrdinalIgnoreCase);
+
+    var podeAtribuirEntregador =
+        !p.RetiradaNoLocal &&
+        (
+            string.Equals(statusAtual, PedidoStatus.Pronto, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(statusAtual, PedidoEntregaStatus.AguardandoAtribuicao, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(statusAtual, PedidoEntregaStatus.Atribuido, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(statusAtual, PedidoEntregaStatus.SaiuParaEntrega, StringComparison.OrdinalIgnoreCase)
+        );
 
     <tr data-id="@p.Id" data-order-id="@p.Id">
         <td data-th="Cliente">
@@ -57,7 +64,6 @@
 
         <td data-th="Ações" class="text-end">
             <div class="actions-wrap">
-                @* Transições *@
                 @if (proximas.Any())
                 {
                     <div class="btn-group btn-group-sm actions-group" role="group" aria-label="Ações do pedido">
@@ -89,7 +95,6 @@
                     </div>
                 }
 
-                @* PIX manual pendente *@
                 @if (pagamentoPixManualPendente != null)
                 {
                     <form class="d-inline js-inline-action"
@@ -105,7 +110,6 @@
                     </form>
                 }
 
-                @* Dinheiro/Débito na entrega *@
                 @if (podeAprovarNaEntrega)
                 {
                     <form class="d-inline js-inline-action"
@@ -121,14 +125,16 @@
                     </form>
                 }
 
-                <a asp-controller="PedidosAdmin"
-                   asp-action="AtribuirEntregador"
-                   asp-route-id="@p.Id"
-                   class="btn btn-sm btn-outline-info">
-                    Atribuir entregador
-                </a>
+                @if (podeAtribuirEntregador)
+                {
+                    <a asp-controller="PedidosAdmin"
+                       asp-action="AtribuirEntregador"
+                       asp-route-id="@p.Id"
+                       class="btn btn-sm btn-outline-info">
+                        @(p.EntregadorId.HasValue ? "Alterar entregador" : "Atribuir entregador")
+                    </a>
+                }
 
-                @* Excluir só para cancelados *@
                 @if (string.Equals(p.Status, "Cancelado", StringComparison.OrdinalIgnoreCase))
                 {
                     <form class="d-inline js-inline-action"

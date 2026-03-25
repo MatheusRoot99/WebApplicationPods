@@ -198,9 +198,10 @@ namespace WebApplicationPods.Controllers
                     p.CanceledAt = now;
                     await _db.SaveChangesAsync();
                     await _pedidoAppService.AtualizarStatusAsync(
-                            p.PedidoId,
-                            "Cancelado por expiração (PIX)",
-                            origem: "PagamentoController.Status");
+                        p.PedidoId,
+                        "Cancelado",
+                        observacao: "Pagamento PIX expirado automaticamente.",
+                        origem: "PagamentoController.Status");
                 }
                 else
                 {
@@ -311,14 +312,13 @@ namespace WebApplicationPods.Controllers
             {
                 p.Status = PaymentStatus.Canceled;
                 p.CanceledAt = DateTime.UtcNow;
-
-                if (p.Pedido != null)
-                {
-                    p.Pedido.Status = "Cancelado";
-                    p.Pedido.DataCancelado = DateTime.UtcNow;
-                }
-
                 await _db.SaveChangesAsync();
+
+                await _pedidoAppService.AtualizarStatusAsync(
+                    p.PedidoId,
+                    "Cancelado",
+                    observacao: "Pagamento cancelado pelo usuário.",
+                    origem: "PagamentoController.Cancelar");
             }
 
             return Json(new { ok = true, redirect = Url.Action("Index", "Carrinho") });
@@ -376,6 +376,7 @@ namespace WebApplicationPods.Controllers
                 TempData["Erro"] = "Este pagamento não é PIX manual.";
                 return RedirectToAction("DetalhesPedido", "Admin", new { id = p.PedidoId });
             }
+
             if (p.Status == PaymentStatus.Paid)
             {
                 TempData["Sucesso"] = "Pagamento já está aprovado.";
@@ -386,11 +387,14 @@ namespace WebApplicationPods.Controllers
             p.PaidAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
 
-            _pedidos.AtualizarStatus(p.PedidoId, "Pago");
+            await _pedidoAppService.MarcarComoPagoAsync(
+                p.PedidoId,
+                origem: "PagamentoController.ConfirmarPixManual");
+
             await EnsureBaixaEstoqueAsync(p.PedidoId);
 
-            // 🔔 notifica
-            if (p.Pedido != null) await NotifyPaidAsync(p.Pedido);
+            if (p.Pedido != null)
+                await NotifyPaidAsync(p.Pedido);
 
             TempData["Sucesso"] = "PIX confirmado e estoque atualizado.";
             return RedirectToAction("DetalhesPedido", "Admin", new { id = p.PedidoId });

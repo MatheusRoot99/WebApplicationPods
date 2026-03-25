@@ -37,7 +37,8 @@ namespace WebApplicationPods.Controllers
                 .Include(x => x.Entregador)
                     .ThenInclude(x => x!.Usuario)
                 .Include(x => x.Entrega)
-                .Where(x => x.Entregador != null &&
+                .Where(x => !x.IsDeleted &&
+                            x.Entregador != null &&
                             x.Entregador.Usuario != null &&
                             x.Entregador.Usuario.Id == user.Id)
                 .OrderByDescending(x => x.DataPedido)

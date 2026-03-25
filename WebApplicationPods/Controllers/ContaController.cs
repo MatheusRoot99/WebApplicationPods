@@ -41,9 +41,10 @@ namespace WebApplicationPods.Controllers
                     var roles = await _userManager.GetRolesAsync(user);
                     var isAdmin = roles.Any(r => r.Equals("Admin", StringComparison.OrdinalIgnoreCase));
                     var isLojista = roles.Any(r => r.Equals("Lojista", StringComparison.OrdinalIgnoreCase));
+                    var isEntregador = roles.Any(r => r.Equals("Entregador", StringComparison.OrdinalIgnoreCase));
 
                     // se estiver autenticado, mas sem role válida, derruba sessão
-                    if (!isAdmin && !isLojista)
+                    if (!isAdmin && !isLojista && !isEntregador)
                     {
                         await _signInManager.SignOutAsync();
                         HttpContext.Session.Clear();
@@ -117,29 +118,33 @@ namespace WebApplicationPods.Controllers
                 var roles = await _userManager.GetRolesAsync(user);
                 var isAdmin = roles.Any(r => string.Equals(r, "Admin", StringComparison.OrdinalIgnoreCase));
                 var isLojista = roles.Any(r => string.Equals(r, "Lojista", StringComparison.OrdinalIgnoreCase));
+                var isEntregador = roles.Any(r => string.Equals(r, "Entregador", StringComparison.OrdinalIgnoreCase));
 
                 // bloqueia usuário sem perfil
-                if (!isAdmin && !isLojista)
+                if (!isAdmin && !isLojista && !isEntregador)
                 {
                     await _signInManager.SignOutAsync();
                     HttpContext.Session.Clear();
 
-                    ModelState.AddModelError(string.Empty, "Seu usuário está sem perfil de acesso (Admin/Lojista). Fale com o administrador.");
+                    ModelState.AddModelError(string.Empty, "Seu usuário está sem perfil de acesso (Admin/Lojista/Entregador). Fale com o administrador.");
                     return View(vm);
                 }
 
                 // respeita returnUrl somente se for local e compatível com a role
                 if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
                 {
-                    if (IsReturnUrlCompatibleWithRole(returnUrl, isAdmin, isLojista))
+                    if (IsReturnUrlCompatibleWithRole(returnUrl, isAdmin, isLojista, isEntregador))
                         return Redirect(returnUrl);
                 }
 
-                // fallback padrão no localhost
+                // fallbacks corretos
                 if (isAdmin)
-                    return RedirectToAction("Lojistas", "Admin");
+                    return RedirectToAction("Index", "Lojistas", new { area = "Admin" });
 
-                return RedirectToAction("Dashboard", "PainelLojista");
+                if (isLojista)
+                    return RedirectToAction("Index", "Dashboard", new { area = "PainelLojista" });
+
+                return RedirectToAction("Index", "Entregador");
             }
             catch (Exception ex)
             {
@@ -149,7 +154,7 @@ namespace WebApplicationPods.Controllers
             }
         }
 
-        private static bool IsReturnUrlCompatibleWithRole(string returnUrl, bool isAdmin, bool isLojista)
+        private static bool IsReturnUrlCompatibleWithRole(string returnUrl, bool isAdmin, bool isLojista, bool isEntregador)
         {
             if (string.IsNullOrWhiteSpace(returnUrl))
                 return false;
@@ -163,6 +168,9 @@ namespace WebApplicationPods.Controllers
             if (isLojista && returnUrl.StartsWith("/PainelLojista", StringComparison.OrdinalIgnoreCase))
                 return true;
 
+            if (isEntregador && returnUrl.StartsWith("/Entregador", StringComparison.OrdinalIgnoreCase))
+                return true;
+
             return false;
         }
 
@@ -170,12 +178,16 @@ namespace WebApplicationPods.Controllers
         {
             var isAdmin = User.IsInRole("Admin");
             var isLojista = User.IsInRole("Lojista");
+            var isEntregador = User.IsInRole("Entregador");
 
             if (isAdmin)
-                return RedirectToAction("Lojistas", "Admin");
+                return RedirectToAction("Index", "Lojistas", new { area = "Admin" });
 
             if (isLojista)
-                return RedirectToAction("Dashboard", "PainelLojista");
+                return RedirectToAction("Index", "Dashboard", new { area = "PainelLojista" });
+
+            if (isEntregador)
+                return RedirectToAction("Index", "Entregador");
 
             return RedirectToAction("Index", "Home");
         }

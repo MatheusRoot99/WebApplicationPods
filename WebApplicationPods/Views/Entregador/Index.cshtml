@@ -1,14 +1,239 @@
-﻿@model IEnumerable<WebApplicationPods.Models.PedidoModel>
+﻿@using WebApplicationPods.Models
+@using EntregaStatusConst = WebApplicationPods.Enum.EntregaStatus
+@model IEnumerable<PedidoModel>
 
 @{
-    ViewData["Title"] = "Meus pedidos";
+    // Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Minhas entregas";
+
+    var pedidos = Model?.OrderByDescending(x => x.DataPedido).ToList() ?? new List<PedidoModel>();
+
+    var pendentes = pedidos.Where(x =>
+        x.Entrega != null &&
+        (
+            string.Equals(x.Entrega.Status, EntregaStatusConst.Atribuida, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(x.Entrega.Status, EntregaStatusConst.Aceita, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(x.Entrega.Status, EntregaStatusConst.Coletada, StringComparison.OrdinalIgnoreCase)
+        )).ToList();
+
+    var emRota = pedidos.Where(x =>
+        x.Entrega != null &&
+        string.Equals(x.Entrega.Status, EntregaStatusConst.EmRota, StringComparison.OrdinalIgnoreCase)
+    ).ToList();
+
+    var historico = pedidos.Where(x =>
+        x.Entrega != null &&
+        (
+            string.Equals(x.Entrega.Status, EntregaStatusConst.Entregue, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(x.Entrega.Status, EntregaStatusConst.NaoEntregue, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(x.Entrega.Status, EntregaStatusConst.Cancelada, StringComparison.OrdinalIgnoreCase)
+        )).ToList();
 }
 
-<div class="container py-3">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+@functions {
+    public string SomenteDigitos(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return string.Empty;
+
+        return new string(valor.Where(char.IsDigit).ToArray());
+    }
+
+    public string FormatarTelefone(string? valor)
+    {
+        var dig = SomenteDigitos(valor);
+
+        if (dig.Length == 11)
+            return $"({dig[..2]}) {dig.Substring(2, 5)}-{dig.Substring(7, 4)}";
+
+        if (dig.Length == 10)
+            return $"({dig[..2]}) {dig.Substring(2, 4)}-{dig.Substring(6, 4)}";
+
+        return valor ?? "-";
+    }
+
+    public string MontarEndereco(EnderecoModel? e)
+    {
+        if (e == null)
+            return "-";
+
+        var partes = new List<string>();
+
+        var logradouroNumero = string.Join(", ", new[] { e.Logradouro, e.Numero }.Where(x => !string.IsNullOrWhiteSpace(x)));
+        if (!string.IsNullOrWhiteSpace(logradouroNumero))
+            partes.Add(logradouroNumero);
+
+        if (!string.IsNullOrWhiteSpace(e.Complemento))
+            partes.Add(e.Complemento);
+
+        if (!string.IsNullOrWhiteSpace(e.Bairro))
+            partes.Add(e.Bairro);
+
+        var cidadeUfCep = string.Join(" - ", new[]
+        {
+            string.Join("/", new[] { e.Cidade, e.Estado }.Where(x => !string.IsNullOrWhiteSpace(x))),
+            e.CEP
+        }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+        if (!string.IsNullOrWhiteSpace(cidadeUfCep))
+            partes.Add(cidadeUfCep);
+
+        return string.Join(" • ", partes);
+    }
+
+    public string MontarMapsUrl(EnderecoModel? e)
+    {
+        var endereco = MontarEndereco(e);
+        if (string.IsNullOrWhiteSpace(endereco) || endereco == "-")
+            return "#";
+
+        return "https://www.google.com/maps/search/?api=1&query=" + Uri.EscapeDataString(endereco);
+    }
+
+    public string MontarWhatsUrl(string? telefone)
+    {
+        var dig = SomenteDigitos(telefone);
+        if (string.IsNullOrWhiteSpace(dig))
+            return "#";
+
+        if (dig.Length == 10 || dig.Length == 11)
+            dig = "55" + dig;
+
+        return $"https://wa.me/{dig}";
+    }
+
+    public string BadgeClass(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+            return "bg-secondary";
+
+        if (string.Equals(status, EntregaStatusConst.Atribuida, StringComparison.OrdinalIgnoreCase))
+            return "bg-info text-dark";
+
+        if (string.Equals(status, EntregaStatusConst.Aceita, StringComparison.OrdinalIgnoreCase))
+            return "bg-primary";
+
+        if (string.Equals(status, EntregaStatusConst.Coletada, StringComparison.OrdinalIgnoreCase))
+            return "bg-warning text-dark";
+
+        if (string.Equals(status, EntregaStatusConst.EmRota, StringComparison.OrdinalIgnoreCase))
+            return "bg-secondary";
+
+        if (string.Equals(status, EntregaStatusConst.Entregue, StringComparison.OrdinalIgnoreCase))
+            return "bg-success";
+
+        if (string.Equals(status, EntregaStatusConst.NaoEntregue, StringComparison.OrdinalIgnoreCase))
+            return "bg-danger";
+
+        return "bg-dark";
+    }
+}
+
+<style>
+    .delivery-page .section-title {
+        font-size: 1rem;
+        font-weight: 700;
+        margin-bottom: .9rem;
+    }
+
+    .delivery-card {
+        border: 0;
+        border-radius: 18px;
+        box-shadow: 0 10px 24px rgba(0,0,0,.06);
+    }
+
+        .delivery-card .topline {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .delivery-card .pedido-id {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .delivery-card .sub {
+            color: #6c757d;
+            font-size: .92rem;
+        }
+
+    .delivery-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    @@media (min-width: 768px) {
+        .delivery-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    .delivery-info {
+        background: rgba(0,0,0,.03);
+        border-radius: 14px;
+        padding: 12px;
+    }
+
+        .delivery-info .label {
+            font-size: .78rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            margin-bottom: 4px;
+        }
+
+        .delivery-info .value {
+            font-size: .95rem;
+            font-weight: 600;
+            word-break: break-word;
+        }
+
+    .delivery-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+    }
+
+        .delivery-actions form {
+            margin: 0;
+        }
+
+    .delivery-section {
+        margin-bottom: 22px;
+    }
+
+    .delivery-empty {
+        border-radius: 16px;
+        border: 1px dashed rgba(0,0,0,.15);
+        padding: 18px;
+        color: #6c757d;
+        background: rgba(0,0,0,.02);
+    }
+
+    .motivo-box {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(0,0,0,.08);
+    }
+</style>
+
+<div class="container py-3 delivery-page">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <div>
             <h2 class="mb-1">Minhas entregas</h2>
-            <p class="text-muted mb-0">Pedidos atribuídos ao entregador logado.</p>
+            <p class="text-muted mb-0">Painel do entregador com ações rápidas no celular.</p>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap">
+            <span class="badge text-bg-light">Pendentes: @pendentes.Count</span>
+            <span class="badge text-bg-light">Em rota: @emRota.Count</span>
+            <span class="badge text-bg-light">Histórico: @historico.Count</span>
         </div>
     </div>
 
@@ -16,77 +241,299 @@
     {
         <div class="alert alert-success">@okMsg</div>
     }
+
     @if (TempData["Erro"] is string errMsg)
     {
         <div class="alert alert-danger">@errMsg</div>
     }
 
-    <div class="row g-3">
-        @if (!Model.Any())
+    <div class="delivery-section">
+        <div class="section-title">Pendentes</div>
+
+        @if (!pendentes.Any())
         {
-            <div class="col-12">
-                <div class="card shadow-sm border-0">
-                    <div class="card-body text-center text-muted py-5">
-                        Nenhum pedido atribuído no momento.
-                    </div>
-                </div>
-            </div>
+            <div class="delivery-empty">Nenhuma entrega pendente no momento.</div>
         }
         else
         {
-            foreach (var item in Model)
-            {
-                <div class="col-12">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-body">
-                            <div class="d-flex flex-wrap justify-content-between gap-3">
-                                <div>
-                                    <div class="fw-bold">Pedido #@item.Id</div>
-                                    <div class="text-muted small">Cliente: @(item.Cliente?.Nome ?? "-")</div>
-                                    <div class="text-muted small">Status: @item.Status</div>
-                                    <div class="text-muted small">Valor: @item.ValorTotal.ToString("C")</div>
+            <div class="row g-3">
+                @foreach (var item in pendentes)
+                {
+                    var entregaStatus = item.Entrega?.Status ?? "-";
+                    var mapsUrl = MontarMapsUrl(item.Endereco);
+                    var whatsUrl = MontarWhatsUrl(item.Cliente?.Telefone);
+
+                    var podeAceitar = string.Equals(entregaStatus, EntregaStatusConst.Atribuida, StringComparison.OrdinalIgnoreCase);
+                    var podeColetar =
+                    string.Equals(entregaStatus, EntregaStatusConst.Atribuida, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(entregaStatus, EntregaStatusConst.Aceita, StringComparison.OrdinalIgnoreCase);
+
+                    var podeSair =
+                    string.Equals(entregaStatus, EntregaStatusConst.Atribuida, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(entregaStatus, EntregaStatusConst.Aceita, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(entregaStatus, EntregaStatusConst.Coletada, StringComparison.OrdinalIgnoreCase);
+
+                    <div class="col-12">
+                        <div class="card delivery-card">
+                            <div class="card-body">
+                                <div class="topline">
+                                    <div>
+                                        <div class="pedido-id">Pedido #@item.Id</div>
+                                        <div class="sub">
+                                            @item.DataPedido.ToString("dd/MM/yyyy HH:mm")
+                                            •
+                                            @item.ValorTotal.ToString("C")
+                                        </div>
+                                    </div>
+
+                                    <span class="badge @BadgeClass(entregaStatus)">@entregaStatus</span>
                                 </div>
 
-                                <div>
-                                    <div class="fw-semibold">Endereço</div>
-                                    <div class="small text-muted">
-                                        @(
-                                                                        item.Endereco == null
-                                                                        ? "-"
-                                                                        : "Endereço cadastrado"
-                                                                        )
-                            </div>
-                        </div>
+                                <div class="delivery-grid">
+                                    <div class="delivery-info">
+                                        <div class="label">Cliente</div>
+                                        <div class="value">@((item.Cliente?.Nome) ?? "-")</div>
+                                    </div>
 
-                                <div class="d-flex flex-wrap gap-2 align-items-start">
-                            @if (item.Status != WebApplicationPods.Models.PedidoEntregaStatus.SaiuParaEntrega
-                                                        && item.Status != WebApplicationPods.Models.PedidoEntregaStatus.Entregue)
+                                    <div class="delivery-info">
+                                        <div class="label">Telefone</div>
+                                        <div class="value">@FormatarTelefone(item.Cliente?.Telefone)</div>
+                                    </div>
+
+                                    <div class="delivery-info">
+                                        <div class="label">Endereço</div>
+                                        <div class="value">@MontarEndereco(item.Endereco)</div>
+                                    </div>
+
+                                    <div class="delivery-info">
+                                        <div class="label">Status do pedido</div>
+                                        <div class="value">@((item.Status) ?? "-")</div>
+                                    </div>
+                                </div>
+
+                                <div class="delivery-actions">
+                                    @if (podeAceitar)
+                                    {
+                                        <form asp-action="Aceitar" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button type="submit" class="btn btn-primary btn-sm">Aceitar entrega</button>
+                                        </form>
+                                    }
+
+                                    @if (podeColetar)
+                                    {
+                                        <form asp-action="Coletada" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button type="submit" class="btn btn-outline-primary btn-sm">Informar retirada</button>
+                                        </form>
+                                    }
+
+                                    @if (podeSair)
                                     {
                                         <form asp-action="SaiuParaEntrega" method="post">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="id" value="@item.Id" />
-                                            <button type="submit" class="btn btn-warning btn-sm">
-                                                Saiu para entrega
-                                            </button>
+                                            <button type="submit" class="btn btn-warning btn-sm">Saiu para entrega</button>
                                         </form>
                                     }
 
-                                    @if (item.Status != WebApplicationPods.Models.PedidoEntregaStatus.Entregue)
-                                    {
-                                        <form asp-action="Entregue" method="post">
+                                    <a href="@mapsUrl" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm @(mapsUrl == "#" ? "disabled" : "")">
+                                        Abrir rota
+                                    </a>
+
+                                    <a href="@whatsUrl" target="_blank" rel="noopener" class="btn btn-outline-success btn-sm @(whatsUrl == "#" ? "disabled" : "")">
+                                        WhatsApp
+                                    </a>
+                                </div>
+
+                                <div class="motivo-box">
+                                    <details>
+                                        <summary class="text-danger small fw-semibold">Marcar tentativa sem sucesso</summary>
+
+                                        <form asp-action="NaoEntregue" method="post" class="mt-2">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="id" value="@item.Id" />
-                                            <button type="submit" class="btn btn-success btn-sm">
-                                                Marcar entregue
+
+                                            <div class="mb-2">
+                                                <input type="text"
+                                                       name="motivo"
+                                                       class="form-control form-control-sm"
+                                                       maxlength="200"
+                                                       placeholder="Ex.: cliente ausente, endereço não localizado" />
+                                            </div>
+
+                                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                Confirmar não entregue
                                             </button>
                                         </form>
-                                    }
+                                    </details>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            }
+                }
+            </div>
+        }
+    </div>
+
+    <div class="delivery-section">
+        <div class="section-title">Em rota</div>
+
+        @if (!emRota.Any())
+        {
+            <div class="delivery-empty">Nenhuma entrega em rota agora.</div>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var item in emRota)
+                {
+                    var entregaStatus = item.Entrega?.Status ?? "-";
+                    var mapsUrl = MontarMapsUrl(item.Endereco);
+                    var whatsUrl = MontarWhatsUrl(item.Cliente?.Telefone);
+
+                    <div class="col-12">
+                        <div class="card delivery-card">
+                            <div class="card-body">
+                                <div class="topline">
+                                    <div>
+                                        <div class="pedido-id">Pedido #@item.Id</div>
+                                        <div class="sub">
+                                            @item.DataPedido.ToString("dd/MM/yyyy HH:mm")
+                                            •
+                                            @item.ValorTotal.ToString("C")
+                                        </div>
+                                    </div>
+
+                                    <span class="badge @BadgeClass(entregaStatus)">@entregaStatus</span>
+                                </div>
+
+                                <div class="delivery-grid">
+                                    <div class="delivery-info">
+                                        <div class="label">Cliente</div>
+                                        <div class="value">@((item.Cliente?.Nome) ?? "-")</div>
+                                    </div>
+
+                                    <div class="delivery-info">
+                                        <div class="label">Telefone</div>
+                                        <div class="value">@FormatarTelefone(item.Cliente?.Telefone)</div>
+                                    </div>
+
+                                    <div class="delivery-info">
+                                        <div class="label">Endereço</div>
+                                        <div class="value">@MontarEndereco(item.Endereco)</div>
+                                    </div>
+
+                                    <div class="delivery-info">
+                                        <div class="label">Status do pedido</div>
+                                        <div class="value">@((item.Status) ?? "-")</div>
+                                    </div>
+                                </div>
+
+                                <div class="delivery-actions">
+                                    <form asp-action="Entregue" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <button type="submit" class="btn btn-success btn-sm">Marcar entregue</button>
+                                    </form>
+
+                                    <a href="@mapsUrl" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm @(mapsUrl == "#" ? "disabled" : "")">
+                                        Abrir rota
+                                    </a>
+
+                                    <a href="@whatsUrl" target="_blank" rel="noopener" class="btn btn-outline-success btn-sm @(whatsUrl == "#" ? "disabled" : "")">
+                                        WhatsApp
+                                    </a>
+                                </div>
+
+                                <div class="motivo-box">
+                                    <details>
+                                        <summary class="text-danger small fw-semibold">Marcar tentativa sem sucesso</summary>
+
+                                        <form asp-action="NaoEntregue" method="post" class="mt-2">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+
+                                            <div class="mb-2">
+                                                <input type="text"
+                                                       name="motivo"
+                                                       class="form-control form-control-sm"
+                                                       maxlength="200"
+                                                       placeholder="Ex.: cliente ausente, portaria recusou, endereço incorreto" />
+                                            </div>
+
+                                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                Confirmar não entregue
+                                            </button>
+                                        </form>
+                                    </details>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="delivery-section">
+        <div class="section-title">Histórico</div>
+
+        @if (!historico.Any())
+        {
+            <div class="delivery-empty">Nenhuma entrega finalizada ainda.</div>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var item in historico)
+                {
+                    var entregaStatus = item.Entrega?.Status ?? "-";
+
+                    <div class="col-12">
+                        <div class="card delivery-card">
+                            <div class="card-body">
+                                <div class="topline">
+                                    <div>
+                                        <div class="pedido-id">Pedido #@item.Id</div>
+                                        <div class="sub">
+                                            @item.DataPedido.ToString("dd/MM/yyyy HH:mm")
+                                            •
+                                            @item.ValorTotal.ToString("C")
+                                        </div>
+                                    </div>
+
+                                    <span class="badge @BadgeClass(entregaStatus)">@entregaStatus</span>
+                                </div>
+
+                                <div class="delivery-grid">
+                                    <div class="delivery-info">
+                                        <div class="label">Cliente</div>
+                                        <div class="value">@((item.Cliente?.Nome) ?? "-")</div>
+                                    </div>
+
+                                    <div class="delivery-info">
+                                        <div class="label">Telefone</div>
+                                        <div class="value">@FormatarTelefone(item.Cliente?.Telefone)</div>
+                                    </div>
+
+                                    <div class="delivery-info">
+                                        <div class="label">Endereço</div>
+                                        <div class="value">@MontarEndereco(item.Endereco)</div>
+                                    </div>
+
+                                    <div class="delivery-info">
+                                        <div class="label">Observação</div>
+                                        <div class="value">@((item.Entrega?.Observacao) ?? "-")</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
         }
     </div>
 </div>

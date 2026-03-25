@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using WebApplicationPods.Data;
-using WebApplicationPods.Enum;
 using WebApplicationPods.Hubs;
 using WebApplicationPods.Models;
 using WebApplicationPods.Services.Interface;
+using EntregaStatusConst = WebApplicationPods.Enum.EntregaStatus;
 
 namespace WebApplicationPods.Services.service
 {
@@ -47,7 +47,7 @@ namespace WebApplicationPods.Services.service
                 {
                     PedidoId = pedido.Id,
                     EntregadorId = entregador.Id,
-                    Status = EntregaStatus.Atribuida,
+                    Status = EntregaStatusConst.Atribuida,
                     DataAtribuicao = DateTime.Now,
                     DataCadastro = DateTime.Now,
                     DataAtualizacao = DateTime.Now,
@@ -59,13 +59,13 @@ namespace WebApplicationPods.Services.service
             else
             {
                 pedido.Entrega.EntregadorId = entregador.Id;
-                pedido.Entrega.Status = EntregaStatus.Atribuida;
+                pedido.Entrega.Status = EntregaStatusConst.Atribuida;
                 pedido.Entrega.DataAtribuicao = DateTime.Now;
                 pedido.Entrega.DataAtualizacao = DateTime.Now;
                 pedido.Entrega.Observacao = $"Entregador atribuído: {entregador.Nome}";
             }
 
-            // manter compatibilidade temporária
+            // compatibilidade temporária
             pedido.EntregadorId = entregador.Id;
             pedido.DataAtribuicaoEntregador = DateTime.Now;
 
@@ -85,7 +85,7 @@ namespace WebApplicationPods.Services.service
                     pedidoId = pedido.Id,
                     cliente = pedido.Cliente?.Nome,
                     total = pedido.ValorTotal,
-                    status = EntregaStatus.Atribuida
+                    status = EntregaStatusConst.Atribuida
                 });
             }
 
@@ -101,7 +101,7 @@ namespace WebApplicationPods.Services.service
             if (pedido.Entrega == null)
                 return false;
 
-            pedido.Entrega.Status = EntregaStatus.Aceita;
+            pedido.Entrega.Status = EntregaStatusConst.Aceita;
             pedido.Entrega.DataAceite = DateTime.Now;
             pedido.Entrega.DataAtualizacao = DateTime.Now;
 
@@ -127,7 +127,7 @@ namespace WebApplicationPods.Services.service
             if (pedido.Entrega == null)
                 return false;
 
-            pedido.Entrega.Status = EntregaStatus.Coletada;
+            pedido.Entrega.Status = EntregaStatusConst.Coletada;
             pedido.Entrega.DataColeta = DateTime.Now;
             pedido.Entrega.DataAtualizacao = DateTime.Now;
 
@@ -153,7 +153,7 @@ namespace WebApplicationPods.Services.service
             if (pedido.Entrega == null)
                 return false;
 
-            pedido.Entrega.Status = EntregaStatus.EmRota;
+            pedido.Entrega.Status = EntregaStatusConst.EmRota;
             pedido.Entrega.DataSaidaParaEntrega = DateTime.Now;
             pedido.Entrega.DataAtualizacao = DateTime.Now;
 
@@ -182,7 +182,7 @@ namespace WebApplicationPods.Services.service
             if (pedido.Entrega == null)
                 return false;
 
-            pedido.Entrega.Status = EntregaStatus.Entregue;
+            pedido.Entrega.Status = EntregaStatusConst.Entregue;
             pedido.Entrega.DataConclusao = DateTime.Now;
             pedido.Entrega.DataAtualizacao = DateTime.Now;
 
@@ -211,7 +211,7 @@ namespace WebApplicationPods.Services.service
             if (pedido.Entrega == null)
                 return false;
 
-            pedido.Entrega.Status = EntregaStatus.NaoEntregue;
+            pedido.Entrega.Status = EntregaStatusConst.NaoEntregue;
             pedido.Entrega.DataAtualizacao = DateTime.Now;
             pedido.Entrega.Observacao = string.IsNullOrWhiteSpace(motivo)
                 ? "Entrega não concluída."
