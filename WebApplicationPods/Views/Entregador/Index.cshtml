@@ -263,14 +263,13 @@
                     var mapsUrl = MontarMapsUrl(item.Endereco);
                     var whatsUrl = MontarWhatsUrl(item.Cliente?.Telefone);
 
-                    var podeAceitar = string.Equals(entregaStatus, EntregaStatusConst.Atribuida, StringComparison.OrdinalIgnoreCase);
+                    var podeAceitar =
+                    string.Equals(entregaStatus, EntregaStatusConst.Atribuida, StringComparison.OrdinalIgnoreCase);
+
                     var podeColetar =
-                    string.Equals(entregaStatus, EntregaStatusConst.Atribuida, StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(entregaStatus, EntregaStatusConst.Aceita, StringComparison.OrdinalIgnoreCase);
 
                     var podeSair =
-                    string.Equals(entregaStatus, EntregaStatusConst.Atribuida, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(entregaStatus, EntregaStatusConst.Aceita, StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(entregaStatus, EntregaStatusConst.Coletada, StringComparison.OrdinalIgnoreCase);
 
                     <div class="col-12">

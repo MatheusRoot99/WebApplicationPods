@@ -23,30 +23,94 @@ namespace WebApplicationPods.Controllers
         private readonly IPedidoAppService _pedidoAppService;
         private readonly IEntregaAppService _entregaAppService;
         private readonly BancoContext _context;
+        private readonly ICurrentLojaService _currentLoja;
 
-        public PedidosAdminController(IPedidoRepository pedidos, IHubContext<PedidosHub> hub, IPedidoAppService pedidoAppService, IEntregaAppService entregaAppService,
-        BancoContext context)
+        public PedidosAdminController(
+            IPedidoRepository pedidos,
+            IHubContext<PedidosHub> hub,
+            IPedidoAppService pedidoAppService,
+            IEntregaAppService entregaAppService,
+            BancoContext context,
+            ICurrentLojaService currentLoja)
         {
             _pedidos = pedidos;
             _hub = hub;
             _pedidoAppService = pedidoAppService;
             _entregaAppService = entregaAppService;
             _context = context;
+            _currentLoja = currentLoja;
         }
 
-        //private static readonly Dictionary<string, string[]> AllowedTransitions =
-        //    new(StringComparer.OrdinalIgnoreCase)
-        //    {
-        //        ["Aguardando Confirmação (Dinheiro)"] = new[] { "Em Preparação", "Cancelado" },
-        //        ["Pago"] = new[] { "Em Preparação", "Cancelado" },
-        //        ["Em Preparação"] = new[] { "Pronto", "Cancelado" },
-        //        ["Pronto"] = new[] { "Saiu p/ Entrega", "Concluído", "Cancelado" },
-        //        ["Saiu p/ Entrega"] = new[] { "Concluído", "Cancelado" },
-        //        ["Aguardando Pagamento (Entrega)"] = new[] { "Pago", "Cancelado" },
-        //        ["Aguardando Pagamento"] = new[] { "Pago", "Cancelado" },
-        //        ["Concluído"] = Array.Empty<string>(),
-        //        ["Cancelado"] = Array.Empty<string>()
-        //    };
+        private int? ObterLojaAtual()
+        {
+            if (_currentLoja?.LojaId is int lojaAtual && lojaAtual > 0)
+                return lojaAtual;
+
+            var claimLojaId = User.FindFirst("LojaId")?.Value
+                           ?? User.FindFirst("lojaId")?.Value;
+
+            if (int.TryParse(claimLojaId, out var lojaIdClaim) && lojaIdClaim > 0)
+                return lojaIdClaim;
+
+            return null;
+        }
+
+        private async Task<List<SelectListItem>> CarregarEntregadoresAsync(int? pedidoLojaId = null)
+        {
+            var lojaAtual = ObterLojaAtual();
+            var lojaBase = pedidoLojaId.GetValueOrDefault() > 0
+                ? pedidoLojaId
+                : lojaAtual;
+
+            var entregadores = new List<EntregadorModel>();
+
+            if (lojaBase.HasValue && lojaBase.Value > 0)
+            {
+                entregadores = await _context.Entregadores
+                    .Include(x => x.Usuario)
+                    .Where(x =>
+                        x.Ativo &&
+                        (
+                            x.LojaId == lojaBase.Value ||
+                            (x.Usuario != null && x.Usuario.LojaId == lojaBase.Value)
+                        ))
+                    .OrderBy(x => x.Nome)
+                    .ToListAsync();
+            }
+
+            if (!entregadores.Any() && lojaAtual.HasValue && lojaAtual.Value > 0)
+            {
+                entregadores = await _context.Entregadores
+                    .Include(x => x.Usuario)
+                    .Where(x =>
+                        x.Ativo &&
+                        (
+                            x.LojaId == lojaAtual.Value ||
+                            (x.Usuario != null && x.Usuario.LojaId == lojaAtual.Value)
+                        ))
+                    .OrderBy(x => x.Nome)
+                    .ToListAsync();
+            }
+
+            if (!entregadores.Any())
+            {
+                entregadores = await _context.Entregadores
+                    .Include(x => x.Usuario)
+                    .Where(x => x.Ativo)
+                    .OrderBy(x => x.Nome)
+                    .ToListAsync();
+            }
+
+            return entregadores
+                .Select(x => new SelectListItem
+                {
+                    Value = x.Id.ToString(),
+                    Text = string.IsNullOrWhiteSpace(x.Telefone)
+                        ? x.Nome
+                        : $"{x.Nome} - {x.Telefone}"
+                })
+                .ToList();
+        }
 
         [HttpGet]
         public IActionResult Index(string? filtro = "abertos")
@@ -91,11 +155,6 @@ namespace WebApplicationPods.Controllers
             if (pedido == null)
                 return NotFound();
 
-            var entregadores = await _context.Entregadores
-                .Where(x => x.Ativo && x.LojaId == pedido.LojaId)
-                .OrderBy(x => x.Nome)
-                .ToListAsync();
-
             var vm = new PedidoAtribuirEntregadorViewModel
             {
                 PedidoId = pedido.Id,
@@ -103,37 +162,44 @@ namespace WebApplicationPods.Controllers
                 StatusAtual = pedido.Status ?? "-",
                 ValorTotal = pedido.ValorTotal,
                 EntregadorId = pedido.EntregadorId,
-                Entregadores = entregadores.Select(x => new SelectListItem
-                {
-                    Value = x.Id.ToString(),
-                    Text = $"{x.Nome} - {x.Telefone}"
-                }).ToList()
+                Entregadores = await CarregarEntregadoresAsync(pedido.LojaId)
             };
 
-            return View(vm);
+            if (!vm.Entregadores.Any())
+            {
+                ModelState.AddModelError(string.Empty, "Nenhum entregador ativo foi encontrado.");
+            }
+
+            return View("~/Views/PedidosAdmin/AtribuirEntregador.cshtml", vm);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AtribuirEntregador(PedidoAtribuirEntregadorViewModel vm)
         {
+            var pedidoReload = await _context.Pedidos
+                .Include(x => x.Cliente)
+                .FirstOrDefaultAsync(x => x.Id == vm.PedidoId);
+
+            if (pedidoReload == null)
+            {
+                TempData["Erro"] = "Pedido não encontrado.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            vm.ClienteNome = pedidoReload.Cliente?.Nome ?? "-";
+            vm.StatusAtual = pedidoReload.Status ?? "-";
+            vm.ValorTotal = pedidoReload.ValorTotal;
+            vm.Entregadores = await CarregarEntregadoresAsync(pedidoReload.LojaId);
+
+            if (!vm.Entregadores.Any())
+            {
+                ModelState.AddModelError(string.Empty, "Nenhum entregador ativo foi encontrado.");
+            }
+
             if (!ModelState.IsValid)
             {
-                var pedidoReload = await _context.Pedidos.FirstOrDefaultAsync(x => x.Id == vm.PedidoId);
-                if (pedidoReload != null)
-                {
-                    vm.Entregadores = await _context.Entregadores
-                        .Where(x => x.Ativo && x.LojaId == pedidoReload.LojaId)
-                        .OrderBy(x => x.Nome)
-                        .Select(x => new SelectListItem
-                        {
-                            Value = x.Id.ToString(),
-                            Text = x.Nome + " - " + x.Telefone
-                        })
-                        .ToListAsync();
-                }
-
-                return View(vm);
+                return View("~/Views/PedidosAdmin/AtribuirEntregador.cshtml", vm);
             }
 
             var ok = await _entregaAppService.AtribuirEntregadorAsync(
@@ -179,12 +245,12 @@ namespace WebApplicationPods.Controllers
             var usuarioId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             await _pedidoAppService.AtualizarStatusAsync(
-                    id,
-                    status,
-                    nomeResponsavel: User.Identity?.Name,
-                    usuarioResponsavelId: usuarioId,
-                    observacao: null,
-                    origem: "PainelLojista");
+                id,
+                status,
+                nomeResponsavel: User.Identity?.Name,
+                usuarioResponsavelId: usuarioId,
+                observacao: null,
+                origem: "PainelLojista");
 
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 return Json(new { ok = true });

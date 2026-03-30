@@ -65,7 +65,7 @@ namespace WebApplicationPods.Services.service
                 pedido.Entrega.Observacao = $"Entregador atribuído: {entregador.Nome}";
             }
 
-            // compatibilidade temporária
+            // compatibilidade temporária com o pedido
             pedido.EntregadorId = entregador.Id;
             pedido.DataAtribuicaoEntregador = DateTime.Now;
 
@@ -95,10 +95,10 @@ namespace WebApplicationPods.Services.service
         public async Task<bool> AceitarEntregaAsync(int pedidoId, int entregadorUserId)
         {
             var pedido = await ObterPedidoComEntregaAsync(pedidoId);
-            if (pedido == null || !EntregaPertenceAoUsuario(pedido, entregadorUserId))
+            if (pedido == null || !EntregaPertenceAoUsuario(pedido, entregadorUserId) || pedido.Entrega == null)
                 return false;
 
-            if (pedido.Entrega == null)
+            if (!StatusEh(pedido.Entrega.Status, EntregaStatusConst.Atribuida))
                 return false;
 
             pedido.Entrega.Status = EntregaStatusConst.Aceita;
@@ -121,10 +121,10 @@ namespace WebApplicationPods.Services.service
         public async Task<bool> MarcarColetadaAsync(int pedidoId, int entregadorUserId)
         {
             var pedido = await ObterPedidoComEntregaAsync(pedidoId);
-            if (pedido == null || !EntregaPertenceAoUsuario(pedido, entregadorUserId))
+            if (pedido == null || !EntregaPertenceAoUsuario(pedido, entregadorUserId) || pedido.Entrega == null)
                 return false;
 
-            if (pedido.Entrega == null)
+            if (!StatusEh(pedido.Entrega.Status, EntregaStatusConst.Aceita))
                 return false;
 
             pedido.Entrega.Status = EntregaStatusConst.Coletada;
@@ -147,10 +147,10 @@ namespace WebApplicationPods.Services.service
         public async Task<bool> MarcarSaiuParaEntregaAsync(int pedidoId, int entregadorUserId)
         {
             var pedido = await ObterPedidoComEntregaAsync(pedidoId);
-            if (pedido == null || !EntregaPertenceAoUsuario(pedido, entregadorUserId))
+            if (pedido == null || !EntregaPertenceAoUsuario(pedido, entregadorUserId) || pedido.Entrega == null)
                 return false;
 
-            if (pedido.Entrega == null)
+            if (!StatusEh(pedido.Entrega.Status, EntregaStatusConst.Coletada))
                 return false;
 
             pedido.Entrega.Status = EntregaStatusConst.EmRota;
@@ -176,10 +176,10 @@ namespace WebApplicationPods.Services.service
         public async Task<bool> MarcarEntregueAsync(int pedidoId, int entregadorUserId)
         {
             var pedido = await ObterPedidoComEntregaAsync(pedidoId);
-            if (pedido == null || !EntregaPertenceAoUsuario(pedido, entregadorUserId))
+            if (pedido == null || !EntregaPertenceAoUsuario(pedido, entregadorUserId) || pedido.Entrega == null)
                 return false;
 
-            if (pedido.Entrega == null)
+            if (!StatusEh(pedido.Entrega.Status, EntregaStatusConst.EmRota))
                 return false;
 
             pedido.Entrega.Status = EntregaStatusConst.Entregue;
@@ -205,26 +205,28 @@ namespace WebApplicationPods.Services.service
         public async Task<bool> MarcarNaoEntregueAsync(int pedidoId, int entregadorUserId, string? motivo = null)
         {
             var pedido = await ObterPedidoComEntregaAsync(pedidoId);
-            if (pedido == null || !EntregaPertenceAoUsuario(pedido, entregadorUserId))
+            if (pedido == null || !EntregaPertenceAoUsuario(pedido, entregadorUserId) || pedido.Entrega == null)
                 return false;
 
-            if (pedido.Entrega == null)
+            if (!PodeMarcarNaoEntregue(pedido.Entrega.Status))
                 return false;
+
+            var motivoFinal = string.IsNullOrWhiteSpace(motivo)
+                ? "Entrega não concluída."
+                : motivo.Trim();
 
             pedido.Entrega.Status = EntregaStatusConst.NaoEntregue;
             pedido.Entrega.DataAtualizacao = DateTime.Now;
-            pedido.Entrega.Observacao = string.IsNullOrWhiteSpace(motivo)
-                ? "Entrega não concluída."
-                : motivo;
+            pedido.Entrega.Observacao = motivoFinal;
 
             await _context.SaveChangesAsync();
 
             await _pedidoAppService.AtualizarStatusAsync(
                 pedido.Id,
-                PedidoEntregaStatus.Atribuido,
+                PedidoEntregaStatus.AguardandoAtribuicao,
                 nomeResponsavel: pedido.Entregador?.Nome,
                 usuarioResponsavelId: entregadorUserId.ToString(),
-                observacao: $"Entrega não concluída. Motivo: {motivo}",
+                observacao: $"Entrega não concluída. Motivo: {motivoFinal}",
                 origem: "PainelEntregador");
 
             return true;
@@ -243,6 +245,19 @@ namespace WebApplicationPods.Services.service
         {
             return pedido.Entregador?.Usuario != null &&
                    pedido.Entregador.Usuario.Id == entregadorUserId;
+        }
+
+        private static bool StatusEh(string? atual, string esperado)
+        {
+            return string.Equals(atual, esperado, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool PodeMarcarNaoEntregue(string? status)
+        {
+            return StatusEh(status, EntregaStatusConst.Atribuida)
+                || StatusEh(status, EntregaStatusConst.Aceita)
+                || StatusEh(status, EntregaStatusConst.Coletada)
+                || StatusEh(status, EntregaStatusConst.EmRota);
         }
     }
 }

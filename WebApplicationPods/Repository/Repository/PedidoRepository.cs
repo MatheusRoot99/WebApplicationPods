@@ -18,15 +18,20 @@ namespace WebApplicationPods.Repository.Repository
         private readonly ICurrentLojaService _currentLoja;
 
         private static readonly string[] StatusVisiveisAbertos = new[]
-{
-                PedidoStatus.AguardandoConfirmacaoDinheiro,
-                PedidoStatus.Pago,
-                PedidoStatus.EmPreparacao,
-                PedidoStatus.Pronto,
-                PedidoStatus.SaiuParaEntrega,
-                PedidoStatus.AguardandoPagamentoEntrega,
-                PedidoStatus.AguardandoPagamento
-            };
+        {
+            PedidoStatus.AguardandoConfirmacaoDinheiro,
+            PedidoStatus.Pago,
+            PedidoStatus.EmPreparacao,
+            PedidoStatus.Pronto,
+            PedidoStatus.SaiuParaEntrega,
+            PedidoStatus.AguardandoPagamentoEntrega,
+            PedidoStatus.AguardandoPagamento,
+
+            // fluxo de entrega
+            PedidoEntregaStatus.AguardandoAtribuicao,
+            PedidoEntregaStatus.Atribuido,
+            PedidoEntregaStatus.SaiuParaEntrega
+        };
 
         public PedidoRepository(BancoContext context, IHttpContextAccessor http, ICurrentLojaService currentLoja)
         {
@@ -90,13 +95,15 @@ namespace WebApplicationPods.Repository.Repository
                 pedido.DataInicioPreparo ??= agora;
             }
 
-            if (string.Equals(status, PedidoStatus.SaiuParaEntrega, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(status, PedidoStatus.Pronto, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(status, PedidoStatus.Pronto, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(status, PedidoStatus.SaiuParaEntrega, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(status, PedidoEntregaStatus.SaiuParaEntrega, StringComparison.OrdinalIgnoreCase))
             {
                 pedido.DataSaiuParaEntregaOuRetirada ??= agora;
             }
 
-            if (string.Equals(status, PedidoStatus.Concluido, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(status, PedidoStatus.Concluido, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(status, PedidoEntregaStatus.Entregue, StringComparison.OrdinalIgnoreCase))
             {
                 pedido.DataConcluido ??= agora;
             }

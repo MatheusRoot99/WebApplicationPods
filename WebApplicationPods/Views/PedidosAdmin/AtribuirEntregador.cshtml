@@ -23,10 +23,12 @@
                         <label class="form-label">Pedido</label>
                         <input class="form-control" value="@Model.PedidoId" disabled />
                     </div>
+
                     <div class="col-md-4">
                         <label class="form-label">Cliente</label>
                         <input class="form-control" value="@Model.ClienteNome" disabled />
                     </div>
+
                     <div class="col-md-4">
                         <label class="form-label">Status atual</label>
                         <input class="form-control" value="@Model.StatusAtual" disabled />
@@ -48,7 +50,7 @@
 
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary">Salvar</button>
-                    <a asp-action="Detalhes" asp-route-id="@Model.PedidoId" class="btn btn-outline-secondary">Voltar</a>
+                    <a asp-action="Index" class="btn btn-outline-secondary">Voltar</a>
                 </div>
             </form>
         </div>
