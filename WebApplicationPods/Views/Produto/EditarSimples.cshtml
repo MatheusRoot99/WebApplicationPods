@@ -1,0 +1,18 @@
+﻿@* Views/Produto/EditarSimples.cshtml *@
+@model WebApplicationPods.Models.ProdutoFormSimplesViewModel
+
+@{
+    ViewData["Title"] = "Editar Produto";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/produto-simples-form.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+}
+
+<partial name="_FormSimples" model="Model" />
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/produto-simples-form.js" asp-append-version="true"></script>
+}

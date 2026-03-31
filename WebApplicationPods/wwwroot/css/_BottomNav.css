@@ -1,97 +1,181 @@
 ﻿/* =========================================================
-   Bottom Nav (mobile) — Pods
+   Bottom Nav (mobile) — Premium / Clean / App-like
+   Estável no Chrome mobile + SVG inline
    ========================================================= */
 
 :root {
-    /* altura do bottom nav */
-    --mbn-height: 70px;
-    /* deslocamento opcional quando o teclado abre (definido via JS) */
+    --mbn-height: 78px;
+    --mbn-side: 12px;
+    --mbn-gap: 10px;
+    --mbn-radius: 18px;
+    --mbn-icon-box: 36px;
+    --mbn-icon-svg: 22px;
+    --mbn-icon-stroke: 1.9;
     --kb-shift: 0px;
 }
 
-/* ======= NAV FIXO NO RODAPÉ DO VIEWPORT ======= */
+/* ---------------------------------------------------------
+   NAV
+--------------------------------------------------------- */
 .mobile-bottom-nav {
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
-    height: var(--mbn-height);
-    background: rgba(255,255,255,.97);
-    border-top: 1px solid rgba(0,0,0,.08);
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
     z-index: 1080;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 -4px 20px rgba(0,0,0,.08);
-    /* NÃO usar transform aqui (poderia quebrar o fixed em iOS) */
-    /* transform: translateY(var(--vv-inset, 0px)); */
+    height: var(--mbn-height);
+   /* padding: 8px var(--mbn-side) 12px;*/
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: var(--mbn-gap);
+    background: rgba(8, 11, 20, 0.94);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.18), 0 -1px 0 rgba(255, 255, 255, 0.03) inset;
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
     will-change: transform;
 }
 
-    /* ======= ITENS ======= */
+    /* ---------------------------------------------------------
+   ITEM
+--------------------------------------------------------- */
     .mobile-bottom-nav .mbn-item {
+        flex: 1 1 0;
+        min-width: 0;
         position: relative;
-        display: inline-flex;
+        display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 4px;
-        min-width: 56px;
-        padding: 8px 12px;
-        color: #6c757d;
+        justify-content: center;
+        gap: 5px;
+        padding: 6px 4px 8px;
+        border-radius: var(--mbn-radius);
         text-decoration: none;
-        border-radius: 12px;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.62);
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+        transition: color .18s ease, background-color .18s ease, box-shadow .18s ease;
     }
 
-        .mobile-bottom-nav .mbn-item i {
-            font-size: 20px;
-            width: 32px;
-            height: 32px;
-            display: inline-grid;
-            place-items: center;
-            border-radius: 50%;
+        /* toque */
+        .mobile-bottom-nav .mbn-item:active {
+            background: rgba(255, 255, 255, 0.035);
         }
 
-        .mobile-bottom-nav .mbn-item.active {
-            color: #0d6efd;
+    /* ---------------------------------------------------------
+   ÍCONE
+--------------------------------------------------------- */
+    .mobile-bottom-nav .mbn-icon {
+        width: var(--mbn-icon-box);
+        height: var(--mbn-icon-box);
+        min-width: var(--mbn-icon-box);
+        min-height: var(--mbn-icon-box);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        flex-shrink: 0;
+        transition: color .18s ease, background-color .18s ease, transform .18s ease;
+    }
+
+        .mobile-bottom-nav .mbn-icon svg {
+            width: var(--mbn-icon-svg);
+            height: var(--mbn-icon-svg);
+            display: block;
+            stroke: currentColor;
+            stroke-width: var(--mbn-icon-stroke);
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            vector-effect: non-scaling-stroke;
         }
 
-            .mobile-bottom-nav .mbn-item.active i {
-                background: rgba(13,110,253,.12);
-                color: #0d6efd;
-            }
+    /* ---------------------------------------------------------
+   LABEL
+--------------------------------------------------------- */
+    .mobile-bottom-nav .mbn-label {
+        display: block;
+        max-width: 100%;
+        font-size: 10px;
+        line-height: 1;
+        font-weight: 800;
+        letter-spacing: .015em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        opacity: .96;
+    }
 
-    /* ======= BADGE ======= */
+    /* ---------------------------------------------------------
+   ACTIVE
+--------------------------------------------------------- */
+    .mobile-bottom-nav .mbn-item.active {
+        color: #60a5fa;
+    }
+
+        .mobile-bottom-nav .mbn-item.active .mbn-icon {
+            color: #60a5fa;
+            background: linear-gradient(180deg, rgba(96, 165, 250, 0.20), rgba(59, 130, 246, 0.12));
+            box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18), 0 0 0 1px rgba(96, 165, 250, 0.10) inset;
+        }
+
+    /* ---------------------------------------------------------
+   BADGE
+--------------------------------------------------------- */
     .mobile-bottom-nav .mbn-badge {
         position: absolute;
-        top: 4px;
-        right: 4px;
-        transform: translate(50%,-50%);
-        background: #dc3545;
+        top: 7px;
+        left: 50%;
+        margin-left: 10px;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(180deg, #ff5a6b, #dc3545);
         color: #fff;
         border-radius: 999px;
         font-size: 10px;
-        font-weight: 700;
+        font-weight: 900;
         line-height: 1;
-        padding: 2px 5px;
-        min-width: 16px;
-        text-align: center;
-        box-shadow: 0 0 0 2px rgba(255,255,255,.9);
+        box-shadow: 0 0 0 2px rgba(8, 11, 20, 0.94), 0 4px 10px rgba(220, 53, 69, 0.28);
+        pointer-events: none;
     }
 
-/* animação usada no JS */
+    /* ---------------------------------------------------------
+   DOT
+--------------------------------------------------------- */
+    .mobile-bottom-nav .mbn-dot {
+        position: absolute;
+        top: 9px;
+        left: 50%;
+        margin-left: 18px;
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 0 2px rgba(8, 11, 20, 0.94), 0 0 10px rgba(34, 197, 94, 0.45);
+        pointer-events: none;
+    }
+
+/* ---------------------------------------------------------
+   ANIMAÇÃO DO BADGE
+--------------------------------------------------------- */
 @keyframes mbn-bump {
     0% {
-        transform: translate(50%,-50%) scale(1);
+        transform: scale(1);
     }
 
     30% {
-        transform: translate(50%,-50%) scale(1.18);
+        transform: scale(1.12);
     }
 
     100% {
-        transform: translate(50%,-50%) scale(1);
+        transform: scale(1);
     }
 }
 
@@ -99,22 +183,27 @@
     animation: mbn-bump .35s ease;
 }
 
-/* esconde item de auth quando não deve aparecer */
+/* ---------------------------------------------------------
+   AUTH
+--------------------------------------------------------- */
 .mbn-item--auth {
     display: none !important;
 }
 
-/* ======= ESCONDE NO DESKTOP ======= */
+/* ---------------------------------------------------------
+   DESKTOP
+--------------------------------------------------------- */
 @media (min-width: 992px) {
     .mobile-bottom-nav {
-        display: none;
+        display: none !important;
     }
 }
 
-/* =========================================================
-   “Respiro” do conteúdo — somente quando o BottomNav existir
-   (o <body> recebe a classe .has-bottom-nav via JS)
-   ========================================================= */
-.has-bottom-nav .page-content {
-    padding-bottom: calc( var(--mbn-height) + var(--kb-shift, 0px) + env(safe-area-inset-bottom) + 12px );
+/* ---------------------------------------------------------
+   CONTEÚDO
+--------------------------------------------------------- */
+.has-bottom-nav .page-content,
+.has-bottom-nav main,
+.has-bottom-nav .main-content {
+    padding-bottom: calc(var(--mbn-height) + 14px);
 }

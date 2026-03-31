@@ -1,0 +1,10 @@
+﻿@{
+    var action = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+
+    var usarLayoutPainel =
+        !string.Equals(action, "Detalhes", StringComparison.OrdinalIgnoreCase);
+
+    Layout = usarLayoutPainel
+        ? "~/Areas/PainelLojista/Views/Shared/_Layout.cshtml"
+        : "~/Views/Shared/_Layout.cshtml";
+}

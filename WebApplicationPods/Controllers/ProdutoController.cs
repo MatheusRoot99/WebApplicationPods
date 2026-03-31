@@ -1,15 +1,17 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using WebApplicationPods.Data;
+using WebApplicationPods.Enum;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
 using WebApplicationPods.Services.Interface;
+using static WebApplicationPods.Models.ProdutoModel;
 
 namespace WebApplicationPods.Controllers
 {
@@ -35,7 +37,6 @@ namespace WebApplicationPods.Controllers
             _currentLoja = currentLoja;
         }
 
-        // ========= Flash padronizado =========
         private void FlashOk(string msg)
         {
             TempData["MensagemSucesso"] = msg;
@@ -48,24 +49,24 @@ namespace WebApplicationPods.Controllers
             TempData["FlashSource"] = "Produto";
         }
 
+        private const int LOJA_FIXA_ID = 9;
+
         private int GetLojaIdOrFail()
         {
-            if (!_currentLoja.HasLoja || !_currentLoja.LojaId.HasValue || _currentLoja.LojaId.Value <= 0)
-                throw new InvalidOperationException("Loja atual não definida. Verifique o middleware multi-loja.");
-            return _currentLoja.LojaId.Value;
+            return LOJA_FIXA_ID;
         }
 
-        // ========= LISTA (painel) =========
-        [Authorize(Roles = "Lojista,Admin")]
-        public async Task<IActionResult> Index(
-            string? q,
-            int? categoriaId,
-            bool? emPromocao,
-            string? sort = "nome",
-            int page = 1,
-            int pageSize = 12)
+        private int? GetLojaIdOrNull()
         {
-            // Gate de flash
+            return LOJA_FIXA_ID;
+        }
+
+        private static bool IsPod(ProdutoTipo tipo) => tipo == ProdutoTipo.PodVape;
+        private static bool IsBebida(ProdutoTipo tipo) => tipo == ProdutoTipo.BebidaAlcoolica;
+
+        [Authorize(Roles = "Lojista,Admin")]
+        public async Task<IActionResult> Index(string? q, int? categoriaId, bool? emPromocao, string? sort = "nome", int page = 1, int pageSize = 12)
+        {
             var src = TempData.Peek("FlashSource") as string;
             if (!string.Equals(src, "Produto", StringComparison.OrdinalIgnoreCase))
             {
@@ -76,9 +77,13 @@ namespace WebApplicationPods.Controllers
             page = page < 1 ? 1 : page;
             pageSize = pageSize is < 1 or > 60 ? 12 : pageSize;
 
-            // BancoContext já filtra por loja via QueryFilter, se _hasLoja = true.
-            // Mesmo assim, se Admin quiser ver "sem loja", o filtro pode estar desligado (depende do seu design).
-            var query = _context.Produtos.AsNoTracking().Where(p => p.Ativo);
+            var lojaId = GetLojaIdOrFail();
+
+            IQueryable<ProdutoModel> query = _context.Produtos
+                .AsNoTracking()
+                .Where(p => p.LojaId == lojaId && p.Ativo)
+                .Include(p => p.Categoria)
+                .Include(p => p.Variacoes);
 
             if (!string.IsNullOrWhiteSpace(q))
             {
@@ -98,25 +103,20 @@ namespace WebApplicationPods.Controllers
                     : query.Where(p => !p.PrecoPromocional.HasValue || p.PrecoPromocional >= p.Preco);
             }
 
-            query = sort switch
+            IQueryable<ProdutoModel> queryOrdenada = sort switch
             {
                 "preco" => query.OrderBy(p => p.Preco),
                 "preco_desc" => query.OrderByDescending(p => p.Preco),
-                "promo" => query.OrderByDescending(p => p.PrecoPromocional.HasValue && p.PrecoPromocional < p.Preco)
-                               .ThenBy(p => p.Nome),
+                "promo" => query.OrderByDescending(p => p.PrecoPromocional.HasValue && p.PrecoPromocional < p.Preco).ThenBy(p => p.Nome),
                 "novidades" => query.OrderByDescending(p => p.Id),
                 _ => query.OrderBy(p => p.Nome),
             };
 
-            var total = await query.CountAsync();
-
-            var itens = await query
+            var total = await queryOrdenada.CountAsync();
+            var itens = await queryOrdenada
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
-
-            foreach (var p in itens)
-                p.DeserializarSaboresQuantidades();
 
             ViewBag.Busca = q;
             ViewBag.CategoriaId = categoriaId;
@@ -131,412 +131,505 @@ namespace WebApplicationPods.Controllers
             return View(itens);
         }
 
-        // ========= PÚBLICO =========
         [AllowAnonymous]
-        public IActionResult DetalhesProdutos(int id)
+        [HttpGet]
+        public async Task<IActionResult> Detalhes(int id)
         {
-            var produto = _context.Produtos
+            IQueryable<ProdutoModel> query = _context.Produtos
                 .AsNoTracking()
-                .FirstOrDefault(p => p.Id == id && p.Ativo);
+                .Where(p => p.Id == id && p.Ativo);
+
+            var lojaIdAtual = GetLojaIdOrNull();
+            if (lojaIdAtual.HasValue)
+            {
+                query = query.Where(p => p.LojaId == lojaIdAtual.Value);
+            }
+
+            var produto = await query.FirstOrDefaultAsync();
 
             if (produto == null)
                 return NotFound();
 
-            produto.DeserializarSaboresQuantidades();
-            produto.SaboresQuantidadesList ??= new List<ProdutoModel.SaborQuantidade>();
-
-            var saboresDisponiveis = produto.SaboresQuantidadesList
-                .Select(sq => new ProdutoModel.SaborQuantidade
-                {
-                    Sabor = sq.Sabor,
-                    Quantidade = sq.Quantidade
-                })
-                .OrderByDescending(sq => sq.Quantidade > 0)
-                .ThenBy(sq => sq.Sabor)
-                .ToList();
-
-            var relacionados = _context.Produtos
+            var relacionados = await _context.Produtos
                 .AsNoTracking()
-                .Where(p => p.CategoriaId == produto.CategoriaId && p.Id != produto.Id && p.Ativo)
-                .OrderByDescending(p => p.PrecoPromocional.HasValue && p.PrecoPromocional < p.Preco)
-                .ThenByDescending(p => p.Estoque > 0)
+                .Where(p => p.Ativo && p.LojaId == produto.LojaId && p.Id != produto.Id)
+                .OrderByDescending(p => p.MaisVendido)
                 .ThenByDescending(p => p.Id)
-                .Take(4)
-                .ToList();
+                .Take(8)
+                .ToListAsync();
 
-            var viewModel = new ProdutoDetalhesViewModel
+            var sabores = new List<SaborQuantidade>();
+
+            if (IsPod(produto.TipoProduto) && !string.IsNullOrWhiteSpace(produto.Sabor))
+            {
+                sabores.Add(new SaborQuantidade
+                {
+                    Sabor = produto.Sabor,
+                    Quantidade = produto.Estoque
+                });
+            }
+
+            var vm = new ProdutoDetalhesViewModel
             {
                 Produto = produto,
-                SaboresDisponiveis = saboresDisponiveis,
+                SaboresDisponiveis = sabores,
                 ProdutosRelacionados = relacionados
             };
 
-            return View("Detalhes", viewModel);
+            return View("Detalhes", vm);
         }
 
-        // ========= CRUD (painel) =========
+        [Authorize(Roles = "Lojista,Admin")]
+        [HttpGet]
+        public IActionResult CriarPadrao()
+        {
+            CarregarCategoriasEnum();
+            ViewBag.Sabores = new List<SelectListItem>();
+
+            return View(new ProdutoFormSimplesViewModel
+            {
+                TipoProduto = ProdutoTipo.Padrao,
+                Ativo = true,
+                RequerMaioridade = false
+            });
+        }
 
         [Authorize(Roles = "Lojista,Admin")]
-        public IActionResult Criar()
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CriarPadrao(ProdutoFormSimplesViewModel vm, string submit, string? SaborSelect, string? SaborOutro)
         {
-            CarregarCategorias();
+            vm.TipoProduto = ProdutoTipo.Padrao;
+            vm.RequerMaioridade = false;
 
-            var vm = new ProdutoFormViewModel
+            vm.Sabor = (vm.Sabor ?? "").Trim();
+            vm.Cor = string.IsNullOrWhiteSpace(vm.Cor) ? vm.Cor : vm.Cor.Trim();
+
+            return await SalvarSimplesCreate(vm, submit, "CriarPadrao", nameof(CriarPadrao));
+        }
+
+        [Authorize(Roles = "Lojista,Admin")]
+        [HttpGet]
+        public IActionResult CriarBebida()
+        {
+            CarregarCategoriasEnum();
+            ViewBag.Sabores = new List<SelectListItem>();
+
+            return View(new ProdutoFormSimplesViewModel
             {
-                Variacoes = new List<ProdutoFormViewModel.ProdutoVariacaoFormRow>
-                    {
-                        new() {
-                            Nome = "Unidade",
-                            Multiplicador = 1,
-                            PrecoTexto = "0,01",
-                            PrecoPromocionalTexto = "",
-                            Estoque = 0,
-                            Ativo = true
-                        }
-                    }
+                TipoProduto = ProdutoTipo.BebidaAlcoolica,
+                Ativo = true,
+                RequerMaioridade = true
+            });
+        }
 
+        [Authorize(Roles = "Lojista,Admin")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CriarBebida(ProdutoFormSimplesViewModel vm, string submit, string? SaborSelect, string? SaborOutro)
+        {
+            vm.TipoProduto = ProdutoTipo.BebidaAlcoolica;
+            vm.RequerMaioridade = true;
+
+            vm.Sabor = "";
+            vm.Cor = "";
+
+            return await SalvarSimplesCreate(vm, submit, "CriarBebida", nameof(CriarBebida));
+        }
+
+        [Authorize(Roles = "Lojista,Admin")]
+        [HttpGet]
+        public IActionResult CriarPod()
+        {
+            CarregarCategoriasEnum();
+            CarregarSaboresPod(null);
+
+            return View(new ProdutoFormSimplesViewModel
+            {
+                TipoProduto = ProdutoTipo.PodVape,
+                Ativo = true,
+                RequerMaioridade = true
+            });
+        }
+
+        [Authorize(Roles = "Lojista,Admin")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CriarPod(ProdutoFormSimplesViewModel vm, string submit, string? SaborSelect, string? SaborOutro)
+        {
+            vm.TipoProduto = ProdutoTipo.PodVape;
+            vm.RequerMaioridade = true;
+
+            var saborFinal = !string.IsNullOrWhiteSpace(SaborOutro) ? SaborOutro.Trim()
+                            : !string.IsNullOrWhiteSpace(SaborSelect) ? SaborSelect.Trim()
+                            : (vm.Sabor ?? "").Trim();
+
+            vm.Sabor = saborFinal;
+            vm.Cor = string.IsNullOrWhiteSpace(vm.Cor) ? vm.Cor : vm.Cor.Trim();
+
+            if (string.IsNullOrWhiteSpace(vm.Sabor))
+                ModelState.AddModelError(nameof(vm.Sabor), "Informe o sabor do POD.");
+
+            if (!ModelState.IsValid)
+            {
+                CarregarCategoriasEnum();
+                CarregarSaboresPod(vm.Sabor);
+                return View("CriarPod", vm);
+            }
+
+            return await SalvarSimplesCreate(vm, submit, "CriarPod", nameof(CriarPod));
+        }
+
+        [Authorize(Roles = "Lojista,Admin")]
+        [HttpGet]
+        public IActionResult EditarSimples(int id)
+        {
+            var lojaId = GetLojaIdOrFail();
+
+            var produto = _context.Produtos
+                .AsNoTracking()
+                .FirstOrDefault(p => p.Id == id && p.LojaId == lojaId);
+
+            if (produto == null)
+            {
+                FlashErr("Produto não encontrado.");
+                return RedirectToAction(nameof(Index));
+            }
+
+            CarregarCategoriasEnum();
+
+            if (IsPod(produto.TipoProduto))
+                CarregarSaboresPod(produto.Sabor);
+            else
+                ViewBag.Sabores = new List<SelectListItem>();
+
+            var vm = new ProdutoFormSimplesViewModel
+            {
+                Id = produto.Id,
+                TipoProduto = produto.TipoProduto,
+                CategoriaId = produto.CategoriaId,
+                Nome = produto.Nome,
+                Descricao = produto.Descricao,
+                Marca = produto.Marca,
+                SKU = produto.SKU,
+                CodigoBarras = produto.CodigoBarras,
+                Preco = produto.Preco,
+                PrecoPromocional = produto.PrecoPromocional,
+                Estoque = produto.Estoque,
+                ImagemUrl = produto.ImagemUrl,
+                Ativo = produto.Ativo,
+                MaisVendido = produto.MaisVendido,
+                RequerMaioridade = produto.RequerMaioridade,
+                Sabor = produto.Sabor,
+                Cor = produto.Cor,
+                BebidaVolumeMl = produto.BebidaVolumeMl,
+                BebidaTipo = produto.BebidaTipo,
+                BebidaEmbalagem = produto.BebidaEmbalagem ?? BebidaEmbalagemTipo.NaoInformado,
+                BebidaQtdPorEmbalagem = produto.BebidaQtdPorEmbalagem,
+                BebidaTeorAlcoolico = produto.BebidaTeorAlcoolico,
+                PodPuffs = produto.PodPuffs,
+                PodCapacidadeBateria = produto.PodCapacidadeBateria,
+                PodTipo = produto.PodTipo
             };
 
             return View(vm);
         }
 
+        [Authorize(Roles = "Lojista,Admin")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditarSimples(int id, ProdutoFormSimplesViewModel vm, string? SaborSelect, string? SaborOutro)
+        {
+            if (vm.Id != id) vm.Id = id;
+
+            if (IsPod(vm.TipoProduto))
+            {
+                var saborFinal = !string.IsNullOrWhiteSpace(SaborOutro) ? SaborOutro.Trim()
+                                : !string.IsNullOrWhiteSpace(SaborSelect) ? SaborSelect.Trim()
+                                : (vm.Sabor ?? "").Trim();
+
+                vm.Sabor = saborFinal;
+                vm.Cor = string.IsNullOrWhiteSpace(vm.Cor) ? vm.Cor : vm.Cor.Trim();
+
+                if (string.IsNullOrWhiteSpace(vm.Sabor))
+                    ModelState.AddModelError(nameof(vm.Sabor), "Informe o sabor do POD.");
+            }
+            else if (IsBebida(vm.TipoProduto))
+            {
+                vm.Sabor = "";
+                vm.Cor = "";
+            }
+            else
+            {
+                vm.Sabor = (vm.Sabor ?? "").Trim();
+                vm.Cor = string.IsNullOrWhiteSpace(vm.Cor) ? vm.Cor : vm.Cor.Trim();
+            }
+
+            return await SalvarSimplesUpdate(vm, "EditarSimples");
+        }
+
+        [Authorize(Roles = "Lojista,Admin")]
+        [HttpGet]
+        public IActionResult Editar(int id)
+        {
+            return RedirectToAction(nameof(EditarSimples), new { id });
+        }
 
         [Authorize(Roles = "Lojista,Admin")]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Criar(ProdutoFormViewModel vm)
+        public Task<IActionResult> Editar(int id, ProdutoFormSimplesViewModel vm, string? SaborSelect, string? SaborOutro)
         {
-            CarregarCategorias();
+            return EditarSimples(id, vm, SaborSelect, SaborOutro);
+        }
 
-            // ===== normaliza + limpa variações =====
-            vm.Variacoes = (vm.Variacoes ?? new())
-                .Where(v => !string.IsNullOrWhiteSpace(v.Nome))
-                .ToList();
+        private async Task<IActionResult> SalvarSimplesCreate(ProdutoFormSimplesViewModel vm, string submit, string viewName, string redirectNewAction)
+        {
+            CarregarCategoriasEnum();
+            if (IsPod(vm.TipoProduto))
+                CarregarSaboresPod(vm.Sabor);
+            else
+                ViewBag.Sabores = new List<SelectListItem>();
 
-            if (vm.Variacoes.Count == 0)
-                ModelState.AddModelError("", "Adicione pelo menos 1 variação (Unidade, Fardo, Caixa...).");
-
-            // ===== valida variações (server) =====
-            foreach (var v in vm.Variacoes)
+            if (Request.Form["Preco"].ToString().Contains(",") || Request.Form["PrecoPromocional"].ToString().Contains(","))
             {
-                var preco = ParseDecimalBR(v.PrecoTexto);
-                var promo = string.IsNullOrWhiteSpace(v.PrecoPromocionalTexto) ? (decimal?)null : ParseDecimalBR(v.PrecoPromocionalTexto);
-
-                if (preco <= 0)
-                    ModelState.AddModelError("", $"Preço inválido na variação: {v.Nome}");
-
-                if (promo.HasValue && promo.Value > 0 && promo.Value >= preco)
-                    ModelState.AddModelError("", $"Promo deve ser menor que o preço em: {v.Nome}");
+                ModelState.Remove(nameof(vm.Preco));
+                ModelState.Remove(nameof(vm.PrecoPromocional));
             }
 
+            NormalizeMoneyServerSide(vm);
+
+            if (IsPod(vm.TipoProduto) || IsBebida(vm.TipoProduto))
+                vm.RequerMaioridade = true;
+
+            if (IsBebida(vm.TipoProduto))
+            {
+                vm.Sabor = "";
+                vm.Cor = "";
+
+                var emb = vm.BebidaEmbalagem;
+                var exigeQtd = emb == BebidaEmbalagemTipo.Caixa
+                            || emb == BebidaEmbalagemTipo.Fardo
+                            || emb == BebidaEmbalagemTipo.Pack;
+
+                if (exigeQtd && (!vm.BebidaQtdPorEmbalagem.HasValue || vm.BebidaQtdPorEmbalagem <= 0))
+                {
+                    ModelState.AddModelError(nameof(vm.BebidaQtdPorEmbalagem), "Informe a quantidade por embalagem (ex.: 6, 12, 24).");
+                }
+            }
+
+            if (vm.PrecoPromocional.HasValue && vm.PrecoPromocional.Value > 0 && vm.PrecoPromocional.Value >= vm.Preco)
+                ModelState.AddModelError(nameof(vm.PrecoPromocional), "Promo deve ser menor que o preço.");
+
             if (!ModelState.IsValid)
-                return View(vm);
+                return View(viewName, vm);
 
             var lojaId = GetLojaIdOrFail();
 
             var produto = new ProdutoModel
             {
                 LojaId = lojaId,
+                TipoProduto = vm.TipoProduto,
                 Nome = vm.Nome,
                 Descricao = vm.Descricao,
                 Marca = vm.Marca,
                 SKU = vm.SKU,
                 CodigoBarras = vm.CodigoBarras,
                 CategoriaId = vm.CategoriaId,
-                RequerMaioridade = vm.RequerMaioridade,
+                BebidaVolumeMl = IsBebida(vm.TipoProduto) ? vm.BebidaVolumeMl : null,
+                BebidaTipo = IsBebida(vm.TipoProduto) ? vm.BebidaTipo?.Trim() : null,
+                BebidaEmbalagem = IsBebida(vm.TipoProduto) ? vm.BebidaEmbalagem : null,
+                BebidaQtdPorEmbalagem = IsBebida(vm.TipoProduto) ? vm.BebidaQtdPorEmbalagem : null,
+                BebidaTeorAlcoolico = IsBebida(vm.TipoProduto) ? vm.BebidaTeorAlcoolico : null,
+                Preco = vm.Preco,
+                PrecoPromocional = (vm.PrecoPromocional.HasValue && vm.PrecoPromocional.Value > 0) ? vm.PrecoPromocional : null,
+                EmPromocao = vm.PrecoPromocional.HasValue && vm.PrecoPromocional.Value > 0 && vm.PrecoPromocional.Value < vm.Preco,
+                Estoque = vm.Estoque < 0 ? 0 : vm.Estoque,
                 Ativo = vm.Ativo,
                 MaisVendido = vm.MaisVendido,
-                EmPromocao = vm.EmPromocao,
-                DataCadastro = DateTime.Now
+                RequerMaioridade = vm.RequerMaioridade,
+                DataCadastro = DateTime.Now,
+                PodPuffs = IsPod(vm.TipoProduto) ? vm.PodPuffs : null,
+                PodCapacidadeBateria = IsPod(vm.TipoProduto) ? vm.PodCapacidadeBateria?.Trim() : null,
+                PodTipo = IsPod(vm.TipoProduto) ? vm.PodTipo?.Trim() : null,
+                Sabor = IsPod(vm.TipoProduto) ? (vm.Sabor ?? "").Trim()
+                      : IsBebida(vm.TipoProduto) ? ""
+                      : (vm.Sabor ?? "").Trim(),
+                Cor = IsBebida(vm.TipoProduto) ? "" : (string.IsNullOrWhiteSpace(vm.Cor) ? vm.Cor : vm.Cor!.Trim())
             };
 
-            // imagem opcional
             if (vm.ImagemUpload is { Length: > 0 })
             {
-                var erroImg = ValidateImage(vm.ImagemUpload, out var extLower);
+                var erroImg = ValidateImage(vm.ImagemUpload, out _);
                 if (erroImg != null)
                 {
                     ModelState.AddModelError(nameof(vm.ImagemUpload), erroImg);
-                    return View(vm);
+                    return View(viewName, vm);
                 }
 
-                var pastaUploads = Path.Combine(_hostEnvironment.WebRootPath, "imagens/produtos");
-                Directory.CreateDirectory(pastaUploads);
-
-                var fileName = MakeShortFileName(produto.Nome, extLower);
-                var caminho = Path.Combine(pastaUploads, fileName);
-
-                using var fs = new FileStream(caminho, FileMode.Create);
-                await vm.ImagemUpload.CopyToAsync(fs);
-
-                produto.ImagemUrl = $"/imagens/produtos/{fileName}";
+                produto.ImagemUrl = await SaveImageAndReturnUrl(vm.ImagemUpload, produto.Nome);
             }
-
-            // variações
-            foreach (var v in vm.Variacoes)
-            {
-                var preco = ParseDecimalBR(v.PrecoTexto);
-                var promo = string.IsNullOrWhiteSpace(v.PrecoPromocionalTexto) ? (decimal?)null : ParseDecimalBR(v.PrecoPromocionalTexto);
-
-                produto.Variacoes.Add(new ProdutoVariacaoModel
-                {
-                    Nome = v.Nome.Trim(),
-                    Multiplicador = v.Multiplicador <= 0 ? 1 : v.Multiplicador,
-                    Preco = preco,
-                    PrecoPromocional = (promo.HasValue && promo.Value > 0) ? promo : null,
-                    Estoque = v.Estoque,
-                    SKU = v.SKU,
-                    CodigoBarras = v.CodigoBarras,
-                    Ativo = v.Ativo
-                });
-            }
-
-            // ✅ estoque total correto (ATIVOS × multiplicador)
-            produto.Estoque = produto.Variacoes
-                .Where(x => x.Ativo)
-                .Sum(x => x.Estoque * x.Multiplicador);
 
             _context.Produtos.Add(produto);
             await _context.SaveChangesAsync();
 
-            FlashOk("Produto cadastrado com variações!");
+            FlashOk("Produto cadastrado!");
+
+            if (string.Equals(submit, "save_new", StringComparison.OrdinalIgnoreCase))
+                return RedirectToAction(redirectNewAction);
+
             return RedirectToAction(nameof(Index));
         }
 
-
-
-        [Authorize(Roles = "Lojista,Admin")]
-        [HttpGet]
-        public IActionResult Editar(int id)
+        private async Task<IActionResult> SalvarSimplesUpdate(ProdutoFormSimplesViewModel vm, string viewName)
         {
-            var produto = _context.Produtos
-                .Include(p => p.Variacoes)
-                .FirstOrDefault(p => p.Id == id && p.Ativo);
+            CarregarCategoriasEnum();
+            if (IsPod(vm.TipoProduto))
+                CarregarSaboresPod(vm.Sabor);
+            else
+                ViewBag.Sabores = new List<SelectListItem>();
 
-            if (produto == null)
+            if (Request.Form["Preco"].ToString().Contains(",") || Request.Form["PrecoPromocional"].ToString().Contains(","))
             {
-                FlashErr("Produto não encontrado");
-                return RedirectToAction(nameof(Index));
+                ModelState.Remove(nameof(vm.Preco));
+                ModelState.Remove(nameof(vm.PrecoPromocional));
             }
 
-            CarregarCategorias();
+            NormalizeMoneyServerSide(vm);
 
-            var ptbr = CultureInfo.GetCultureInfo("pt-BR");
+            if (IsPod(vm.TipoProduto) || IsBebida(vm.TipoProduto))
+                vm.RequerMaioridade = true;
 
-            var vm = new ProdutoFormViewModel
+            if (IsBebida(vm.TipoProduto))
             {
-                Id = produto.Id,
-                Nome = produto.Nome,
-                Descricao = produto.Descricao,
-                Marca = produto.Marca,
-                SKU = produto.SKU,
-                CodigoBarras = produto.CodigoBarras,
-                CategoriaId = produto.CategoriaId,
-                RequerMaioridade = produto.RequerMaioridade,
-                Ativo = produto.Ativo,
-                MaisVendido = produto.MaisVendido,
-                EmPromocao = produto.EmPromocao,
-                ImagemUrl = produto.ImagemUrl,
-                Variacoes = produto.Variacoes
-                    .OrderBy(v => v.Multiplicador)
-                    .Select(v => new ProdutoFormViewModel.ProdutoVariacaoFormRow
-                    {
-                        Id = v.Id,
-                        Nome = v.Nome,
-                        Multiplicador = v.Multiplicador,
-                        PrecoTexto = v.Preco.ToString("N2", ptbr),
-                        PrecoPromocionalTexto = v.PrecoPromocional.HasValue
-                            ? v.PrecoPromocional.Value.ToString("N2", ptbr)
-                            : "",
-                        Estoque = v.Estoque,
-                        SKU = v.SKU,
-                        CodigoBarras = v.CodigoBarras,
-                        Ativo = v.Ativo
-                    })
-                    .ToList()
-            };
+                vm.Sabor = "";
+                vm.Cor = "";
 
-            if (vm.Variacoes.Count == 0)
-                vm.Variacoes.Add(new()
+                var emb = vm.BebidaEmbalagem;
+                var exigeQtd = emb == BebidaEmbalagemTipo.Caixa
+                            || emb == BebidaEmbalagemTipo.Fardo
+                            || emb == BebidaEmbalagemTipo.Pack;
+
+                if (exigeQtd && (!vm.BebidaQtdPorEmbalagem.HasValue || vm.BebidaQtdPorEmbalagem <= 0))
                 {
-                    Nome = "Unidade",
-                    Multiplicador = 1,
-                    PrecoTexto = "0,01",
-                    PrecoPromocionalTexto = "",
-                    Estoque = 0
-                });
-
-            return View(vm);
-        }
-
-
-
-        [Authorize(Roles = "Lojista,Admin")]
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Editar(ProdutoFormViewModel vm)
-        {
-            if (vm.Id == null) return BadRequest();
-
-            var produto = _context.Produtos
-                .Include(p => p.Variacoes)
-                .FirstOrDefault(p => p.Id == vm.Id.Value);
-
-            if (produto == null)
-            {
-                FlashErr("Produto não encontrado");
-                return RedirectToAction(nameof(Index));
+                    ModelState.AddModelError(nameof(vm.BebidaQtdPorEmbalagem), "Informe a quantidade por embalagem (ex.: 6, 12, 24).");
+                }
             }
 
-            CarregarCategorias();
-
-            // ===== normaliza + limpa variações =====
-            vm.Variacoes = (vm.Variacoes ?? new())
-                .Where(v => !string.IsNullOrWhiteSpace(v.Nome))
-                .ToList();
-
-            if (vm.Variacoes.Count == 0)
-                ModelState.AddModelError("", "Adicione pelo menos 1 variação.");
-
-            // ===== valida variações (server) =====
-            foreach (var v in vm.Variacoes)
-            {
-                var preco = ParseDecimalBR(v.PrecoTexto);
-                var promo = string.IsNullOrWhiteSpace(v.PrecoPromocionalTexto) ? (decimal?)null : ParseDecimalBR(v.PrecoPromocionalTexto);
-
-                if (preco <= 0)
-                    ModelState.AddModelError("", $"Preço inválido na variação: {v.Nome}");
-
-                if (promo.HasValue && promo.Value > 0 && promo.Value >= preco)
-                    ModelState.AddModelError("", $"Promo deve ser menor que o preço em: {v.Nome}");
-            }
+            if (vm.PrecoPromocional.HasValue && vm.PrecoPromocional.Value > 0 && vm.PrecoPromocional.Value >= vm.Preco)
+                ModelState.AddModelError(nameof(vm.PrecoPromocional), "Promo deve ser menor que o preço.");
 
             if (!ModelState.IsValid)
-                return View(vm);
+                return View(viewName, vm);
 
-            // atualiza campos do produto
+            var lojaId = GetLojaIdOrFail();
+
+            var produto = await _context.Produtos
+                .FirstOrDefaultAsync(p => p.Id == vm.Id && p.LojaId == lojaId);
+
+            if (produto == null)
+            {
+                FlashErr("Produto não encontrado.");
+                return RedirectToAction(nameof(Index));
+            }
+
+            produto.TipoProduto = vm.TipoProduto;
+            produto.CategoriaId = vm.CategoriaId;
             produto.Nome = vm.Nome;
             produto.Descricao = vm.Descricao;
             produto.Marca = vm.Marca;
             produto.SKU = vm.SKU;
             produto.CodigoBarras = vm.CodigoBarras;
-            produto.CategoriaId = vm.CategoriaId;
-            produto.RequerMaioridade = vm.RequerMaioridade;
+            produto.Preco = vm.Preco;
+            produto.PrecoPromocional = (vm.PrecoPromocional.HasValue && vm.PrecoPromocional.Value > 0) ? vm.PrecoPromocional : null;
+            produto.EmPromocao = produto.PrecoPromocional.HasValue && produto.PrecoPromocional.Value > 0 && produto.PrecoPromocional.Value < produto.Preco;
+            produto.Estoque = vm.Estoque < 0 ? 0 : vm.Estoque;
+            produto.BebidaVolumeMl = IsBebida(vm.TipoProduto) ? vm.BebidaVolumeMl : null;
+            produto.BebidaTipo = IsBebida(vm.TipoProduto) ? vm.BebidaTipo?.Trim() : null;
+            produto.BebidaEmbalagem = IsBebida(vm.TipoProduto) ? vm.BebidaEmbalagem : null;
+            produto.BebidaQtdPorEmbalagem = IsBebida(vm.TipoProduto) ? vm.BebidaQtdPorEmbalagem : null;
+            produto.BebidaTeorAlcoolico = IsBebida(vm.TipoProduto) ? vm.BebidaTeorAlcoolico : null;
             produto.Ativo = vm.Ativo;
             produto.MaisVendido = vm.MaisVendido;
-            produto.EmPromocao = vm.EmPromocao;
+            produto.RequerMaioridade = vm.RequerMaioridade;
+            produto.PodPuffs = IsPod(vm.TipoProduto) ? vm.PodPuffs : null;
+            produto.PodCapacidadeBateria = IsPod(vm.TipoProduto) ? vm.PodCapacidadeBateria?.Trim() : null;
+            produto.PodTipo = IsPod(vm.TipoProduto) ? vm.PodTipo?.Trim() : null;
+            produto.Sabor = IsPod(vm.TipoProduto) ? (vm.Sabor ?? "").Trim()
+                         : IsBebida(vm.TipoProduto) ? ""
+                         : (vm.Sabor ?? "").Trim();
+            produto.Cor = IsBebida(vm.TipoProduto) ? "" : (string.IsNullOrWhiteSpace(vm.Cor) ? vm.Cor : vm.Cor!.Trim());
 
-            // imagem opcional
             if (vm.ImagemUpload is { Length: > 0 })
             {
-                var erroImg = ValidateImage(vm.ImagemUpload, out var extLower);
+                var erroImg = ValidateImage(vm.ImagemUpload, out _);
                 if (erroImg != null)
                 {
                     ModelState.AddModelError(nameof(vm.ImagemUpload), erroImg);
-                    return View(vm);
+                    return View(viewName, vm);
                 }
 
-                var uploads = Path.Combine(_hostEnvironment.WebRootPath, "imagens/produtos");
-                Directory.CreateDirectory(uploads);
-
-                if (!string.IsNullOrEmpty(produto.ImagemUrl))
-                {
-                    var oldPath = Path.Combine(_hostEnvironment.WebRootPath,
-                        produto.ImagemUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-                    if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
-                }
-
-                var fileName = MakeShortFileName(produto.Nome, extLower);
-                using var fs = System.IO.File.Create(Path.Combine(uploads, fileName));
-                await vm.ImagemUpload.CopyToAsync(fs);
-                produto.ImagemUrl = $"/imagens/produtos/{fileName}";
+                produto.ImagemUrl = await SaveImageAndReturnUrl(vm.ImagemUpload, produto.Nome);
             }
-
-            // ===== sincroniza variações =====
-            var idsNoForm = vm.Variacoes
-                .Where(x => x.Id.HasValue && x.Id.Value > 0)
-                .Select(x => x.Id!.Value)
-                .ToHashSet();
-
-            var paraRemover = produto.Variacoes.Where(v => !idsNoForm.Contains(v.Id)).ToList();
-            foreach (var r in paraRemover)
-                _context.ProdutoVariacoes.Remove(r);
-
-            foreach (var row in vm.Variacoes)
-            {
-                var preco = ParseDecimalBR(row.PrecoTexto);
-                var promo = string.IsNullOrWhiteSpace(row.PrecoPromocionalTexto) ? (decimal?)null : ParseDecimalBR(row.PrecoPromocionalTexto);
-
-                if (row.Id.HasValue && row.Id.Value > 0)
-                {
-                    var ent = produto.Variacoes.First(v => v.Id == row.Id.Value);
-                    ent.Nome = row.Nome.Trim();
-                    ent.Multiplicador = row.Multiplicador <= 0 ? 1 : row.Multiplicador;
-                    ent.Preco = preco;
-                    ent.PrecoPromocional = (promo.HasValue && promo.Value > 0) ? promo : null;
-                    ent.Estoque = row.Estoque;
-                    ent.SKU = row.SKU;
-                    ent.CodigoBarras = row.CodigoBarras;
-                    ent.Ativo = row.Ativo;
-                }
-                else
-                {
-                    produto.Variacoes.Add(new ProdutoVariacaoModel
-                    {
-                        Nome = row.Nome.Trim(),
-                        Multiplicador = row.Multiplicador <= 0 ? 1 : row.Multiplicador,
-                        Preco = preco,
-                        PrecoPromocional = (promo.HasValue && promo.Value > 0) ? promo : null,
-                        Estoque = row.Estoque,
-                        SKU = row.SKU,
-                        CodigoBarras = row.CodigoBarras,
-                        Ativo = row.Ativo
-                    });
-                }
-            }
-
-            // ✅ estoque total correto (ATIVOS × multiplicador)
-            produto.Estoque = produto.Variacoes
-                .Where(v => v.Ativo)
-                .Sum(v => v.Estoque * v.Multiplicador);
 
             await _context.SaveChangesAsync();
 
-            FlashOk("Produto e variações atualizados!");
+            FlashOk("Produto atualizado!");
             return RedirectToAction(nameof(Index));
         }
 
+        [Authorize(Roles = "Lojista,Admin")]
+        [HttpGet]
+        public IActionResult Excluir(int id)
+        {
+            var lojaId = GetLojaIdOrFail();
 
+            var produto = _context.Produtos
+                .AsNoTracking()
+                .Include(p => p.Categoria)
+                .FirstOrDefault(p => p.Id == id && p.LojaId == lojaId);
 
+            if (produto == null)
+            {
+                FlashErr("Produto não encontrado");
+                return RedirectToAction(nameof(Index));
+            }
+
+            return View(produto);
+        }
 
         [Authorize(Roles = "Lojista,Admin")]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult ConfirmarExcluir(int id)
+        public async Task<IActionResult> ConfirmarExcluir(int id)
         {
             try
             {
-                var produto = _produtoRepository.ObterPorId(id);
+                var lojaId = GetLojaIdOrFail();
+
+                var produto = await _context.Produtos
+                    .FirstOrDefaultAsync(p => p.Id == id && p.LojaId == lojaId);
+
                 if (produto == null)
                 {
                     FlashErr("Produto não encontrado");
                     return RedirectToAction(nameof(Index));
                 }
 
-                _produtoRepository.Remover(id);
-                FlashOk("Produto excluído com sucesso!");
+                produto.Ativo = false;
+                await _context.SaveChangesAsync();
+
+                FlashOk("Produto excluído (desativado) com sucesso!");
+                return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
                 FlashErr($"Erro ao excluir produto: {ex.Message}");
+                return RedirectToAction(nameof(Index));
             }
-
-            return RedirectToAction(nameof(Index));
         }
 
-        // ========= Auxiliares =========
-
-        private void CarregarCategorias()
+        private void CarregarCategoriasEnum()
         {
             var categorias = _categoriaRepository.ObterTodos()
                 .OrderBy(c => c.Nome)
@@ -545,7 +638,13 @@ namespace WebApplicationPods.Controllers
             ViewBag.Categorias = new SelectList(categorias, "Id", "Nome");
         }
 
-        [HttpGet]
+        private void CarregarSaboresPod(string? saborAtual)
+        {
+            var baseSabores = ObterTodosSabores();
+            var merged = MesclarSabores(baseSabores, new[] { saborAtual ?? "" });
+            ViewBag.Sabores = merged;
+        }
+
         private List<SelectListItem> ObterTodosSabores()
         {
             return new List<SelectListItem>
@@ -599,6 +698,21 @@ namespace WebApplicationPods.Controllers
             return null;
         }
 
+        private async Task<string> SaveImageAndReturnUrl(IFormFile file, string? productName)
+        {
+            var extLower = Path.GetExtension(file.FileName).ToLowerInvariant();
+            var pastaUploads = Path.Combine(_hostEnvironment.WebRootPath, "imagens/produtos");
+            Directory.CreateDirectory(pastaUploads);
+
+            var fileName = MakeShortFileName(productName, extLower);
+            var caminho = Path.Combine(pastaUploads, fileName);
+
+            using var fs = new FileStream(caminho, FileMode.Create);
+            await file.CopyToAsync(fs);
+
+            return $"/imagens/produtos/{fileName}";
+        }
+
         private static string MakeShortFileName(string? productName, string extLower)
         {
             var slug = Slugify(productName ?? "produto");
@@ -612,6 +726,33 @@ namespace WebApplicationPods.Controllers
         {
             var slug = Regex.Replace(s ?? "", "[^a-zA-Z0-9]+", "-").Trim('-');
             return slug.ToLowerInvariant();
+        }
+
+        private void NormalizeMoneyServerSide(ProdutoFormSimplesViewModel vm)
+        {
+            var precoRaw = GetRawFromModelState(nameof(vm.Preco));
+            if (!string.IsNullOrWhiteSpace(precoRaw))
+                vm.Preco = ParseDecimalBR(precoRaw);
+
+            var promoRaw = GetRawFromModelState(nameof(vm.PrecoPromocional));
+            if (!string.IsNullOrWhiteSpace(promoRaw))
+                vm.PrecoPromocional = ParseNullableDecimalBR(promoRaw);
+        }
+
+        private string? GetRawFromModelState(string key)
+        {
+            if (ModelState.TryGetValue(key, out var entry))
+                return entry.AttemptedValue;
+
+            return null;
+        }
+
+        private static decimal? ParseNullableDecimalBR(string? s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return null;
+
+            var d = ParseDecimalBR(s);
+            return d <= 0 ? null : d;
         }
 
         private static decimal ParseDecimalBR(string? s)
@@ -628,6 +769,13 @@ namespace WebApplicationPods.Controllers
 
             return decimal.TryParse(s, NumberStyles.Number, CultureInfo.InvariantCulture, out var d) ? d : 0m;
         }
+    }
 
+    public enum ProdutoCategoriaEnum
+    {
+        Bebidas = 1,
+        Pods = 2,
+        Doces = 3,
+        Snacks = 4
     }
 }

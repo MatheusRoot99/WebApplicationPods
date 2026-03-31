@@ -1,383 +1,559 @@
 ﻿@using System.Globalization
+@using WebApplicationPods.Enum
 @model WebApplicationPods.Models.ProdutoDetalhesViewModel
+
 @{
-    Layout = "~/Views/Shared/_Layout.cshtml";
     Layout = "_Layout";
     ViewData["Title"] = Model?.Produto?.Nome ?? "Produto";
 
-    var temPromocao = Model?.Produto?.PrecoPromocional.HasValue == true && Model.Produto.PrecoPromocional!.Value < Model.Produto.Preco;
-    var precoBase = temPromocao ? Model!.Produto!.PrecoPromocional!.Value : Model!.Produto!.Preco;
+    var produto = Model?.Produto;
+    if (produto == null)
+    {
+        <div class="container py-5">
+            <div class="alert alert-warning">Produto não encontrado.</div>
+        </div>
+        return;
+    }
 
-    var precoAvista = Math.Round(precoBase * 0.90m, 2);
+    var temPromocao = produto.PrecoPromocional.HasValue
+        && produto.PrecoPromocional.Value > 0
+        && produto.PrecoPromocional.Value < produto.Preco;
+
+    var precoAtual = temPromocao ? produto.PrecoPromocional!.Value : produto.Preco;
+    var precoPix = Math.Round(precoAtual * 0.95m, 2);
+
+    var isPod = produto.TipoProduto == ProdutoTipo.PodVape;
+    var isBebida = produto.TipoProduto == ProdutoTipo.BebidaAlcoolica;
+    var isPadrao = !isPod && !isBebida;
+
     var totalSabores = Model?.SaboresDisponiveis?.Count ?? 0;
     var totalSaboresComEstoque = Model?.SaboresDisponiveis?.Count(s => s.Quantidade > 0) ?? 0;
-}
 
-<!-- CSS específico desta página -->
-<link rel="stylesheet" href="~/css/produto-detalhes.css" asp-append-version="true" />
+    string tipoLabel = isPod ? "Pod" : isBebida ? "Bebida alcoólica" : "Produto";
+    string disponibilidade = produto.Estoque > 0 ? "Em estoque" : "Esgotado";
+    var desconto = temPromocao ? (int)Math.Round(100 - (precoAtual / produto.Preco * 100)) : 0;
+}
 
 @section Styles {
-    <style>
-        /* ===== respiro APENAS nesta página para conviver com o BottomNav ===== */
-        .produto-detalhes-container {
-            padding-bottom: calc(var(--mbn-height) + env(safe-area-inset-bottom) + 16px) !important;
-        }
-
-        /* desktop não precisa do respiro extra */
-        @@media (min-width: 992px) {
-            .produto-detalhes-container
-
-        {
-            padding-bottom: 2rem !important;
-        }
-
-        }
-
-        /* a CTA “gruda” acima do BottomNav no mobile */
-        @@media (max-width: 991.98px) {
-            .sticky-cta
-
-        {
-            position: sticky;
-            bottom: calc(var(--mbn-height) + env(safe-area-inset-bottom));
-            z-index: 5; /* acima do conteúdo, abaixo do BottomNav */
-        }
-
-        }
-    </style>
+    <link rel="stylesheet" href="~/css/produto-detalhes.css" asp-append-version="true" />
 }
 
-<!-- dados para JS -->
 <div id="product-data"
-     data-stock="@Model.Produto.Estoque"
-     data-is-out-of-stock="@(Model.Produto.Estoque <= 0 ? "true" : "false")"
-     data-resumo-url="@Url.Action("Resumo", "Carrinho")"
+     data-stock="@produto.Estoque"
+     data-is-out-of-stock="@(produto.Estoque <= 0 ? "true" : "false")"
      hidden></div>
 
-<!-- wrapper principal marcado como page-content -->
-<div class="produto-detalhes-container page-content" itemscope itemtype="https://schema.org/Product">
+<div class="pdp-page" itemscope itemtype="https://schema.org/Product">
 
-    <!-- voltar -->
-    <div class="navigation-header d-flex align-items-center gap-2 flex-wrap">
-        <a href="javascript:history.back()" class="btn-voltar btn btn-light d-inline-flex align-items-center">
-            <i class="fas fa-arrow-left me-2" aria-hidden="true"></i><span>Voltar</span>
+    <div class="pdp-topbar">
+        <a href="javascript:history.back()" class="pdp-back">
+            <i class="fas fa-arrow-left"></i>
+            <span>Voltar</span>
         </a>
+
+        <div class="pdp-topbar-badges">
+            <span class="pdp-chip pdp-chip-type">@tipoLabel</span>
+
+            @if (produto.RequerMaioridade)
+            {
+                <span class="pdp-chip pdp-chip-age">
+                    <i class="fas fa-ban"></i>
+                    18+
+                </span>
+            }
+
+            @if (produto.Estoque <= 0)
+            {
+                <span class="pdp-chip pdp-chip-out">Esgotado</span>
+            }
+            else if (temPromocao)
+            {
+            }
+            else
+            {
+                <span class="pdp-chip pdp-chip-in">Disponível</span>
+            }
+        </div>
     </div>
 
-    <!-- título + rating -->
-    <header class="product-header">
-        <h1 class="product-title" itemprop="name">@Model.Produto.Nome</h1>
-        <div class="product-rating" aria-label="Avaliação média 4,8 de 5">
-            <div class="stars" aria-hidden="true">
-                <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                <i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
-            </div>
-            <span class="rating-text">
-                <span itemprop="aggregateRating" itemscope itemtype="https://schema.org/AggregateRating">
-                    <span itemprop="ratingValue">4.8</span> (<span itemprop="reviewCount">42</span> avaliações)
-                </span>
-            </span>
-            <a href="#reviews" class="review-link">Ver avaliações</a>
-        </div>
-    </header>
-
-    <!-- grid principal -->
-    <div class="produto-main-content">
-        <!-- coluna imagem -->
-        <div class="produto-image-column">
-            <div class="product-image-container">
-                @if (!string.IsNullOrEmpty(Model!.Produto!.ImagemUrl))
+    <section class="pdp-hero">
+        <div class="pdp-gallery-card">
+            <div class="pdp-gallery-stage">
+                @if (!string.IsNullOrWhiteSpace(produto.ImagemUrl))
                 {
-                    <img src="@Url.Content(Model.Produto.ImagemUrl)"
-                         class="product-main-image"
-                         alt="Imagem do produto @Model.Produto.Nome"
-                         loading="lazy" decoding="async"
-                         width="960" height="960"
+                    <img src="@Url.Content(produto.ImagemUrl)"
+                         alt="@produto.Nome"
+                         class="pdp-main-image"
+                         width="900"
+                         height="900"
+                         loading="lazy"
+                         decoding="async"
                          itemprop="image" />
                 }
                 else
                 {
-                    <div class="image-placeholder" aria-label="Imagem não disponível">
-                        <i class="fas fa-image" aria-hidden="true"></i>
+                    <div class="pdp-image-placeholder">
+                        <i class="fas fa-image"></i>
+                        <span>Imagem não disponível</span>
                     </div>
                 }
+            </div>
 
-                <ul class="product-badges" aria-label="Diferenciais do produto">
-                    <li class="badge-item"><i class="fas fa-truck" aria-hidden="true"></i><span>Entrega Rápida</span></li>
-                    <li class="badge-item"><i class="fas fa-shield-alt" aria-hidden="true"></i><span>Pagamento Seguro</span></li>
-                </ul>
+            <div class="pdp-trust-list">
+                <div class="pdp-trust-item">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Segura</span>
+                </div>
+
+                <div class="pdp-trust-item">
+                    <i class="fas fa-bolt"></i>
+                    <span>Rápida</span>
+                </div>
+
+                @if (produto.Estoque > 0)
+                {
+                    <div class="pdp-trust-item">
+                        <i class="fas fa-box-open"></i>
+                        <span>Entrega</span>
+                    </div>
+                }
             </div>
         </div>
 
-        <!-- coluna info -->
-        <div class="produto-info-column">
-            @if (Model.Produto.Estoque <= 0)
-            {
-                <span class="stock-badge out-of-stock" aria-live="polite">ESGOTADO</span>
-            }
-            else if (temPromocao)
-            {
-                <span class="stock-badge promotion" aria-live="polite">PROMOÇÃO</span>
-            }
+        <aside class="pdp-summary-card">
+            <header class="pdp-header">
+                <div class="pdp-header-main">
+                    <h1 class="pdp-title" itemprop="name">@produto.Nome</h1>
 
-            <!-- preço & pagamento -->
-            <section class="price-section" aria-label="Informações de preço" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+                    <div class="pdp-subline">
+                        @if (!string.IsNullOrWhiteSpace(produto.Marca))
+                        {
+                            <span class="pdp-brand">@produto.Marca</span>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(produto.SKU))
+                        {
+                            <span class="pdp-meta">SKU: @produto.SKU</span>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(produto.CodigoBarras))
+                        {
+                            <span class="pdp-meta">Cód. barras: @produto.CodigoBarras</span>
+                        }
+                    </div>
+                </div>
+            </header>
+
+            <section class="pdp-price-box pdp-price-box--clean" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
                 <meta itemprop="priceCurrency" content="BRL" />
-                <meta itemprop="price" content="@precoBase.ToString(CultureInfo.InvariantCulture)" />
-                <link itemprop="availability" href="https://schema.org/@(Model.Produto.Estoque > 0 ? "InStock" : "OutOfStock")" />
+                <meta itemprop="price" content="@precoAtual.ToString(CultureInfo.InvariantCulture)" />
+                <link itemprop="availability" href="https://schema.org/@(produto.Estoque > 0 ? "InStock" : "OutOfStock")" />
 
-                <div class="price-card">
-                    <div class="price-left">
+                <div class="pdp-price-top">
+                    <div class="pdp-price-main">
                         @if (temPromocao)
                         {
-                            <div class="price-wrapper">
-                                <span class="original-price">@Model.Produto.Preco.ToString("C")</span>
-                                <span class="current-price">@precoBase.ToString("C")</span>
-                                <span class="discount-badge">@((int)(100 - (precoBase * 100 / Model.Produto.Preco)))% OFF</span>
-                            </div>
-                        }
-                        else
-                        {
-                            <span class="current-price">@precoBase.ToString("C")</span>
+                            <span class="pdp-old-price">@produto.Preco.ToString("C")</span>
                         }
 
-                        <div class="pix-price-line"><!-- reservado --></div>
+                        <div class="pdp-price-line">
+                            <span class="pdp-current-price">@precoAtual.ToString("C")</span>
+
+                            @if (temPromocao)
+                            {
+                                <span class="pdp-discount-badge">
+                                    <i class="fas fa-tag"></i>
+                                    @desconto% OFF
+                                </span>
+                            }
+                        </div>
                     </div>
 
-                    <div class="stock-chip @(Model.Produto.Estoque > 0 ? "in" : "out")">
-                        <i class="fas @(Model.Produto.Estoque > 0 ? "fa-check-circle" : "fa-times-circle")"></i>
-                        @(Model.Produto.Estoque > 0 ? "Em estoque" : "Sem estoque")
+                    <div class="pdp-stock-badge @(produto.Estoque > 0 ? "is-in" : "is-out")">
+                        <i class="fas @(produto.Estoque > 0 ? "fa-check-circle" : "fa-times-circle")"></i>
+                        <span>@disponibilidade</span>
                     </div>
-                </div>
-
-                <div class="pay-options" role="group" aria-label="Opções de pagamento">
-                    <div class="pay-chip"><i class="fas fa-credit-card" aria-hidden="true"></i><div><div class="chip-title">Cartão</div><div class="chip-sub">1x à vista</div></div></div>
-                    <div class="pay-chip"><i class="fas fa-qrcode" aria-hidden="true"></i><div><div class="chip-title">Pix</div><div class="chip-sub">à vista • @precoBase.ToString("C")</div></div></div>
-                    <div class="pay-chip"><i class="fas fa-money-bill-wave" aria-hidden="true"></i><div><div class="chip-title">Dinheiro</div><div class="chip-sub">@precoBase.ToString("C")</div></div></div>
                 </div>
             </section>
 
-            <!-- sabores -->
-            <section class="flavors-section" aria-labelledby="titulo-sabores">
-                <h3 id="titulo-sabores" class="section-title">
-                    Escolha o sabor
-                    <small class="muted">(@totalSaboresComEstoque de @totalSabores disponíveis)</small>
-                </h3>
-
-                <fieldset class="flavors-fieldset" role="radiogroup" aria-describedby="estoque-info">
-                    <legend class="sr-only">Sabores</legend>
-                    <div class="flavors-responsive-grid">
-                        @{
-                            var index = 0;
-                        }
-                        @foreach (var sabor in Model.SaboresDisponiveis)
+            <section class="pdp-highlights">
+                <div class="pdp-highlight-grid">
+                    @if (isPod)
+                    {
+                        @if (!string.IsNullOrWhiteSpace(produto.PodTipo))
                         {
-                            var saborId = $"flavor-{index++}";
-                            var parts = (sabor.Sabor ?? string.Empty).Split(new[] { " - " }, StringSplitOptions.None);
-                            var disabled = sabor.Quantidade <= 0;
-
-                            <div class="flavor-card @(disabled ? "is-disabled" : "")">
-                                <input type="radio"
-                                       name="flavor"
-                                       id="@saborId"
-                                       value="@sabor.Sabor"
-                                       class="flavor-radio"
-                                       data-estoque="@sabor.Quantidade"
-                                       @(disabled ? "disabled" : null)
-                                       required />
-                                <label for="@saborId" class="flavor-label" title="@sabor.Sabor">
-                                    @if (parts.Length > 1)
-                                    {
-                                        <span class="flavor-name-en">@parts[0]</span>
-                                        <span class="flavor-name-pt">@parts[1]</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="flavor-name-en">@sabor.Sabor</span>
-                                    }
-                                    @if (disabled)
-                                    {
-                                        <span class="flavor-badge out">Esgotado</span>
-                                    }
-                                </label>
+                            <div class="pdp-info-card is-wide">
+                                <span>Tipo</span>
+                                <strong>@produto.PodTipo</strong>
                             </div>
                         }
-                    </div>
-                </fieldset>
+                    }
+                    else if (isBebida)
+                    {
+                        @if (produto.BebidaVolumeMl.HasValue)
+                        {
+                            <div class="pdp-info-card">
+                                <span>Volume</span>
+                                <strong>@produto.BebidaVolumeMl.Value ml</strong>
+                            </div>
+                        }
 
-                <div class="mt-3 text-muted estoque-info" id="estoque-info" aria-live="polite" hidden>
-                    <i class="fas fa-boxes me-2" aria-hidden="true"></i>
-                    Estoque disponível: <span id="estoque-quantidade" class="fw-bold"></span> unidades
+                        @if (!string.IsNullOrWhiteSpace(produto.BebidaTipo))
+                        {
+                            <div class="pdp-info-card">
+                                <span>Tipo</span>
+                                <strong>@produto.BebidaTipo</strong>
+                            </div>
+                        }
+
+                        @if (produto.BebidaTeorAlcoolico.HasValue)
+                        {
+                            <div class="pdp-info-card">
+                                <span>Teor</span>
+                                <strong>@produto.BebidaTeorAlcoolico.Value.ToString("0.##")%</strong>
+                            </div>
+                        }
+
+                        @if (produto.BebidaQtdPorEmbalagem.HasValue && produto.BebidaQtdPorEmbalagem.Value > 0)
+                        {
+                            <div class="pdp-info-card">
+                                <span>Embalagem</span>
+                                <strong>@produto.BebidaQtdPorEmbalagem.Value un.</strong>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        @if (!string.IsNullOrWhiteSpace(produto.Sabor))
+                        {
+                            <div class="pdp-info-card is-wide">
+                                <span>Sabor</span>
+                                <strong>@produto.Sabor</strong>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(produto.Cor))
+                        {
+                            <div class="pdp-info-card">
+                                <span>Cor</span>
+                                <strong>@produto.Cor</strong>
+                            </div>
+                        }
+
+                        <div class="pdp-info-card">
+                            <span>Estoque</span>
+                            <strong>@produto.Estoque unidade(s)</strong>
+                        </div>
+                    }
                 </div>
-
-                @if (!Model.SaboresDisponiveis.Any())
-                {
-                    <div class="no-flavors" role="status">Nenhum sabor disponível no momento.</div>
-                }
             </section>
 
-            <!-- ações -->
-            <div class="action-buttons">
-                <div class="quantity-selector mb-3">
-                    <label for="quantity">Quantidade</label>
-                    <div class="quantity-control">
-                        <button type="button" class="quantity-btn minus" aria-label="Diminuir">-</button>
-                        <input type="number" id="quantity" name="quantity" value="1" min="1" max="@Model.Produto.Estoque" class="quantity-input" inputmode="numeric" pattern="[0-9]*">
-                        <button type="button" class="quantity-btn plus" aria-label="Aumentar">+</button>
+            @if (isPod && Model?.SaboresDisponiveis != null && Model.SaboresDisponiveis.Any())
+            {
+                <section class="pdp-flavors-box">
+                    <div class="pdp-section-head">
+                        <h3>Escolha o sabor</h3>
+                        <small>@totalSaboresComEstoque de @totalSabores disponível(is)</small>
+                    </div>
+
+                    <fieldset class="pdp-flavors-fieldset">
+                        <legend class="visually-hidden">Sabores disponíveis</legend>
+
+                        <div class="pdp-flavors-grid">
+                            @{
+                                var idx = 0;
+                            }
+
+                            @foreach (var sabor in Model.SaboresDisponiveis)
+                            {
+                                var saborId = $"sabor-{idx++}";
+                                var disabled = sabor.Quantidade <= 0;
+
+                                <div class="pdp-flavor-item @(disabled ? "is-disabled" : "")">
+                                    <input type="radio"
+                                           name="flavor"
+                                           id="@saborId"
+                                           value="@sabor.Sabor"
+                                           class="pdp-flavor-radio"
+                                           data-estoque="@sabor.Quantidade"
+                                           @(disabled ? "disabled" : null) />
+
+                                    <label for="@saborId" class="pdp-flavor-label">
+                                        <span class="pdp-flavor-name">@sabor.Sabor</span>
+                                        <small>@(disabled ? "Esgotado" : $"{sabor.Quantidade} em estoque")</small>
+                                    </label>
+                                </div>
+                            }
+                        </div>
+                    </fieldset>
+
+                    <div class="pdp-flavor-stock" id="estoque-info" hidden>
+                        <i class="fas fa-boxes"></i>
+                        Estoque do sabor: <strong id="estoque-quantidade"></strong>
+                    </div>
+                </section>
+            }
+
+            <section class="pdp-buy-box">
+                <div class="pdp-qty-wrap">
+                    <label for="quantity" class="pdp-qty-label">Quantidade</label>
+
+                    <div class="pdp-qty-control">
+                        <button type="button" class="pdp-qty-btn minus" aria-label="Diminuir">-</button>
+
+                        <input type="number"
+                               id="quantity"
+                               name="quantity"
+                               value="1"
+                               min="1"
+                               max="@(produto.Estoque > 0 ? produto.Estoque : 1)"
+                               class="pdp-qty-input" />
+
+                        <button type="button" class="pdp-qty-btn plus" aria-label="Aumentar">+</button>
                     </div>
                 </div>
 
-                <form asp-controller="Carrinho" asp-action="AdicionarItem" method="post" class="w-100" id="addToCartForm">
+                <form asp-controller="Carrinho" asp-action="AdicionarItem" method="post" id="addToCartForm" class="pdp-buy-form">
                     @Html.AntiForgeryToken()
-                    <input type="hidden" name="produtoId" value="@Model.Produto.Id">
-                    <input type="hidden" name="quantidade" id="quantidadeHidden" value="1">
-                    <input type="hidden" name="sabor" id="saborSelecionado" value="">
-                    <input type="hidden" name="observacoes" id="observacoesProduto" value="">
+                    <input type="hidden" name="produtoId" value="@produto.Id" />
+                    <input type="hidden" name="quantidade" id="quantidadeHidden" value="1" />
+                    <input type="hidden" name="sabor" id="saborSelecionado" value="" />
+                    <input type="hidden" name="observacoes" id="observacoesProduto" value="" />
+                    <input type="hidden" name="buyNow" id="buyNowHidden" value="false" />
 
-                    <button type="submit" class="btn-add-to-cart @(Model.Produto.Estoque <= 0 ? "disabled" : "")"
-                            @(Model.Produto.Estoque <= 0 ? "disabled" : null)
-                            aria-disabled="@(Model.Produto.Estoque <= 0)">
-                        <i class="fas fa-shopping-cart" aria-hidden="true"></i>
-                        @(Model.Produto.Estoque <= 0 ? "ESGOTADO" : "ADICIONAR AO CARRINHO")
-                    </button>
+                    <div class="pdp-buy-actions">
+                        <button type="submit"
+                                id="addToCartBtn"
+                                class="pdp-btn pdp-btn-primary"
+                                @(produto.Estoque <= 0 ? "disabled" : null)>
+                            <i class="fas fa-shopping-cart"></i>
+                            @(produto.Estoque <= 0 ? "Produto esgotado" : "Adicionar ao carrinho")
+                        </button>
+
+                        <button type="button"
+                                id="buyNowBtn"
+                                class="pdp-btn pdp-btn-secondary"
+                                @(produto.Estoque <= 0 ? "disabled" : null)>
+                            <i class="fas fa-bolt"></i>
+                            Comprar agora
+                        </button>
+                    </div>
                 </form>
+            </section>
+        </aside>
+    </section>
 
-                <button type="button"
-                        class="btn-buy-now mt-2 @(Model.Produto.Estoque <= 0 ? "disabled" : "")"
-                        @(Model.Produto.Estoque <= 0 ? "disabled" : null)
-                        aria-disabled="@(Model.Produto.Estoque <= 0)">
-                    <i class="fas fa-bolt" aria-hidden="true"></i> COMPRAR AGORA
-                </button>
+    <section class="pdp-tabs-section">
+        <div class="pdp-tabs-header" role="tablist">
+            <button class="pdp-tab-btn active" type="button" data-tab="descricao">Descrição</button>
+            <button class="pdp-tab-btn" type="button" data-tab="especificacoes">Especificações</button>
+            <button class="pdp-tab-btn" type="button" data-tab="informacoes">Info</button>
+        </div>
+
+        <div class="pdp-tab-pane active" data-pane="descricao">
+            <div class="pdp-content-card">
+                <h3>Descrição</h3>
+                <p>@(string.IsNullOrWhiteSpace(produto.Descricao) ? "Sem descrição cadastrada." : produto.Descricao)</p>
             </div>
         </div>
-    </div>
 
-    <!-- abas -->
-    <section class="product-details-tabs" aria-label="Detalhes do produto">
-        <div class="tabs-header" role="tablist">
-            <button class="tab-button active" role="tab" aria-selected="true" aria-controls="tab-description" id="tabbtn-description" data-tab="description">Descrição</button>
-            <button class="tab-button" role="tab" aria-selected="false" aria-controls="tab-specifications" id="tabbtn-specifications" data-tab="specifications">Especificações</button>
-            <button class="tab-button" role="tab" aria-selected="false" aria-controls="tab-reviews" id="tabbtn-reviews" data-tab="reviews">Avaliações</button>
+        <div class="pdp-tab-pane" data-pane="especificacoes">
+            <div class="pdp-content-card">
+                <h3>Especificações técnicas</h3>
+
+                <div class="pdp-specs-grid">
+                    <div class="pdp-spec-item">
+                        <span>Nome</span>
+                        <strong>@produto.Nome</strong>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(produto.Marca))
+                    {
+                        <div class="pdp-spec-item">
+                            <span>Marca</span>
+                            <strong>@produto.Marca</strong>
+                        </div>
+                    }
+
+                    <div class="pdp-spec-item">
+                        <span>Preço</span>
+                        <strong>@precoAtual.ToString("C")</strong>
+                    </div>
+
+                    <div class="pdp-spec-item">
+                        <span>Estoque</span>
+                        <strong>@produto.Estoque unidade(s)</strong>
+                    </div>
+
+                    @if (isPod)
+                    {
+                        @if (!string.IsNullOrWhiteSpace(produto.Sabor))
+                        {
+                            <div class="pdp-spec-item">
+                                <span>Sabor</span>
+                                <strong>@produto.Sabor</strong>
+                            </div>
+                        }
+                        @if (produto.PodPuffs.HasValue)
+                        {
+                            <div class="pdp-spec-item">
+                                <span>Puffs</span>
+                                <strong>@produto.PodPuffs.Value</strong>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(produto.PodCapacidadeBateria))
+                        {
+                            <div class="pdp-spec-item">
+                                <span>Bateria</span>
+                                <strong>@produto.PodCapacidadeBateria</strong>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(produto.PodTipo))
+                        {
+                            <div class="pdp-spec-item">
+                                <span>Tipo do pod</span>
+                                <strong>@produto.PodTipo</strong>
+                            </div>
+                        }
+                    }
+
+                    @if (isBebida)
+                    {
+                        @if (produto.BebidaVolumeMl.HasValue)
+                        {
+                            <div class="pdp-spec-item">
+                                <span>Volume</span>
+                                <strong>@produto.BebidaVolumeMl.Value ml</strong>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(produto.BebidaTipo))
+                        {
+                            <div class="pdp-spec-item">
+                                <span>Tipo</span>
+                                <strong>@produto.BebidaTipo</strong>
+                            </div>
+                        }
+                        @if (produto.BebidaEmbalagem.HasValue)
+                        {
+                            <div class="pdp-spec-item">
+                                <span>Embalagem</span>
+                                <strong>@produto.BebidaEmbalagem.Value</strong>
+                            </div>
+                        }
+                        @if (produto.BebidaQtdPorEmbalagem.HasValue)
+                        {
+                            <div class="pdp-spec-item">
+                                <span>Qtd. embalagem</span>
+                                <strong>@produto.BebidaQtdPorEmbalagem.Value</strong>
+                            </div>
+                        }
+                        @if (produto.BebidaTeorAlcoolico.HasValue)
+                        {
+                            <div class="pdp-spec-item">
+                                <span>Teor alcoólico</span>
+                                <strong>@produto.BebidaTeorAlcoolico.Value.ToString("0.##")%</strong>
+                            </div>
+                        }
+                    }
+
+                    @if (isPadrao)
+                    {
+                        @if (!string.IsNullOrWhiteSpace(produto.Sabor))
+                        {
+                            <div class="pdp-spec-item">
+                                <span>Sabor</span>
+                                <strong>@produto.Sabor</strong>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(produto.Cor))
+                        {
+                            <div class="pdp-spec-item">
+                                <span>Cor</span>
+                                <strong>@produto.Cor</strong>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
         </div>
 
-        <div class="tabs-content">
-            <div class="tab-pane active" id="tab-description" role="tabpanel" aria-labelledby="tabbtn-description">
-                <h3>Descrição do Produto</h3>
-                <p itemprop="description">@Model.Produto.Descricao</p>
+        <div class="pdp-tab-pane" data-pane="informacoes">
+            <div class="pdp-content-card">
+                <h3>Informações adicionais</h3>
 
-                <h4>Características</h4>
-                <ul class="features-list">
-                    <li><strong>@Model.Produto.Puffs puffs</strong> - Duração prolongada</li>
-                    <li><strong>@Model.Produto.CapacidadeBateria mAh</strong> - Bateria de alta capacidade</li>
-                    <li><strong>Design ergonômico</strong> - Confortável para uso diário</li>
-                    <li><strong>Variedade de sabores</strong> - Experiência sensorial única</li>
-                    <li><strong>Recarregável</strong> - Pode ser recarregado via USB</li>
+                <ul class="pdp-info-list">
+                    <li>Produto vendido por loja vinculada à plataforma.</li>
+                    <li>Disponibilidade sujeita à atualização de estoque.</li>
+
+                    @if (produto.RequerMaioridade)
+                    {
+                        <li>Venda permitida apenas para maiores de 18 anos.</li>
+                    }
+
+                    @if (isPod)
+                    {
+                        <li>Selecione o sabor antes de adicionar ao carrinho.</li>
+                    }
+
+                    @if (isBebida)
+                    {
+                        <li>Confira volume, embalagem e teor alcoólico antes da compra.</li>
+                    }
                 </ul>
-            </div>
-
-            <div class="tab-pane" id="tab-specifications" role="tabpanel" aria-labelledby="tabbtn-specifications">
-                <h3>Especificações Técnicas</h3>
-                <div class="specs-table">
-                    <div class="spec-row"><div class="spec-name">Modelo</div><div class="spec-value">@Model.Produto.Nome</div></div>
-                    <div class="spec-row"><div class="spec-name">Puffs</div><div class="spec-value">@Model.Produto.Puffs puffs</div></div>
-                    <div class="spec-row"><div class="spec-name">Capacidade da Bateria</div><div class="spec-value">@Model.Produto.CapacidadeBateria mAh</div></div>
-                    <div class="spec-row"><div class="spec-name">Tipo</div><div class="spec-value">Pod Descartável Recarregável</div></div>
-                    <div class="spec-row"><div class="spec-name">Sabores Disponíveis</div><div class="spec-value">@totalSabores opções</div></div>
-                    <div class="spec-row"><div class="spec-name">Garantia</div><div class="spec-value">6 meses contra defeitos de fabricação</div></div>
-                </div>
-            </div>
-
-            <div class="tab-pane" id="tab-reviews" role="tabpanel" aria-labelledby="tabbtn-reviews">
-                <h3 id="reviews">Avaliações dos Clientes</h3>
-                <div class="reviews-summary">
-                    <div class="rating-overview">
-                        <div class="average-rating">4.8</div>
-                        <div class="stars" aria-hidden="true">
-                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
-                        </div>
-                        <p>Baseado em 42 avaliações</p>
-                    </div>
-                    <div class="reviews-list">
-                        <div class="review-item">
-                            <div class="review-header">
-                                <h4>Ótimo produto!</h4>
-                                <div class="stars" aria-hidden="true">
-                                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                                    <i class="fas fa-star"></i><i class="fas fa-star"></i>
-                                </div>
-                            </div>
-                            <p class="review-text">"Comprei o sabor Melancia Ice e adorei! Duração excelente e sabor muito bom."</p>
-                            <p class="review-author">Por: João S. em 15/05/2023</p>
-                        </div>
-                        <div class="review-item">
-                            <div class="review-header">
-                                <h4>Recomendo</h4>
-                                <div class="stars" aria-hidden="true">
-                                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                                    <i class="fas fa-star"></i><i class="fas fa-star"></i>
-                                </div>
-                            </div>
-                            <p class="review-text">"Já é meu segundo pod dessa marca. O sabor de Menta Ice é refrescante e dura bastante."</p>
-                            <p class="review-author">Por: Maria L. em 10/05/2023</p>
-                        </div>
-                        <button class="btn-view-all-reviews" type="button">Ver todas as avaliações</button>
-                    </div>
-                </div>
             </div>
         </div>
     </section>
 
-    @if (Model.ProdutosRelacionados != null && Model.ProdutosRelacionados.Any())
+    @if (Model?.ProdutosRelacionados != null && Model.ProdutosRelacionados.Any())
     {
-        <section class="related-products-section" aria-label="Produtos relacionados">
-            <h2 class="section-title">Você também pode gostar:</h2>
-            <div class="related-products-grid">
+        <section class="pdp-related-section">
+            <div class="pdp-related-head">
+                <h2>Produtos relacionados</h2>
+                <p>Outras opções que podem combinar com esta compra.</p>
+            </div>
+
+            <div class="pdp-related-grid">
                 @foreach (var pr in Model.ProdutosRelacionados)
                 {
-                    var temPromo = pr.PrecoPromocional.HasValue && pr.PrecoPromocional.Value < pr.Preco;
-                    var precoAtual = temPromo ? pr.PrecoPromocional!.Value : pr.Preco;
+                    var prTemPromo = pr.PrecoPromocional.HasValue && pr.PrecoPromocional.Value > 0 && pr.PrecoPromocional.Value < pr.Preco;
+                    var prPreco = prTemPromo ? pr.PrecoPromocional!.Value : pr.Preco;
 
-                    <article class="related-product-card" itemscope itemtype="https://schema.org/Product">
-                        <a asp-controller="Produto" asp-action="DetalhesProdutos" asp-route-id="@pr.Id" class="card-link" aria-label="Ver @pr.Nome" itemprop="url">
-                            <div class="product-image">
-                                @if (!string.IsNullOrEmpty(pr.ImagemUrl))
+                    <article class="pdp-related-card">
+                        <a asp-controller="Produto" asp-action="Detalhes" asp-route-id="@pr.Id" class="pdp-related-link">
+                            <div class="pdp-related-image">
+                                @if (!string.IsNullOrWhiteSpace(pr.ImagemUrl))
                                 {
-                                    <img src="@pr.ImagemUrl" alt="@pr.Nome" loading="lazy" decoding="async" width="480" height="480" itemprop="image" />
+                                    <img src="@Url.Content(pr.ImagemUrl)" alt="@pr.Nome" loading="lazy" decoding="async" />
                                 }
                                 else
                                 {
-                                    <div class="image-placeholder"><i class="fas fa-image" aria-hidden="true"></i></div>
+                                    <div class="pdp-related-placeholder">
+                                        <i class="fas fa-image"></i>
+                                    </div>
                                 }
-                                @if (temPromo)
+
+                                @if (prTemPromo)
                                 {
-                                    <span class="ribbon">Promo</span>
+                                    <span class="pdp-related-ribbon">Promo</span>
                                 }
                             </div>
 
-                            <div class="product-info">
-                                <h3 class="product-name" itemprop="name">@pr.Nome</h3>
-                                <div class="product-price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
-                                    <meta itemprop="priceCurrency" content="BRL" />
-                                    @if (temPromo)
-                                    {
-                                        <span class="old-price">@pr.Preco.ToString("C")</span>
-                                    }
-                                    <span class="price" itemprop="price">@precoAtual.ToString("C")</span>
-                                </div>
-                                <div class="mini-flags">
-                                    @if (pr.Estoque <= 0)
-                                    {
-                                        <span class="tag out">Esgotado</span>
-                                    }
-                                    else
-                                    {
+                            <div class="pdp-related-body">
+                                <h3>@pr.Nome</h3>
 
-                                        <span class="tag in">Em estoque</span>
+                                <div class="pdp-related-price">
+                                    @if (prTemPromo)
+                                    {
+                                        <span class="old">@pr.Preco.ToString("C")</span>
                                     }
+
+                                    <span class="new">@prPreco.ToString("C")</span>
+                                </div>
+
+                                <div class="pdp-related-status @(pr.Estoque > 0 ? "is-in" : "is-out")">
+                                    @(pr.Estoque > 0 ? "Em estoque" : "Esgotado")
                                 </div>
                             </div>
-                            <span class="stretched"></span>
                         </a>
                     </article>
                 }
@@ -386,47 +562,191 @@
     }
 </div>
 
-@* <!-- Sticky CTA (mobile) -->
-<div class="sticky-cta @(Model.Produto.Estoque <= 0 ? "disabled" : "")">
-    <div class="sticky-price">
-        <span class="sticky-price-main">@precoBase.ToString("C")</span>
-        @* <span class="sticky-price-sub">Pix: @precoAvista.ToString("C")</span> 
-    </div>
-    <button class="sticky-btn" @(Model.Produto.Estoque <= 0 ? "disabled" : null)
-            onclick="document.getElementById('addToCartForm')?.requestSubmit()">
-        <i class="fas fa-cart-plus"></i> Adicionar
-    </button>
-</div>
- *@
 @section Scripts {
-    <script src="~/js/Detalhe-form.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            const qtd = document.getElementById('quantity');
+            const qtdHidden = document.getElementById('quantidadeHidden');
+            const minus = document.querySelector('.pdp-qty-btn.minus');
+            const plus = document.querySelector('.pdp-qty-btn.plus');
+            const mobileAdd = document.getElementById('mobileAddToCartBtn');
+            const form = document.getElementById('addToCartForm');
+            const addToCartBtn = document.getElementById('addToCartBtn');
+            const buyNowBtn = document.getElementById('buyNowBtn');
+            const buyNowHidden = document.getElementById('buyNowHidden');
+            const flavorRadios = document.querySelectorAll('.pdp-flavor-radio');
+            const max = parseInt(qtd?.max || '1', 10);
+
+            function normalizeQty() {
+                if (!qtd) return;
+
+                let value = parseInt(qtd.value || '1', 10);
+                if (isNaN(value) || value < 1) value = 1;
+                if (value > max) value = max;
+
+                qtd.value = value;
+                if (qtdHidden) qtdHidden.value = value;
+            }
+
+            function hasFlavorOptions() {
+                return flavorRadios.length > 0;
+            }
+
+            function getSelectedFlavor() {
+                return document.querySelector('.pdp-flavor-radio:checked');
+            }
+
+            function flavorIsRequiredAndMissing() {
+                if (!hasFlavorOptions()) return false;
+                return !getSelectedFlavor();
+            }
+
+            function updateButtonsState() {
+                const missingFlavor = flavorIsRequiredAndMissing();
+
+                if (addToCartBtn) {
+                    addToCartBtn.disabled = missingFlavor;
+                    addToCartBtn.title = missingFlavor ? 'Selecione um sabor antes de continuar.' : '';
+                }
+
+                if (buyNowBtn) {
+                    buyNowBtn.disabled = missingFlavor;
+                    buyNowBtn.title = missingFlavor ? 'Selecione um sabor antes de continuar.' : '';
+                }
+            }
+
+            minus?.addEventListener('click', function () {
+                if (!qtd) return;
+                qtd.stepDown();
+                normalizeQty();
+            });
+
+            plus?.addEventListener('click', function () {
+                if (!qtd) return;
+                qtd.stepUp();
+                normalizeQty();
+            });
+
+            qtd?.addEventListener('input', normalizeQty);
+            qtd?.addEventListener('change', normalizeQty);
+
+            mobileAdd?.addEventListener('click', function () {
+                if (!form) return;
+
+                normalizeQty();
+
+                if (flavorIsRequiredAndMissing()) {
+                    alert('Selecione um sabor antes de continuar.');
+                    return;
+                }
+
+                if (buyNowHidden) buyNowHidden.value = 'false';
+                form.requestSubmit();
+            });
+
+            buyNowBtn?.addEventListener('click', function () {
+                if (!form) return;
+
+                normalizeQty();
+
+                if (flavorIsRequiredAndMissing()) {
+                    alert('Selecione um sabor antes de continuar.');
+                    return;
+                }
+
+                if (buyNowHidden) buyNowHidden.value = 'true';
+                form.requestSubmit();
+            });
+
+            form?.addEventListener('submit', function (event) {
+                normalizeQty();
+
+                if (flavorIsRequiredAndMissing()) {
+                    event.preventDefault();
+                    alert('Selecione um sabor antes de continuar.');
+                    return;
+                }
+
+                const active = document.activeElement;
+                if (!active || active.id !== 'buyNowBtn') {
+                    if (buyNowHidden) buyNowHidden.value = 'false';
+                }
+            });
+
+            flavorRadios.forEach(radio => {
+                radio.addEventListener('change', updateButtonsState);
+            });
+
+            normalizeQty();
+            updateButtonsState();
+        })();
+
+        (function () {
+            const radios = document.querySelectorAll('.pdp-flavor-radio');
+            const hidden = document.getElementById('saborSelecionado');
+            const info = document.getElementById('estoque-info');
+            const span = document.getElementById('estoque-quantidade');
+
+            radios.forEach(r => {
+                r.addEventListener('change', function (e) {
+                    const value = e.target.value;
+                    const estoque = e.target.getAttribute('data-estoque') || '0';
+
+                    if (hidden) hidden.value = value;
+
+                    if (info && span) {
+                        span.textContent = estoque;
+                        info.hidden = false;
+                    }
+                });
+            });
+        })();
+
+        (function () {
+            const tabs = document.querySelectorAll('.pdp-tab-btn');
+            const panes = document.querySelectorAll('.pdp-tab-pane');
+
+            tabs.forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const tab = btn.getAttribute('data-tab');
+
+                    tabs.forEach(x => x.classList.remove('active'));
+                    panes.forEach(x => x.classList.remove('active'));
+
+                    btn.classList.add('active');
+                    document.querySelector(`.pdp-tab-pane[data-pane="${tab}"]`)?.classList.add('active');
+                });
+            });
+        })();
+    </script>
 
     <script>
-        // quantidade -> hidden (fallback simples)
-        (function () {
-          const qtd = document.getElementById('quantity');
-          const qtdHidden = document.getElementById('quantidadeHidden');
-          const minus = document.querySelector('.quantity-btn.minus');
-          const plus  = document.querySelector('.quantity-btn.plus');
-          function sync(){ if(qtdHidden) qtdHidden.value = qtd.value; }
-          minus?.addEventListener('click',()=>{ qtd.stepDown(); sync(); });
-          plus?.addEventListener('click', ()=>{ qtd.stepUp();   sync(); });
-          qtd?.addEventListener('input', sync);
-        })();
+        document.addEventListener("DOMContentLoaded", function () {
+            const form = document.getElementById("addToCartForm");
+            const buyNowBtn = document.getElementById("buyNowBtn");
+            const addToCartBtn = document.getElementById("addToCartBtn");
+            const buyNowHidden = document.getElementById("buyNowHidden");
 
-        // sabor -> hidden + info (fallback simples)
-        (function () {
-          const radios = document.querySelectorAll('.flavor-radio');
-          const hidden = document.getElementById('saborSelecionado');
-          const info   = document.getElementById('estoque-info');
-          const span   = document.getElementById('estoque-quantidade');
-          radios.forEach(r => {
-            r.addEventListener('change', (e) => {
-              if (hidden) hidden.value = e.target.value;
-              const est = e.target.getAttribute('data-estoque');
-              if (info && span) { span.textContent = est || '0'; info.hidden = false; }
+            if (!form || !buyNowBtn || !buyNowHidden) return;
+
+            buyNowBtn.addEventListener("click", function () {
+                buyNowHidden.value = "true";
+                form.submit();
             });
-          });
-        })();
+
+            if (addToCartBtn) {
+                addToCartBtn.addEventListener("click", function () {
+                    buyNowHidden.value = "false";
+                });
+            }
+
+            form.addEventListener("submit", function () {
+                if (document.activeElement && document.activeElement.id !== "buyNowBtn") {
+                    if (buyNowHidden.value !== "true") {
+                        buyNowHidden.value = "false";
+                    }
+                }
+            });
+        });
     </script>
 }

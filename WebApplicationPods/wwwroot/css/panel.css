@@ -1,33 +1,28 @@
 ﻿/* =========================================================
    panel.css — UI padrão para Admin/Lojista
-   Depende do site.css (tokens: --bg, --text, --muted, --border,
-   --primary, --primary-dark, --primary-grad, --shadow-1, --radius-lg)
    ========================================================= */
 
-/* Wrapper padrão (opcional): aplique class="panel" no container mais externo */
-.panel,
-.panel-page {
+/* Wrapper */
+.panel, .panel-page {
     color: var(--text);
 }
 
-/* Head de página (título + ações) */
+/* Head */
 .panel-head {
     display: flex;
     flex-wrap: wrap;
     align-items: end;
     justify-content: space-between;
     gap: .75rem 1rem;
-    padding: 0;
 }
 
-    .panel-head h1,
-    .panel-head h2 {
+    .panel-head h1, .panel-head h2 {
         margin: 0;
         font-weight: 900;
-        letter-spacing: -0.3px;
+        letter-spacing: -.3px;
     }
 
-/* Card “header row” (ex: filtros/topbar) */
+/* Bar */
 .panel-bar {
     background: var(--bg-elev-2);
     border: 1px solid var(--border);
@@ -36,15 +31,14 @@
     padding: .95rem 1rem;
 }
 
-/* Toolbar forms (filtros) */
+/* Toolbar */
 .panel-toolbar .form-label {
     font-weight: 800;
     color: var(--text);
     margin-bottom: .35rem;
 }
 
-.panel-toolbar .form-control,
-.panel-toolbar .form-select {
+.panel-toolbar .form-control, .panel-toolbar .form-select {
     border-radius: 12px;
 }
 
@@ -53,7 +47,7 @@
     font-weight: 800;
 }
 
-/* Botões “brand” padrão */
+/* Buttons */
 .btn-brand {
     background: var(--primary-grad);
     color: #fff;
@@ -77,7 +71,7 @@
     padding: .55rem 1rem;
     font-weight: 900;
     background: transparent;
-    transition: background .12s ease, color .12s ease;
+    transition: background .12s ease,color .12s ease;
 }
 
     .btn-outline-brand:hover {
@@ -85,7 +79,7 @@
         color: #fff;
     }
 
-/* KPIs padrão */
+/* KPI */
 .panel-kpis .kpi-card {
     position: relative;
     overflow: hidden;
@@ -115,10 +109,10 @@
     margin-top: .1rem;
     font-weight: 1000;
     font-size: 1.25rem;
-    letter-spacing: -0.2px;
+    letter-spacing: -.2px;
 }
 
-/* Tabelas “bonitas” padrão */
+/* Table */
 .panel-table-wrap {
     background: var(--bg-elev-2);
     border: 1px solid var(--border);
@@ -143,15 +137,15 @@
     .panel-table td {
         padding: 1rem;
         vertical-align: middle;
-        border-color: color-mix(in srgb, var(--border) 80%, transparent);
+        border-color: color-mix(in srgb,var(--border) 80%, transparent);
         color: var(--text);
     }
 
     .panel-table tbody tr:hover {
-        background: color-mix(in srgb, var(--primary) 6%, transparent);
+        background: color-mix(in srgb,var(--primary) 6%, transparent);
     }
 
-/* “Pill badge” (ex: LIVE) */
+/* Pills */
 .panel-pill {
     background: var(--primary-grad);
     color: #fff;
@@ -161,95 +155,8 @@
     font-weight: 900;
 }
 
-/* Status legend (bolinhas) */
-.panel-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: .45rem 1rem;
-}
-
-    .panel-legend .legend-item {
-        font-size: .9rem;
-        color: var(--muted);
-        display: inline-flex;
-        align-items: center;
-        gap: .4rem;
-        font-weight: 700;
-    }
-
-    .panel-legend .dot {
-        width: .65rem;
-        height: .65rem;
-        border-radius: 50%;
-        background: #cbd5e1;
-    }
-
-        .panel-legend .dot.info {
-            background: var(--bs-info, #0dcaf0);
-        }
-
-        .panel-legend .dot.primary {
-            background: var(--primary, #0d6efd);
-        }
-
-        .panel-legend .dot.warning {
-            background: var(--bs-warning, #ffc107);
-        }
-
-        .panel-legend .dot.secondary {
-            background: var(--bs-secondary, #6c757d);
-        }
-
-        .panel-legend .dot.dark {
-            background: color-mix(in srgb, var(--text) 90%, transparent);
-        }
-
-        .panel-legend .dot.danger {
-            background: var(--bs-danger, #dc3545);
-        }
-
-/* Busca rápida */
-.panel-search .input-group-text,
-.panel-search .form-control {
-    border-radius: 12px;
-}
-
-/* Skeleton simples (para listas/tabelas) */
-.panel-skeleton {
-    display: grid;
-    gap: .5rem;
-    padding: .75rem 0;
-}
-
-    .panel-skeleton .sk-line {
-        height: 12px;
-        background: linear-gradient(90deg,#f2f4f8 25%,#e9eef5 37%,#f2f4f8 63%);
-        background-size: 400% 100%;
-        animation: panelSk 1.2s ease-in-out infinite;
-        border-radius: 6px;
-    }
-
-html[data-theme="dark"] .panel-skeleton .sk-line {
-    background: linear-gradient(90deg, rgba(255,255,255,.06) 25%, rgba(255,255,255,.10) 37%, rgba(255,255,255,.06) 63%);
-}
-
-@keyframes panelSk {
-    0% {
-        background-position: 100% 0;
-    }
-
-    100% {
-        background-position: 0 0;
-    }
-}
-
-/* =========================================================
-   Responsive pattern genérico: tabela vira cards no mobile
-   - Para usar: adicione class="panel-table panel-responsive"
-     e adicione data-th="NomeDaColuna" em cada td
-   ========================================================= */
-
-@media (max-width: 767.98px) {
+/* Responsive table -> cards */
+@media (max-width:767.98px) {
     .panel-responsive thead {
         position: absolute;
         left: -9999px;
@@ -259,10 +166,7 @@ html[data-theme="dark"] .panel-skeleton .sk-line {
         overflow: hidden;
     }
 
-    .panel-responsive,
-    .panel-responsive tbody,
-    .panel-responsive tr,
-    .panel-responsive td {
+    .panel-responsive, .panel-responsive tbody, .panel-responsive tr, .panel-responsive td {
         display: block;
         width: 100%;
     }
@@ -278,7 +182,7 @@ html[data-theme="dark"] .panel-skeleton .sk-line {
 
         .panel-responsive td {
             border: 0;
-            border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+            border-bottom: 1px solid color-mix(in srgb,var(--border) 70%, transparent);
             padding: .7rem 1rem;
             display: flex;
             align-items: center;
@@ -299,7 +203,6 @@ html[data-theme="dark"] .panel-skeleton .sk-line {
                 margin-right: 1rem;
             }
 
-            /* opcional: primeira coluna sem label */
             .panel-responsive td.panel-primary {
                 padding-top: .95rem;
             }
@@ -319,9 +222,205 @@ html[data-theme="dark"] .panel-skeleton .sk-line {
                 }
 }
 
-/* Pequenos ajustes de densidade */
-@media (max-width: 992px) {
+@media (max-width:992px) {
     .panel-bar {
         padding: .85rem .9rem;
     }
+}
+
+/* =========================================================
+   SIDEBAR (desktop) + OFFCANVAS (mobile) — CLEAN ORGANIZADO
+   ========================================================= */
+
+/* desktop wrapper */
+#sidebar-wrapper {
+    width: var(--sidebar-w);
+    position: fixed;
+    z-index: 1030;
+    min-height: 100vh;
+    background: var(--sidebar-bg) !important;
+    border-right: 1px solid var(--sidebar-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 12px 0 40px rgba(0,0,0,.10);
+    display: flex;
+    flex-direction: column;
+}
+
+    /* header */
+    #sidebar-wrapper .sidebar-heading {
+        padding: 14px 14px 10px;
+        border-bottom: 1px solid var(--sidebar-border);
+        color: var(--sidebar-text) !important;
+    }
+
+/* brand */
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-badge {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    background: color-mix(in srgb,var(--primary) 18%, transparent);
+    border: 1px solid color-mix(in srgb,var(--primary) 22%, transparent);
+    box-shadow: 0 10px 24px rgba(0,0,0,.10);
+}
+
+.brand-title {
+    font-weight: 900;
+    letter-spacing: .2px;
+    line-height: 1.1;
+    color: var(--sidebar-text);
+}
+
+.brand-subtitle {
+    font-size: .85rem;
+    color: var(--sidebar-muted);
+    margin-top: 2px;
+}
+
+/* menu scroll */
+#sidebar-wrapper .list-group {
+    padding: 10px 10px 14px;
+    overflow: auto;
+    max-height: calc(100vh - 74px);
+}
+
+/* section title */
+.sidebar-section {
+    margin: 10px 0 14px;
+}
+
+.sidebar-section-title {
+    padding: 10px 12px 6px;
+    font-size: .72rem;
+    letter-spacing: .10em;
+    font-weight: 900;
+    color: var(--sidebar-muted);
+    text-transform: uppercase;
+}
+
+/* item base */
+#sidebar-wrapper .list-group-item {
+    border: 0 !important;
+    background: transparent !important;
+    color: var(--sidebar-text) !important;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    margin: 4px 6px;
+    border-radius: 12px;
+    transition: background .15s ease, transform .12s ease;
+}
+
+    #sidebar-wrapper .list-group-item i {
+        width: 18px;
+        text-align: center;
+        opacity: .92;
+    }
+
+    /* hover */
+    #sidebar-wrapper .list-group-item:hover {
+        background: var(--sidebar-hover) !important;
+        transform: translateY(-1px);
+    }
+
+    /* active */
+    #sidebar-wrapper .list-group-item.is-active {
+        background: var(--sidebar-active-bg) !important;
+        position: relative;
+        font-weight: 800;
+    }
+
+        #sidebar-wrapper .list-group-item.is-active::before {
+            content: "";
+            position: absolute;
+            left: 6px;
+            top: 9px;
+            bottom: 9px;
+            width: 3px;
+            border-radius: 999px;
+            background: var(--sidebar-active-border);
+        }
+
+/* parent with submenu */
+#sidebar-wrapper .nav-parent {
+    justify-content: space-between;
+}
+
+    #sidebar-wrapper .nav-parent .chev {
+        opacity: .65;
+        transition: transform .15s ease, opacity .15s ease;
+    }
+
+    #sidebar-wrapper .nav-parent[aria-expanded="true"] .chev {
+        transform: rotate(180deg);
+        opacity: .95;
+    }
+
+    #sidebar-wrapper .nav-parent.has-sub-active {
+        background: color-mix(in srgb,var(--primary) 10%, transparent) !important;
+    }
+
+/* submenu area */
+#sidebar-wrapper .nav-sub {
+    padding: 2px 0 6px 22px;
+    margin-left: 6px;
+    border-left: 1px dashed color-mix(in srgb,var(--sidebar-text) 16%, transparent);
+}
+
+    #sidebar-wrapper .nav-sub .list-group-item {
+        margin: 4px 6px;
+        padding: 9px 12px;
+        border-radius: 11px;
+        font-size: .95rem;
+    }
+
+        #sidebar-wrapper .nav-sub .list-group-item i {
+            width: 18px;
+            opacity: .85;
+        }
+
+/* logout button like item */
+.sidebar-btn {
+    width: 100%;
+    text-align: left;
+    border: 0;
+    background: transparent;
+    color: var(--sidebar-text);
+    padding: 0;
+}
+
+/* OFFCANVAS mobile */
+.offcanvas.sidebar-offcanvas {
+    background: var(--sidebar-bg) !important;
+    color: var(--sidebar-text) !important;
+    border-right: 1px solid var(--sidebar-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+    .offcanvas.sidebar-offcanvas .offcanvas-header {
+        border-bottom: 1px solid var(--sidebar-border);
+    }
+
+    .offcanvas.sidebar-offcanvas .offcanvas-title {
+        color: var(--sidebar-text);
+        font-weight: 900;
+    }
+
+    /* close icon in dark/light */
+    .offcanvas.sidebar-offcanvas .btn-close {
+        filter: invert(1);
+    }
+
+html[data-theme="dark"] .offcanvas.sidebar-offcanvas .btn-close {
+    filter: invert(0);
 }

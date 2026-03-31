@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Newtonsoft.Json;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using WebApplicationPods.Enum;
 
 namespace WebApplicationPods.Models
 {
@@ -13,13 +14,27 @@ namespace WebApplicationPods.Models
         // ===== MULTI-LOJA =====
         public int LojaId { get; set; }
 
+        // ✅ NOVO: tipo real salvo no banco
+        public ProdutoTipo TipoProduto { get; set; } = ProdutoTipo.Padrao;
+
         // ===== Conveniência (genérico) =====
         [Required(ErrorMessage = "O nome do produto é obrigatório")]
         [StringLength(100)]
         public string Nome { get; set; } = string.Empty;
 
-        public bool RequerMaioridade { get; set; } = false;
+        public int? BebidaVolumeMl { get; set; }
 
+        [StringLength(40)]
+        public string? BebidaTipo { get; set; }
+
+        public BebidaEmbalagemTipo? BebidaEmbalagem { get; set; }
+
+        public int? BebidaQtdPorEmbalagem { get; set; }
+
+        [Column(TypeName = "decimal(5,2)")]
+        public decimal? BebidaTeorAlcoolico { get; set; }
+
+        public bool RequerMaioridade { get; set; } = false;
 
         [StringLength(2000)]
         public string? Descricao { get; set; }
@@ -74,10 +89,25 @@ namespace WebApplicationPods.Models
 
         [ValidateNever]
         public virtual ICollection<PedidoItemModel> PedidoItens { get; set; } = new List<PedidoItemModel>();
+
         [ValidateNever]
         public ICollection<ProdutoVariacaoModel> Variacoes { get; set; } = new List<ProdutoVariacaoModel>();
 
         // ===== Pods (legado) - mantém, mas não obriga no novo fluxo =====
+        // =========================
+        // POD/VAPE (NOVO fluxo - opcional)
+        // =========================
+        [Display(Name = "Quantidade de Puffs (novo)")]
+        public int? PodPuffs { get; set; }
+
+        [Display(Name = "Bateria (novo)")]
+        [StringLength(40)]
+        public string? PodCapacidadeBateria { get; set; } // ex: "600 mAh"
+
+        [Display(Name = "Tipo (novo)")]
+        [StringLength(40)]
+        public string? PodTipo { get; set; } // ex: "Descartável"
+
         [Display(Name = "Sabor")]
         [StringLength(50)]
         public string Sabor { get; set; } = string.Empty;

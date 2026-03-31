@@ -39,7 +39,6 @@ namespace WebApplicationPods.Models
         [StringLength(500)]
         public string? Observacoes { get; set; }
 
-        // ✅ MULTI-LOJA (obrigatório!)
         public int LojaId { get; set; }
 
         public bool IsDeleted { get; set; }
@@ -60,6 +59,19 @@ namespace WebApplicationPods.Models
         [StringLength(500)]
         public string? LojaMapsUrl { get; set; }
 
+        // CAMPOS ANTIGOS - manter por enquanto para não quebrar nada
+        public int? EntregadorId { get; set; }
+
+        [ForeignKey(nameof(EntregadorId))]
+        public EntregadorModel? Entregador { get; set; }
+
+        public DateTime? DataAtribuicaoEntregador { get; set; }
+        public DateTime? DataSaiuParaEntrega { get; set; }
+        public DateTime? DataEntregue { get; set; }
+
+        // NOVA NAVEGAÇÃO
+        public EntregaModel? Entrega { get; set; }
+
         public DateTime? DataAguardandoPagamento { get; set; }
         public DateTime? DataPagamentoAprovado { get; set; }
         public DateTime? DataInicioPreparo { get; set; }
@@ -75,5 +87,6 @@ namespace WebApplicationPods.Models
 
         public ICollection<PedidoItemModel> PedidoItens { get; set; } = new List<PedidoItemModel>();
         public ICollection<PaymentModel> Pagamentos { get; set; } = new List<PaymentModel>();
+        public ICollection<PedidoHistoricoModel> Historico { get; set; } = new List<PedidoHistoricoModel>();
     }
 }

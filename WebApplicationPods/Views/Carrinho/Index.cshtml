@@ -14,7 +14,6 @@
 }
 
 <div class="carrinho-container">
-    <!-- Alerts -->
     <div id="carrinho-alerts">
         @if (TempData["Sucesso"] is string ok && !string.IsNullOrWhiteSpace(ok))
         {
@@ -22,6 +21,7 @@
                 <i class="fas fa-check-circle me-1"></i>@ok
             </div>
         }
+
         @if (TempData["Erro"] is string err && !string.IsNullOrWhiteSpace(err))
         {
             <div class="alert alert-danger">
@@ -35,16 +35,14 @@
     @if (Model?.Carrinho?.Itens?.Any() == true)
     {
         <div class="cart-grid">
-            <!-- LISTA DE ITENS -->
             <div>
                 <div class="table-responsive">
                     <table class="carrinho-table">
                         <thead>
                             <tr>
                                 <th>Produto</th>
-                                <th style="width:360px;"></th>
-                                <th>Preço Normal</th>
-                                <th>Preço com Desconto</th>
+                                <th style="width:260px;">Quantidade</th>
+                                <th>Preço</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
@@ -66,55 +64,134 @@
                                 {
                                     maxPermitido = item.Produto?.Estoque ?? 1;
                                 }
+
                                 if (maxPermitido < 1) maxPermitido = 1;
 
-                                // ===== PREÇOS (definidos UMA ÚNICA VEZ por item) =====
                                 var temPromo = item.Produto?.EstaEmPromocao() == true;
                                 var precoNormal = item.Produto?.Preco ?? 0m;
-                                decimal? precoPromo = temPromo ? item.Produto!.PrecoPromocional : null;
+                                var precoFinal = temPromo
+                                ? (item.Produto?.PrecoPromocional ?? precoNormal)
+                                : precoNormal;
+
+                                bool puffOk = item.Produto?.PodPuffs > 0;
+                                bool batOk = int.TryParse(item.Produto?.PodCapacidadeBateria, out var bat) && bat > 0;
+                                bool temSpecsPod = puffOk || batOk;
+
+                                bool volumeOk = item.Produto?.BebidaVolumeMl.HasValue == true &&
+                                item.Produto.BebidaVolumeMl.Value > 0;
+
+                                bool teorOk = false;
+                                string teorTxt = "";
+                                if (item.Produto?.BebidaTeorAlcoolico.HasValue == true &&
+                                item.Produto.BebidaTeorAlcoolico.Value > 0)
+                                {
+                                    teorOk = true;
+                                    teorTxt = item.Produto.BebidaTeorAlcoolico.Value.ToString("0.##") + "%";
+                                }
+
+                                bool embalagemOk = item.Produto?.BebidaEmbalagem.HasValue == true &&
+                                item.Produto.BebidaEmbalagem.Value != WebApplicationPods.Enum.BebidaEmbalagemTipo.NaoInformado;
+
+                                bool qtdEmbOk = item.Produto?.BebidaQtdPorEmbalagem.HasValue == true &&
+                                item.Produto.BebidaQtdPorEmbalagem.Value > 0;
+
+                                string embalagemTxt = "";
+                                if (embalagemOk)
+                                {
+                                    embalagemTxt = item.Produto!.BebidaEmbalagem!.Value switch
+                                    {
+                                        WebApplicationPods.Enum.BebidaEmbalagemTipo.Unidade => "Unidade",
+                                        WebApplicationPods.Enum.BebidaEmbalagemTipo.Lata => "Lata",
+                                        WebApplicationPods.Enum.BebidaEmbalagemTipo.LongNeck => "Long Neck",
+                                        WebApplicationPods.Enum.BebidaEmbalagemTipo.Garrafa => "Garrafa",
+                                        WebApplicationPods.Enum.BebidaEmbalagemTipo.Fardo => "Fardo",
+                                        WebApplicationPods.Enum.BebidaEmbalagemTipo.Caixa => "Caixa",
+                                        WebApplicationPods.Enum.BebidaEmbalagemTipo.Pack => "Pack",
+                                        _ => ""
+                                    };
+                                }
+
+                                string embalagemResumo = "";
+                                if (embalagemOk)
+                                {
+                                    var emb = item.Produto!.BebidaEmbalagem!.Value;
+                                    bool embMultipla =
+                                    emb == WebApplicationPods.Enum.BebidaEmbalagemTipo.Fardo ||
+                                    emb == WebApplicationPods.Enum.BebidaEmbalagemTipo.Caixa ||
+                                    emb == WebApplicationPods.Enum.BebidaEmbalagemTipo.Pack;
+
+                                    if (embMultipla && qtdEmbOk)
+                                        embalagemResumo = $"{embalagemTxt} {item.Produto.BebidaQtdPorEmbalagem}un";
+                                    else
+                                        embalagemResumo = embalagemTxt;
+                                }
+
+                                bool temSpecsBebida = volumeOk || teorOk || !string.IsNullOrWhiteSpace(embalagemResumo);
+                                bool pareceBebida = temSpecsBebida || !string.IsNullOrWhiteSpace(item.Produto?.BebidaTipo);
+
+                                var partesDescricao = new List<string>();
+
+                                if (temSpecsPod)
+                                {
+                                    if (puffOk)
+                                        partesDescricao.Add($"{item.Produto!.PodPuffs} puffs");
+
+                                    if (batOk)
+                                        partesDescricao.Add($"{bat} mAh");
+                                }
+                                else if (pareceBebida)
+                                {
+                                    if (volumeOk)
+                                        partesDescricao.Add($"{item.Produto!.BebidaVolumeMl} ml");
+
+                                    if (teorOk)
+                                        partesDescricao.Add(teorTxt);
+
+                                    if (!string.IsNullOrWhiteSpace(embalagemResumo))
+                                        partesDescricao.Add(embalagemResumo);
+                                }
+
+                                string descricaoResumo = partesDescricao.Any()
+                                ? string.Join(" • ", partesDescricao)
+                                : (!string.IsNullOrWhiteSpace(item.Produto?.Descricao)
+                                ? item.Produto.Descricao
+                                : "Produto selecionado");
 
                                 <tr class="linha-item">
-                                    <!-- PRODUTO -->
-                                    <td data-label="Produto">
+                                    <td data-label="Produto" class="cell-produto">
                                         <div class="produto-info">
                                             <img src="@(item.Produto?.ImagemUrl ?? "https://via.placeholder.com/120x120?text=%20")"
                                                  alt="@(item.Produto?.Nome ?? "Produto")"
                                                  class="produto-imagem" />
-                                            <div>
+
+                                            <div class="produto-meta">
                                                 <h5 class="produto-nome">@item.Produto?.Nome</h5>
 
-                                                @if (!string.IsNullOrEmpty(item.Sabor))
-                                                {
-                                                    <div class="produto-sabor">
-                                                        <strong>Sabor:</strong> @item.Sabor
-                                                    </div>
-                                                }
+                                                <div class="produto-descricao">
+                                                    @descricaoResumo
+                                                </div>
+
                                                 @if (!string.IsNullOrEmpty(item.Observacoes))
                                                 {
                                                     <div class="produto-observacoes">
                                                         <strong>Obs:</strong> @item.Observacoes
                                                     </div>
                                                 }
-
-                                                <div class="produto-estoque">
-                                                    <small class="text-muted">
-                                                        Estoque disponível: <strong>@maxPermitido</strong>
-                                                    </small>
-                                                </div>
                                             </div>
                                         </div>
                                     </td>
 
-                                    <!-- QUANTIDADE -->
-                                    <td data-label="">
+                                    <td data-label="Quantidade" class="cell-quantidade">
                                         <form asp-action="AtualizarItem" method="post" class="quantidade-form">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="produtoId" value="@item.Produto!.Id" />
                                             <input type="hidden" name="sabor" value="@item.Sabor" />
 
                                             <div class="input-group">
-                                                <button type="submit" name="op" value="dec"
-                                                        class="btn btn-outline btn-outline-secondary"
+                                                <button type="submit"
+                                                        name="op"
+                                                        value="dec"
+                                                        class="btn btn-outline btn-outline-secondary qty-btn"
                                                         aria-label="Diminuir">
                                                     <i class="fas fa-minus"></i>
                                                 </button>
@@ -127,35 +204,31 @@
                                                        class="form-control text-center quantidade-input"
                                                        inputmode="numeric" />
 
-                                                <button type="submit" name="op" value="inc"
-                                                        class="btn btn-outline btn-outline-secondary"
+                                                <button type="submit"
+                                                        name="op"
+                                                        value="inc"
+                                                        class="btn btn-outline btn-outline-secondary qty-btn"
                                                         aria-label="Aumentar">
                                                     <i class="fas fa-plus"></i>
-                                                </button>
-
-                                                <button type="submit" class="btn btn-primary full-bleed">
-                                                    Atualizar
                                                 </button>
                                             </div>
                                         </form>
                                     </td>
 
-                                    <!-- PREÇOS -->
-                                    <td data-label="Preço Normal">@precoNormal.ToString("C", ptBR)</td>
-
-                                    <td data-label="Preço com Desconto"
-                                        data-has-discount="@(precoPromo.HasValue ? "true" : "false")">
-                                        @(precoPromo.HasValue? precoPromo.Value.ToString("C", ptBR) : "")
+                                    <td data-label="Preço" class="cell-preco preco-final">
+                                        @precoFinal.ToString("C", ptBR)
                                     </td>
 
-                                    <!-- AÇÕES -->
-                                    <td data-label="Ações">
+                                    <td data-label="Ações" class="cell-acoes">
                                         <form asp-action="RemoverItem" method="post" class="remove-form">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="produtoId" value="@item.Produto!.Id" />
                                             <input type="hidden" name="sabor" value="@item.Sabor" />
-                                            <button type="submit" class="btn btn-danger">
-                                                <i class="fas fa-trash"></i> Remover
+
+                                            <button type="submit"
+                                                    class="btn btn-danger btn-remover-icon"
+                                                    aria-label="Remover item">
+                                                <i class="fas fa-trash"></i>
                                             </button>
                                         </form>
                                     </td>
@@ -166,7 +239,6 @@
                 </div>
             </div>
 
-            <!-- RESUMO -->
             <aside>
                 <div id="resumo-card" class="total-card">
                     <div class="total-label">Total:</div>
@@ -189,7 +261,6 @@
     }
     else
     {
-        <!-- ESTADO VAZIO + POPULARES -->
         <div id="empty-state" class="carrinho-vazio">
             <h4>Seu carrinho está vazio</h4>
             <p>Adicione produtos ao seu carrinho para continuar.</p>
@@ -205,7 +276,6 @@
                 @foreach (var p in Model.Populares)
                 {
                     <article class="pop-card">
-                        <!-- Imagem sem <a>; o overlay abaixo cobre o card todo -->
                         <div class="pop-img">
                             <img src="@p.ImagemUrl" alt="@p.Nome" loading="lazy" />
                         </div>
@@ -235,7 +305,6 @@
                             </form>
                         </div>
 
-                        <!-- Link esticado: torna o card inteiro clicável (detalhes) -->
                         <a class="stretched-link"
                            asp-controller="Produto"
                            asp-action="DetalhesProdutos"
@@ -256,13 +325,4 @@
 
 @section Scripts {
     <script src="~/js/Carrinho-form.js" asp-append-version="true"></script>
-    <script>
-        setTimeout(() => {
-            document.querySelectorAll('#carrinho-alerts .alert').forEach(a => {
-                a.style.transition = 'opacity .5s';
-                a.style.opacity = '0';
-                setTimeout(() => a.remove(), 500);
-            });
-        }, 5000);
-    </script>
 }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using WebApplicationPods.Data;
+using WebApplicationPods.Enum;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
 
@@ -19,6 +20,7 @@ namespace WebApplicationPods.Repository.Repository
         {
             return _context.Produtos
                 .Include(p => p.Categoria)
+                .Include(p => p.Variacoes)
                 .Where(p => p.Ativo)
                 .OrderBy(p => p.Nome)
                 .ToList();
@@ -28,9 +30,10 @@ namespace WebApplicationPods.Repository.Repository
         {
             var produto = _context.Produtos
                 .Include(p => p.Categoria)
+                .Include(p => p.Variacoes)
                 .FirstOrDefault(p => p.Id == id);
 
-            if (produto == null) return null;   // <- evita NRE
+            if (produto == null) return null;
 
             if (!string.IsNullOrEmpty(produto.SaboresQuantidades))
             {
@@ -79,6 +82,7 @@ namespace WebApplicationPods.Repository.Repository
         {
             return _context.Produtos
                 .Include(p => p.Categoria)
+                .Include(p => p.Variacoes)
                 .Where(p => p.CategoriaId == categoriaId && p.Ativo)
                 .OrderBy(p => p.Nome)
                 .ToList();
@@ -88,28 +92,62 @@ namespace WebApplicationPods.Repository.Repository
         {
             return _context.Produtos
                 .Include(p => p.Categoria)
+                .Include(p => p.Variacoes)
                 .Where(p => p.Ativo)
                 .OrderByDescending(p => p.PedidoItens.Sum(pi => pi.Quantidade))
                 .Take(quantidade)
                 .ToList();
         }
 
+        public IQueryable<ProdutoModel> Query()
+        {
+            return _context.Produtos
+                .Include(p => p.Categoria)
+                .Include(p => p.Variacoes)
+                .Where(p => p.Ativo)
+                .AsNoTracking();
+        }
 
-        //////////////////pods filtros////////////////
+        public IEnumerable<ProdutoModel> ObterMaisPopulares(int take = 8)
+        {
+            return _context.Produtos
+                .Include(p => p.Variacoes)
+                .Where(p => p.Ativo && p.Estoque > 0)
+                .OrderByDescending(p => p.PedidoItens.Count())
+                .ThenByDescending(p => p.MaisVendido)
+                .ThenByDescending(p => p.Avaliacao)
+                .ThenByDescending(p => p.EmPromocao)
+                .ThenByDescending(p => p.DataCadastro)
+                .Take(take)
+                .ToList();
+        }
+
+        // =============================
+        // HOME: FILTROS (CORRIGIDO)
+        // =============================
         public List<ProdutoModel> FiltrarProdutos(FiltrosModel filtros)
         {
             var query = _context.Produtos
-        .Include(p => p.Categoria)
-        .Where(p => p.Ativo);
+                .Include(p => p.Categoria)
+                .Where(p => p.Ativo);
 
-            // Aplicar filtros
-            if (!string.IsNullOrEmpty(filtros.Categoria))
+            if (!string.IsNullOrWhiteSpace(filtros.Termo))
+            {
+                var t = filtros.Termo.Trim();
+                query = query.Where(p =>
+                    p.Nome.Contains(t) ||
+                    (p.Descricao != null && p.Descricao.Contains(t)) ||
+                    (p.Marca != null && p.Marca.Contains(t)));
+            }
+
+            if (!string.IsNullOrWhiteSpace(filtros.Categoria))
                 query = query.Where(p => p.Categoria != null && p.Categoria.Nome == filtros.Categoria);
 
-            if (!string.IsNullOrEmpty(filtros.Sabor))
+            // (Se ainda quiser usar enquanto existir campo)
+            if (!string.IsNullOrWhiteSpace(filtros.Sabor))
                 query = query.Where(p => p.Sabor == filtros.Sabor);
 
-            if (!string.IsNullOrEmpty(filtros.Cor))
+            if (!string.IsNullOrWhiteSpace(filtros.Cor))
                 query = query.Where(p => p.Cor == filtros.Cor);
 
             if (filtros.PrecoMin.HasValue)
@@ -122,79 +160,51 @@ namespace WebApplicationPods.Repository.Repository
                 query = query.Where(p => p.Avaliacao >= filtros.AvaliacaoMin.Value);
 
             if (filtros.ApenasPromocoes)
-                query = query.Where(p => p.EmPromocao && p.PrecoPromocional.HasValue);
+                query = query.Where(p => p.PrecoPromocional.HasValue && p.PrecoPromocional < p.Preco);
 
             if (filtros.ApenasEstoque)
                 query = query.Where(p => p.Estoque > 0);
 
-            // Ordenação
             query = filtros.OrdenarPor switch
             {
                 "avaliacao" => query.OrderByDescending(p => p.Avaliacao),
                 "recente" => query.OrderByDescending(p => p.DataCadastro),
-                "preco-asc" => query.OrderBy(p => p.Preco),
-                "preco-desc" => query.OrderByDescending(p => p.Preco),
-                _ => query.OrderByDescending(p => p.MaisVendido) // Default: popularidade
+                "preco-asc" => query.OrderBy(p => p.PrecoPromocional.HasValue && p.PrecoPromocional < p.Preco ? p.PrecoPromocional : p.Preco),
+                "preco-desc" => query.OrderByDescending(p => p.PrecoPromocional.HasValue && p.PrecoPromocional < p.Preco ? p.PrecoPromocional : p.Preco),
+                _ => query.OrderByDescending(p => p.MaisVendido)
             };
 
-            return query.ToList(); // Já retorna List<ProdutoModel>
+            return query.AsNoTracking().ToList();
         }
+
+
 
         public List<string> ObterCategoriasDistintas()
         {
             return _context.Produtos
                 .Include(p => p.Categoria)
-                .Where(p => p.Categoria != null && !string.IsNullOrEmpty(p.Categoria.Nome))
+                .Where(p => p.Ativo && p.Categoria != null && !string.IsNullOrEmpty(p.Categoria.Nome))
                 .Select(p => p.Categoria!.Nome)
                 .Distinct()
                 .OrderBy(c => c)
                 .ToList();
         }
 
+        // ✅ AGORA PEGA OS SABORES DO POD NAS VARIAÇÕES
         public List<string> ObterSaboresDistintos()
         {
-            return _context.Produtos
-                .Where(p => !string.IsNullOrEmpty(p.Sabor))
-                .Select(p => p.Sabor)
-                .Distinct()
-                .OrderBy(s => s)
-                .ToList();
+            return new List<string>(); // não usamos mais
         }
+
 
         public List<string> ObterCoresDistintas()
         {
             return _context.Produtos
-                .Where(p => !string.IsNullOrEmpty(p.Cor))
+                .Where(p => p.Ativo && !string.IsNullOrEmpty(p.Cor))
                 .Select(p => p.Cor)
                 .Distinct()
                 .OrderBy(c => c)
                 .ToList();
         }
-
-        public IQueryable<ProdutoModel> Query()
-        {
-            return _context.Produtos
-                .Include(p => p.Categoria)
-                .Where(p => p.Ativo)      // só ativos (ajuste se quiser)
-                .AsNoTracking();           // leitura
-        }
-        public IEnumerable<ProdutoModel> ObterMaisPopulares(int take = 8)
-        {
-            return _context.Produtos
-                .Where(p => p.Ativo && p.Estoque > 0)
-                // 1) mais vendidos (conta de itens de pedidos)
-                .OrderByDescending(p => p.PedidoItens.Count())
-                // 2) marcados como MaisVendido
-                .ThenByDescending(p => p.MaisVendido)
-                // 3) melhor avaliação
-                .ThenByDescending(p => p.Avaliacao)
-                // 4) em promoção primeiro
-                .ThenByDescending(p => p.EmPromocao)
-                // 5) mais recentes por último critério
-                .ThenByDescending(p => p.DataCadastro)
-                .Take(take)
-                .ToList();
-        }
-
     }
 }

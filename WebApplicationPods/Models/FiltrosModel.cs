@@ -4,10 +4,13 @@ namespace WebApplicationPods.Models
 {
     public class FiltrosModel
     {
+        // Busca
+        public string? Termo { get; set; }
+
         // Filtros básicos
-        public string Categoria { get; set; }
-        public string Sabor { get; set; }
-        public string Cor { get; set; }
+        public string? Categoria { get; set; }
+        public string? Sabor { get; set; }
+        public string? Cor { get; set; }
 
         // Filtros de preço
         [Display(Name = "Preço Mínimo")]
@@ -35,9 +38,9 @@ namespace WebApplicationPods.Models
         public string OrdenarPor { get; set; } = "popularidade";
 
         // Opções para UI
-        public List<string> CategoriasDisponiveis { get; set; }
-        public List<string> SaboresDisponiveis { get; set; }
-        public List<string> CoresDisponiveis { get; set; }
+        public List<string> CategoriasDisponiveis { get; set; } = new();
+        public List<string> SaboresDisponiveis { get; set; } = new();
+        public List<string> CoresDisponiveis { get; set; } = new();
 
         public Dictionary<string, string> OpcoesOrdenacao { get; } = new()
         {

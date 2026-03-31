@@ -4,7 +4,7 @@
 @inject IAuthorizationService Authz
 
 @{
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    // Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Configurações da Loja";
     var authResult = await Authz.AuthorizeAsync(User, policyName: "Admin");
     var isAdmin = authResult.Succeeded || (User?.Identity?.IsAuthenticated == true && User.IsInRole("Admin"));

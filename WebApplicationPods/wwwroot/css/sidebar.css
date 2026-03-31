@@ -259,3 +259,109 @@
     }
     /* você já esconde no mobile */
 }
+/* =========================================================
+   SIDEBAR — Submenu / Dropdown (Gerenciar Produtos)
+   Requer: bootstrap collapse (div.collapse) no submenu
+   ========================================================= */
+
+/* item pai (o que tem a setinha) */
+#sidebar-wrapper .nav-parent {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .6rem;
+}
+
+    #sidebar-wrapper .nav-parent .chev {
+        margin-left: auto;
+        opacity: .70;
+        transition: transform .18s ease, opacity .18s ease;
+        font-size: .85rem;
+    }
+
+    /* gira a seta quando abre (Bootstrap coloca .show no collapse) */
+    #sidebar-wrapper .collapse.show + .nav-parent .chev,
+    #sidebar-wrapper .nav-parent[aria-expanded="true"] .chev {
+        transform: rotate(180deg);
+        opacity: .95;
+    }
+
+/* container do submenu */
+#sidebar-wrapper .nav-sub {
+    margin: .25rem .6rem .55rem .6rem;
+    padding: .25rem .15rem .15rem .15rem;
+    border-radius: 14px;
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.07);
+}
+
+:root[data-theme="light"] #sidebar-wrapper .nav-sub {
+    background: rgba(2,6,23,.03);
+    border-color: rgba(15,23,42,.08);
+}
+
+/* lista do submenu */
+#sidebar-wrapper .nav-sub .list-group-item {
+    margin: 2px 6px;
+    padding: .58rem .75rem;
+    border-radius: 12px;
+    font-size: .93rem;
+    opacity: .92;
+    position: relative;
+}
+
+/* indent + “linha” de submenu */
+#sidebar-wrapper .nav-sub .list-group-item {
+    padding-left: 2.1rem;
+}
+
+    #sidebar-wrapper .nav-sub .list-group-item::before {
+        content: "";
+        position: absolute;
+        left: 14px;
+        top: 10px;
+        bottom: 10px;
+        width: 2px;
+        border-radius: 999px;
+        background: rgba(255,255,255,.10);
+    }
+
+:root[data-theme="light"] #sidebar-wrapper .nav-sub .list-group-item::before {
+    background: rgba(15,23,42,.10);
+}
+
+/* ícones do submenu menores */
+#sidebar-wrapper .nav-sub .list-group-item i {
+    width: 18px;
+    font-size: .92rem;
+    opacity: .9;
+}
+
+/* hover do submenu */
+#sidebar-wrapper .nav-sub .list-group-item:hover {
+    background: rgba(255,255,255,.06) !important;
+    transform: translateY(-1px);
+}
+
+:root[data-theme="light"] #sidebar-wrapper .nav-sub .list-group-item:hover {
+    background: rgba(2,6,23,.05) !important;
+}
+
+/* ativo do submenu (use .is-active OU .active, depende do seu Razor) */
+#sidebar-wrapper .nav-sub .list-group-item.is-active,
+#sidebar-wrapper .nav-sub .list-group-item.active {
+    background: rgba(37,117,252,.14) !important;
+    box-shadow: 0 0 0 1px rgba(37,117,252,.22) inset;
+}
+
+    #sidebar-wrapper .nav-sub .list-group-item.is-active::before,
+    #sidebar-wrapper .nav-sub .list-group-item.active::before {
+        background: var(--primary-grad);
+        box-shadow: 0 0 16px rgba(37,117,252,.45);
+    }
+
+/* opcional: deixa o item pai “ativo” quando qualquer submenu está ativo */
+#sidebar-wrapper .has-sub-active {
+    background: rgba(37,117,252,.10) !important;
+    box-shadow: 0 0 0 1px rgba(37,117,252,.14) inset;
+}

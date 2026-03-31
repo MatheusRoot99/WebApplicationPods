@@ -1,19 +1,110 @@
 ﻿@using WebApplicationPods.Models
+@using WebApplicationPods.Constants
 @model PedidoModel
+
 @{
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    // Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Acompanhar pedido";
 
     var ultimos = ViewBag.Ultimos as IEnumerable<PedidoModel> ?? Enumerable.Empty<PedidoModel>();
+    var historico = ViewBag.Historico as IEnumerable<PedidoHistoricoModel> ?? Enumerable.Empty<PedidoHistoricoModel>();
 
     string statusAtual = Model?.Status ?? "";
-    string[] finais = new[] { "Cancelado", "Pagamento Falhou", "Entregue", "Concluído" };
-    bool temPedidoAtual = Model != null && !finais.Any(f => statusAtual.Contains(f, StringComparison.OrdinalIgnoreCase));
+    string[] finais = new[] { "Cancelado", "Pagamento Falhou", "Concluído" };
+
+    bool temPedidoAtual = Model != null &&
+                          !string.IsNullOrWhiteSpace(statusAtual) &&
+                          !finais.Any(f => statusAtual.Contains(f, StringComparison.OrdinalIgnoreCase));
 
     var subtotal = Model?.PedidoItens?.Sum(i => i.PrecoUnitario * i.Quantidade) ?? 0m;
-    var total = subtotal + (Model?.TaxaEntrega ?? 0m);
-}
+    var taxaEntrega = Model?.TaxaEntrega ?? 0m;
+    var total = subtotal + taxaEntrega;
 
+    bool ehEntrega = Model?.EnderecoId.HasValue == true && Model.EnderecoId.Value > 0;
+
+
+    bool statusPronto = string.Equals(statusAtual, PedidoStatus.Pronto, StringComparison.OrdinalIgnoreCase);
+    bool statusAguardandoEntregador = string.Equals(statusAtual, PedidoEntregaStatus.AguardandoAtribuicao, StringComparison.OrdinalIgnoreCase);
+    bool statusEntregadorAtribuido = string.Equals(statusAtual, PedidoEntregaStatus.Atribuido, StringComparison.OrdinalIgnoreCase);
+    bool statusSaiuEntrega =
+        string.Equals(statusAtual, PedidoStatus.SaiuParaEntrega, StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(statusAtual, PedidoEntregaStatus.SaiuParaEntrega, StringComparison.OrdinalIgnoreCase);
+
+    string etapaEntregaTitulo;
+    string etapaEntregaDescricao;
+    string etapaEntregaHora;
+
+    if (!ehEntrega)
+    {
+        etapaEntregaTitulo = "Pronto para retirada";
+        etapaEntregaDescricao = "Seu pedido está pronto para retirada no local.";
+        etapaEntregaHora = Model.DataSaiuParaEntregaOuRetirada?.ToString("HH:mm") ?? "—";
+    }
+    else if (statusSaiuEntrega)
+    {
+        etapaEntregaTitulo = "Saiu para entrega";
+        etapaEntregaDescricao = "Seu pedido está a caminho.";
+        etapaEntregaHora = Model.DataSaiuParaEntregaOuRetirada?.ToString("HH:mm") ?? "—";
+    }
+    else if (statusEntregadorAtribuido)
+    {
+        etapaEntregaTitulo = "Entregador atribuído";
+        etapaEntregaDescricao = "Seu pedido foi atribuído a um entregador e será retirado em breve.";
+        etapaEntregaHora = Model.DataAtribuicaoEntregador?.ToString("HH:mm") ?? "—";
+    }
+    else if (statusAguardandoEntregador || statusPronto)
+    {
+        etapaEntregaTitulo = "Pronto para entrega";
+        etapaEntregaDescricao = "Seu pedido está pronto e aguardando a saída para entrega.";
+        etapaEntregaHora = "—";
+    }
+    else
+    {
+        etapaEntregaTitulo = ehEntrega ? "Saiu para entrega" : "Pronto para retirada";
+        etapaEntregaDescricao = ehEntrega ? "Seu pedido está a caminho." : "Seu pedido está pronto para retirada no local.";
+        etapaEntregaHora = Model.DataSaiuParaEntregaOuRetirada?.ToString("HH:mm") ?? "—";
+    }
+
+    string statusBadgeClass = "badge-soft";
+    if (!string.IsNullOrWhiteSpace(statusAtual))
+    {
+        if (statusAtual.Contains("Concl", StringComparison.OrdinalIgnoreCase) ||
+            statusAtual.Contains("Pago", StringComparison.OrdinalIgnoreCase))
+        {
+            statusBadgeClass = "badge-soft ok";
+        }
+        else if (statusAtual.Contains("Cancel", StringComparison.OrdinalIgnoreCase) ||
+                 statusAtual.Contains("Falhou", StringComparison.OrdinalIgnoreCase))
+        {
+            statusBadgeClass = "badge-soft err";
+        }
+        else if (statusAtual.Contains("Aguard", StringComparison.OrdinalIgnoreCase) ||
+                 statusAtual.Contains("Pendente", StringComparison.OrdinalIgnoreCase))
+        {
+            statusBadgeClass = "badge-soft warn";
+        }
+    }
+
+    string textoStatusAmigavel = statusAtual;
+    if (string.IsNullOrWhiteSpace(textoStatusAmigavel))
+    {
+        textoStatusAmigavel = "Sem status";
+    }
+
+    string telefoneWhatsapp = "";
+    if (Model?.Cliente?.Telefone != null)
+    {
+        telefoneWhatsapp = new string(Model.Cliente.Telefone.Where(char.IsDigit).ToArray());
+        if (!string.IsNullOrWhiteSpace(telefoneWhatsapp) && telefoneWhatsapp.Length >= 10 && !telefoneWhatsapp.StartsWith("55"))
+        {
+            telefoneWhatsapp = "55" + telefoneWhatsapp;
+        }
+    }
+
+    string linkWhatsApp = !string.IsNullOrWhiteSpace(telefoneWhatsapp)
+        ? $"https://wa.me/{telefoneWhatsapp}"
+        : "#";
+}
 
 @section Styles {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
@@ -21,50 +112,89 @@
 }
 
 <div class="wrap">
+    @if (Model != null)
+    {
+        <div id="trackData"
+             data-status-url="@Url.Action("StatusJson", "Pedido", new { id = Model.Id, t = Model.RastreioToken })"
+             data-initial-status="@Model.Status">
+        </div>
+    }
+
     <div class="page-head">
         <div>
             <h2>Meus pedidos</h2>
             @if (Model != null)
             {
-                <div class="subtle">• realizado em @Model.DataPedido.ToString("dd/MM/yyyy HH:mm")</div>
+                <div class="subtle">
+                    Pedido #@Model.Id • realizado em @Model.DataPedido.ToString("dd/MM/yyyy HH:mm")
+                </div>
+            }
+            else
+            {
+                <div class="subtle">Acompanhe o andamento do seu pedido e consulte seu histórico.</div>
             }
         </div>
-        <a asp-controller="Home" asp-action="Index" class="btnx"><i class="bi bi-arrow-left"></i> Voltar</a>
+
+        <div class="actions">
+            <a asp-controller="Home" asp-action="Index" class="btnx">
+                <i class="bi bi-arrow-left"></i>
+                Voltar
+            </a>
+
+            @if (Model != null)
+            {
+                <a asp-controller="Pedido"
+                   asp-action="Acompanhar"
+                   asp-route-id="@Model.Id"
+                   asp-route-t="@Model.RastreioToken"
+                   class="btnx btn-brand">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    Recarregar
+                </a>
+            }
+        </div>
     </div>
 
     <div class="seg-tabs" id="tabs">
         @if (temPedidoAtual)
         {
-            <div class="seg @(temPedidoAtual ? "active" : "")" data-tab="track"><i class="bi bi-truck"></i> Acompanhar</div>
+            <button type="button" class="seg active" data-tab="track">
+                <i class="bi bi-truck"></i>
+                <span>Acompanhar</span>
+            </button>
         }
-        <div class="seg @(!temPedidoAtual ? "active" : "")" data-tab="history"><i class="bi bi-clock-history"></i> Histórico</div>
+
+        <button type="button" class="seg @(!temPedidoAtual ? "active" : "")" data-tab="history">
+            <i class="bi bi-clock-history"></i>
+            <span>Histórico</span>
+        </button>
     </div>
 
     <!-- ACOMPANHAR -->
     <div class="tab @(temPedidoAtual ? "active" : "")" id="tab-track">
-        @if (temPedidoAtual)
+        @if (temPedidoAtual && Model != null)
         {
             <div class="grid-2">
-                <!-- Andamento + Itens -->
+                <!-- Andamento -->
                 <div class="cardx">
                     <div class="cardx-h">
-                        <div class="d-flex align-items-center">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                             <span>Andamento do pedido</span>
+                            <span class="@statusBadgeClass">@textoStatusAmigavel</span>
                         </div>
                     </div>
 
-
                     <div class="cardx-b">
-                        <!-- Timeline vertical (grid, sem sobreposição) -->
-                        <div class="vtrack" id="vtrack"
+                        <div class="vtrack"
+                             id="vtrack"
                              data-start="@Model.DataPedido.ToString("o")"
-                             data-is-delivery="@((Model.EnderecoId.HasValue && Model.EnderecoId.Value > 0).ToString().ToLower())">
+                             data-is-delivery="@(ehEntrega.ToString().ToLower())">
 
                             <div class="vstep" data-step="0">
                                 <div class="vbullet"><i class="bi bi-ui-checks"></i></div>
                                 <div class="vbody">
-                                    <div class="vtitle">Pendente</div>
-                                    <div class="vdesc">Pedido recebido</div>
+                                    <div class="vtitle">Pedido recebido</div>
+                                    <div class="vdesc">Seu pedido foi criado com sucesso.</div>
                                     <time class="vtime">@Model.DataPedido.ToString("HH:mm")</time>
                                 </div>
                             </div>
@@ -73,35 +203,41 @@
                                 <div class="vbullet"><i class="bi bi-cash-coin"></i></div>
                                 <div class="vbody">
                                     <div class="vtitle">Pagamento</div>
-                                    <div class="vdesc">Aguardando confirmação</div>
-                                    <time class="vtime">—</time>
+                                    <div class="vdesc">Aguardando confirmação do pagamento.</div>
+                                    <time class="vtime">
+                                        @(Model.DataAguardandoPagamento?.ToString("HH:mm") ?? "—")
+                                    </time>
                                 </div>
                             </div>
 
                             <div class="vstep" data-step="2">
                                 <div class="vbullet"><i class="bi bi-check2-circle"></i></div>
                                 <div class="vbody">
-                                    <div class="vtitle">Pago</div>
-                                    <div class="vdesc">Pagamento aprovado</div>
-                                    <time class="vtime">—</time>
+                                    <div class="vtitle">Pagamento aprovado</div>
+                                    <div class="vdesc">Pagamento confirmado com sucesso.</div>
+                                    <time class="vtime">
+                                        @(Model.DataPagamentoAprovado?.ToString("HH:mm") ?? "—")
+                                    </time>
                                 </div>
                             </div>
 
                             <div class="vstep" data-step="3">
                                 <div class="vbullet"><i class="bi bi-gear-wide-connected"></i></div>
                                 <div class="vbody">
-                                    <div class="vtitle">Preparando</div>
-                                    <div class="vdesc">Em produção</div>
-                                    <time class="vtime">—</time>
+                                    <div class="vtitle">Em preparação</div>
+                                    <div class="vdesc">Seu pedido está sendo preparado.</div>
+                                    <time class="vtime">
+                                        @(Model.DataInicioPreparo?.ToString("HH:mm") ?? "—")
+                                    </time>
                                 </div>
                             </div>
 
                             <div class="vstep" data-step="4">
                                 <div class="vbullet"><i class="bi bi-truck"></i></div>
                                 <div class="vbody">
-                                    <div class="vtitle">Em rota</div>
-                                    <div class="vdesc">@((Model.EnderecoId > 0) ? "A caminho" : "Pronto para retirada")</div>
-                                    <time class="vtime">—</time>
+                                    <div class="vtitle">@etapaEntregaTitulo</div>
+                                    <div class="vdesc">@etapaEntregaDescricao</div>
+                                    <time class="vtime">@etapaEntregaHora</time>
                                 </div>
                             </div>
 
@@ -109,68 +245,161 @@
                                 <div class="vbullet"><i class="bi bi-bag-check"></i></div>
                                 <div class="vbody">
                                     <div class="vtitle">Concluído</div>
-                                    <div class="vdesc">Entregue</div>
-                                    <time class="vtime">—</time>
+                                    <div class="vdesc">@(ehEntrega ? "Pedido entregue com sucesso." : "Pedido retirado com sucesso.")</div>
+                                    <time class="vtime">
+                                        @(Model.DataConcluido?.ToString("HH:mm") ?? "—")
+                                    </time>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="actions">
-                             @*<button type="button" id="btnRefresh" class="btnx">
-                                <i class="bi bi-arrow-clockwise"></i> Atualizar agora
-                             </button>*@
-                            <a asp-controller="Pedido" asp-action="Acompanhar"
-                               asp-route-id="@Model.Id" asp-route-t="@Model.RastreioToken"
-                               class="btnx btn-brand">
-                                <i class="bi bi-shuffle"></i> Recarregar
-                            </a>
-                        </div>
+                        @if (!string.IsNullOrWhiteSpace(Model.Observacoes))
+                        {
+                            <div class="cardx mt-3">
+                                <div class="cardx-b">
+                                    <div class="subtle mb-1"><i class="bi bi-chat-left-text"></i> Observações do pedido</div>
+                                    <div>@Model.Observacoes</div>
+                                </div>
+                            </div>
+                        }
 
-                        <!-- Itens -->
                         <div class="mt-3">
-                            @if (Model.PedidoItens != null)
+                            <div class="subtle mb-2"><strong>Itens do pedido</strong></div>
+
+                            @if (Model.PedidoItens != null && Model.PedidoItens.Any())
                             {
-                                @foreach (var it in Model.PedidoItens)
+                                foreach (var it in Model.PedidoItens)
                                 {
                                     var nome = it?.Produto?.Nome ?? $"Produto #{it?.ProdutoId}";
-                                    var img = it?.Produto?.ImagemUrl ?? "https://via.placeholder.com/80x80?text=Produto";
-                                    var sabor = it?.Observacoes;
+                                    var img = !string.IsNullOrWhiteSpace(it?.Produto?.ImagemUrl)
+                                    ? it.Produto.ImagemUrl
+                                    : "https://via.placeholder.com/80x80?text=Produto";
+
+                                    var observacaoItem = it?.Observacoes;
+                                    var quantidade = it?.Quantidade ?? 0;
+                                    var totalItem = (it?.PrecoUnitario ?? 0m) * quantidade;
+
                                     <div class="it">
                                         <img class="it-img" src="@img" alt="@nome" />
-                                        <div>
-                                            <div class="it-name">@nome x @(it?.Quantidade ?? 0)</div>
-                                            @if (!string.IsNullOrWhiteSpace(sabor))
+
+                                        <div class="flex-grow-1">
+                                            <div class="it-name">@nome x @quantidade</div>
+
+                                            @if (!string.IsNullOrWhiteSpace(observacaoItem))
                                             {
-                                                <div class="it-sabor">Obs: @sabor</div>
+                                                <div class="it-sabor">Obs: @observacaoItem</div>
                                             }
                                         </div>
-                                        <div class="it-price">@(((it?.PrecoUnitario ?? 0m) * (it?.Quantidade ?? 0)).ToString("C"))</div>
+
+                                        <div class="it-price">@totalItem.ToString("C")</div>
                                     </div>
                                 }
+                            }
+                            else
+                            {
+                                <div class="subtle">Nenhum item encontrado neste pedido.</div>
                             }
                         </div>
                     </div>
                 </div>
 
                 <!-- Resumo -->
-                <div class="cardx">
-                    <div class="cardx-h">Resumo</div>
-                    <div class="cardx-b">
-                        <div class="tot-row"><span>Subtotal</span><strong>@subtotal.ToString("C")</strong></div>
-                        <div class="tot-row"><span>Taxa de entrega</span><strong>@(Model?.TaxaEntrega.ToString("C") ?? "R$ 0,00")</strong></div>
-                        <div class="tot-row total"><span>Total</span><strong id="totalLabel">@total.ToString("C")</strong></div>
-                        <div class="subtle mt-2">
-                            <div><i class="bi bi-cash-coin"></i> Pagamento: @(Model?.MetodoPagamento ?? "N/A")</div>
-                            @if (Model?.EnderecoId > 0 && Model?.Endereco != null)
-                            {
-                                <div class="mt-1"><i class="bi bi-geo-alt"></i> Entrega: @Model.Endereco.Logradouro, @Model.Endereco.Numero - @Model.Endereco.Bairro</div>
-                            }
-                            else
-                            {
-                                <div class="mt-1"><i class="bi bi-bag"></i> Retirada no local</div>
-                            }
+                <div class="d-flex flex-column gap-3">
+                    <div class="cardx">
+                        <div class="cardx-h">Resumo</div>
+                        <div class="cardx-b">
+                            <div class="tot-row">
+                                <span>Subtotal</span>
+                                <strong>@subtotal.ToString("C")</strong>
+                            </div>
+
+                            <div class="tot-row">
+                                <span>Taxa de entrega</span>
+                                <strong>@taxaEntrega.ToString("C")</strong>
+                            </div>
+
+                            <div class="tot-row total">
+                                <span>Total</span>
+                                <strong id="totalLabel">@total.ToString("C")</strong>
+                            </div>
+
+                            <div class="subtle mt-3">
+                                <div><i class="bi bi-cash-coin"></i> Pagamento: @(Model.MetodoPagamento ?? "N/A")</div>
+
+                                @if (ehEntrega && Model.Endereco != null)
+                                {
+                                    <div class="mt-2">
+                                        <i class="bi bi-geo-alt"></i>
+                                        Entrega: @Model.Endereco.Logradouro, @Model.Endereco.Numero
+                                        @if (!string.IsNullOrWhiteSpace(Model.Endereco.Bairro))
+                                        {
+                                            <span> - @Model.Endereco.Bairro</span>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="mt-2">
+                                        <i class="bi bi-shop"></i>
+                                        Retirada no local
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="actions">
+                                @if (!string.IsNullOrWhiteSpace(telefoneWhatsapp))
+                                {
+                                    <a href="@linkWhatsApp" target="_blank" rel="noopener noreferrer" class="btnx">
+                                        <i class="bi bi-whatsapp"></i>
+                                        WhatsApp
+                                    </a>
+                                }
+
+                                <a asp-controller="Home" asp-action="Index" class="btnx">
+                                    <i class="bi bi-bag"></i>
+                                    Continuar comprando
+                                </a>
+                            </div>
                         </div>
                     </div>
+
+                    @if (historico.Any())
+                    {
+                        <div class="cardx">
+                            <div class="cardx-h">Atualizações</div>
+                            <div class="cardx-b">
+                                <div class="orders">
+                                    @foreach (var h in historico.OrderByDescending(x => x.DataCadastro).Take(6))
+                                    {
+                                        <div class="order-card">
+                                            <div class="order-info">
+                                                <div class="order-title">@h.NovoStatus</div>
+
+                                                <div class="order-extras">
+                                                    <span><i class="bi bi-clock"></i> @h.DataCadastro.ToString("dd/MM/yyyy HH:mm")</span>
+
+                                                    @if (!string.IsNullOrWhiteSpace(h.NomeResponsavel))
+                                                    {
+                                                        <span><i class="bi bi-person"></i> @h.NomeResponsavel</span>
+                                                    }
+
+                                                    @if (!string.IsNullOrWhiteSpace(h.Origem))
+                                                    {
+                                                        <span><i class="bi bi-broadcast"></i> @h.Origem</span>
+                                                    }
+                                                </div>
+
+                                                @if (!string.IsNullOrWhiteSpace(h.Observacao))
+                                                {
+                                                    <div class="subtle mt-2">@h.Observacao</div>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
                 </div>
             </div>
         }
@@ -179,7 +408,9 @@
             <div class="cardx">
                 <div class="cardx-h">Sem pedido em andamento</div>
                 <div class="cardx-b">
-                    <div class="subtle">Assim que você fizer uma compra, o acompanhamento aparece aqui 👇</div>
+                    <div class="subtle">
+                        Assim que você fizer uma compra, o acompanhamento aparece aqui.
+                    </div>
                 </div>
             </div>
         }
@@ -188,40 +419,65 @@
     <!-- HISTÓRICO -->
     <div class="tab @(!temPedidoAtual ? "active" : "")" id="tab-history">
         <div class="cardx">
-            <div class="cardx-h">Histórico</div>
+            <div class="cardx-h">Histórico de pedidos</div>
             <div class="cardx-b">
                 @if (ultimos.Any())
                 {
                     <div class="orders">
                         @foreach (var p in ultimos.OrderByDescending(x => x.DataPedido).Take(10))
                         {
-                            var st = (p.Status ?? "").ToLowerInvariant();
-                            var badgeClass = st.Contains("cancel") ? "err"
-                            : (st.Contains("entreg") || st.Contains("concl")) ? "ok"
-                            : (st.Contains("pago") || st.Contains("prepar") || st.Contains("rota")) ? "warn"
-                            : "";
+                            var st = p.Status ?? "";
+                            var badgeClass = "badge-soft";
 
-                            var firstItem = p.PedidoItens?.FirstOrDefault();
-                            var img = firstItem?.Produto?.ImagemUrl ?? "https://via.placeholder.com/64x64?text=%20";
-                            var title = firstItem?.Produto?.Nome ?? "Pedido";
-                            var totalUnidades = p.PedidoItens?.Sum(i => i.Quantidade) ?? 0;
-                            var extras = totalUnidades > 1 ? $"+ {totalUnidades - 1} itens" : $"{totalUnidades} un";
+                            if (st.Contains("Concl", StringComparison.OrdinalIgnoreCase) ||
+                            st.Contains("Pago", StringComparison.OrdinalIgnoreCase))
+                            {
+                                badgeClass = "badge-soft ok";
+                            }
+                            else if (st.Contains("Cancel", StringComparison.OrdinalIgnoreCase) ||
+                            st.Contains("Falhou", StringComparison.OrdinalIgnoreCase))
+                            {
+                                badgeClass = "badge-soft err";
+                            }
+                            else if (st.Contains("Aguard", StringComparison.OrdinalIgnoreCase) ||
+                            st.Contains("Pendente", StringComparison.OrdinalIgnoreCase) ||
+                            st.Contains("Prepar", StringComparison.OrdinalIgnoreCase))
+                            {
+                                badgeClass = "badge-soft warn";
+                            }
+
+                            var primeiroItem = p.PedidoItens?.FirstOrDefault();
+                            var thumb = !string.IsNullOrWhiteSpace(primeiroItem?.Produto?.ImagemUrl)
+                            ? primeiroItem.Produto.ImagemUrl
+                            : "https://via.placeholder.com/80x80?text=Pedido";
+
+                            var qtdItens = p.PedidoItens?.Sum(x => x.Quantidade) ?? 0;
+                            var textoItens = qtdItens == 1 ? "1 item" : $"{qtdItens} itens";
 
                             <div class="order-card">
-                                <img class="order-thumb" src="@img" alt="@title" />
+                                <img class="order-thumb" src="@thumb" alt="Pedido #@p.Id" />
+
                                 <div class="order-info">
-                                    <div class="order-title">@title <span class="text-muted">(@extras)</span></div>
+                                    <div class="order-title">Pedido #@p.Id</div>
+
                                     <div class="order-extras">
-                                        <span class="badge-soft @badgeClass">@p.Status</span>
-                                        <span><i class="bi bi-clock"></i> @p.DataPedido.ToString("dd/MM HH:mm")</span>
+                                        <span><i class="bi bi-calendar3"></i> @p.DataPedido.ToString("dd/MM/yyyy HH:mm")</span>
+                                        <span><i class="bi bi-bag"></i> @textoItens</span>
+                                        <span><i class="bi bi-cash-coin"></i> @(string.IsNullOrWhiteSpace(p.MetodoPagamento) ? "N/A" : p.MetodoPagamento)</span>
                                     </div>
                                 </div>
+
                                 <div class="order-right">
-                                    <div class="order-total">@(p.ValorTotal.ToString("C") ?? "R$ 0,00")</div>
-                                    <a class="btnx btn-brand btn-compact"
-                                       asp-controller="Pedido" asp-action="ResumoPedidoCliente"
-                                       asp-route-id="@p.Id" asp-route-t="@p.RastreioToken">
-                                        <i class="bi bi-eye"></i> Ver
+                                    <span class="@badgeClass">@st</span>
+                                    <div class="order-total">@p.ValorTotal.ToString("C")</div>
+
+                                    <a asp-controller="Pedido"
+                                       asp-action="Acompanhar"
+                                       asp-route-id="@p.Id"
+                                       asp-route-t="@p.RastreioToken"
+                                       class="btnx btn-compact">
+                                        <i class="bi bi-eye"></i>
+                                        Ver
                                     </a>
                                 </div>
                             </div>
@@ -237,14 +493,7 @@
     </div>
 </div>
 
-<!-- Elemento oculto com dados para o tracker -->
-<div id="trackData"
-     data-status-url="@ViewBag.StatusUrl"
-     data-initial-status="@Model?.Status"
-     style="display: none;">
-</div>
-
 @section Scripts {
-    <script src="~/js/pedido-tracker.js" asp-append-version="true" defer></script>
-    <script src="~/js/page-acompanhar.js" asp-append-version="true" defer></script>
+    <script src="~/js/pedido-tracker.js" asp-append-version="true"></script>
+    <script src="~/js/page-acompanhar.js" asp-append-version="true"></script>
 }

@@ -1,0 +1,361 @@
+﻿@using Microsoft.AspNetCore.Mvc.Rendering
+@using WebApplicationPods.Enum
+@model WebApplicationPods.Models.ProdutoFormSimplesViewModel
+
+@{
+    var isEdit = Model?.Id.HasValue == true && Model.Id.Value > 0;
+
+    string action = isEdit
+        ? "EditarSimples"
+        : (Model?.TipoProduto == ProdutoTipo.BebidaAlcoolica ? "CriarBebida"
+           : Model?.TipoProduto == ProdutoTipo.PodVape ? "CriarPod"
+           : "CriarPadrao");
+
+    var isPod = Model?.TipoProduto == ProdutoTipo.PodVape;
+    var isBebida = Model?.TipoProduto == ProdutoTipo.BebidaAlcoolica;
+
+    var phNome = isPod
+        ? "Ex: Ignite Sex Addict 28000 puffs"
+        : (isBebida
+            ? "Ex: Heineken 330ml (Unidade)"
+            : "Ex: Chocolate Lacta 90g");
+}
+
+<div class="ps-page">
+    <div class="ps-container">
+
+        <!-- enums pro JS (sem hardcode) -->
+        <div id="psEnums"
+             data-pod="@((int)ProdutoTipo.PodVape)"
+             data-bebida="@((int)ProdutoTipo.BebidaAlcoolica)"></div>
+
+        <div class="ps-header">
+            <div class="ps-header-left">
+                <div class="ps-app-icon">
+                    <i class="fa-solid fa-cube"></i>
+                </div>
+
+                <div class="ps-header-texts">
+                    <h1 class="ps-title">@ViewData["Title"]</h1>
+                    <p class="ps-subtitle">Sem variações. Cada embalagem vira um produto separado.</p>
+                </div>
+            </div>
+
+            <a asp-action="Index" class="ps-btn ps-btn-ghost">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span>Voltar</span>
+            </a>
+        </div>
+
+        <div class="ps-card">
+            <form class="ps-form"
+                  asp-action="@action"
+                  asp-route-id="@(isEdit ? Model!.Id : null)"
+                  method="post"
+                  enctype="multipart/form-data"
+                  novalidate>
+
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+                <input type="hidden" asp-for="ImagemUrl" />
+
+                <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+
+                <div class="ps-grid ps-grid-2">
+                    <div class="ps-field">
+                        <label class="ps-label">Tipo de Produto</label>
+                        <select asp-for="TipoProduto" class="ps-input ps-select" id="TipoProduto">
+                            <option value="@((int)ProdutoTipo.Padrao)">Padrão</option>
+                            <option value="@((int)ProdutoTipo.PodVape)">Pod / Vape</option>
+                            <option value="@((int)ProdutoTipo.BebidaAlcoolica)">Bebida Alcoólica</option>
+                        </select>
+                    </div>
+
+                    <div class="ps-field">
+                        <label class="ps-label">Categoria <span class="ps-req">*</span></label>
+                        <select asp-for="CategoriaId" asp-items="ViewBag.Categorias" class="ps-input ps-select">
+                            <option value="">Selecione uma categoria</option>
+                        </select>
+                        <span asp-validation-for="CategoriaId" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="ps-field">
+                    <label class="ps-label">Nome do Produto <span class="ps-req">*</span></label>
+                    <input asp-for="Nome" class="ps-input" maxlength="120" placeholder="@phNome" />
+                    <span asp-validation-for="Nome" class="text-danger small"></span>
+                </div>
+
+                <div class="ps-field">
+                    <label class="ps-label">Descrição</label>
+                    <textarea asp-for="Descricao" class="ps-input ps-textarea" rows="4" placeholder="Descreva o produto..."></textarea>
+                    <small class="ps-counter">0/1000 caracteres</small>
+                </div>
+
+                <div class="ps-grid ps-grid-3">
+                    <div class="ps-field">
+                        <label class="ps-label">Marca</label>
+                        <input asp-for="Marca" class="ps-input" maxlength="80" placeholder="Ex: Coca-Cola" />
+                    </div>
+
+                    <div class="ps-field">
+                        <label class="ps-label">SKU</label>
+                        <input asp-for="SKU" class="ps-input" maxlength="80" placeholder="Ex: PROD-001" />
+                    </div>
+
+                    <div class="ps-field">
+                        <label class="ps-label">Código de Barras</label>
+                        <input asp-for="CodigoBarras" class="ps-input" maxlength="80" placeholder="Ex: 7891234567890" />
+                    </div>
+                </div>
+
+                <div class="ps-grid ps-grid-3">
+                    <div class="ps-field">
+                        <label class="ps-label">Preço <span class="ps-req">*</span></label>
+                        <div class="ps-money">
+                            <span class="ps-money-prefix">R$</span>
+                            <input asp-for="Preco" class="ps-input ps-money-input js-money" inputmode="decimal" autocomplete="off" placeholder="0,00" />
+                        </div>
+                        <span asp-validation-for="Preco" class="text-danger small"></span>
+                    </div>
+
+                    <div class="ps-field">
+                        <label class="ps-label">Preço Promocional</label>
+                        <div class="ps-money">
+                            <span class="ps-money-prefix">R$</span>
+                            <input asp-for="PrecoPromocional" class="ps-input ps-money-input js-money" inputmode="decimal" autocomplete="off" placeholder="0,00" />
+                        </div>
+                        <small id="promoHint" class="ps-hint"></small>
+                        <span asp-validation-for="PrecoPromocional" class="text-danger small"></span>
+                    </div>
+
+                    <div class="ps-field">
+                        <label class="ps-label">Estoque <span class="ps-req">*</span></label>
+                        <input asp-for="Estoque" class="ps-input" type="number" min="0" />
+                        <span asp-validation-for="Estoque" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <!-- BLOCO IMAGEM + COLUNA DIREITA (layout estável) -->
+                <div class="ps-media-row">
+                    <div class="ps-field">
+                        <label class="ps-label">Imagem do Produto</label>
+
+                        <input asp-for="ImagemUpload" id="ImagemUpload" type="file" accept="image/*" class="ps-file-hidden" />
+
+                        <label for="ImagemUpload" class="ps-dropzone">
+                            <div class="ps-dropzone-icon">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                            </div>
+                            <div class="ps-dropzone-text">
+                                <div class="ps-dropzone-title">Clique para fazer upload</div>
+                                <div class="ps-dropzone-sub">PNG, JPG até 2MB</div>
+                            </div>
+                        </label>
+
+                        <span asp-validation-for="ImagemUpload" class="text-danger small"></span>
+
+                        <div class="ps-preview-box">
+                            <img id="imgPreview"
+                                 src="@(string.IsNullOrWhiteSpace(Model?.ImagemUrl) ? "" : Model!.ImagemUrl)"
+                                 class="@(string.IsNullOrWhiteSpace(Model?.ImagemUrl) ? "d-none" : "")"
+                                 alt="Preview" />
+                            <div id="imgPreviewEmpty" class="ps-preview-empty @(string.IsNullOrWhiteSpace(Model?.ImagemUrl) ? "" : "d-none")">
+                                <i class="fa-regular fa-image"></i>
+                                <span>Pré-visualização da imagem</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ps-right-stack">
+
+                        <!-- Sabor (Padrão/Pod). Bebida NÃO mostra -->
+                        <div class="ps-field" id="saborFieldWrap" style="@(isBebida ? "display:none;" : "")">
+                            <label class="ps-label">Sabor @(isPod ? "*" : "(opcional)")</label>
+
+                            <!-- POD -->
+                            <div id="podSaborBox" style="@(isPod ? "" : "display:none;")">
+                                <select class="ps-input ps-select mb-2" id="SaborSelect" name="SaborSelect">
+                                    <option value="">Selecione um sabor...</option>
+                                    @if (ViewBag.Sabores is IEnumerable<SelectListItem> sabores)
+                                    {
+                                        foreach (var s in sabores)
+                                        {
+                                            <option value="@s.Value">@s.Text</option>
+                                        }
+                                    }
+                                </select>
+
+                                <input type="text" class="ps-input" id="SaborOutro" name="SaborOutro" placeholder="Ou escreva um novo sabor..." />
+
+                                <!-- campo real do model (POD) -->
+                                <input type="hidden" asp-for="Sabor" id="Sabor" />
+
+                                <span asp-validation-for="Sabor" class="text-danger small"></span>
+                                <small class="ps-hint">Se preencher “Outro sabor”, ele será usado no lugar do selecionado.</small>
+                            </div>
+
+                            <!-- PADRÃO -->
+                            <div id="saborSimplesBox" style="@(isPod ? "display:none;" : "")">
+                                <input asp-for="Sabor" class="ps-input" placeholder="Se quiser usar como atributo simples" />
+                                <span asp-validation-for="Sabor" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <!-- Cor (Padrão/Pod). Bebida NÃO mostra -->
+                        <div class="ps-field" id="corFieldWrap" style="@(isBebida ? "display:none;" : "")">
+                            <label class="ps-label">Cor (opcional)</label>
+                            <input asp-for="Cor" class="ps-input" placeholder="Ex: Azul, Vermelho" />
+                        </div>
+
+                        <!-- DETALHES DA BEBIDA -->
+                        <div id="bebidaDetailsBox" class="ps-bebida-card" style="@(isBebida ? "" : "display:none;")">
+                            <div class="ps-bebida-head">
+                                <div class="ps-bebida-title">
+                                    <i class="fa-solid fa-wine-bottle"></i>
+                                    <strong>Detalhes da Bebida</strong>
+                                </div>
+                                <small>opcional</small>
+                            </div>
+
+                            <div class="ps-grid ps-grid-2">
+                                <div class="ps-field">
+                                    <label class="ps-label">Tipo da Bebida</label>
+                                    <input asp-for="BebidaTipo" class="ps-input" placeholder="Ex: Cerveja, Whisky, Vodka, Gin..." />
+                                </div>
+
+                                <div class="ps-field">
+                                    <label class="ps-label">Volume (ml)</label>
+                                    <input asp-for="BebidaVolumeMl" class="ps-input" type="number" min="1" placeholder="Ex: 330" />
+                                    <span asp-validation-for="BebidaVolumeMl" class="text-danger small"></span>
+                                </div>
+                            </div>
+
+                            <div class="ps-grid ps-grid-2">
+                                <div class="ps-field">
+                                    <label class="ps-label">Embalagem</label>
+                                    <select asp-for="BebidaEmbalagem" class="ps-input ps-select" id="BebidaEmbalagem">
+                                        <option value="@((int)WebApplicationPods.Enum.BebidaEmbalagemTipo.NaoInformado)">Não informado</option>
+                                        <option value="@((int)WebApplicationPods.Enum.BebidaEmbalagemTipo.Unidade)">Unidade</option>
+                                        <option value="@((int)WebApplicationPods.Enum.BebidaEmbalagemTipo.Lata)">Lata</option>
+                                        <option value="@((int)WebApplicationPods.Enum.BebidaEmbalagemTipo.LongNeck)">Long Neck</option>
+                                        <option value="@((int)WebApplicationPods.Enum.BebidaEmbalagemTipo.Garrafa)">Garrafa</option>
+                                        <option value="@((int)WebApplicationPods.Enum.BebidaEmbalagemTipo.Fardo)">Fardo</option>
+                                        <option value="@((int)WebApplicationPods.Enum.BebidaEmbalagemTipo.Caixa)">Caixa</option>
+                                        <option value="@((int)WebApplicationPods.Enum.BebidaEmbalagemTipo.Pack)">Pack</option>
+                                    </select>
+                                </div>
+
+                                <div class="ps-field">
+                                    <label class="ps-label">Qtd. por Embalagem</label>
+                                    <input asp-for="BebidaQtdPorEmbalagem" class="ps-input" type="number" min="1" placeholder="Ex: 6, 12, 24" />
+                                    <span asp-validation-for="BebidaQtdPorEmbalagem" class="text-danger small"></span>
+                                    <small class="ps-hint">Use para fardo/caixa/pack. Ex.: caixa com 12 unidades.</small>
+                                </div>
+                            </div>
+
+                            <div class="ps-grid ps-grid-2">
+                                <div class="ps-field">
+                                    <label class="ps-label">Teor Alcoólico (%)</label>
+                                    <input asp-for="BebidaTeorAlcoolico"
+                                           class="ps-input js-alcool"
+                                           inputmode="decimal"
+                                           autocomplete="off"
+                                           placeholder="Ex: 4,7" />
+                                    <span asp-validation-for="BebidaTeorAlcoolico" class="text-danger small"></span>
+                                </div>
+
+                                <div class="ps-field">
+                                    <label class="ps-label">Observação de nome (sugestão)</label>
+                                    <input type="text" class="ps-input" id="BebidaNomeSugestao" readonly placeholder="Ex: Heineken 330ml Long Neck" />
+                                    <small class="ps-hint">Só visual. O nome do produto é o campo acima.</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- DETALHES DO POD -->
+                        <div id="podDetailsBox" class="ps-pod-card" style="@(isPod ? "" : "display:none;")">
+                            <div class="ps-pod-head">
+                                <div class="ps-pod-title">
+                                    <i class="fa-solid fa-bolt"></i>
+                                    <strong>Detalhes do Pod</strong>
+                                </div>
+                                <small>opcional</small>
+                            </div>
+
+                            <div class="ps-grid ps-grid-2">
+                                <div class="ps-field">
+                                    <label class="ps-label">Número de Puffs</label>
+                                    <input asp-for="PodPuffs" class="ps-input" type="number" min="0" placeholder="Ex: 28000" />
+                                </div>
+
+                                <div class="ps-field">
+                                    <label class="ps-label">Capacidade da Bateria</label>
+                                    <input asp-for="PodCapacidadeBateria" class="ps-input" placeholder="Ex: 650mAh" />
+                                </div>
+                            </div>
+
+                            <div class="ps-field">
+                                <label class="ps-label">Tipo do Pod</label>
+                                <input asp-for="PodTipo" class="ps-input" placeholder="Ex: Descartável, Recarregável" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ps-check-row">
+                    <label class="ps-check-card">
+                        <input class="ps-check" type="checkbox" asp-for="Ativo" />
+                        <div class="ps-check-content">
+                            <div class="ps-check-top">
+                                <i class="fa-solid fa-circle-check"></i>
+                                <strong>Ativo</strong>
+                            </div>
+                            <div class="ps-check-sub">Produto disponível</div>
+                        </div>
+                    </label>
+
+                    <label class="ps-check-card">
+                        <input class="ps-check" type="checkbox" asp-for="MaisVendido" />
+                        <div class="ps-check-content">
+                            <div class="ps-check-top">
+                                <i class="fa-solid fa-chart-line"></i>
+                                <strong>Mais Vendido</strong>
+                            </div>
+                            <div class="ps-check-sub">Destaque na lista</div>
+                        </div>
+                    </label>
+
+                    <label class="ps-check-card">
+                        <input class="ps-check" type="checkbox" asp-for="RequerMaioridade" id="RequerMaioridade" />
+                        <div class="ps-check-content">
+                            <div class="ps-check-top">
+                                <i class="fa-solid fa-shield-halved"></i>
+                                <strong>+18</strong>
+                            </div>
+                            <div class="ps-check-sub">Opcional</div>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="ps-actions">
+                    <a asp-action="Index" class="ps-btn ps-btn-ghost">
+                        <i class="fa-solid fa-xmark"></i>
+                        <span>Cancelar</span>
+                    </a>
+
+                    <button class="ps-btn ps-btn-blue" type="submit" name="submit" value="save">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>Salvar Produto</span>
+                    </button>
+
+                    <button class="ps-btn ps-btn-green" type="submit" name="submit" value="save_new">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Salvar e Adicionar Novo</span>
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,41 @@
+﻿@model WebApplicationPods.Models.ProdutoModel
+
+@{
+    // Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Detalhes do Produto";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="m-0">@Model.Nome</h3>
+
+        <a asp-area="PainelLojista" asp-controller="Home" asp-action="Index"
+           class="btn btn-outline-secondary">
+            Voltar
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-12 col-md-4">
+                    <strong>Preço</strong><br />
+                    @Model.Preco.ToString("C")
+                </div>
+                <div class="col-12 col-md-4">
+                    <strong>Promo</strong><br />
+                    @(Model.PrecoPromocional.HasValue? Model.PrecoPromocional.Value.ToString("C") : "-")
+                </div>
+                <div class="col-12 col-md-4">
+                    <strong>Estoque</strong><br />
+                    @Model.Estoque
+                </div>
+
+                <div class="col-12">
+                    <strong>Descrição</strong><br />
+                    <span class="text-muted">@Model.Descricao</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

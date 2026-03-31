@@ -20,9 +20,8 @@ namespace WebApplicationPods.Controllers
 
         private int GetLojaIdOrFail()
         {
-            if (!_currentLoja.HasLoja || !_currentLoja.LojaId.HasValue || _currentLoja.LojaId.Value <= 0)
-                throw new InvalidOperationException("Loja atual não definida. Verifique o middleware multi-loja.");
-            return _currentLoja.LojaId.Value;
+            // Multi-loja desativado por enquanto
+            return 1;
         }
 
         public IActionResult Index()
@@ -31,7 +30,10 @@ namespace WebApplicationPods.Controllers
             return View(categorias);
         }
 
-        public IActionResult Criar() => View();
+        public IActionResult Criar()
+        {
+            return View();
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -61,6 +63,7 @@ namespace WebApplicationPods.Controllers
         {
             var categoria = _categoriaRepository.ObterPorId(id);
             if (categoria == null) return NotFound();
+
             return View(categoria);
         }
 
@@ -119,7 +122,9 @@ namespace WebApplicationPods.Controllers
             var categoria = _categoriaRepository.ObterPorId(id);
             if (categoria == null) return NotFound();
 
-            if (_currentLoja.LojaId.HasValue && categoria.LojaId != _currentLoja.LojaId.Value && !User.IsInRole("Admin"))
+            var lojaId = GetLojaIdOrFail();
+
+            if (categoria.LojaId != lojaId && !User.IsInRole("Admin"))
                 return Forbid();
 
             _categoriaRepository.Remover(id);

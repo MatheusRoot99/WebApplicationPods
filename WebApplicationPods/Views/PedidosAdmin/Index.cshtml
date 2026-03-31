@@ -5,7 +5,7 @@
 @model IEnumerable<PedidoModel>
 
 @{
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    // Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Pedidos";
 
     var filtro = (string)(ViewBag.Filtro ?? "abertos");
@@ -89,7 +89,7 @@
                 </tr>
             </thead>
             <tbody id="tbodyPedidos">
-                @await Html.PartialAsync("_PedidosTableBody", Model)
+                @await Html.PartialAsync("~/Views/PedidosAdmin/_PedidosTableBody.cshtml", Model)
             </tbody>
         </table>
     </div>

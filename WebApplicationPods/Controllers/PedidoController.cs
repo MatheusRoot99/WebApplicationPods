@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using WebApplicationPods.Constants;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
 
@@ -34,73 +35,185 @@ namespace WebApplicationPods.Controllers
             return false;
         }
 
-        private static int MapStep(string? status)
+        private static bool StatusEh(string? atual, string esperado)
         {
-            var s = (status ?? string.Empty).ToLowerInvariant();
-            if (s.Contains("cancel")) return -1;
-            if (s.Contains("entreg") || s.Contains("concl")) return 5;
-            if (s.Contains("rota") || s.Contains("saiu") || s.Contains("entrega") || s.Contains("retirada")) return 4;
-            if (s.Contains("prepar") || s.Contains("produção") || s.Contains("producao")) return 3;
-            if (s.Contains("pago") || s.Contains("aprov")) return 2;
-            if (s.Contains("aguard") && s.Contains("pag")) return 1;
+            return string.Equals(atual?.Trim(), esperado, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static int MapStep(string? status, bool retiradaNoLocal = false)
+        {
+            if (string.IsNullOrWhiteSpace(status))
+                return 0;
+
+            if (status.Contains("Cancel", StringComparison.OrdinalIgnoreCase) ||
+                status.Contains("Falhou", StringComparison.OrdinalIgnoreCase))
+            {
+                return -1;
+            }
+
+            if (StatusEh(status, PedidoStatus.Concluido) ||
+                StatusEh(status, PedidoEntregaStatus.Entregue))
+            {
+                return 5;
+            }
+
+            if (StatusEh(status, PedidoStatus.SaiuParaEntrega) ||
+                StatusEh(status, PedidoEntregaStatus.SaiuParaEntrega))
+            {
+                return 4;
+            }
+
+            // retirada local: "Pronto" já representa etapa 4
+            if (retiradaNoLocal && StatusEh(status, PedidoStatus.Pronto))
+            {
+                return 4;
+            }
+
+            // entrega: ainda não saiu, mas já está na fase logística
+            if (StatusEh(status, PedidoStatus.Pronto) ||
+                StatusEh(status, PedidoEntregaStatus.AguardandoAtribuicao) ||
+                StatusEh(status, PedidoEntregaStatus.Atribuido))
+            {
+                return 4;
+            }
+
+            if (StatusEh(status, PedidoStatus.EmPreparacao) ||
+                status.Contains("Produ", StringComparison.OrdinalIgnoreCase))
+            {
+                return 3;
+            }
+
+            if (StatusEh(status, PedidoStatus.Pago) ||
+                status.Contains("Aprov", StringComparison.OrdinalIgnoreCase))
+            {
+                return 2;
+            }
+
+            if (status.Contains("Aguard", StringComparison.OrdinalIgnoreCase) &&
+                status.Contains("Pag", StringComparison.OrdinalIgnoreCase))
+            {
+                return 1;
+            }
+
             return 0;
         }
 
         // GET /Pedido/Acompanhar/123?t=TOKEN
         [HttpGet]
-        [AllowAnonymous]
-        public IActionResult Acompanhar(int id, string? t)
+        [HttpGet]
+        public IActionResult Acompanhar(int id, string? t = null)
         {
+            if (id <= 0)
+                return RedirectToAction("Index", "Home");
+
             var pedido = _pedidoRepository.ObterPorId(id);
-            if (pedido == null) return NotFound();
+            if (pedido == null)
+                return RedirectToAction("Index", "Home");
 
-            if (!CanViewPedido(pedido, HttpContext.User, t))
+            // Se existir token de rastreio no pedido, valida quando vier na URL
+            if (!string.IsNullOrWhiteSpace(pedido.RastreioToken))
             {
-                TempData["Erro"] = "Não foi possível identificar seu pedido.";
-                return RedirectToAction(nameof(Buscar));
-            }
-
-            IEnumerable<PedidoModel> ultimos = new[] { pedido };
-
-            var user = HttpContext.User;
-            if (user?.Identity?.IsAuthenticated == true)
-            {
-                if (user.IsInRole("Lojista") || user.IsInRole("Admin"))
+                if (string.IsNullOrWhiteSpace(t) ||
+                    !string.Equals(pedido.RastreioToken, t, StringComparison.OrdinalIgnoreCase))
                 {
-                    ultimos = _pedidoRepository.ObterPorCliente(pedido.ClienteId)
-                        .OrderByDescending(x => x.DataPedido)
-                        .Take(10)
-                        .ToList();
-                }
-                else
-                {
-                    var cidStr = user.FindFirstValue("ClienteId");
-                    if (int.TryParse(cidStr, out var cid) && cid > 0)
-                    {
-                        ultimos = _pedidoRepository.ObterPorCliente(cid)
-                            .OrderByDescending(x => x.DataPedido)
-                            .Take(10)
-                            .ToList();
-                    }
-                }
-            }
-            else
-            {
-                var cookieToken = Request.Cookies["last_order_token"];
-                if (!string.IsNullOrEmpty(cookieToken) &&
-                    string.Equals(cookieToken, pedido.RastreioToken, StringComparison.Ordinal))
-                {
-                    ultimos = _pedidoRepository.ObterPorCliente(pedido.ClienteId)
-                        .OrderByDescending(x => x.DataPedido)
-                        .Take(10)
-                        .ToList();
+                    return RedirectToAction("Index", "Home");
                 }
             }
 
-            ViewBag.Ultimos = ultimos;
-            ViewBag.StatusUrl = Url.Action("Status", "Pedido", new { id = pedido.Id, t = pedido.RastreioToken });
+            var ultimosPedidos = Enumerable.Empty<PedidoModel>();
+
+            if (pedido.ClienteId > 0)
+            {
+                ultimosPedidos = _pedidoRepository
+                    .ObterPorCliente(pedido.ClienteId)
+                    .Where(x => x.Id != pedido.Id)
+                    .OrderByDescending(x => x.DataPedido)
+                    .Take(10)
+                    .ToList();
+            }
+
+            var historico = _pedidoRepository
+                .ObterHistorico(pedido.Id)
+                .OrderByDescending(x => x.DataCadastro)
+                .ToList();
+
+            ViewBag.Ultimos = ultimosPedidos;
+            ViewBag.Historico = historico;
 
             return View(pedido);
+        }
+
+        [HttpGet]
+        public IActionResult StatusJson(int id, string? t = null)
+        {
+            if (id <= 0)
+            {
+                return Json(new
+                {
+                    ok = false,
+                    message = "Pedido inválido."
+                });
+            }
+
+            var pedido = _pedidoRepository.ObterPorId(id);
+            if (pedido == null)
+            {
+                return Json(new
+                {
+                    ok = false,
+                    message = "Pedido não encontrado."
+                });
+            }
+
+            if (!string.IsNullOrWhiteSpace(pedido.RastreioToken))
+            {
+                if (string.IsNullOrWhiteSpace(t) ||
+                    !string.Equals(pedido.RastreioToken, t, StringComparison.OrdinalIgnoreCase))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        message = "Token de rastreio inválido."
+                    });
+                }
+            }
+
+            int step = ObterStepPedido(pedido);
+
+            var times = new Dictionary<string, string?>()
+            {
+                ["0"] = pedido.DataPedido != default ? pedido.DataPedido.ToString("o") : null,
+                ["1"] = pedido.DataAguardandoPagamento?.ToString("o"),
+                ["2"] = pedido.DataPagamentoAprovado?.ToString("o"),
+                ["3"] = pedido.DataInicioPreparo?.ToString("o"),
+                ["4"] = pedido.DataSaiuParaEntregaOuRetirada?.ToString("o"),
+                ["5"] = pedido.DataConcluido?.ToString("o")
+            };
+
+            return Json(new
+            {
+                ok = true,
+                id = pedido.Id,
+                status = pedido.Status,
+                step = step,
+                times = times,
+                dataPedido = pedido.DataPedido,
+                dataAguardandoPagamento = pedido.DataAguardandoPagamento,
+                dataPagamentoAprovado = pedido.DataPagamentoAprovado,
+                dataInicioPreparo = pedido.DataInicioPreparo,
+                dataSaiuParaEntregaOuRetirada = pedido.DataSaiuParaEntregaOuRetirada,
+                dataConcluido = pedido.DataConcluido,
+                dataCancelado = pedido.DataCancelado,
+                retiradaNoLocal = pedido.RetiradaNoLocal
+            });
+        }
+
+        private static int ObterStepPedido(PedidoModel pedido)
+        {
+            if (pedido == null)
+                return 0;
+
+            return MapStep(pedido.Status, pedido.RetiradaNoLocal);
         }
 
         [HttpGet("Pedido/ResumoPedidoCliente/{id:int}")]
@@ -115,7 +228,7 @@ namespace WebApplicationPods.Controllers
                 TempData["Erro"] = "Não foi possível identificar seu pedido.";
                 return RedirectToAction(nameof(Buscar));
             }
-
+            ViewBag.Historico = _pedidoRepository.ObterHistorico(pedido.Id);
             return View("ResumoPedidoCliente", pedido);
         }
 
@@ -129,7 +242,7 @@ namespace WebApplicationPods.Controllers
             if (p == null) return NotFound();
             if (!CanViewPedido(p, HttpContext.User, t)) return Unauthorized();
 
-            var step = MapStep(p.Status);
+            var step = MapStep(p.Status, p.RetiradaNoLocal);
             var times = new Dictionary<string, string?>
             {
                 ["0"] = p.DataPedido.ToString("o"),

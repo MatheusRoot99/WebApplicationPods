@@ -4,48 +4,65 @@
     var isAuth = User.Identity?.IsAuthenticated == true;
     var isAdmin = User.IsInRole("Admin");
     var isLojista = User.IsInRole("Lojista");
+    var isEntregador = User.IsInRole("Entregador");
 
-    string currentArea = (ViewContext.RouteData.Values["area"]?.ToString() ?? "");
-    string currentCtrl = (ViewContext.RouteData.Values["controller"]?.ToString() ?? "");
+    string currentArea = ViewContext.RouteData.Values["area"]?.ToString() ?? "";
+    string currentCtrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
 
     string Active(string area, string controller)
     {
-        bool sameArea = string.Equals(currentArea ?? "", area ?? "", StringComparison.OrdinalIgnoreCase);
-        bool sameCtrl = string.Equals(currentCtrl ?? "", controller ?? "", StringComparison.OrdinalIgnoreCase);
+        bool sameArea = string.Equals(currentArea, area ?? "", StringComparison.OrdinalIgnoreCase);
+        bool sameCtrl = string.Equals(currentCtrl, controller ?? "", StringComparison.OrdinalIgnoreCase);
         return (sameArea && sameCtrl) ? "is-active" : "";
     }
+
+    var produtosArea = AppAreas.Lojista;
+
+    var isProdutoMenuOpen =
+        string.Equals(currentArea, produtosArea, StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(currentCtrl, "Produto", StringComparison.OrdinalIgnoreCase);
+
+    var produtoCollapseShow = isProdutoMenuOpen ? "show" : "";
+    var produtoExpanded = isProdutoMenuOpen ? "true" : "false";
+
+    var dashboardClass = Active(AppAreas.Lojista, "Dashboard");
+    var relatoriosClass = Active("", "PedidosAdmin");
+    var estoqueClass = Active("", "Estoque");
+    var pedidosClass = Active("", "PedidosAdmin");
+    var categoriasClass = Active("", "Categoria");
+    var entregadoresClass = Active(AppAreas.Lojista, "Entregadores");
+    var pagamentoClass = Active("", "PaymentConfig");
+    var lojaClass = Active(AppAreas.Lojista, "Loja");
+    var entregadorPainelClass = Active("", "Entregador");
 }
 
- <div class="border-right d-none d-lg-block" id="sidebar-wrapper">
+<div class="border-right d-none d-lg-block" id="sidebar-wrapper">
     <div class="sidebar-heading">
         <div class="sidebar-brand">
             <div class="brand-badge">
-                <i class="fas fa-smoking text-white"></i>
+                <i class="fas fa-store"></i>
             </div>
             <div class="d-flex flex-column">
-                <div class="brand-title">Pods Eletrônicos</div>
+                <div class="brand-title">Conveniência</div>
                 <div class="brand-subtitle">Painel</div>
             </div>
         </div>
     </div>
 
     <div class="list-group list-group-flush">
-
-        <!-- NAVEGAÇÃO -->
         <div class="sidebar-section">
-            <div class="sidebar-section-title">NAVEGAÇÃO</div>
+            <div class="sidebar-section-title">Navegação</div>
 
             <a asp-area="" asp-controller="Home" asp-action="Index"
                class="list-group-item list-group-item-action @Active("", "Home")">
-                <i class="fas fa-tachometer-alt"></i> Home
+                <i class="fas fa-house"></i> Home
             </a>
         </div>
 
-        <!-- CLIENTE -->
-        @if (!isAdmin && !isLojista)
+        @if (!isAdmin && !isLojista && !isEntregador)
         {
             <div class="sidebar-section">
-                <div class="sidebar-section-title">CLIENTE</div>
+                <div class="sidebar-section-title">Cliente</div>
 
                 <a asp-area="" asp-controller="Carrinho" asp-action="Index"
                    class="list-group-item list-group-item-action @Active("", "Carrinho")">
@@ -54,59 +71,110 @@
             </div>
         }
 
-        <!-- LOJISTA -->
         @if (isLojista)
         {
             <div class="sidebar-section">
-                <div class="sidebar-section-title">LOJISTA</div>
+                <div class="sidebar-section-title">Lojista</div>
 
                 <a asp-area="PainelLojista" asp-controller="Dashboard" asp-action="Index"
-                   class="list-group-item list-group-item-action @Active("PainelLojista", "Dashboard")">
+                   class="list-group-item list-group-item-action @dashboardClass">
                     <i class="fas fa-gauge"></i> Dashboard
                 </a>
 
-                <a asp-area="@AppAreas.Lojista" asp-controller="PedidosAdmin" asp-action="Relatorio"
-                   class="list-group-item list-group-item-action @Active(AppAreas.Lojista, "PedidosAdmin")">
+                <a asp-area="" asp-controller="PedidosAdmin" asp-action="Relatorio"
+                   class="list-group-item list-group-item-action @relatoriosClass">
                     <i class="fas fa-chart-line"></i> Relatórios
                 </a>
 
-                <a asp-area="@AppAreas.Lojista" asp-controller="Estoque" asp-action="Index"
-                   class="list-group-item list-group-item-action @Active(AppAreas.Lojista, "Estoque")">
+                <a asp-area="" asp-controller="Estoque" asp-action="Index"
+                   class="list-group-item list-group-item-action @estoqueClass">
                     <i class="fas fa-boxes"></i> Estoque
                 </a>
 
-                <a asp-area="@AppAreas.Lojista" asp-controller="PedidosAdmin" asp-action="Index"
-                   class="list-group-item list-group-item-action @Active(AppAreas.Lojista, "PedidosAdmin")">
+                <a asp-area="" asp-controller="PedidosAdmin" asp-action="Index"
+                   class="list-group-item list-group-item-action @pedidosClass">
                     <i class="fas fa-clipboard-list"></i> Pedidos
                 </a>
 
-                <a asp-area="@AppAreas.Lojista" asp-controller="Categoria" asp-action="Index"
-                   class="list-group-item list-group-item-action @Active(AppAreas.Lojista, "Categoria")">
+                <a asp-area="PainelLojista" asp-controller="Entregadores" asp-action="Index"
+                   class="list-group-item list-group-item-action @entregadoresClass">
+                    <i class="fas fa-motorcycle"></i> Entregadores
+                </a>
+
+                <a asp-area="" asp-controller="Entregador" asp-action="Index"
+                   class="list-group-item list-group-item-action @entregadorPainelClass">
+                    <i class="fas fa-route"></i> Minhas entregas
+                </a>
+
+                <a asp-area="" asp-controller="Categoria" asp-action="Index"
+                   class="list-group-item list-group-item-action @categoriasClass">
                     <i class="fas fa-tags"></i> Categorias
                 </a>
 
-                <a asp-area="@AppAreas.Lojista" asp-controller="Produto" asp-action="Index"
-                   class="list-group-item list-group-item-action @Active(AppAreas.Lojista, "Produto")">
-                    <i class="fas fa-box-open"></i> Gerenciar Produtos
+                <a class="list-group-item list-group-item-action nav-parent @(isProdutoMenuOpen ? "has-sub-active" : "")"
+                   data-bs-toggle="collapse"
+                   href="#menuProdutos"
+                   role="button"
+                   aria-expanded="@produtoExpanded"
+                   aria-controls="menuProdutos">
+                    <span class="d-flex align-items-center gap-2">
+                        <i class="fas fa-box-open"></i> Produtos
+                    </span>
+                    <i class="fas fa-chevron-down chev"></i>
                 </a>
 
-                <a asp-area="@AppAreas.Lojista" asp-controller="PaymentConfig" asp-action="Edit" asp-route-provider="Stripe"
-                   class="list-group-item list-group-item-action @Active(AppAreas.Lojista, "PaymentConfig")">
-                    <i class="fas fa-credit-card"></i> Configurações de Pagamento
+                <div class="collapse @produtoCollapseShow" id="menuProdutos">
+                    <div class="nav-sub">
+                        <a class="list-group-item list-group-item-action @Active(AppAreas.Lojista, "Produto")"
+                           asp-area="@AppAreas.Lojista" asp-controller="Produto" asp-action="Index">
+                            <i class="fas fa-list"></i> Catálogo
+                        </a>
+
+                        <a class="list-group-item list-group-item-action"
+                           asp-area="@AppAreas.Lojista" asp-controller="Produto" asp-action="CriarPadrao">
+                            <i class="fas fa-plus"></i> Novo Padrão
+                        </a>
+
+                        <a class="list-group-item list-group-item-action"
+                           asp-area="@AppAreas.Lojista" asp-controller="Produto" asp-action="CriarBebida">
+                            <i class="fas fa-wine-bottle"></i> Nova Bebida
+                        </a>
+
+                        <a class="list-group-item list-group-item-action"
+                           asp-area="@AppAreas.Lojista" asp-controller="Produto" asp-action="CriarPod">
+                            <i class="fas fa-smoking"></i> Novo Pod
+                        </a>
+                    </div>
+                </div>
+
+                <a asp-area="" asp-controller="PaymentConfig" asp-action="Edit" asp-route-provider="Stripe"
+                   class="list-group-item list-group-item-action @pagamentoClass">
+                    <i class="fas fa-credit-card"></i> Pagamento
                 </a>
 
                 <a asp-area="@AppAreas.Lojista" asp-controller="Loja" asp-action="Editar"
-                   class="list-group-item list-group-item-action @Active(AppAreas.Lojista, "Loja")">
+                   class="list-group-item list-group-item-action @lojaClass">
                     <i class="fas fa-store"></i> Configurações da Loja
                 </a>
             </div>
         }
 
-        <!-- ADMIN -->
+        @if (isEntregador)
+        {
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Entregador</div>
+
+                <a asp-area="" asp-controller="Entregador" asp-action="Index"
+                   class="list-group-item list-group-item-action @entregadorPainelClass">
+                    <i class="fas fa-route"></i> Minhas entregas
+                </a>
+            </div>
+        }
+
         @if (isAdmin)
         {
             <div class="sidebar-section">
-                <div class="sidebar-section-title">ADMIN</div>
+                <div class="sidebar-section-title">Admin</div>
 
                 <a asp-area="@AppAreas.Admin" asp-controller="Dashboard" asp-action="Index"
                    class="list-group-item list-group-item-action @Active(AppAreas.Admin, "Dashboard")">
@@ -125,9 +193,8 @@
             </div>
         }
 
-        <!-- USUÁRIO -->
         <div class="sidebar-section">
-            <div class="sidebar-section-title">USUÁRIO</div>
+            <div class="sidebar-section-title">Usuário</div>
 
             @if (isAuth)
             {
@@ -136,9 +203,10 @@
                     <i class="fas fa-user-circle"></i> Perfil
                 </a>
 
-                <form asp-area="" asp-controller="Conta" asp-action="Logout" method="post" class="list-group-item">
+                <form asp-area="" asp-controller="Conta" asp-action="Logout" method="post"
+                      class="list-group-item list-group-item-action">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-link p-0">
+                    <button type="submit" class="sidebar-btn">
                         <i class="fas fa-sign-out-alt"></i> Sair
                     </button>
                 </form>
@@ -151,6 +219,5 @@
                 </a>
             }
         </div>
-
     </div>
 </div>

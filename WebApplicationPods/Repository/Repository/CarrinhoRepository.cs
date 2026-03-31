@@ -15,42 +15,55 @@ namespace WebApplicationPods.Repositories
         private readonly ILogger<CarrinhoRepository> _logger;
         private readonly BancoContext _context;
         private readonly ICurrentLojaService _currentLoja;
+        private readonly IWebHostEnvironment _env;
 
         private const string CarrinhoSessionKeyPrefix = "Carrinho_";
+        private const int LojaFallbackDev = 0;
 
         public CarrinhoRepository(
             IHttpContextAccessor httpContextAccessor,
             IProdutoRepository produtoRepository,
             ILogger<CarrinhoRepository> logger,
             BancoContext context,
-            ICurrentLojaService currentLoja)
+            ICurrentLojaService currentLoja,
+            IWebHostEnvironment env)
         {
             _http = httpContextAccessor;
             _produtoRepository = produtoRepository;
             _logger = logger;
             _context = context;
             _currentLoja = currentLoja;
+            _env = env;
         }
 
         // ===================== Helpers =====================
 
-        private int GetLojaIdOrFail()
+        private bool IgnorarLojaNoAmbienteAtual()
+            => _env.IsDevelopment();
+
+        private int GetLojaIdOrFallback()
         {
-            if (_currentLoja?.LojaId is not int lojaId || lojaId <= 0)
-                throw new InvalidOperationException("Loja atual não definida. Verifique o middleware multi-loja.");
-            return lojaId;
+            if (_currentLoja?.LojaId is int lojaId && lojaId > 0)
+                return lojaId;
+
+            if (IgnorarLojaNoAmbienteAtual())
+                return LojaFallbackDev;
+
+            throw new InvalidOperationException("Loja atual não definida. Verifique o middleware multi-loja.");
         }
 
         private string GetSessionKey()
         {
-            var lojaId = GetLojaIdOrFail();
+            var lojaId = GetLojaIdOrFallback();
             return $"{CarrinhoSessionKeyPrefix}{lojaId}";
         }
 
         private ISession SessionOrFail()
         {
             var session = _http.HttpContext?.Session;
-            if (session == null) throw new InvalidOperationException("Sessão não disponível. Verifique UseSession().");
+            if (session == null)
+                throw new InvalidOperationException("Sessão não disponível. Verifique UseSession().");
+
             return session;
         }
 
@@ -60,7 +73,7 @@ namespace WebApplicationPods.Repositories
 
         public CarrinhoModel ObterCarrinho()
         {
-            var lojaId = GetLojaIdOrFail();
+            var lojaId = GetLojaIdOrFallback();
             var sessionKey = GetSessionKey();
             var session = SessionOrFail();
 
@@ -76,7 +89,11 @@ namespace WebApplicationPods.Repositories
 
             try
             {
-                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+
                 var carrinhoDTO = JsonSerializer.Deserialize<CarrinhoDTO>(json, options);
 
                 var carrinho = new CarrinhoModel
@@ -89,15 +106,16 @@ namespace WebApplicationPods.Repositories
                 {
                     foreach (var itemDTO in carrinhoDTO.Itens)
                     {
-                        // Cinturão: produto sempre vem filtrado por loja (se você tem query filter),
-                        // mas aqui ainda garantimos.
                         var produto = _produtoRepository.ObterPorId(itemDTO.ProdutoId);
-                        if (produto == null) continue;
-
-                        // Se existir Produto.LojaId, protege:
-                        // (Se não existir, pode remover esse IF)
-                        if (produto.LojaId != 0 && produto.LojaId != lojaId)
+                        if (produto == null)
                             continue;
+
+                        // Em produção: protege multi-loja
+                        if (!IgnorarLojaNoAmbienteAtual())
+                        {
+                            if (produto.LojaId != 0 && produto.LojaId != lojaId)
+                                continue;
+                        }
 
                         carrinho.Itens.Add(new CarrinhoItemViewModel
                         {
@@ -116,6 +134,7 @@ namespace WebApplicationPods.Repositories
             catch (JsonException ex)
             {
                 _logger.LogWarning(ex, "Erro ao desserializar carrinho da sessão. Limpando carrinho.");
+
                 session.Remove(sessionKey);
 
                 return new CarrinhoModel
@@ -128,11 +147,10 @@ namespace WebApplicationPods.Repositories
 
         public void SalvarCarrinho(CarrinhoModel carrinho)
         {
-            var lojaId = GetLojaIdOrFail();
+            var lojaId = GetLojaIdOrFallback();
             var sessionKey = GetSessionKey();
             var session = SessionOrFail();
 
-            // Cinturão: carrinho sempre amarra na loja atual
             carrinho.LojaId = lojaId;
 
             _logger.LogInformation("Salvando carrinho LojaId={LojaId} com {Count} itens",
@@ -151,7 +169,8 @@ namespace WebApplicationPods.Repositories
                         Quantidade = i.Quantidade,
                         Sabor = i.Sabor,
                         Observacoes = i.Observacoes
-                    }).ToList()
+                    })
+                    .ToList()
             };
 
             var options = new JsonSerializerOptions
@@ -166,14 +185,20 @@ namespace WebApplicationPods.Repositories
 
         public void AdicionarItem(ProdutoModel produto, int quantidade, string? sabor = null, string? observacoes = null)
         {
-            if (produto == null) throw new ArgumentNullException(nameof(produto));
-            if (quantidade <= 0) throw new ArgumentException("Quantidade deve ser maior que zero", nameof(quantidade));
+            if (produto == null)
+                throw new ArgumentNullException(nameof(produto));
 
-            var lojaId = GetLojaIdOrFail();
+            if (quantidade <= 0)
+                throw new ArgumentException("Quantidade deve ser maior que zero", nameof(quantidade));
 
-            // Cinturão multi-loja (se Produto tem LojaId)
-            if (produto.LojaId != 0 && produto.LojaId != lojaId)
-                throw new InvalidOperationException("Produto não pertence à loja atual.");
+            var lojaId = GetLojaIdOrFallback();
+
+            // Só valida loja em produção
+            if (!IgnorarLojaNoAmbienteAtual())
+            {
+                if (produto.LojaId != 0 && produto.LojaId != lojaId)
+                    throw new InvalidOperationException("Produto não pertence à loja atual.");
+            }
 
             var carrinho = ObterCarrinho();
             var saborKey = NormSabor(sabor);
@@ -207,7 +232,8 @@ namespace WebApplicationPods.Repositories
 
         public void AtualizarItem(ProdutoModel produto, int quantidade, string? sabor = null)
         {
-            if (produto == null) throw new ArgumentNullException(nameof(produto));
+            if (produto == null)
+                throw new ArgumentNullException(nameof(produto));
 
             var carrinho = ObterCarrinho();
             var saborKey = NormSabor(sabor);
@@ -216,7 +242,8 @@ namespace WebApplicationPods.Repositories
                 i.Produto.Id == produto.Id &&
                 string.Equals(NormSabor(i.Sabor), saborKey, StringComparison.OrdinalIgnoreCase));
 
-            if (item == null) return;
+            if (item == null)
+                return;
 
             item.Quantidade = quantidade;
 
@@ -235,7 +262,8 @@ namespace WebApplicationPods.Repositories
                 i.Produto.Id == produtoId &&
                 string.Equals(NormSabor(i.Sabor), saborKey, StringComparison.OrdinalIgnoreCase));
 
-            if (item == null) return;
+            if (item == null)
+                return;
 
             carrinho.Itens.Remove(item);
             SalvarCarrinho(carrinho);
@@ -249,9 +277,7 @@ namespace WebApplicationPods.Repositories
         }
 
         // =====================
-        // Abaixo são métodos "extras" que você tinha.
-        // Mantive, mas eles NÃO estão na interface.
-        // Se não usar, pode remover.
+        // Extras
         // =====================
 
         public CarrinhoModel? ObterCarrinhoPorTelefone(string telefone)

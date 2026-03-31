@@ -1,47 +1,160 @@
 ﻿@model WebApplicationPods.Models.ResumoPedidoViewModel
 @using WebApplicationPods.Models
+@using System.Globalization
+@using System.Text.RegularExpressions
 
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Resumo do Pedido";
     var loja = ViewBag.Loja as LojaConfig;
+
+    string FormatarTelefone(string telefone)
+    {
+        if (string.IsNullOrWhiteSpace(telefone)) return "";
+
+        var d = Regex.Replace(telefone, @"\D+", "");
+
+        if ((d.Length == 12 || d.Length == 13) && d.StartsWith("55"))
+            d = d.Substring(2);
+
+        if (d.Length == 11) return $"({d[..2]}) {d.Substring(2, 5)}-{d.Substring(7)}";
+        if (d.Length == 10) return $"({d[..2]}) {d.Substring(2, 4)}-{d.Substring(6)}";
+        if (d.Length == 9) return $"{d[..5]}-{d.Substring(5)}";
+        if (d.Length == 8) return $"{d[..4]}-{d.Substring(4)}";
+
+        return telefone;
+    }
+
+    int? TentarObterInt(object obj, params string[] nomes)
+    {
+        if (obj == null) return null;
+
+        var type = obj.GetType();
+        foreach (var nome in nomes)
+        {
+            var prop = type.GetProperty(nome);
+            if (prop == null) continue;
+
+            var valor = prop.GetValue(obj);
+            if (valor == null) continue;
+
+            if (valor is int i) return i;
+            if (int.TryParse(valor.ToString(), out var convertido)) return convertido;
+        }
+
+        return null;
+    }
+
+    decimal? TentarObterDecimal(object obj, params string[] nomes)
+    {
+        if (obj == null) return null;
+
+        var type = obj.GetType();
+        foreach (var nome in nomes)
+        {
+            var prop = type.GetProperty(nome);
+            if (prop == null) continue;
+
+            var valor = prop.GetValue(obj);
+            if (valor == null) continue;
+
+            if (valor is decimal dec) return dec;
+            if (valor is double dbl) return Convert.ToDecimal(dbl);
+            if (valor is float flt) return Convert.ToDecimal(flt);
+
+            if (decimal.TryParse(valor.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var convertidoInv))
+                return convertidoInv;
+
+            if (decimal.TryParse(valor.ToString(), out var convertido))
+                return convertido;
+        }
+
+        return null;
+    }
+
+    string MontarDescricaoQuantidade(dynamic item)
+    {
+        var qtd = (int)(item?.Quantidade ?? 0);
+        if (qtd <= 0) qtd = 1;
+
+        var produto = item?.Produto;
+        var unidadesPack = TentarObterInt(produto,
+            "UnidadesPorPack",
+            "QuantidadePorPack",
+            "QtdPorPack",
+            "PodsPorPack",
+            "Unidades",
+            "QuantidadeUnidades");
+
+        if (unidadesPack.HasValue && unidadesPack.Value > 1)
+        {
+            var packTxt = qtd == 1 ? "pack" : "packs";
+            var unTxt = unidadesPack.Value == 1 ? "unidade" : "unidades";
+            return $"{qtd} {packTxt} c/ {unidadesPack.Value} {unTxt}";
+        }
+
+        return qtd == 1 ? "1 un." : $"{qtd} un.";
+    }
+
+    decimal ObterPrecoUnitario(dynamic item)
+    {
+        decimal? preco =
+            TentarObterDecimal(item, "PrecoUnitario", "ValorUnitario", "Preco") ??
+            TentarObterDecimal(item?.Produto, "PrecoPromocional", "PrecoPor", "PrecoVenda", "Preco");
+
+        return preco ?? 0;
+    }
+
+    decimal ObterSubtotalItem(dynamic item)
+    {
+        var qtd = (int)(item?.Quantidade ?? 0);
+        if (qtd <= 0) qtd = 1;
+
+        var subtotalDireto =
+            TentarObterDecimal(item, "Subtotal", "ValorTotal", "Total");
+
+        if (subtotalDireto.HasValue && subtotalDireto.Value > 0)
+            return subtotalDireto.Value;
+
+        return ObterPrecoUnitario(item) * qtd;
+    }
+
+    var telefoneFormatado = FormatarTelefone(Model?.Cliente?.Telefone);
+    var subtotalPedido = Model?.Carrinho?.Total ?? 0;
+    var taxaEntregaInicial = Model?.RetiradaNoLocal == true ? 0 : 5;
+    var totalItensCarrinho = Model?.Carrinho?.Itens?.Sum(i => i.Quantidade) ?? 0;
+    var quantidadeProdutos = Model?.Carrinho?.Itens?.Count() ?? 0;
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/resumo-componente.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
-    <style>
-        .pickup-box {
-            border: 1px dashed #28a745;
-            border-radius: 12px;
-            padding: 12px;
-            background: #f6fff8
-        }
-
-            .pickup-box .title {
-                font-weight: 700
-            }
-    </style>
 }
 
 <div class="container-xxl mt-4 animate__animated animate__fadeIn">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="mb-0 fw-bold">@ViewData["Title"]</h1>
-        <a asp-action="Index" class="btn btn-outline-dark"><i class="bi bi-arrow-left me-1"></i> Voltar</a>
+    <div class="d-flex justify-content-between align-items-center mb-4 resumo-topbar">
+        <div>
+            <h1 class="mb-1 fw-bold">@ViewData["Title"]</h1>
+            @* <div class="text-muted small">Confira seus dados e finalize com segurança</div> *@
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Voltar
+        </a>
     </div>
 
     @if (TempData["Sucesso"] != null)
     {
         <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i> @TempData["Sucesso"] 
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["Sucesso"]
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
         </div>
     }
+
     @if (TempData["Erro"] != null)
     {
         <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>  @TempData["Erro"] 
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Erro"]
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
         </div>
     }
@@ -50,32 +163,64 @@
     {
         <div class="row g-4">
             <div class="col-lg-8">
-                <!-- Dados do cliente -->
-                <div class="card shadow-sm border-0 overflow-hidden">
-                    <div class="card-header bg-gradient-orange text-white d-flex align-items-center">
-                        <div class="icon-circle bg-white bg-opacity-10 me-3"><i class="bi bi-person-badge text-white"></i></div>
-                        <div><h5 class="mb-0">Dados do Cliente</h5><small class="opacity-75">Informações para contato</small></div>
+                <div class="card shadow-sm border-0 overflow-hidden compact-section-card">
+                    <div class="card-header bg-gradient-orange text-white d-flex align-items-center compact-section-header">
+                        <div class="icon-circle bg-white bg-opacity-10 me-2">
+                            <i class="bi bi-person-badge text-white"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0">Dados do Cliente</h5>
+                            <small class="opacity-75">Contato</small>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-4"><div class="info-box"><small class="text-muted">Nome</small><div class="fw-semibold">@Model.Cliente.Nome</div></div></div>
-                            <div class="col-md-4"><div class="info-box"><small class="text-muted">Telefone</small><div class="fw-semibold">@Model.Cliente.Telefone</div></div></div>
-                            <div class="col-md-4"><div class="info-box"><small class="text-muted">Email</small><div class="fw-semibold">@Model.Cliente.Email</div></div></div>
+
+                    <div class="card-body compact-section-body">
+                        <div class="row g-2 compact-client-grid">
+                            <div class="col-md-4">
+                                <div class="info-box info-box-premium compact-info-box">
+                                    <small>Nome</small>
+                                    <div class="fw-semibold info-value text-truncate" title="@Model.Cliente.Nome">
+                                        @Model.Cliente.Nome
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="info-box info-box-premium compact-info-box">
+                                    <small>Telefone</small>
+                                    <div class="fw-semibold info-value" id="telefoneClienteTopo">
+                                        @telefoneFormatado
+                                    </div>
+                                </div>
+                            </div>
+
+                            @* <div class="col-md-4">
+                                <div class="info-box info-box-premium compact-info-box">
+                                    <small>Email</small>
+                                    <div class="fw-semibold info-value text-truncate" title="@Model.Cliente.Email">
+                                        @Model.Cliente.Email
+                                    </div>
+                                </div>
+                            </div> *@
                         </div>
                     </div>
                 </div>
 
-                <!-- Form principal -->
                 <form asp-action="Finalizar" method="post" id="formFinalizar">
                     @Html.AntiForgeryToken()
 
-                    <!-- Entrega / Retirada -->
                     <div class="card shadow-sm border-0 mt-4">
                         <div class="card-header bg-gradient-orange text-white d-flex justify-content-between align-items-center">
                             <div class="d-flex align-items-center">
-                                <div class="icon-circle bg-white bg-opacity-10 me-3"><i class="bi bi-truck text-white"></i></div>
-                                <div><h5 class="mb-0">Entrega</h5><small class="opacity-75">Escolha como receber seu pedido</small></div>
+                                <div class="icon-circle bg-white bg-opacity-10 me-3">
+                                    <i class="bi bi-truck text-white"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0">Entrega</h5>
+                                    <small class="opacity-75">Escolha como receber seu pedido</small>
+                                </div>
                             </div>
+
                             <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#enderecoModal">
                                 <i class="bi bi-plus-lg me-1"></i> Novo Endereço
                             </button>
@@ -90,10 +235,12 @@
                                 </label>
                             </div>
 
-                            <!-- Box retirada -->
                             <div id="pickupBox" class="pickup-box mb-3 @(Model.RetiradaNoLocal ? "" : "d-none")">
-                                <div class="title mb-1"><i class="bi bi-shop me-1"></i> @(loja?.Nome ?? "Retirada na loja")</div>
+                                <div class="title mb-1">
+                                    <i class="bi bi-shop me-1"></i> @(loja?.Nome ?? "Retirada na loja")
+                                </div>
                                 <div class="text-muted">@(loja?.EnderecoTexto ?? "Endereço da loja não configurado.")</div>
+
                                 @if (!string.IsNullOrWhiteSpace(loja?.MapsUrl))
                                 {
                                     <a class="btn btn-dark btn-sm mt-2" href="@loja.MapsUrl" target="_blank" rel="noopener">
@@ -102,10 +249,10 @@
                                 }
                             </div>
 
-                            <!-- Seleção de endereço -->
                             <div id="containerEntrega" class="@(Model.RetiradaNoLocal ? "d-none" : "") animate__animated animate__fadeIn">
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold">Selecione um endereço</label>
+
                                     <div class="d-flex gap-2 mb-3">
                                         <select asp-for="EnderecoSelecionadoId" class="form-select" id="enderecoSelect">
                                             <option value="">Selecione...</option>
@@ -134,7 +281,6 @@
                                             <i class="bi bi-pencil-square"></i>
                                         </button>
 
-                                        <!-- NOVO: excluir -->
                                         <button type="button"
                                                 class="btn btn-outline-danger flex-shrink-0"
                                                 id="btnExcluirEndereco"
@@ -151,7 +297,8 @@
                                     {
                                         <div class="d-flex justify-content-between align-items-start mb-2">
                                             <h6 class="mb-0 d-flex align-items-center gap-2">
-                                                <i class="bi bi-house-check text-orange"></i><span>Endereço selecionado</span>
+                                                <i class="bi bi-house-check text-orange"></i>
+                                                <span>Endereço selecionado</span>
                                                 @if (Model.EnderecoEntrega.Principal)
                                                 {
                                                     <span class="badge bg-orange-soft">Principal</span>
@@ -159,6 +306,7 @@
                                             </h6>
                                             <small class="text-muted">CEP: @Model.EnderecoEntrega.CEP</small>
                                         </div>
+
                                         <div class="address-details">
                                             <div>@Model.EnderecoEntrega.Logradouro, @Model.EnderecoEntrega.Numero</div>
                                             @if (!string.IsNullOrEmpty(Model.EnderecoEntrega.Complemento))
@@ -170,44 +318,72 @@
                                     }
                                     else
                                     {
-                                        <div class="empty-state"><i class="bi bi-house-x"></i><span>Nenhum endereço selecionado</span></div>
+                                        <div class="empty-state">
+                                            <i class="bi bi-house-x"></i>
+                                            <span>Nenhum endereço selecionado</span>
+                                        </div>
                                     }
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Observações -->
-                    <div class="card shadow-sm border-0 mt-4">
-                        <div class="card-header bg-gradient-orange text-white d-flex align-items-center">
-                            <div class="icon-circle bg-white bg-opacity-10 me-3"><i class="bi bi-chat-square-text text-white"></i></div>
-                            <div><h5 class="mb-0">Observações</h5><small class="opacity-75">Instruções especiais para seu pedido</small></div>
+                    <div class="card shadow-sm border-0 mt-3 compact-section-card">
+                        <div class="card-header bg-gradient-orange text-white d-flex align-items-center compact-section-header">
+                            <div class="icon-circle bg-white bg-opacity-10 me-2">
+                                <i class="bi bi-chat-square-text text-white"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0">Observações</h5>
+                                <small class="opacity-75">Opcional</small>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <textarea asp-for="Observacoes" class="form-control" rows="3" placeholder="Ex.: aviso, trocar sabor, horário..."></textarea>
-                            <small class="text-muted">Máximo de 200 caracteres</small>
+
+                        <div class="card-body compact-section-body">
+                            <textarea asp-for="Observacoes"
+                                      class="form-control compact-textarea"
+                                      rows="2"
+                                      maxlength="200"
+                                      placeholder="Ex.: trocar sabor, aviso, horário..."></textarea>
+                            <div class="compact-helper-text">Máx. 200 caracteres</div>
                         </div>
                     </div>
 
-                    <!-- Pagamento -->
                     <div class="card shadow-sm border-0 mt-4">
                         <div class="card-header bg-gradient-orange text-white d-flex align-items-center">
-                            <div class="icon-circle bg-white bg-opacity-10 me-3"><i class="bi bi-credit-card text-white"></i></div>
-                            <div><h5 class="mb-0">Pagamento</h5><small class="opacity-75">Escolha como deseja pagar</small></div>
+                            <div class="icon-circle bg-white bg-opacity-10 me-3">
+                                <i class="bi bi-credit-card text-white"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0">Pagamento</h5>
+                                <small class="opacity-75">Escolha como deseja pagar</small>
+                            </div>
                         </div>
+
                         <div class="card-body">
                             <div class="payments-grid">
                                 <div>
                                     <input type="radio" class="btn-check" id="pay-money" asp-for="MetodoPagamento" value="Dinheiro" />
-                                    <label class="btn btn-payment w-100" for="pay-money"><i class="bi bi-cash-coin payment-icon"></i><span>Dinheiro</span></label>
+                                    <label class="btn btn-payment w-100" for="pay-money">
+                                        <i class="bi bi-cash-coin payment-icon"></i>
+                                        <span>Dinheiro</span>
+                                    </label>
                                 </div>
+
                                 <div>
                                     <input type="radio" class="btn-check" id="pay-pix" asp-for="MetodoPagamento" value="Pix" />
-                                    <label class="btn btn-payment w-100" for="pay-pix"><i class="bi bi-qr-code payment-icon"></i><span>Pix</span></label>
+                                    <label class="btn btn-payment w-100" for="pay-pix">
+                                        <i class="bi bi-qr-code payment-icon"></i>
+                                        <span>Pix</span>
+                                    </label>
                                 </div>
+
                                 <div>
                                     <input type="radio" class="btn-check" id="pay-card-credit" asp-for="MetodoPagamento" value="Cartão de Crédito" />
-                                    <label class="btn btn-payment w-100" for="pay-card-credit"><i class="bi bi-credit-card payment-icon"></i><span>Cartão</span></label>
+                                    <label class="btn btn-payment w-100" for="pay-card-credit">
+                                        <i class="bi bi-credit-card payment-icon"></i>
+                                        <span>Cartão</span>
+                                    </label>
                                 </div>
                             </div>
                         </div>
@@ -221,40 +397,92 @@
                 </form>
             </div>
 
-            <!-- Coluna direita -->
             <div class="col-lg-4">
-                <div class="card shadow-sm border-0 sticky-top">
-                    <div class="card-header bg-dark text-white d-flex align-items-center">
-                        <div class="icon-circle bg-white bg-opacity-10 me-3"><i class="bi bi-bag-check text-white"></i></div>
-                        <div><h5 class="mb-0">Seu Pedido</h5><small class="opacity-75">Resumo dos itens</small></div>
-                    </div>
-                    <div class="card-body">
-                        <div class="order-items">
+                <div class="card shadow-sm border-0 sticky-top compact-summary-card">
+                    @* <div class="card-header compact-summary-header d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center min-w-0">
+                            <div class="icon-circle bg-white bg-opacity-10 me-2">
+                                <i class="bi bi-bag-check text-white"></i>
+                            </div>
+                             <div class="min-w-0">
+                                <h5 class="mb-0 compact-summary-title">Seu Pedido</h5>
+                                <small class="opacity-75">Resumo compacto</small>
+                            </div> 
+                        </div>
+
+                        <span class="compact-count-badge">@totalItensCarrinho</span>
+                    </div> *@
+
+                    <div class="card-body compact-summary-body">
+                        @* <div class="compact-summary-top">
+                            <div class="compact-summary-top-title">
+                                @quantidadeProdutos @(quantidadeProdutos == 1 ? "produto" : "produtos")
+                            </div>
+                             <div class="compact-summary-top-subtitle">
+                                Revise itens, sabores e valores
+                            </div> 
+                        </div> *@
+
+                        <div class="compact-items">
                             @foreach (var item in Model.Carrinho.Itens)
                             {
-                                <div class="order-item">
-                                    <div class="item-image">
-                                        <img src="@item.Produto.ImagemUrl" alt="@item.Produto.Nome" class="img-fluid rounded">
-                                        <span class="item-quantity">@item.Quantidade</span>
+                                var qtd = item.Quantidade;
+                                var nome = item.Produto?.Nome ?? "Produto";
+                                var sabor = item.Sabor as string;
+                                var descricaoQtd = MontarDescricaoQuantidade(item);
+                                var precoUnit = ObterPrecoUnitario(item);
+                                var subtotalItem = ObterSubtotalItem(item);
+
+                                <div class="compact-item">
+                                    <div class="compact-item-image">
+                                        <img src="@item.Produto.ImagemUrl" alt="@nome">
+                                        <span class="compact-item-qty">@qtd</span>
                                     </div>
-                                    <div class="item-details">
-                                        <h6 class="item-name">@item.Produto.Nome</h6>
-                                        @if (!string.IsNullOrEmpty(item.Sabor))
-                                        {
-                                            <small class="item-flavor">Sabor: @item.Sabor</small>
-                                        }
-                                    </div>                                
+
+                                    <div class="compact-item-main">
+                                        <div class="compact-item-top">
+                                            <h6 class="compact-item-name">@nome</h6>
+                                            <strong class="compact-item-total">@subtotalItem.ToString("C")</strong>
+                                        </div>
+
+                                        <div class="compact-item-meta">
+                                            <span>@descricaoQtd</span>
+
+                                            @if (!string.IsNullOrWhiteSpace(sabor))
+                                            {
+                                                <span class="compact-dot">•</span>
+                                                <span class="compact-item-flavor">@sabor</span>
+                                            }
+
+                                            <span class="compact-dot">•</span>
+                                            <span>@precoUnit.ToString("C")/un.</span>
+                                        </div>
+                                    </div>
                                 </div>
                             }
                         </div>
 
-                        <div class="order-summary">
-                            <div class="summary-row"><span>Subtotal</span><strong>@Model.Carrinho.Total.ToString("C")</strong></div>
-                            <div class="summary-row"><span>Taxa de Entrega</span><strong id="taxaEntregaLabel">@(Model.RetiradaNoLocal ? "Grátis" : "R$ 5,00")</strong></div>
-                            <hr class="my-2">
-                            <div class="summary-row total">
+                        <div class="compact-order-summary">
+                            <div class="compact-summary-row">
+                                <span>Subtotal</span>
+                                <strong>@subtotalPedido.ToString("C")</strong>
+                            </div>
+
+                            <div class="compact-summary-row">
+                                <span>Entrega</span>
+                                <strong id="taxaEntregaLabel">@(Model.RetiradaNoLocal ? "Grátis" : "R$ 5,00")</strong>
+                            </div>
+
+                            <div class="compact-summary-row compact-status-row">
+                                <span>Tipo</span>
+                                <strong id="tipoEntregaLabel">@(Model.RetiradaNoLocal ? "Retirada" : "Entrega")</strong>
+                            </div>
+
+                            <div class="compact-summary-divider"></div>
+
+                            <div class="compact-summary-row total">
                                 <span>Total</span>
-                                <strong id="totalGeralLabel">@((Model.Carrinho.Total + (Model.RetiradaNoLocal ? 0 : 5)).ToString("C"))</strong>
+                                <strong id="totalGeralLabel">@((subtotalPedido + taxaEntregaInicial).ToString("C"))</strong>
                             </div>
                         </div>
                     </div>
@@ -268,12 +496,13 @@
             <div class="empty-icon"><i class="bi bi-cart-x"></i></div>
             <h3>Seu carrinho está vazio</h3>
             <p class="text-muted">Adicione itens ao seu carrinho antes de finalizar o pedido</p>
-            <a asp-action="Index" class="btn btn-orange mt-3"><i class="bi bi-arrow-left me-2"></i> Voltar ao cardápio</a>
+            <a asp-action="Index" class="btn btn-orange mt-3">
+                <i class="bi bi-arrow-left me-2"></i> Voltar ao cardápio
+            </a>
         </div>
     }
 </div>
 
-@* ===== MODAL: NOVO ENDEREÇO ===== *@
 <div class="modal fade" id="enderecoModal" tabindex="-1" aria-hidden="true" aria-labelledby="enderecoTitle" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content confirm-modal">
@@ -293,7 +522,9 @@
                             <input class="form-control" name="EnderecoNovo.CEP" data-cep inputmode="numeric" autocomplete="postal-code" placeholder="00000-000" />
                         </div>
                         <div class="col-4 d-flex align-items-end">
-                            <button type="button" id="buscarCepBtn" class="btn btn-outline-secondary w-100"><i class="bi bi-search"></i> Buscar</button>
+                            <button type="button" id="buscarCepBtn" class="btn btn-outline-secondary w-100">
+                                <i class="bi bi-search"></i> Buscar
+                            </button>
                         </div>
 
                         <div class="col-9">
@@ -332,14 +563,13 @@
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Salvar</button>
+                    <button type="submit" class="btn btn-orange">Salvar</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-@* ===== MODAL: EDITAR ENDEREÇO ===== *@
 <div class="modal fade" id="editarEnderecoModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content confirm-modal">
@@ -347,6 +577,7 @@
                 <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Editar Endereço</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
+
             <form id="formEditarEndereco" asp-action="AtualizarEndereco" method="post">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="ClienteId" value="@Model.Cliente.Id" />
@@ -361,6 +592,7 @@
                                 <button class="btn btn-outline-secondary" type="button" id="buscarCepBtnEditar">Buscar</button>
                             </div>
                         </div>
+
                         <div class="col-6">
                             <label class="form-label">Número</label>
                             <input id="edit_Numero" name="Numero" class="form-control" />
@@ -380,10 +612,12 @@
                             <label class="form-label">Bairro</label>
                             <input id="edit_Bairro" name="Bairro" class="form-control" />
                         </div>
+
                         <div class="col-md-4">
                             <label class="form-label">Cidade</label>
                             <input id="edit_Cidade" name="Cidade" class="form-control" />
                         </div>
+
                         <div class="col-md-2">
                             <label class="form-label">UF</label>
                             <input id="edit_Estado" name="Estado" class="form-control" maxlength="2" />
@@ -407,7 +641,6 @@
     </div>
 </div>
 
-@* ===== MODAL: CONFIRME SEUS DADOS ===== *@
 @if (Model.PrecisaConfirmar)
 {
     <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true" aria-labelledby="confirmTitle" data-bs-backdrop="static">
@@ -417,19 +650,23 @@
                     <h5 id="confirmTitle" class="modal-title"><i class="bi bi-shield-check me-2"></i>Confirme seus dados</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
                 </div>
+
                 <div class="modal-body">
                     <div class="confirm-line mb-3">
                         <div class="confirm-ico"><i class="bi bi-person"></i></div>
-                        <div><small class="text-muted d-block">Eu sou</small><div class="fw-semibold">@Model?.Cliente?.Nome</div></div>
+                        <div>
+                            <small class="text-muted d-block">Eu sou</small>
+                            <div class="fw-semibold">@Model?.Cliente?.Nome</div>
+                        </div>
                     </div>
+
                     <div class="confirm-line">
                         <div class="confirm-ico"><i class="bi bi-phone"></i></div>
                         <div>
                             <small class="text-muted d-block">Meu telefone é</small>
-                            <div id="telefoneResumo" class="fw-semibold">@Model?.Cliente?.Telefone</div>
+                            <div id="telefoneResumo" class="fw-semibold">@telefoneFormatado</div>
                         </div>
                     </div>
-
 
                     <div class="mt-3 d-grid gap-2">
                         <form class="m-0">
@@ -437,8 +674,9 @@
                             <button type="button" id="btnConfirmaModal" class="btn btn-outline-warning btn-confirm">Confirmar</button>
                         </form>
 
-
-                        <a class="btn btn-outline-warning btn-confirm" href="@Url.Action("Editar", "Auth", new { returnUrl = Url.Action("Resumo", "Carrinho") })">Editar informações</a>
+                        <a class="btn btn-outline-warning btn-confirm" href="@Url.Action("Editar", "Auth", new { returnUrl = Url.Action("Resumo", "Carrinho") })">
+                            Editar informações
+                        </a>
 
                         <form asp-controller="Auth" asp-action="TrocarUsuario" method="post" class="text-center">
                             @Html.AntiForgeryToken()
@@ -451,13 +689,14 @@
     </div>
 }
 
-@*MODAL DE EXCLUSÃO*@
-
 <div class="modal fade" id="excluirEnderecoModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title"><i class="bi bi-trash me-2"></i>Excluir endereço</h5>
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content delete-address-modal">
+            <div class="modal-header delete-modal-header">
+                <h5 class="modal-title d-flex align-items-center gap-2">
+                    <i class="bi bi-trash"></i>
+                    <span>Excluir endereço</span>
+                </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
 
@@ -466,19 +705,25 @@
                 <input type="hidden" name="ClienteId" value="@Model.Cliente.Id" />
                 <input type="hidden" id="del_Id" name="id" />
 
-                <div class="modal-body">
-                    <p class="mb-2">Tem certeza que deseja excluir este endereço?</p>
-                    <div class="p-2 rounded bg-light small" id="del_preview">
-                        <!-- preenchido via JS com os dados do endereço -->
-                    </div>
-                    <div class="form-text mt-2">
-                        Se este for o endereço principal, o sistema definirá outro como principal automaticamente (se existir).
+                <div class="modal-body delete-modal-body">
+                    <p class="delete-modal-text">
+                        Tem certeza que deseja excluir este endereço?
+                    </p>
+
+                    <div class="delete-address-preview" id="del_preview"></div>
+
+                    <div class="delete-warning-note">
+                        Se este endereço for o principal, outro será definido automaticamente.
                     </div>
                 </div>
 
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-danger">Excluir</button>
+                <div class="modal-footer delete-modal-footer">
+                    <button type="button" class="btn btn-outline-secondary btn-delete-cancel" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-danger btn-delete-confirm">
+                        Excluir
+                    </button>
                 </div>
             </form>
         </div>
@@ -487,32 +732,32 @@
 
 @section Scripts {
     <script>
+        function formatarTelefoneBR(valor) {
+            let d = (valor || '').replace(/\D+/g, '');
+
+            if ((d.length === 12 || d.length === 13) && d.startsWith('55')) {
+                d = d.slice(2);
+            }
+
+            if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+            if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+            if (d.length === 9) return `${d.slice(0, 5)}-${d.slice(5)}`;
+            if (d.length === 8) return `${d.slice(0, 4)}-${d.slice(4)}`;
+
+            return valor || '';
+        }
+
         (function () {
-          const el = document.getElementById('telefoneResumo');
-          if (!el) return;
+            const telTopo = document.getElementById('telefoneClienteTopo');
+            const telResumo = document.getElementById('telefoneResumo');
 
-          let d = (el.textContent || '').replace(/\D+/g, '');
-
-          // remove +55 / 55 se vier
-          if ((d.length === 12 || d.length === 13) && d.startsWith('55')) d = d.slice(2);
-
-          let fmt = el.textContent || '';
-
-          if (d.length === 11) {             // celular: DDD + 9 dígitos
-            fmt = `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;
-          } else if (d.length === 10) {      // fixo: DDD + 8 dígitos
-            fmt = `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`;
-          } else if (d.length === 8) {       // sem DDD
-            fmt = `${d.slice(0,4)}-${d.slice(4)}`;
-          }
-
-          el.textContent = fmt;
+            if (telTopo) telTopo.textContent = formatarTelefoneBR(telTopo.textContent);
+            if (telResumo) telResumo.textContent = formatarTelefoneBR(telResumo.textContent);
         })();
     </script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // ===== helpers CEP (com máscara e validação) =====
             function aplicarMascaraCEP(input) {
                 input.addEventListener('input', function (e) {
                     let value = e.target.value.replace(/\D/g, '');
@@ -523,7 +768,6 @@
                     }
                     e.target.value = value;
 
-                    // Validar formato
                     const cepRegex = /^\d{5}-\d{3}$/;
                     if (cepRegex.test(value)) {
                         e.target.classList.remove('is-invalid');
@@ -557,9 +801,7 @@
 
             function clearValidation(form) {
                 if (!form) return;
-                form.querySelectorAll('.is-invalid, .is-valid')
-                    .forEach(e => e.classList.remove('is-invalid', 'is-valid'));
-                form.querySelectorAll('.invalid-feedback').forEach(el => el.style.display = 'none');
+                form.querySelectorAll('.is-invalid, .is-valid').forEach(e => e.classList.remove('is-invalid', 'is-valid'));
             }
 
             function hardResetForm(form) {
@@ -576,7 +818,6 @@
                 const cepInput = form.querySelector('[data-cep]');
                 if (!cepInput) return;
 
-                // Aplicar máscara
                 aplicarMascaraCEP(cepInput);
 
                 async function doLookup() {
@@ -595,7 +836,6 @@
                         return;
                     }
 
-                    // Preencher campos - busca por name com prefixo EnderecoNovo ou sem prefixo
                     const preencherCampo = (name, value) => {
                         const selector = `[name="EnderecoNovo.${name}"], [name="${name}"]`;
                         const campo = form.querySelector(selector);
@@ -610,211 +850,60 @@
                     preencherCampo('Cidade', data.localidade);
                     preencherCampo('Estado', (data.uf || '').toUpperCase());
 
-                    // Focar no número
                     const numeroInput = form.querySelector('[name="EnderecoNovo.Numero"], [name="Numero"]');
                     if (numeroInput) numeroInput.focus();
                 }
 
                 cepInput.addEventListener('blur', doLookup);
-                const btn = document.getElementById(buscarBtnId);
-                btn?.addEventListener('click', doLookup);
+                document.getElementById(buscarBtnId)?.addEventListener('click', doLookup);
             }
 
-            // ===== elementos =====
-            const modalNovo  = document.getElementById('enderecoModal');
-            const formNovo   = document.getElementById('formEnderecoModal');
-            const modalEdit  = document.getElementById('editarEnderecoModal');
-            const formEdit   = document.getElementById('formEditarEndereco');
-            const selectEnd  = document.getElementById('enderecoSelect');
-            const btnEdit    = document.getElementById('btnEditarEndereco');
-            // NOVO (exclusão):
+            const modalNovo = document.getElementById('enderecoModal');
+            const formNovo = document.getElementById('formEnderecoModal');
+            const modalEdit = document.getElementById('editarEnderecoModal');
+            const formEdit = document.getElementById('formEditarEndereco');
+            const selectEnd = document.getElementById('enderecoSelect');
+            const btnEdit = document.getElementById('btnEditarEndereco');
             const btnExcluir = document.getElementById('btnExcluirEndereco');
+            const detalhes = document.getElementById('enderecoDetalhes');
 
-            // lookup CEP (com máscara)
-            if (formNovo) bindCepLookup(formNovo, 'buscarCepBtn');
-            if (formEdit) bindCepLookup(formEdit, 'buscarCepBtnEditar');
+            bindCepLookup(formNovo, 'buscarCepBtn');
+            bindCepLookup(formEdit, 'buscarCepBtnEditar');
 
-            // Novo endereço: abrir/fechar zerando
-            if (modalNovo) {
-                modalNovo.addEventListener('show.bs.modal',  () => hardResetForm(formNovo));
-                modalNovo.addEventListener('hidden.bs.modal', () => hardResetForm(formNovo));
-            }
+            modalNovo?.addEventListener('show.bs.modal', () => hardResetForm(formNovo));
+            modalNovo?.addEventListener('hidden.bs.modal', () => hardResetForm(formNovo));
 
-            // Editar: prefill seguro
-            if (modalEdit) {
-                modalEdit.addEventListener('show.bs.modal', () => {
-                    if (!selectEnd || !selectEnd.value) return;
-                    const opt = selectEnd.selectedOptions?.[0];
-                    if (!opt) return;
+            modalEdit?.addEventListener('show.bs.modal', () => {
+                if (!selectEnd || !selectEnd.value) return;
+                const opt = selectEnd.selectedOptions?.[0];
+                if (!opt) return;
 
-                    document.getElementById('edit_Id').value          = opt.value;
-                    document.getElementById('edit_Logradouro').value  = opt.getAttribute('data-logradouro') || '';
-                    document.getElementById('edit_Numero').value      = opt.getAttribute('data-numero') || '';
-                    document.getElementById('edit_Complemento').value = opt.getAttribute('data-complemento') || '';
-                    document.getElementById('edit_Bairro').value      = opt.getAttribute('data-bairro') || '';
-                    document.getElementById('edit_Cidade').value      = opt.getAttribute('data-cidade') || '';
-                    document.getElementById('edit_Estado').value      = (opt.getAttribute('data-estado') || '').toUpperCase();
-                    document.getElementById('edit_CEP').value         = opt.getAttribute('data-cep') || '';
-                    document.getElementById('edit_Principal').checked = (opt.getAttribute('data-principal') === 'true');
+                document.getElementById('edit_Id').value = opt.value;
+                document.getElementById('edit_Logradouro').value = opt.getAttribute('data-logradouro') || '';
+                document.getElementById('edit_Numero').value = opt.getAttribute('data-numero') || '';
+                document.getElementById('edit_Complemento').value = opt.getAttribute('data-complemento') || '';
+                document.getElementById('edit_Bairro').value = opt.getAttribute('data-bairro') || '';
+                document.getElementById('edit_Cidade').value = opt.getAttribute('data-cidade') || '';
+                document.getElementById('edit_Estado').value = (opt.getAttribute('data-estado') || '').toUpperCase();
+                document.getElementById('edit_CEP').value = opt.getAttribute('data-cep') || '';
+                document.getElementById('edit_Principal').checked = opt.getAttribute('data-principal') === 'true';
+                clearValidation(formEdit);
+            });
 
-                    clearValidation(formEdit);
-                });
-                modalEdit.addEventListener('hidden.bs.modal', () => clearValidation(formEdit));
-            }
+            modalEdit?.addEventListener('hidden.bs.modal', () => clearValidation(formEdit));
 
-            // Botão editar habilita só com seleção
             function toggleEditBtn() {
                 if (btnEdit) btnEdit.disabled = !(selectEnd && selectEnd.value);
             }
-            selectEnd?.addEventListener('change', toggleEditBtn);
-            toggleEditBtn();
 
-            // ===== EXCLUSÃO: habilitar botão e preencher modal =====
             function toggleDeleteBtn() {
                 if (btnExcluir) btnExcluir.disabled = !(selectEnd && selectEnd.value);
             }
-            // Sempre que trocar a seleção, sincroniza ambos
-            selectEnd?.addEventListener('change', () => {
+
+            selectEnd?.addEventListener('change', function () {
                 toggleEditBtn();
                 toggleDeleteBtn();
-            });
-            toggleDeleteBtn();
 
-            // Preenche o modal de exclusão com os dados do option selecionado
-            const excluirModalEl = document.getElementById('excluirEnderecoModal');
-            if (excluirModalEl) {
-                excluirModalEl.addEventListener('show.bs.modal', () => {
-                    const opt = selectEnd?.selectedOptions?.[0];
-                    if (!opt) return;
-
-                    const id  = opt.value;
-                    const log = opt.getAttribute('data-logradouro')  || '';
-                    const num = opt.getAttribute('data-numero')      || '';
-                    const comp= opt.getAttribute('data-complemento') || '';
-                    const bai = opt.getAttribute('data-bairro')      || '';
-                    const cid = opt.getAttribute('data-cidade')      || '';
-                    const uf  = (opt.getAttribute('data-estado')     || '').toUpperCase();
-                    const cep = opt.getAttribute('data-cep')         || '';
-                    const principal = opt.getAttribute('data-principal') === 'true';
-
-                    const delId = document.getElementById('del_Id');
-                    if (delId) delId.value = id;
-
-                    const prev = document.getElementById('del_preview');
-                    if (prev) {
-                        prev.innerHTML = `
-                            <div class="fw-semibold">${log}${log && num ? ', ' + num : ''}</div>
-                            ${comp ? `<div>${comp}</div>` : ''}
-                            <div>${bai} - ${cid}/${uf}</div>
-                            <div>CEP: ${cep}</div>
-                            ${principal ? `<span class="badge bg-danger-subtle text-danger">Principal</span>` : ''}
-                        `;
-                    }
-                });
-
-                // (Opcional) UX: desabilita o botão "Excluir" após submit para evitar duplo clique
-                const formExcluir = document.getElementById('formExcluirEndereco');
-                formExcluir?.addEventListener('submit', function () {
-                    const submitBtn = this.querySelector('button[type="submit"]');
-                    if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = 'Excluindo...'; }
-                });
-            }
-
-            // Validação dos formulários de endereço
-            const validarFormEndereco = (form) => {
-                let isValid = true;
-                const requiredFields = form.querySelectorAll('[required]');
-
-                requiredFields.forEach(field => {
-                    if (!field.value.trim()) {
-                        isValid = false;
-                        field.classList.add('is-invalid');
-                        field.classList.remove('is-valid');
-                    } else {
-                        field.classList.remove('is-invalid');
-                        field.classList.add('is-valid');
-                    }
-                });
-
-                // Validação específica do CEP
-                const cepField = form.querySelector('[data-cep]');
-                if (cepField) {
-                    const cepValue = cepField.value;
-                    const cepRegex = /^\d{5}-\d{3}$/;
-                    if (!cepRegex.test(cepValue)) {
-                        isValid = false;
-                        cepField.classList.add('is-invalid');
-                        cepField.classList.remove('is-valid');
-                    }
-                }
-
-                // Validação específica do Estado (UF)
-                const estadoField = form.querySelector('[name$="Estado"]');
-                if (estadoField) {
-                    const estadoValue = estadoField.value.toUpperCase();
-                    if (estadoValue.length !== 2) {
-                        isValid = false;
-                        estadoField.classList.add('is-invalid');
-                        estadoField.classList.remove('is-valid');
-                    }
-                }
-
-                return isValid;
-            };
-
-            // Adicionar validação nos formulários de endereço
-            const formsEndereco = [formNovo, formEdit];
-            formsEndereco.forEach(form => {
-                if (!form) return;
-
-                form.addEventListener('submit', function (e) {
-                    if (!validarFormEndereco(form)) {
-                        e.preventDefault();
-                        alert('Por favor, preencha todos os campos obrigatórios corretamente.');
-                    } else {
-                        // UX: evita duplo clique
-                        const btn = this.querySelector('button[type="submit"]');
-                        if (btn) { btn.disabled = true; btn.innerText = 'Salvando...'; }
-                    }
-                });
-
-                // Validação em tempo real
-                form.querySelectorAll('input, select, textarea').forEach(input => {
-                    input.addEventListener('blur', () => {
-                        if (input.hasAttribute('required') && !input.value.trim()) {
-                            input.classList.add('is-invalid');
-                            input.classList.remove('is-valid');
-                        } else if (input.value.trim()) {
-                            input.classList.remove('is-invalid');
-                            input.classList.add('is-valid');
-                        }
-                    });
-                });
-            });
-
-            // Resto do código permanece igual...
-            const retiradaChk = document.getElementById('retiradaLocal');
-            const containerEntrega = document.getElementById('containerEntrega');
-            const taxaEntregaLabel = document.getElementById('taxaEntregaLabel');
-            const totalGeralLabel = document.getElementById('totalGeralLabel');
-            const pickupBox = document.getElementById('pickupBox');
-            const subtotal = parseFloat('@Model.Carrinho.Total.ToString(System.Globalization.CultureInfo.InvariantCulture)');
-            const taxaPadrao = 5;
-
-            function atualizarTotais() {
-                const retirada = !!retiradaChk?.checked;
-                const taxa = retirada ? 0 : taxaPadrao;
-                if (taxaEntregaLabel) taxaEntregaLabel.textContent = taxa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                if (totalGeralLabel) totalGeralLabel.textContent = (subtotal + taxa).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                if (containerEntrega) containerEntrega.classList.toggle('d-none', retirada);
-                if (pickupBox) pickupBox.classList.toggle('d-none', !retirada);
-            }
-            retiradaChk?.addEventListener('change', atualizarTotais);
-            atualizarTotais();
-
-            // Detalhe do endereço selecionado
-            const detalhes = document.getElementById('enderecoDetalhes');
-            selectEnd?.addEventListener('change', function () {
                 const opt = this.selectedOptions?.[0];
                 if (!opt || !detalhes) return;
 
@@ -842,15 +931,129 @@
                         <div>${bai} - ${cid}/${uf}</div>
                     </div>`;
                 detalhes.classList.remove('empty');
-                toggleEditBtn();
-                toggleDeleteBtn();
             });
 
-            // Modal de confirmação do cliente
+            toggleEditBtn();
+            toggleDeleteBtn();
+
+            document.getElementById('excluirEnderecoModal')?.addEventListener('show.bs.modal', () => {
+                const opt = selectEnd?.selectedOptions?.[0];
+                if (!opt) return;
+
+                const id = opt.value;
+                const log = opt.getAttribute('data-logradouro') || '';
+                const num = opt.getAttribute('data-numero') || '';
+                const comp = opt.getAttribute('data-complemento') || '';
+                const bai = opt.getAttribute('data-bairro') || '';
+                const cid = opt.getAttribute('data-cidade') || '';
+                const uf = (opt.getAttribute('data-estado') || '').toUpperCase();
+                const cep = opt.getAttribute('data-cep') || '';
+                const principal = opt.getAttribute('data-principal') === 'true';
+
+                const delId = document.getElementById('del_Id');
+                if (delId) delId.value = id;
+
+                const prev = document.getElementById('del_preview');
+                if (prev) {
+                            prev.innerHTML = `
+            <div class="fw-semibold">${log}${log && num ? ', ' + num : ''}</div>
+            ${comp ? `<div>${comp}</div>` : ''}
+            <div>${bai} - ${cid}/${uf}</div>
+            <div>CEP: ${cep}</div>
+            ${principal ? `<span class="badge rounded-pill bg-danger-subtle text-danger border mt-2">Principal</span>` : ''}
+                                                                                                                            `;
+                }
+            });
+
+            document.getElementById('formExcluirEndereco')?.addEventListener('submit', function () {
+                const submitBtn = this.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerText = 'Excluindo...';
+                }
+            });
+
+            const validarFormEndereco = (form) => {
+                let isValid = true;
+                const cepField = form.querySelector('[data-cep]');
+                const estadoField = form.querySelector('[name$="Estado"]');
+
+                if (cepField) {
+                    const cepRegex = /^\d{5}-\d{3}$/;
+                    if (!cepRegex.test(cepField.value)) {
+                        isValid = false;
+                        cepField.classList.add('is-invalid');
+                    }
+                }
+
+                if (estadoField) {
+                    const estadoValue = (estadoField.value || '').trim().toUpperCase();
+                    if (estadoValue.length !== 2) {
+                        isValid = false;
+                        estadoField.classList.add('is-invalid');
+                    }
+                }
+
+                return isValid;
+            };
+
+            [formNovo, formEdit].forEach(form => {
+                if (!form) return;
+
+                form.addEventListener('submit', function (e) {
+                    if (!validarFormEndereco(form)) {
+                        e.preventDefault();
+                        alert('Por favor, preencha os dados do endereço corretamente.');
+                        return;
+                    }
+
+                    const btn = this.querySelector('button[type="submit"]');
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.innerText = 'Salvando...';
+                    }
+                });
+            });
+
+            const retiradaChk = document.getElementById('retiradaLocal');
+            const containerEntrega = document.getElementById('containerEntrega');
+            const taxaEntregaLabel = document.getElementById('taxaEntregaLabel');
+            const totalGeralLabel = document.getElementById('totalGeralLabel');
+            const tipoEntregaLabel = document.getElementById('tipoEntregaLabel');
+            const pickupBox = document.getElementById('pickupBox');
+            const subtotal = parseFloat('@Model.Carrinho.Total.ToString(System.Globalization.CultureInfo.InvariantCulture)');
+            const taxaPadrao = 5;
+
+            function atualizarTotais() {
+                const retirada = !!retiradaChk?.checked;
+                const taxa = retirada ? 0 : taxaPadrao;
+
+                if (taxaEntregaLabel) {
+                    taxaEntregaLabel.textContent = taxa === 0
+                        ? 'Grátis'
+                        : taxa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                }
+
+                if (tipoEntregaLabel) {
+                    tipoEntregaLabel.textContent = retirada ? 'Retirada' : 'Entrega';
+                }
+
+                if (totalGeralLabel) {
+                    totalGeralLabel.textContent = (subtotal + taxa).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                }
+
+                containerEntrega?.classList.toggle('d-none', retirada);
+                pickupBox?.classList.toggle('d-none', !retirada);
+            }
+
+            retiradaChk?.addEventListener('change', atualizarTotais);
+            atualizarTotais();
+
             const confirmModalEl = document.getElementById('confirmModal');
             if (confirmModalEl) {
                 const confirmModal = new bootstrap.Modal(confirmModalEl, { backdrop: 'static', keyboard: false });
                 confirmModal.show();
+
                 document.getElementById('btnConfirmaModal')?.addEventListener('click', async () => {
                     try {
                         await fetch('@Url.Action("ConfirmarDados", "Carrinho")', {
@@ -861,16 +1064,15 @@
                             }
                         });
                     } catch { }
+
                     confirmModal.hide();
                 });
             }
 
-            // Validação final do submit do pedido
-            const formFinalizar = document.getElementById('formFinalizar');
-            formFinalizar?.addEventListener('submit', function (e) {
+            document.getElementById('formFinalizar')?.addEventListener('submit', function (e) {
                 if (!retiradaChk?.checked && !selectEnd?.value) {
                     e.preventDefault();
-                    alert('Por favor, selecione um endereço de entrega ou marque "Retirar no local"');
+                    alert('Por favor, selecione um endereço de entrega ou marque "Retirar no local".');
                 }
             });
         });

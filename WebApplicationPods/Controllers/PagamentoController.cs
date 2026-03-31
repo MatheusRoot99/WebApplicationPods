@@ -25,6 +25,7 @@ namespace WebApplicationPods.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IEstoqueService _estoque;
         private readonly IHubContext<PedidosHub> _hub;
+        private readonly IPedidoAppService _pedidoAppService;
 
         public PagamentoController(
             IPaymentService payments,
@@ -35,7 +36,8 @@ namespace WebApplicationPods.Controllers
             IPaymentCredentialsResolver creds,
             UserManager<ApplicationUser> userManager,
             IEstoqueService estoque,
-            IHubContext<PedidosHub> hub) // <= novo
+            IHubContext<PedidosHub> hub,
+            IPedidoAppService pedidoAppService) // <= novo
         {
             _payments = payments;
             _pedidos = pedidos;
@@ -46,6 +48,7 @@ namespace WebApplicationPods.Controllers
             _userManager = userManager;
             _estoque = estoque;
             _hub = hub; // <= novo
+            _pedidoAppService = pedidoAppService;
         }
 
         // ========= Helpers internos =========
@@ -64,8 +67,9 @@ namespace WebApplicationPods.Controllers
             };
         }
 
-        private void MarcarPedidoComoPago(int pedidoId) =>
-            _pedidos.AtualizarStatus(pedidoId, "Pago");
+        private Task<bool> MarcarPedidoComoPago(int pedidoId) => _pedidoAppService.MarcarComoPagoAsync(
+        pedidoId,
+        origem: "PagamentoController");
 
         private async Task EnsureBaixaEstoqueAsync(int pedidoId)
         {
@@ -193,7 +197,11 @@ namespace WebApplicationPods.Controllers
                     p.Status = PaymentStatus.Canceled;
                     p.CanceledAt = now;
                     await _db.SaveChangesAsync();
-                    _pedidos.AtualizarStatus(p.PedidoId, "Cancelado por expiração (PIX)");
+                    await _pedidoAppService.AtualizarStatusAsync(
+                        p.PedidoId,
+                        "Cancelado",
+                        observacao: "Pagamento PIX expirado automaticamente.",
+                        origem: "PagamentoController.Status");
                 }
                 else
                 {
@@ -206,7 +214,7 @@ namespace WebApplicationPods.Controllers
             if (isPaid)
             {
                 if (!string.Equals(p.Pedido?.Status, "Pago", StringComparison.OrdinalIgnoreCase))
-                    MarcarPedidoComoPago(p.PedidoId);
+                    await MarcarPedidoComoPago(p.PedidoId);
 
                 await EnsureBaixaEstoqueAsync(p.PedidoId);
 
@@ -262,7 +270,7 @@ namespace WebApplicationPods.Controllers
             if (ok && p != null)
             {
                 // marca pedido como pago (idempotente)
-                MarcarPedidoComoPago(p.PedidoId);
+                await MarcarPedidoComoPago(p.PedidoId);
                 await EnsureBaixaEstoqueAsync(p.PedidoId);
                 ClearCartOnceForThisSession(p.PedidoId);
 
@@ -305,7 +313,12 @@ namespace WebApplicationPods.Controllers
                 p.Status = PaymentStatus.Canceled;
                 p.CanceledAt = DateTime.UtcNow;
                 await _db.SaveChangesAsync();
-                _pedidos.AtualizarStatus(p.PedidoId, "Cancelado");
+
+                await _pedidoAppService.AtualizarStatusAsync(
+                    p.PedidoId,
+                    "Cancelado",
+                    observacao: "Pagamento cancelado pelo usuário.",
+                    origem: "PagamentoController.Cancelar");
             }
 
             return Json(new { ok = true, redirect = Url.Action("Index", "Carrinho") });
@@ -331,7 +344,7 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction("DetalhesPedido", "Admin", new { id = pedidoId });
             }
 
-            _pedidos.AtualizarStatus(pedidoId, "Pago"); // ou "Aprovado pelo Lojista" se preferir
+            await _pedidoAppService.MarcarComoPagoAsync(pedidoId,origem: "PagamentoController"); // ou "Aprovado pelo Lojista" se preferir
             await EnsureBaixaEstoqueAsync(pedidoId);
 
             // 🔔 notifica lojistas
@@ -363,6 +376,7 @@ namespace WebApplicationPods.Controllers
                 TempData["Erro"] = "Este pagamento não é PIX manual.";
                 return RedirectToAction("DetalhesPedido", "Admin", new { id = p.PedidoId });
             }
+
             if (p.Status == PaymentStatus.Paid)
             {
                 TempData["Sucesso"] = "Pagamento já está aprovado.";
@@ -373,11 +387,14 @@ namespace WebApplicationPods.Controllers
             p.PaidAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
 
-            _pedidos.AtualizarStatus(p.PedidoId, "Pago");
+            await _pedidoAppService.MarcarComoPagoAsync(
+                p.PedidoId,
+                origem: "PagamentoController.ConfirmarPixManual");
+
             await EnsureBaixaEstoqueAsync(p.PedidoId);
 
-            // 🔔 notifica
-            if (p.Pedido != null) await NotifyPaidAsync(p.Pedido);
+            if (p.Pedido != null)
+                await NotifyPaidAsync(p.Pedido);
 
             TempData["Sucesso"] = "PIX confirmado e estoque atualizado.";
             return RedirectToAction("DetalhesPedido", "Admin", new { id = p.PedidoId });

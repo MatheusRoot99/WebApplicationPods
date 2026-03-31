@@ -1,40 +1,34 @@
 /* =========================================================
    Pods Eletrônicos — Theme System (Light/Dark) + UI Kit
-   Bootstrap 5.1 friendly (sem depender de data-bs-theme)
+   Bootstrap 5.1 friendly
    ========================================================= */
 
 /* -----------------------------
    1) TOKENS (tema padrão = light)
    ----------------------------- */
 :root {
-    /* brand */
     --brand-start: #6a11cb;
     --brand-end: #2575fc;
     --primary: #2575fc;
     --primary-dark: #1e56d9;
-    --primary-grad: linear-gradient(135deg, var(--brand-start), var(--brand-end));
-    /* radius/shadow */
+    --primary-grad: linear-gradient(135deg,var(--brand-start),var(--brand-end));
     --radius: 14px;
     --radius-lg: 18px;
     --shadow-1: 0 10px 28px rgba(0,0,0,.10);
     --shadow-2: 0 18px 60px rgba(0,0,0,.16);
-    /* layout */
     --sidebar-w: 15rem;
-    --mbn-height: 70px; /* bottom nav */
+    --mbn-height: 70px;
     --kb-shift: 0px;
-    /* LIGHT theme surfaces */
     --bg: #f3f6fb;
     --bg-elev: rgba(255,255,255,.92);
     --bg-elev-2: #ffffff;
     --text: #0f172a;
     --muted: #6b7280;
-    --border: rgba(15, 23, 42, 0.10);
+    --border: rgba(15,23,42,.10);
     --ring: rgba(37,117,252,.35);
-    /* “hero” background (páginas tipo dashboard) */
     --page-hero: radial-gradient(1000px 520px at 18% 0%, rgba(37,117,252,.22), transparent 60%), radial-gradient(900px 520px at 82% 8%, rgba(106,17,203,.20), transparent 55%), linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,0) 55%);
-    /* sidebar/topbar (LIGHT) */
     --sidebar-bg: rgba(255,255,255,.85);
-    --sidebar-border: rgba(15, 23, 42, 0.10);
+    --sidebar-border: rgba(15,23,42,.10);
     --sidebar-text: #1f2937;
     --sidebar-muted: rgba(31,41,55,.60);
     --sidebar-hover: rgba(2,6,23,.04);
@@ -42,13 +36,11 @@
     --sidebar-active-border: rgba(37,117,252,.55);
     --topbar-bg: rgba(15,23,42,.92);
     --topbar-text: #ffffff;
-    /* tables/forms */
     --input-bg: rgba(255,255,255,.95);
     --input-text: var(--text);
     --input-border: rgba(15,23,42,.14);
     --input-placeholder: rgba(107,114,128,.85);
     --table-head: rgba(2,6,23,.04);
-    /* glass */
     --glass: rgba(255,255,255,.70);
     --glass-border: rgba(255,255,255,.45);
     --glass-blur: blur(10px);
@@ -86,7 +78,7 @@ html[data-theme="dark"] {
 }
 
 /* =========================================================
-   3) Base / reset
+   3) Base
    ========================================================= */
 html {
     -webkit-text-size-adjust: 100%;
@@ -99,7 +91,7 @@ body {
     background: var(--bg);
     color: var(--text);
     margin: 0;
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+    font-family: system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,"Noto Sans","Liberation Sans",sans-serif;
 }
 
 a {
@@ -111,21 +103,18 @@ a {
     }
 
 /* anti-zoom iOS / consistência */
-input, select, textarea,
-label, .form-label,
-.input-group-text, .form-text,
-button, .btn, .btn * {
+input, select, textarea, label, .form-label, .input-group-text, .form-text, button, .btn, .btn * {
     font-size: 16px;
     line-height: 1.25;
 }
 
 /* =========================================================
-   4) Page background “pegada dashboard”
+   4) Page hero
    ========================================================= */
 .page-hero {
     background: var(--page-hero);
     border-radius: var(--radius-lg);
-    padding: 14px;
+    /*padding: 14px;*/
 }
 
 /* =========================================================
@@ -165,18 +154,14 @@ button, .btn, .btn * {
     }
 
 /* focus ring */
-.btn:focus,
-.btn:active:focus,
-.btn-link.nav-link:focus,
-.form-control:focus,
-.form-select:focus,
-.form-check-input:focus {
-    box-shadow: 0 0 0 .12rem rgba(255,255,255,.30), 0 0 0 .30rem var(--ring);
-    border-color: color-mix(in srgb, var(--primary) 65%, var(--border));
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus,
+.form-control:focus, .form-select:focus, .form-check-input:focus {
+    box-shadow: 0 0 0 .12rem rgba(255,255,255,.30),0 0 0 .30rem var(--ring);
+    border-color: color-mix(in srgb,var(--primary) 65%, var(--border));
 }
 
 /* =========================================================
-   6) Cards — estilo “clean modern”
+   6) Cards
    ========================================================= */
 .card {
     border: 1px solid var(--border);
@@ -204,7 +189,6 @@ html[data-theme="dark"] .card {
     border: 0 !important;
 }
 
-/* “glass card” opcional: use class="card card-glass" */
 .card-glass {
     background: var(--glass);
     border: 1px solid var(--glass-border);
@@ -214,7 +198,7 @@ html[data-theme="dark"] .card {
 }
 
 /* =========================================================
-   7) Forms — inputs bonitos no dark e light
+   7) Forms
    ========================================================= */
 .form-control, .form-select, .input-group-text {
     background: var(--input-bg);
@@ -247,8 +231,7 @@ html[data-theme="dark"] .card {
     color: var(--text);
 }
 
-    .table thead.table-light > tr > th,
-    .table thead > tr > th {
+    .table thead.table-light > tr > th, .table thead > tr > th {
         background: var(--table-head) !important;
         color: var(--text) !important;
         border-bottom: 1px solid var(--border);
@@ -259,11 +242,11 @@ html[data-theme="dark"] .card {
     }
 
 .table-hover tbody tr:hover {
-    background: color-mix(in srgb, var(--primary) 6%, transparent);
+    background: color-mix(in srgb,var(--primary) 6%, transparent);
 }
 
 /* =========================================================
-   9) Navbar / topbar
+   9) Topbar
    ========================================================= */
 .navbar.navbar-dark {
     background: var(--topbar-bg) !important;
@@ -273,7 +256,6 @@ html[data-theme="dark"] .card {
     -webkit-backdrop-filter: blur(10px);
 }
 
-/* theme toggle button */
 .theme-toggle {
     border: 1px solid rgba(255,255,255,.16);
     background: rgba(255,255,255,.06);
@@ -291,71 +273,19 @@ html[data-theme="dark"] .card {
     }
 
 /* =========================================================
-   10) Sidebar layout
+   10) Layout wrapper
    ========================================================= */
 #wrapper {
     overflow-x: hidden;
 }
 
-/* sidebar wrapper */
-#sidebar-wrapper {
-    width: var(--sidebar-w);
-    position: fixed;
-    z-index: 1030;
-    min-height: 100vh;
-    background: var(--sidebar-bg) !important;
-    border-right: 1px solid var(--sidebar-border);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    box-shadow: 12px 0 40px rgba(0,0,0,.10);
-}
-
-    #sidebar-wrapper .sidebar-heading {
-        border-bottom: 1px solid var(--sidebar-border);
-        color: var(--sidebar-text) !important;
-    }
-
-    #sidebar-wrapper .list-group-item {
-        background: transparent !important;
-        color: var(--sidebar-text) !important;
-        border: none;
-        border-left: 3px solid transparent;
-        padding: .70rem 1.25rem;
-        border-radius: 12px;
-        margin: 2px 10px;
-        transition: background .15s ease, transform .12s ease, border-color .15s ease;
-    }
-
-        #sidebar-wrapper .list-group-item:hover {
-            background: var(--sidebar-hover) !important;
-        }
-
-        #sidebar-wrapper .list-group-item.active {
-            background: var(--sidebar-active-bg) !important;
-            border-left-color: var(--sidebar-active-border);
-        }
-
-.sidebar-section {
-    margin-bottom: 1.25rem;
-}
-
-.sidebar-section-title {
-    color: var(--sidebar-muted);
-    font-size: .72rem;
-    text-transform: uppercase;
-    padding: .55rem 1.25rem .25rem;
-    letter-spacing: .6px;
-    font-weight: 800;
-}
-
-/* page wrapper */
 #page-content-wrapper {
     min-width: 100vw;
     margin-left: 0;
-    transition: margin 0.25s ease-out;
+    transition: margin .25s ease-out;
 }
 
-@media (min-width: 768px) {
+@media (min-width:768px) {
     #page-content-wrapper {
         margin-left: var(--sidebar-w);
         width: calc(100% - var(--sidebar-w));
@@ -363,18 +293,18 @@ html[data-theme="dark"] .card {
     }
 }
 
-/* toggled behavior */
-#wrapper.toggled #sidebar-wrapper {
-    margin-left: calc(var(--sidebar-w) * -1);
-}
-
+/* toggled */
 #wrapper.toggled #page-content-wrapper {
     margin-left: 0;
     width: 100%;
 }
 
+#wrapper.toggled #sidebar-wrapper {
+    margin-left: calc(var(--sidebar-w) * -1);
+}
+
 /* =========================================================
-   11) Main content spacing / container look
+   11) Main spacing
    ========================================================= */
 .page-content {
     padding-bottom: 12px;
@@ -384,14 +314,12 @@ html[data-theme="dark"] .card {
     padding-bottom: calc(var(--mbn-height) + var(--kb-shift) + env(safe-area-inset-bottom) + 12px);
 }
 
-/* “miolo” centralizado */
 .app-shell {
-    /*max-width: 1200px;*/
     margin: 0 auto;
 }
 
 /* =========================================================
-   12) Mobile toolbar + bottom nav hooks
+   12) Mobile toolbar
    ========================================================= */
 .mobile-toolbar {
     display: flex;
@@ -443,11 +371,11 @@ html[data-theme="dark"] .card {
         height: 18px;
         display: inline-grid;
         place-items: center;
-        transform: translate(-3px, 3px);
+        transform: translate(-3px,3px);
     }
 
 /* =========================================================
-   13) Helpers / utils
+   13) Helpers
    ========================================================= */
 .bg-brand-grad {
     background: var(--primary-grad) !important;
@@ -468,7 +396,6 @@ html[data-theme="dark"] .card {
     border-color: var(--border);
 }
 
-/* ===== bump badge ===== */
 @keyframes bump {
     0% {
         transform: scale(1);
@@ -479,7 +406,7 @@ html[data-theme="dark"] .card {
     }
 
     50% {
-        transform: scale(0.95);
+        transform: scale(.95);
     }
 
     100% {
@@ -491,167 +418,6 @@ html[data-theme="dark"] .card {
     animation: bump .35s ease-out;
 }
 
-/* =========================================================
-   14) Store Header / Toast (do seu trecho anterior)
-   ========================================================= */
-.storebar {
-    position: relative;
-    margin: 0 0 16px 0;
-    background: linear-gradient(90deg, var(--brand-start), var(--brand-end));
-    color: #fff;
-    border-bottom: 1px solid rgba(0,0,0,.06);
-}
-
-.storebar-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: .75rem;
-    padding: .75rem 1rem;
-}
-
-.storebar-brand {
-    display: flex;
-    align-items: center;
-    gap: .75rem;
-}
-
-.storebar-logo {
-    width: 40px;
-    height: 40px;
-    border-radius: 999px;
-    overflow: hidden;
-    background: color-mix(in sRGB, #fff 20%, transparent);
-    display: grid;
-    place-items: center;
-    box-shadow: 0 4px 6px rgba(0,0,0,.10);
-}
-
-    .storebar-logo img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-
-.storebar-logo-fallback {
-    width: 100%;
-    height: 100%;
-    display: grid;
-    place-items: center;
-    color: #fff;
-    font-size: 1rem;
-}
-
-.storebar-name {
-    font-weight: 800;
-    font-size: 1.05rem;
-    text-shadow: 0 1px 2px rgba(0,0,0,.15);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.storebar-actions {
-    display: flex;
-    align-items: center;
-    gap: .25rem;
-}
-
-.storebar-share {
-    border: 0;
-    outline: 0;
-    background: color-mix(in sRGB, #fff 20%, transparent);
-    color: #fff;
-    width: 36px;
-    height: 36px;
-    border-radius: 999px;
-    display: grid;
-    place-items: center;
-    box-shadow: 0 4px 6px rgba(0,0,0,.10);
-    transition: transform .12s ease, background .12s ease;
-}
-
-    .storebar-share:hover {
-        transform: translateY(-1px);
-        background: color-mix(in sRGB, #fff 28%, transparent);
-    }
-
-    .storebar-share:active {
-        transform: translateY(0);
-    }
-
-.storebar-bottom {
-    background: #fff;
-    color: #222;
-    border-top-left-radius: 16px;
-    border-top-right-radius: 16px;
-    padding: .6rem 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: .75rem;
-    box-shadow: 0 8px 18px rgba(0,0,0,.06);
-}
-
-.storebar-meta {
-    display: flex;
-    align-items: center;
-    gap: .5rem;
-    font-size: .92rem;
-}
-
-    .storebar-meta .dot {
-        opacity: .5;
-    }
-
-.badge-status {
-    padding: .2rem .5rem;
-    border-radius: 999px;
-    font-size: .75rem;
-    font-weight: 700;
-    letter-spacing: .2px;
-}
-
-    .badge-status.open {
-        background: #e8f8ef;
-        color: #1e8a4a;
-    }
-
-    .badge-status.closed {
-        background: #fdecea;
-        color: #b42318;
-    }
-
-.storebar-link {
-    font-weight: 700;
-    text-decoration: none;
-    color: var(--brand-end);
-}
-
-    .storebar-link:hover {
-        text-decoration: underline;
-    }
-
-.storebar-toast {
-    position: fixed;
-    left: 50%;
-    bottom: 24px;
-    transform: translateX(-50%) translateY(8px);
-    background: rgba(0,0,0,.8);
-    color: #fff;
-    padding: .6rem .9rem;
-    border-radius: 10px;
-    opacity: 0;
-    transition: all .25s ease;
-    z-index: 1100;
-    font-size: .9rem;
-}
-
-    .storebar-toast.show {
-        opacity: 1;
-        transform: translateX(-50%) translateY(0);
-    }
-
 .visually-hidden {
     clip: rect(0 0 0 0);
     clip-path: inset(50%);
@@ -662,17 +428,158 @@ html[data-theme="dark"] .card {
     width: 1px;
 }
 
-@media (max-width: 420px) {
-    .storebar-name {
-        max-width: 160px;
-    }
-}
-
 /* =========================================================
    15) Responsive: esconder sidebar no mobile
    ========================================================= */
-@media (max-width: 991.98px) {
+@media (max-width:991.98px) {
     #sidebar-wrapper {
         display: none !important;
     }
 }
+/* =========================================================
+   OFFCANVAS (Mobile Menu) — alinhado + dark/light via tokens
+   Funciona mesmo se HTML tiver bg-dark text-white
+   ========================================================= */
+
+#mobileMenu.offcanvas {
+    /* usa seus tokens do tema */
+    background: var(--sidebar-bg) !important;
+    color: var(--sidebar-text) !important;
+    border-right: 1px solid var(--sidebar-border) !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+/* header */
+#mobileMenu .offcanvas-header {
+    border-bottom: 1px solid var(--sidebar-border);
+    padding: 14px 14px;
+}
+
+#mobileMenu .offcanvas-title {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    font-weight: 900;
+    color: var(--sidebar-text) !important;
+}
+
+/* botão X */
+#mobileMenu .btn-close {
+    filter: none;
+    opacity: .9;
+}
+
+html[data-theme="dark"] #mobileMenu .btn-close {
+    filter: invert(1);
+    opacity: .85;
+}
+
+/* body */
+#mobileMenu .offcanvas-body {
+    padding: 14px 12px;
+}
+
+/* títulos de seção */
+#mobileMenu .sidebar-section-title {
+    color: var(--sidebar-muted) !important;
+    font-size: .70rem;
+    letter-spacing: .12em;
+    font-weight: 1000;
+    text-transform: uppercase;
+    padding: 12px 10px 6px;
+}
+
+/* lista */
+#mobileMenu .list-group {
+    gap: 8px;
+}
+
+/* itens */
+#mobileMenu .list-group-item {
+    background: transparent !important;
+    color: var(--sidebar-text) !important;
+    border: 1px solid color-mix(in srgb, var(--sidebar-border) 65%, transparent) !important;
+    border-radius: 14px !important;
+    margin: 0 !important;
+    padding: 12px 12px !important;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background .15s ease, transform .12s ease, border-color .15s ease;
+}
+
+    /* ícone */
+    #mobileMenu .list-group-item i {
+        width: 22px;
+        text-align: center;
+        opacity: .95;
+    }
+
+    /* hover */
+    #mobileMenu .list-group-item:hover {
+        background: var(--sidebar-hover) !important;
+    }
+
+    /* active (quando você usa .active ou quando quiser marcar via Razor) */
+    #mobileMenu .list-group-item.active {
+        background: var(--sidebar-active-bg) !important;
+        border-color: var(--sidebar-active-border) !important;
+    }
+
+/* itens do collapse (sub-menu) mais “recuados” */
+#mobileMenu .collapse .list-group-item {
+    padding-left: 44px !important;
+    border-style: dashed !important;
+    opacity: .98;
+}
+
+/* link “Sair” que é form */
+#mobileMenu form.list-group-item {
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+}
+
+    #mobileMenu form.list-group-item button {
+        width: 100%;
+        text-align: left;
+        padding: 12px 12px;
+        border-radius: 14px;
+        color: var(--sidebar-text);
+        text-decoration: none;
+        font-weight: 800;
+    }
+
+        #mobileMenu form.list-group-item button:hover {
+            background: var(--sidebar-hover);
+        }
+
+/* setinha do submenu */
+#mobileMenu .fa-chevron-down {
+    margin-left: auto;
+    opacity: .65;
+}
+
+/* opcional: não deixar o menu ficar “por baixo” do bottom nav */
+#mobileMenu.offcanvas {
+    padding-bottom: calc(var(--mbn-height) + env(safe-area-inset-bottom));
+}
+#mobileMenu.offcanvas {
+    background: var(--sidebar-bg) !important;
+    color: var(--sidebar-text) !important;
+    border-right: 1px solid var(--sidebar-border) !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+#mobileMenu .list-group-item {
+    background: transparent !important;
+    color: var(--sidebar-text) !important;
+    border: 1px solid color-mix(in srgb, var(--sidebar-border) 60%, transparent) !important;
+    border-radius: 14px !important;
+}
+
+    #mobileMenu .list-group-item:hover {
+        background: var(--sidebar-hover) !important;
+    }

@@ -1,0 +1,173 @@
+﻿@using WebApplicationPods.Enum
+@model WebApplicationPods.Models.ProdutoFormSimplesViewModel
+
+@{
+    var isEdit = Model?.Id.HasValue == true && Model.Id.Value > 0;
+
+    // action correto conforme o tipo
+    // (EditarSimples no edit; no create, o mesmo action do "tipo")
+    string action = isEdit
+        ? "EditarSimples"
+        : (Model?.TipoProduto == ProdutoTipo.BebidaAlcoolica ? "CriarBebida"
+           : Model?.TipoProduto == ProdutoTipo.PodVape ? "CriarPod"
+           : "CriarPadrao");
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+<div class="produto-simples-page">
+    <div class="produto-simples-wrap">
+
+        <div class="produto-simples-head">
+            <div>
+                <h3 class="mb-0">@ViewData["Title"]</h3>
+                <small>Sem variações. Cada embalagem vira um produto separado.</small>
+            </div>
+
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="fa-solid fa-arrow-left me-1"></i> Voltar
+            </a>
+        </div>
+
+        <div class="card produto-simples-card border-0">
+            <div class="card-body">
+                <form asp-action="@action"
+                      asp-route-id="@(isEdit ? Model!.Id : null)"
+                      method="post"
+                      enctype="multipart/form-data"
+                      novalidate>
+
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden" asp-for="Id" />
+                    <input type="hidden" asp-for="ImagemUrl" />
+
+                    <div class="row g-3">
+                        <div class="col-12 col-lg-6">
+                            <label class="form-label">Tipo</label>
+                            <select asp-for="TipoProduto" class="form-select">
+                                <option value="@((int)ProdutoTipo.Padrao)">Padrão</option>
+                                <option value="@((int)ProdutoTipo.PodVape)">Pod / Vape</option>
+                                <option value="@((int)ProdutoTipo.BebidaAlcoolica)">Bebida Alcoólica</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-lg-6">
+                            <label class="form-label">Categoria *</label>
+                            <select asp-for="CategoriaId" asp-items="ViewBag.Categorias" class="form-select">
+                                <option value="">Selecione...</option>
+                            </select>
+                            <span asp-validation-for="CategoriaId" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Nome *</label>
+                            <input asp-for="Nome" class="form-control" placeholder="Ex: Heineken 330ml (Unidade)" />
+                            <span asp-validation-for="Nome" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Descrição</label>
+                            <textarea asp-for="Descricao" class="form-control" rows="3"></textarea>
+                        </div>
+
+                        <div class="col-12 col-lg-4">
+                            <label class="form-label">Marca</label>
+                            <input asp-for="Marca" class="form-control" />
+                        </div>
+
+                        <div class="col-12 col-lg-4">
+                            <label class="form-label">SKU</label>
+                            <input asp-for="SKU" class="form-control" />
+                        </div>
+
+                        <div class="col-12 col-lg-4">
+                            <label class="form-label">Código de Barras</label>
+                            <input asp-for="CodigoBarras" class="form-control" />
+                        </div>
+
+                        <!-- Preço -->
+                        <div class="col-12 col-lg-4">
+                            <label class="form-label">Preço *</label>
+                            <input asp-for="Preco"
+                                   class="form-control js-money"
+                                   inputmode="decimal"
+                                   autocomplete="off"
+                                   placeholder="0,00" />
+                            <span asp-validation-for="Preco" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Promo -->
+                        <div class="col-12 col-lg-4">
+                            <label class="form-label">Promo</label>
+                            <input asp-for="PrecoPromocional"
+                                   class="form-control js-money"
+                                   inputmode="decimal"
+                                   autocomplete="off"
+                                   placeholder="0,00" />
+                            <span asp-validation-for="PrecoPromocional" class="text-danger small"></span>
+                            <small class="text-muted d-block mt-1" id="promoHint"></small>
+                        </div>
+
+                        <div class="col-12 col-lg-4">
+                            <label class="form-label">Estoque *</label>
+                            <input asp-for="Estoque" class="form-control" type="number" min="0" />
+                            <span asp-validation-for="Estoque" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12 col-lg-6">
+                            <label class="form-label">Imagem</label>
+                            <input asp-for="ImagemUpload" class="form-control" type="file" accept="image/*" />
+                            <span asp-validation-for="ImagemUpload" class="text-danger small"></span>
+
+                            @if (!string.IsNullOrWhiteSpace(Model?.ImagemUrl))
+                            {
+                                <div class="ps-img-preview">
+                                    <img src="@Model!.ImagemUrl" alt="Imagem atual" />
+                                </div>
+                            }
+                        </div>
+
+                        <div class="col-12 col-lg-6">
+                            <label class="form-label">Sabor (opcional)</label>
+                            <input asp-for="Sabor" class="form-control" placeholder="Se quiser usar como atributo simples" />
+
+                            <div class="mt-2">
+                                <label class="form-label">Cor (opcional)</label>
+                                <input asp-for="Cor" class="form-control" />
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="produto-simples-checks">
+                                <div class="form-check">
+                                    <input class="form-check-input" asp-for="Ativo" />
+                                    <label class="form-check-label">Ativo</label>
+                                </div>
+
+                                <div class="form-check">
+                                    <input class="form-check-input" asp-for="MaisVendido" />
+                                    <label class="form-check-label">Mais Vendido</label>
+                                </div>
+
+                                <div class="form-check">
+                                    <input class="form-check-input" asp-for="RequerMaioridade" />
+                                    <label class="form-check-label">Requer Maioridade</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 d-flex justify-content-end gap-2 mt-2">
+                            <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fa-solid fa-save me-1"></i> Salvar
+                            </button>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
