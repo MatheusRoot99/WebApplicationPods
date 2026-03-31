@@ -247,8 +247,6 @@ namespace WebApplicationPods.Data
 
                 b.Property(x => x.Status).HasMaxLength(40).IsRequired();
                 b.Property(x => x.Observacao).HasMaxLength(500);
-                b.Property(x => x.NomeRecebedor).HasMaxLength(120);
-                b.Property(x => x.ObservacaoEntrega).HasMaxLength(500);
                 b.Property(x => x.ComprovanteEntregaUrl).HasMaxLength(500);
 
                 b.HasOne(x => x.Pedido)

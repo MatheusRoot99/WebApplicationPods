@@ -51,7 +51,10 @@ namespace WebApplicationPods.Services.service
                     DataAtribuicao = DateTime.Now,
                     DataCadastro = DateTime.Now,
                     DataAtualizacao = DateTime.Now,
-                    Observacao = $"Entregador atribuído: {entregador.Nome}"
+                    Observacao = $"Entregador atribuído: {entregador.Nome}",
+                    NomeRecebedor = null,
+                    ObservacaoEntrega = null,
+                    ComprovanteEntregaUrl = null
                 };
 
                 _context.Entregas.Add(pedido.Entrega);
@@ -208,7 +211,7 @@ namespace WebApplicationPods.Services.service
             pedido.Entrega.NomeRecebedor = nomeRecebedorFinal;
             pedido.Entrega.ObservacaoEntrega = observacaoEntregaFinal;
             pedido.Entrega.ComprovanteEntregaUrl = comprovanteEntregaUrl;
-            pedido.Entrega.Observacao = $"Entregue para {nomeRecebedorFinal}.";
+            pedido.Entrega.Observacao = $"Pedido entregue para {nomeRecebedorFinal}.";
 
             // compatibilidade temporária
             pedido.DataEntregue = DateTime.Now;
@@ -219,7 +222,7 @@ namespace WebApplicationPods.Services.service
             if (!string.IsNullOrWhiteSpace(observacaoEntregaFinal))
                 observacaoHistorico += $" Observação: {observacaoEntregaFinal}";
             if (!string.IsNullOrWhiteSpace(comprovanteEntregaUrl))
-                observacaoHistorico += " Foto anexada ao comprovante.";
+                observacaoHistorico += " Foto do comprovante anexada.";
 
             await _pedidoAppService.AtualizarStatusAsync(
                 pedido.Id,

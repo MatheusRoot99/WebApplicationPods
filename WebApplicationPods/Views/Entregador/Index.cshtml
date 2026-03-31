@@ -221,21 +221,6 @@
         padding-top: 10px;
         border-top: 1px solid rgba(0,0,0,.08);
     }
-
-    .proof-box {
-        margin-top: 10px;
-        padding-top: 10px;
-        border-top: 1px solid rgba(0,0,0,.08);
-    }
-
-    .proof-thumb {
-        width: 84px;
-        height: 84px;
-        object-fit: cover;
-        border-radius: 12px;
-        border: 1px solid rgba(0,0,0,.08);
-        margin-top: 8px;
-    }
 </style>
 
 <div class="container py-3 delivery-page">
@@ -448,6 +433,12 @@
                                 </div>
 
                                 <div class="delivery-actions">
+                                    <form asp-action="Entregue" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <button type="submit" class="btn btn-success btn-sm">Marcar entregue</button>
+                                    </form>
+
                                     <a href="@mapsUrl" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm @(mapsUrl == "#" ? "disabled" : "")">
                                         Abrir rota
                                     </a>
@@ -455,47 +446,6 @@
                                     <a href="@whatsUrl" target="_blank" rel="noopener" class="btn btn-outline-success btn-sm @(whatsUrl == "#" ? "disabled" : "")">
                                         WhatsApp
                                     </a>
-                                </div>
-
-                                <div class="proof-box">
-                                    <details open>
-                                        <summary class="text-success small fw-semibold">Finalizar entrega com comprovante</summary>
-
-                                        <form asp-action="Entregue" method="post" enctype="multipart/form-data" class="mt-2">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="Id" value="@item.Id" />
-
-                                            <div class="mb-2">
-                                                <label class="form-label form-label-sm small mb-1">Nome de quem recebeu</label>
-                                                <input type="text"
-                                                       name="NomeRecebedor"
-                                                       class="form-control form-control-sm"
-                                                       maxlength="120"
-                                                       required
-                                                       placeholder="Ex.: Maria Silva" />
-                                            </div>
-
-                                            <div class="mb-2">
-                                                <label class="form-label form-label-sm small mb-1">Observação da entrega</label>
-                                                <textarea name="ObservacaoEntrega"
-                                                          class="form-control form-control-sm"
-                                                          rows="2"
-                                                          maxlength="500"
-                                                          placeholder="Opcional. Ex.: entregue na portaria."></textarea>
-                                            </div>
-
-                                            <div class="mb-2">
-                                                <label class="form-label form-label-sm small mb-1">Foto do comprovante</label>
-                                                <input type="file"
-                                                       name="FotoComprovante"
-                                                       class="form-control form-control-sm"
-                                                       accept=".jpg,.jpeg,.png,.webp,image/*" />
-                                                <div class="form-text">Opcional. Envie JPG, JPEG, PNG ou WEBP até 5MB.</div>
-                                            </div>
-
-                                            <button type="submit" class="btn btn-success btn-sm">Marcar entregue</button>
-                                        </form>
-                                    </details>
                                 </div>
 
                                 <div class="motivo-box">
@@ -580,30 +530,6 @@
                                         <div class="value">@((item.Entrega?.Observacao) ?? "-")</div>
                                     </div>
                                 </div>
-
-                                @if (string.Equals(entregaStatus, EntregaStatusConst.Entregue, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    <div class="proof-box">
-                                        @if (!string.IsNullOrWhiteSpace(item.Entrega?.NomeRecebedor))
-                                        {
-                                            <div><strong>Recebido por:</strong> @item.Entrega!.NomeRecebedor</div>
-                                        }
-
-                                        @if (!string.IsNullOrWhiteSpace(item.Entrega?.ObservacaoEntrega))
-                                        {
-                                            <div class="text-muted mt-1">@item.Entrega!.ObservacaoEntrega</div>
-                                        }
-
-                                        @if (!string.IsNullOrWhiteSpace(item.Entrega?.ComprovanteEntregaUrl))
-                                        {
-                                            <div>
-                                                <a href="@item.Entrega!.ComprovanteEntregaUrl" target="_blank" rel="noopener">
-                                                    <img src="@item.Entrega.ComprovanteEntregaUrl" alt="Comprovante da entrega" class="proof-thumb" />
-                                                </a>
-                                            </div>
-                                        }
-                                    </div>
-                                }
                             </div>
                         </div>
                     </div>
