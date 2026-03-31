@@ -14,15 +14,18 @@ namespace WebApplicationPods.Controllers
         private readonly BancoContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IEntregaAppService _entregaAppService;
+        private readonly IWebHostEnvironment _hostEnvironment;
 
         public EntregadorController(
             BancoContext context,
             UserManager<ApplicationUser> userManager,
-            IEntregaAppService entregaAppService)
+            IEntregaAppService entregaAppService,
+            IWebHostEnvironment hostEnvironment)
         {
             _context = context;
             _userManager = userManager;
             _entregaAppService = entregaAppService;
+            _hostEnvironment = hostEnvironment;
         }
 
         public async Task<IActionResult> Index()
@@ -100,19 +103,84 @@ namespace WebApplicationPods.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Entregue(int id)
+        public async Task<IActionResult> Entregue(EntregaConclusaoViewModel model)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
                 return Challenge();
 
-            var ok = await _entregaAppService.MarcarEntregueAsync(id, user.Id);
+            if (model == null || model.Id <= 0)
+            {
+                TempData["Erro"] = "Entrega inválida.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (string.IsNullOrWhiteSpace(model.NomeRecebedor))
+            {
+                TempData["Erro"] = "Informe o nome de quem recebeu.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            string? comprovanteUrl = null;
+
+            if (model.FotoComprovante != null && model.FotoComprovante.Length > 0)
+            {
+                var error = ValidateDeliveryImage(model.FotoComprovante, out var extLower);
+                if (!string.IsNullOrWhiteSpace(error))
+                {
+                    TempData["Erro"] = error;
+                    return RedirectToAction(nameof(Index));
+                }
+
+                comprovanteUrl = await SaveDeliveryImageAndReturnUrl(model.FotoComprovante, model.Id, extLower);
+            }
+
+            var ok = await _entregaAppService.MarcarEntregueAsync(
+                model.Id,
+                user.Id,
+                model.NomeRecebedor,
+                model.ObservacaoEntrega,
+                comprovanteUrl);
 
             TempData[ok ? "Sucesso" : "Erro"] = ok
-                ? "Pedido marcado como entregue."
+                ? "Pedido marcado como entregue com comprovante."
                 : "Não foi possível concluir a entrega.";
 
             return RedirectToAction(nameof(Index));
+        }
+
+        private static string? ValidateDeliveryImage(IFormFile file, out string extLower)
+        {
+            extLower = Path.GetExtension(file.FileName).ToLowerInvariant();
+            var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+
+            if (!allowed.Contains(extLower))
+                return "A foto do comprovante deve estar em JPG, JPEG, PNG ou WEBP.";
+
+            if (file.Length > 5 * 1024 * 1024)
+                return "A foto do comprovante não pode exceder 5MB.";
+
+            return null;
+        }
+
+        private async Task<string> SaveDeliveryImageAndReturnUrl(IFormFile file, int pedidoId, string extLower)
+        {
+            var pastaUploads = Path.Combine(_hostEnvironment.WebRootPath, "uploads", "comprovantes-entrega");
+            Directory.CreateDirectory(pastaUploads);
+
+            var fileName = MakeDeliveryFileName(pedidoId, extLower);
+            var caminho = Path.Combine(pastaUploads, fileName);
+
+            using var fs = new FileStream(caminho, FileMode.Create);
+            await file.CopyToAsync(fs);
+
+            return $"/uploads/comprovantes-entrega/{fileName}";
+        }
+
+        private static string MakeDeliveryFileName(int pedidoId, string extLower)
+        {
+            var guid8 = Guid.NewGuid().ToString("N")[..8];
+            return $"pedido-{pedidoId}-comprovante-{guid8}{extLower}";
         }
 
         [HttpPost]

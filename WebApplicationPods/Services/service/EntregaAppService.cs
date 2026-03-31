@@ -67,6 +67,9 @@ namespace WebApplicationPods.Services.service
                 pedido.Entrega.DataConclusao = null;
                 pedido.Entrega.DataAtualizacao = DateTime.Now;
                 pedido.Entrega.Observacao = $"Entregador atribuído: {entregador.Nome}";
+                pedido.Entrega.NomeRecebedor = null;
+                pedido.Entrega.ObservacaoEntrega = null;
+                pedido.Entrega.ComprovanteEntregaUrl = null;
             }
 
             // compatibilidade temporária com o pedido
@@ -177,7 +180,12 @@ namespace WebApplicationPods.Services.service
             return true;
         }
 
-        public async Task<bool> MarcarEntregueAsync(int pedidoId, int entregadorUserId)
+        public async Task<bool> MarcarEntregueAsync(
+            int pedidoId,
+            int entregadorUserId,
+            string nomeRecebedor,
+            string? observacaoEntrega = null,
+            string? comprovanteEntregaUrl = null)
         {
             var pedido = await ObterPedidoComEntregaAsync(pedidoId);
             if (pedido == null || !EntregaPertenceAoUsuario(pedido, entregadorUserId) || pedido.Entrega == null)
@@ -186,21 +194,39 @@ namespace WebApplicationPods.Services.service
             if (!StatusEh(pedido.Entrega.Status, EntregaStatusConst.EmRota))
                 return false;
 
+            if (string.IsNullOrWhiteSpace(nomeRecebedor))
+                return false;
+
+            var nomeRecebedorFinal = nomeRecebedor.Trim();
+            var observacaoEntregaFinal = string.IsNullOrWhiteSpace(observacaoEntrega)
+                ? null
+                : observacaoEntrega.Trim();
+
             pedido.Entrega.Status = EntregaStatusConst.Entregue;
             pedido.Entrega.DataConclusao = DateTime.Now;
             pedido.Entrega.DataAtualizacao = DateTime.Now;
+            pedido.Entrega.NomeRecebedor = nomeRecebedorFinal;
+            pedido.Entrega.ObservacaoEntrega = observacaoEntregaFinal;
+            pedido.Entrega.ComprovanteEntregaUrl = comprovanteEntregaUrl;
+            pedido.Entrega.Observacao = $"Entregue para {nomeRecebedorFinal}.";
 
             // compatibilidade temporária
             pedido.DataEntregue = DateTime.Now;
 
             await _context.SaveChangesAsync();
 
+            var observacaoHistorico = $"Pedido entregue com sucesso. Recebido por: {nomeRecebedorFinal}.";
+            if (!string.IsNullOrWhiteSpace(observacaoEntregaFinal))
+                observacaoHistorico += $" Observação: {observacaoEntregaFinal}";
+            if (!string.IsNullOrWhiteSpace(comprovanteEntregaUrl))
+                observacaoHistorico += " Foto anexada ao comprovante.";
+
             await _pedidoAppService.AtualizarStatusAsync(
                 pedido.Id,
                 PedidoEntregaStatus.Entregue,
                 nomeResponsavel: pedido.Entregador?.Nome,
                 usuarioResponsavelId: entregadorUserId.ToString(),
-                observacao: "Pedido entregue com sucesso.",
+                observacao: observacaoHistorico,
                 origem: "PainelEntregador");
 
             return true;
@@ -223,6 +249,9 @@ namespace WebApplicationPods.Services.service
             pedido.Entrega.Status = EntregaStatusConst.NaoEntregue;
             pedido.Entrega.DataAtualizacao = DateTime.Now;
             pedido.Entrega.Observacao = motivoFinal;
+            pedido.Entrega.NomeRecebedor = null;
+            pedido.Entrega.ObservacaoEntrega = null;
+            pedido.Entrega.ComprovanteEntregaUrl = null;
 
             // devolve o pedido para o lojista reatribuir
             pedido.EntregadorId = null;

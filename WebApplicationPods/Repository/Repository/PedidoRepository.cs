@@ -156,6 +156,8 @@ namespace WebApplicationPods.Repository.Repository
             return q
                 .Include(p => p.Cliente)
                 .Include(p => p.Endereco)
+                .Include(p => p.Entrega)
+                .Include(p => p.Entregador)
                 .Include(p => p.PedidoItens).ThenInclude(pi => pi.Produto)
                 .Include(p => p.Pagamentos)
                 .Include(p => p.Historico.OrderBy(h => h.DataCadastro))
@@ -178,6 +180,9 @@ namespace WebApplicationPods.Repository.Repository
 
             return BaseQuery()
                 .Include(p => p.Cliente)
+                .Include(p => p.Endereco)
+                .Include(p => p.Entrega)
+                .Include(p => p.Entregador)
                 .Include(p => p.PedidoItens).ThenInclude(i => i.Produto)
                 .Include(p => p.Pagamentos)
                 .FirstOrDefault(p => p.RastreioToken == token && !p.IsDeleted);

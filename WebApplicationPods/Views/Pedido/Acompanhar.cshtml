@@ -104,6 +104,11 @@
     string linkWhatsApp = !string.IsNullOrWhiteSpace(telefoneWhatsapp)
         ? $"https://wa.me/{telefoneWhatsapp}"
         : "#";
+
+    bool temComprovanteEntrega = Model?.Entrega != null &&
+        (!string.IsNullOrWhiteSpace(Model.Entrega.NomeRecebedor) ||
+         !string.IsNullOrWhiteSpace(Model.Entrega.ObservacaoEntrega) ||
+         !string.IsNullOrWhiteSpace(Model.Entrega.ComprovanteEntregaUrl));
 }
 
 @section Styles {
@@ -362,6 +367,39 @@
                             </div>
                         </div>
                     </div>
+
+                    @if (temComprovanteEntrega)
+                    {
+                        <div class="cardx">
+                            <div class="cardx-h">Comprovante da entrega</div>
+                            <div class="cardx-b">
+                                <div class="orders">
+                                    @if (!string.IsNullOrWhiteSpace(Model?.Entrega?.NomeRecebedor))
+                                    {
+                                        <div class="subtle mb-2">
+                                            <strong>Recebido por:</strong> @Model!.Entrega!.NomeRecebedor
+                                        </div>
+                                    }
+
+                                    @if (!string.IsNullOrWhiteSpace(Model?.Entrega?.ObservacaoEntrega))
+                                    {
+                                        <div class="subtle mb-3">@Model!.Entrega!.ObservacaoEntrega</div>
+                                    }
+
+                                    @if (!string.IsNullOrWhiteSpace(Model?.Entrega?.ComprovanteEntregaUrl))
+                                    {
+                                        <div>
+                                            <a href="@Model!.Entrega!.ComprovanteEntregaUrl" target="_blank" rel="noopener noreferrer">
+                                                <img src="@Model.Entrega.ComprovanteEntregaUrl"
+                                                     alt="Comprovante da entrega"
+                                                     style="width:100%; max-width:320px; border-radius:16px; border:1px solid rgba(0,0,0,.08);" />
+                                            </a>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
 
                     @if (historico.Any())
                     {

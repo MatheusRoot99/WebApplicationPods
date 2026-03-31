@@ -31,6 +31,12 @@ namespace WebApplicationPods.Models
         [StringLength(500)]
         public string? Observacao { get; set; }
 
+        [StringLength(120)]
+        public string? NomeRecebedor { get; set; }
+
+        [StringLength(500)]
+        public string? ObservacaoEntrega { get; set; }
+
         [StringLength(500)]
         public string? ComprovanteEntregaUrl { get; set; }
 
