@@ -123,10 +123,16 @@ namespace WebApplicationPods.Controllers
             if (user == null)
                 return Challenge();
 
+            if (string.IsNullOrWhiteSpace(motivo))
+            {
+                TempData["Erro"] = "Informe o motivo da tentativa sem sucesso.";
+                return RedirectToAction(nameof(Index));
+            }
+
             var ok = await _entregaAppService.MarcarNaoEntregueAsync(id, user.Id, motivo);
 
             TempData[ok ? "Sucesso" : "Erro"] = ok
-                ? "Entrega marcada como não concluída."
+                ? "Entrega marcada como não concluída e devolvida para nova atribuição."
                 : "Não foi possível atualizar a entrega.";
 
             return RedirectToAction(nameof(Index));

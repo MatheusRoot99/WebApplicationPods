@@ -61,6 +61,10 @@ namespace WebApplicationPods.Services.service
                 pedido.Entrega.EntregadorId = entregador.Id;
                 pedido.Entrega.Status = EntregaStatusConst.Atribuida;
                 pedido.Entrega.DataAtribuicao = DateTime.Now;
+                pedido.Entrega.DataAceite = null;
+                pedido.Entrega.DataColeta = null;
+                pedido.Entrega.DataSaidaParaEntrega = null;
+                pedido.Entrega.DataConclusao = null;
                 pedido.Entrega.DataAtualizacao = DateTime.Now;
                 pedido.Entrega.Observacao = $"Entregador atribuído: {entregador.Nome}";
             }
@@ -211,13 +215,18 @@ namespace WebApplicationPods.Services.service
             if (!PodeMarcarNaoEntregue(pedido.Entrega.Status))
                 return false;
 
-            var motivoFinal = string.IsNullOrWhiteSpace(motivo)
-                ? "Entrega não concluída."
-                : motivo.Trim();
+            if (string.IsNullOrWhiteSpace(motivo))
+                return false;
+
+            var motivoFinal = motivo.Trim();
 
             pedido.Entrega.Status = EntregaStatusConst.NaoEntregue;
             pedido.Entrega.DataAtualizacao = DateTime.Now;
             pedido.Entrega.Observacao = motivoFinal;
+
+            // devolve o pedido para o lojista reatribuir
+            pedido.EntregadorId = null;
+            pedido.DataAtribuicaoEntregador = null;
 
             await _context.SaveChangesAsync();
 
@@ -226,7 +235,7 @@ namespace WebApplicationPods.Services.service
                 PedidoEntregaStatus.AguardandoAtribuicao,
                 nomeResponsavel: pedido.Entregador?.Nome,
                 usuarioResponsavelId: entregadorUserId.ToString(),
-                observacao: $"Entrega não concluída. Motivo: {motivoFinal}",
+                observacao: $"Tentativa de entrega sem sucesso. Motivo: {motivoFinal}",
                 origem: "PainelEntregador");
 
             return true;

@@ -356,11 +356,12 @@
                                             <input type="hidden" name="id" value="@item.Id" />
 
                                             <div class="mb-2">
-                                                <input type="text"
-                                                       name="motivo"
-                                                       class="form-control form-control-sm"
-                                                       maxlength="200"
-                                                       placeholder="Ex.: cliente ausente, endereço não localizado" />
+                                                <textarea name="motivo"
+                                                  class="form-control form-control-sm"
+                                                  rows="2"
+                                                  maxlength="200"
+                                                  required
+                                                  placeholder="Informe o motivo. Ex.: cliente ausente, endereço não localizado"></textarea>
                                             </div>
 
                                             <button type="submit" class="btn btn-outline-danger btn-sm">
@@ -456,11 +457,12 @@
                                             <input type="hidden" name="id" value="@item.Id" />
 
                                             <div class="mb-2">
-                                                <input type="text"
-                                                       name="motivo"
-                                                       class="form-control form-control-sm"
-                                                       maxlength="200"
-                                                       placeholder="Ex.: cliente ausente, portaria recusou, endereço incorreto" />
+                                                <textarea name="motivo"
+                                                  class="form-control form-control-sm"
+                                                  rows="2"
+                                                  maxlength="200"
+                                                  required
+                                                  placeholder="Informe o motivo. Ex.: cliente ausente, portaria recusou, endereço incorreto"></textarea>
                                             </div>
 
                                             <button type="submit" class="btn btn-outline-danger btn-sm">

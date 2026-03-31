@@ -209,29 +209,29 @@ namespace WebApplicationPods.Repository.Repository
             string? usuarioResponsavelId = null,
             string? observacao = null,
             string? origem = null)
-                {
-                    if (string.IsNullOrWhiteSpace(status)) return;
+        {
+            if (string.IsNullOrWhiteSpace(status)) return;
 
-                    var pedido = BaseQuery().FirstOrDefault(p => p.Id == pedidoId);
-                    if (pedido == null) return;
+            var pedido = BaseQuery().FirstOrDefault(p => p.Id == pedidoId);
+            if (pedido == null) return;
 
-                    if (string.Equals(pedido.Status, status, StringComparison.OrdinalIgnoreCase))
-                        return;
+            if (string.Equals(pedido.Status, status, StringComparison.OrdinalIgnoreCase))
+                return;
 
-                    var statusAnterior = pedido.Status;
+            var statusAnterior = pedido.Status;
 
-                    RegistrarHistorico(
-                        pedido,
-                        status,
-                        nomeResponsavel,
-                        usuarioResponsavelId,
-                        observacao,
-                        origem);
+            RegistrarHistorico(
+                pedido,
+                status,
+                nomeResponsavel,
+                usuarioResponsavelId,
+                observacao,
+                origem);
 
-                    pedido.Status = status;
-                    AtualizarDatasPorStatus(pedido, status);
+            pedido.Status = status;
+            AtualizarDatasPorStatus(pedido, status);
 
-                    _context.SaveChanges();
+            _context.SaveChanges();
         }
 
         public decimal ObterTotalVendasHoje()
@@ -254,6 +254,8 @@ namespace WebApplicationPods.Repository.Repository
                 .Include(p => p.Cliente)
                 .Include(p => p.PedidoItens)
                 .Include(p => p.Pagamentos)
+                .Include(p => p.Entrega)
+                .Include(p => p.Entregador)
                 .OrderByDescending(p => p.DataPedido)
                 .AsNoTracking()
                 .ToList();
@@ -269,6 +271,8 @@ namespace WebApplicationPods.Repository.Repository
                 .Include(p => p.Cliente)
                 .Include(p => p.PedidoItens)
                 .Include(p => p.Pagamentos)
+                .Include(p => p.Entrega)
+                .Include(p => p.Entregador)
                 .OrderByDescending(p => p.DataPedido)
                 .AsNoTracking()
                 .ToList();

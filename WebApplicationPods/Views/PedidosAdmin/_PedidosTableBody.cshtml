@@ -38,6 +38,15 @@
             string.Equals(statusAtual, PedidoEntregaStatus.SaiuParaEntrega, StringComparison.OrdinalIgnoreCase)
         );
 
+    var motivoEntrega = string.Empty;
+    var mostrarMotivoEntrega =
+        p.Entrega != null &&
+        string.Equals(p.Entrega.Status, EntregaStatus.NaoEntregue, StringComparison.OrdinalIgnoreCase) &&
+        !string.IsNullOrWhiteSpace(p.Entrega.Observacao);
+
+    if (mostrarMotivoEntrega)
+        motivoEntrega = p.Entrega!.Observacao!;
+
     <tr data-id="@p.Id" data-order-id="@p.Id">
         <td data-th="Cliente">
             <div class="cell-primary">
@@ -59,7 +68,14 @@
         </td>
 
         <td data-th="Status">
-            <span class="badge badge-state" data-state="@statusAtual">@statusAtual</span>
+            <div class="d-flex flex-column align-items-start gap-1">
+                <span class="badge badge-state" data-state="@statusAtual">@statusAtual</span>
+
+                @if (mostrarMotivoEntrega)
+                {
+                    <small class="text-danger fw-semibold">Falha anterior: @motivoEntrega</small>
+                }
+            </div>
         </td>
 
         <td data-th="Ações" class="text-end">

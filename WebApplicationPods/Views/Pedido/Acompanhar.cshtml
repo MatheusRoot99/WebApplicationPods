@@ -1,4 +1,5 @@
 ﻿@using WebApplicationPods.Models
+@using WebApplicationPods.Constants
 @model PedidoModel
 
 @{
@@ -20,6 +21,49 @@
     var total = subtotal + taxaEntrega;
 
     bool ehEntrega = Model?.EnderecoId.HasValue == true && Model.EnderecoId.Value > 0;
+
+
+    bool statusPronto = string.Equals(statusAtual, PedidoStatus.Pronto, StringComparison.OrdinalIgnoreCase);
+    bool statusAguardandoEntregador = string.Equals(statusAtual, PedidoEntregaStatus.AguardandoAtribuicao, StringComparison.OrdinalIgnoreCase);
+    bool statusEntregadorAtribuido = string.Equals(statusAtual, PedidoEntregaStatus.Atribuido, StringComparison.OrdinalIgnoreCase);
+    bool statusSaiuEntrega =
+        string.Equals(statusAtual, PedidoStatus.SaiuParaEntrega, StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(statusAtual, PedidoEntregaStatus.SaiuParaEntrega, StringComparison.OrdinalIgnoreCase);
+
+    string etapaEntregaTitulo;
+    string etapaEntregaDescricao;
+    string etapaEntregaHora;
+
+    if (!ehEntrega)
+    {
+        etapaEntregaTitulo = "Pronto para retirada";
+        etapaEntregaDescricao = "Seu pedido está pronto para retirada no local.";
+        etapaEntregaHora = Model.DataSaiuParaEntregaOuRetirada?.ToString("HH:mm") ?? "—";
+    }
+    else if (statusSaiuEntrega)
+    {
+        etapaEntregaTitulo = "Saiu para entrega";
+        etapaEntregaDescricao = "Seu pedido está a caminho.";
+        etapaEntregaHora = Model.DataSaiuParaEntregaOuRetirada?.ToString("HH:mm") ?? "—";
+    }
+    else if (statusEntregadorAtribuido)
+    {
+        etapaEntregaTitulo = "Entregador atribuído";
+        etapaEntregaDescricao = "Seu pedido foi atribuído a um entregador e será retirado em breve.";
+        etapaEntregaHora = Model.DataAtribuicaoEntregador?.ToString("HH:mm") ?? "—";
+    }
+    else if (statusAguardandoEntregador || statusPronto)
+    {
+        etapaEntregaTitulo = "Pronto para entrega";
+        etapaEntregaDescricao = "Seu pedido está pronto e aguardando a saída para entrega.";
+        etapaEntregaHora = "—";
+    }
+    else
+    {
+        etapaEntregaTitulo = ehEntrega ? "Saiu para entrega" : "Pronto para retirada";
+        etapaEntregaDescricao = ehEntrega ? "Seu pedido está a caminho." : "Seu pedido está pronto para retirada no local.";
+        etapaEntregaHora = Model.DataSaiuParaEntregaOuRetirada?.ToString("HH:mm") ?? "—";
+    }
 
     string statusBadgeClass = "badge-soft";
     if (!string.IsNullOrWhiteSpace(statusAtual))
@@ -191,11 +235,9 @@
                             <div class="vstep" data-step="4">
                                 <div class="vbullet"><i class="bi bi-truck"></i></div>
                                 <div class="vbody">
-                                    <div class="vtitle">@(ehEntrega ? "Saiu para entrega" : "Pronto para retirada")</div>
-                                    <div class="vdesc">@(ehEntrega ? "Seu pedido está a caminho." : "Seu pedido está pronto para retirada no local.")</div>
-                                    <time class="vtime">
-                                        @(Model.DataSaiuParaEntregaOuRetirada?.ToString("HH:mm") ?? "—")
-                                    </time>
+                                    <div class="vtitle">@etapaEntregaTitulo</div>
+                                    <div class="vdesc">@etapaEntregaDescricao</div>
+                                    <time class="vtime">@etapaEntregaHora</time>
                                 </div>
                             </div>
 

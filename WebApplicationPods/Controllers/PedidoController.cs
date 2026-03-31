@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using WebApplicationPods.Constants;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
 
@@ -34,15 +35,66 @@ namespace WebApplicationPods.Controllers
             return false;
         }
 
-        private static int MapStep(string? status)
+        private static bool StatusEh(string? atual, string esperado)
         {
-            var s = (status ?? string.Empty).ToLowerInvariant();
-            if (s.Contains("cancel")) return -1;
-            if (s.Contains("entreg") || s.Contains("concl")) return 5;
-            if (s.Contains("rota") || s.Contains("saiu") || s.Contains("entrega") || s.Contains("retirada")) return 4;
-            if (s.Contains("prepar") || s.Contains("produção") || s.Contains("producao")) return 3;
-            if (s.Contains("pago") || s.Contains("aprov")) return 2;
-            if (s.Contains("aguard") && s.Contains("pag")) return 1;
+            return string.Equals(atual?.Trim(), esperado, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static int MapStep(string? status, bool retiradaNoLocal = false)
+        {
+            if (string.IsNullOrWhiteSpace(status))
+                return 0;
+
+            if (status.Contains("Cancel", StringComparison.OrdinalIgnoreCase) ||
+                status.Contains("Falhou", StringComparison.OrdinalIgnoreCase))
+            {
+                return -1;
+            }
+
+            if (StatusEh(status, PedidoStatus.Concluido) ||
+                StatusEh(status, PedidoEntregaStatus.Entregue))
+            {
+                return 5;
+            }
+
+            if (StatusEh(status, PedidoStatus.SaiuParaEntrega) ||
+                StatusEh(status, PedidoEntregaStatus.SaiuParaEntrega))
+            {
+                return 4;
+            }
+
+            // retirada local: "Pronto" já representa etapa 4
+            if (retiradaNoLocal && StatusEh(status, PedidoStatus.Pronto))
+            {
+                return 4;
+            }
+
+            // entrega: ainda não saiu, mas já está na fase logística
+            if (StatusEh(status, PedidoStatus.Pronto) ||
+                StatusEh(status, PedidoEntregaStatus.AguardandoAtribuicao) ||
+                StatusEh(status, PedidoEntregaStatus.Atribuido))
+            {
+                return 4;
+            }
+
+            if (StatusEh(status, PedidoStatus.EmPreparacao) ||
+                status.Contains("Produ", StringComparison.OrdinalIgnoreCase))
+            {
+                return 3;
+            }
+
+            if (StatusEh(status, PedidoStatus.Pago) ||
+                status.Contains("Aprov", StringComparison.OrdinalIgnoreCase))
+            {
+                return 2;
+            }
+
+            if (status.Contains("Aguard", StringComparison.OrdinalIgnoreCase) &&
+                status.Contains("Pag", StringComparison.OrdinalIgnoreCase))
+            {
+                return 1;
+            }
+
             return 0;
         }
 
@@ -158,50 +210,10 @@ namespace WebApplicationPods.Controllers
 
         private static int ObterStepPedido(PedidoModel pedido)
         {
-            var status = pedido?.Status?.Trim() ?? string.Empty;
-
-            if (string.IsNullOrWhiteSpace(status))
+            if (pedido == null)
                 return 0;
 
-            if (status.Contains("Cancel", StringComparison.OrdinalIgnoreCase) ||
-                status.Contains("Falhou", StringComparison.OrdinalIgnoreCase))
-            {
-                return -1;
-            }
-
-            if (status.Contains("Concl", StringComparison.OrdinalIgnoreCase) ||
-                status.Contains("Entregue", StringComparison.OrdinalIgnoreCase))
-            {
-                return 5;
-            }
-
-            if (status.Contains("Saiu", StringComparison.OrdinalIgnoreCase) ||
-                status.Contains("Entrega", StringComparison.OrdinalIgnoreCase) ||
-                status.Contains("Retirada", StringComparison.OrdinalIgnoreCase) ||
-                status.Contains("Pronto", StringComparison.OrdinalIgnoreCase))
-            {
-                return 4;
-            }
-
-            if (status.Contains("Prepar", StringComparison.OrdinalIgnoreCase) ||
-                status.Contains("Produ", StringComparison.OrdinalIgnoreCase))
-            {
-                return 3;
-            }
-
-            if (status.Contains("Pago", StringComparison.OrdinalIgnoreCase) ||
-                status.Contains("Aprov", StringComparison.OrdinalIgnoreCase))
-            {
-                return 2;
-            }
-
-            if (status.Contains("Aguard", StringComparison.OrdinalIgnoreCase) &&
-                status.Contains("Pag", StringComparison.OrdinalIgnoreCase))
-            {
-                return 1;
-            }
-
-            return 0;
+            return MapStep(pedido.Status, pedido.RetiradaNoLocal);
         }
 
         [HttpGet("Pedido/ResumoPedidoCliente/{id:int}")]
@@ -230,7 +242,7 @@ namespace WebApplicationPods.Controllers
             if (p == null) return NotFound();
             if (!CanViewPedido(p, HttpContext.User, t)) return Unauthorized();
 
-            var step = MapStep(p.Status);
+            var step = MapStep(p.Status, p.RetiradaNoLocal);
             var times = new Dictionary<string, string?>
             {
                 ["0"] = p.DataPedido.ToString("o"),
