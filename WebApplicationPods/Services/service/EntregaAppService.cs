@@ -12,16 +12,20 @@ namespace WebApplicationPods.Services.service
     {
         private readonly BancoContext _context;
         private readonly IPedidoAppService _pedidoAppService;
+        private readonly INotificationAppService _notificationAppService;
         private readonly IHubContext<PedidosHub> _hub;
 
         public EntregaAppService(
             BancoContext context,
             IPedidoAppService pedidoAppService,
-            IHubContext<PedidosHub> hub)
+            IHubContext<PedidosHub> hub,
+            INotificationAppService notificationAppService)
         {
             _context = context;
             _pedidoAppService = pedidoAppService;
             _hub = hub;
+            _notificationAppService = notificationAppService;
+
         }
 
         public async Task<bool> AtribuirEntregadorAsync(int pedidoId, int entregadorId, string? responsavel = null)
@@ -98,6 +102,11 @@ namespace WebApplicationPods.Services.service
                     status = EntregaStatusConst.Atribuida
                 });
             }
+            await CriarNotificacaoLojaAsync(
+                  pedido,
+                  "atribuicao",
+                  $"Pedido #{pedido.Id} atribuído",
+                  $"Entregador {entregador.Nome} foi atribuído ao pedido.");
 
             return true;
         }
@@ -125,6 +134,12 @@ namespace WebApplicationPods.Services.service
                 observacao: "Entrega aceita pelo entregador.",
                 origem: "PainelEntregador");
 
+            await CriarNotificacaoLojaAsync(
+                    pedido,
+                    "aceite",
+                    $"Pedido #{pedido.Id} aceito",
+                    $"{pedido.Entregador?.Nome ?? "O entregador"} aceitou a entrega.");
+
             return true;
         }
 
@@ -150,6 +165,12 @@ namespace WebApplicationPods.Services.service
                 usuarioResponsavelId: entregadorUserId.ToString(),
                 observacao: "Pedido coletado pelo entregador.",
                 origem: "PainelEntregador");
+
+            await CriarNotificacaoLojaAsync(
+                pedido,
+                "coleta",
+                $"Pedido #{pedido.Id} coletado",
+                $"{pedido.Entregador?.Nome ?? "O entregador"} marcou o pedido como coletado.");
 
             return true;
         }
@@ -179,6 +200,12 @@ namespace WebApplicationPods.Services.service
                 usuarioResponsavelId: entregadorUserId.ToString(),
                 observacao: "Entregador saiu para entrega.",
                 origem: "PainelEntregador");
+
+            await CriarNotificacaoLojaAsync(
+                pedido,
+                "rota",
+                $"Pedido #{pedido.Id} saiu para entrega",
+                $"{pedido.Entregador?.Nome ?? "O entregador"} saiu para entrega.");
 
             return true;
         }
@@ -232,6 +259,12 @@ namespace WebApplicationPods.Services.service
                 observacao: observacaoHistorico,
                 origem: "PainelEntregador");
 
+            await CriarNotificacaoLojaAsync(
+                    pedido,
+                    "rota",
+                    $"Pedido #{pedido.Id} saiu para entrega",
+                    $"{pedido.Entregador?.Nome ?? "O entregador"} saiu para entrega.");
+
             return true;
         }
 
@@ -270,6 +303,12 @@ namespace WebApplicationPods.Services.service
                 observacao: $"Tentativa de entrega sem sucesso. Motivo: {motivoFinal}",
                 origem: "PainelEntregador");
 
+            await CriarNotificacaoLojaAsync(
+                pedido,
+                "rota",
+                $"Pedido #{pedido.Id} saiu para entrega",
+                $"{pedido.Entregador?.Nome ?? "O entregador"} saiu para entrega.");
+
             return true;
         }
 
@@ -299,6 +338,19 @@ namespace WebApplicationPods.Services.service
                 || StatusEh(status, EntregaStatusConst.Aceita)
                 || StatusEh(status, EntregaStatusConst.Coletada)
                 || StatusEh(status, EntregaStatusConst.EmRota);
+        }
+
+        private Task CriarNotificacaoLojaAsync(PedidoModel pedido,string tipo,string titulo,string mensagem)
+        {
+            if (pedido.LojaId <= 0)
+                return Task.CompletedTask;
+
+            return _notificationAppService.CriarAsync(
+                pedido.LojaId,
+                titulo,
+                mensagem,
+                tipo,
+                pedidoId: pedido.Id);
         }
     }
 }

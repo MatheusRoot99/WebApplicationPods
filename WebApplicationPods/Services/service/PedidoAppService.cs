@@ -10,13 +10,16 @@ namespace WebApplicationPods.Services.service
     {
         private readonly IPedidoRepository _pedidoRepository;
         private readonly IHubContext<PedidosHub> _hub;
+        private readonly INotificationAppService _notificationAppService;
 
         public PedidoAppService(
             IPedidoRepository pedidoRepository,
-            IHubContext<PedidosHub> hub)
+            IHubContext<PedidosHub> hub,
+            INotificationAppService notificationAppService)
         {
             _pedidoRepository = pedidoRepository;
             _hub = hub;
+            _notificationAppService = notificationAppService;
         }
 
         public async Task<PedidoModel> CriarPedidoAsync(PedidoModel pedido, string? origem = null)
@@ -30,6 +33,16 @@ namespace WebApplicationPods.Services.service
             _pedidoRepository.Adicionar(pedido);
 
             var pedidoCriado = _pedidoRepository.ObterPorId(pedido.Id) ?? pedido;
+
+            if (pedidoCriado.LojaId > 0)
+            {
+                await _notificationAppService.CriarAsync(
+                    pedidoCriado.LojaId,
+                    $"Novo pedido #{pedidoCriado.Id}",
+                    $"Pedido realizado por {pedidoCriado.Cliente?.Nome ?? $"Cliente #{pedidoCriado.ClienteId}"} no valor de {pedidoCriado.ValorTotal:C}.",
+                    tipo: "novo-pedido",
+                    pedidoId: pedidoCriado.Id);
+            }
 
             await _hub.Clients.Group("lojistas").SendAsync("NewOrder", new
             {

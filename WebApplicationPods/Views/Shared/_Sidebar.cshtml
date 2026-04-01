@@ -6,6 +6,7 @@
     var isLojista = User.IsInRole("Lojista");
     var isEntregador = User.IsInRole("Entregador");
 
+
     string currentArea = ViewContext.RouteData.Values["area"]?.ToString() ?? "";
     string currentCtrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
 
@@ -24,7 +25,7 @@
 
     var produtoCollapseShow = isProdutoMenuOpen ? "show" : "";
     var produtoExpanded = isProdutoMenuOpen ? "true" : "false";
-
+    var notificacoesClass = Active("", "Notificacoes");
     var dashboardClass = Active(AppAreas.Lojista, "Dashboard");
     var relatoriosClass = Active("", "PedidosAdmin");
     var estoqueClass = Active("", "Estoque");
@@ -94,6 +95,11 @@
                 <a asp-area="" asp-controller="PedidosAdmin" asp-action="Index"
                    class="list-group-item list-group-item-action @pedidosClass">
                     <i class="fas fa-clipboard-list"></i> Pedidos
+                </a>
+
+                <a asp-area="" asp-controller="Notificacoes" asp-action="Index"
+                   class="list-group-item list-group-item-action @notificacoesClass">
+                    <i class="fas fa-bell"></i> Notificações
                 </a>
 
                 <a asp-area="PainelLojista" asp-controller="Entregadores" asp-action="Index"

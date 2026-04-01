@@ -45,6 +45,7 @@ namespace WebApplicationPods.Data
         public DbSet<PedidoHistoricoModel> PedidoHistoricos => Set<PedidoHistoricoModel>();
         public DbSet<EntregadorModel> Entregadores => Set<EntregadorModel>();
         public DbSet<EntregaModel> Entregas => Set<EntregaModel>();
+        public DbSet<NotificacaoModel> Notificacoes => Set<NotificacaoModel>();
         public DbSet<ProdutoVariacaoModel> ProdutoVariacoes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -263,6 +264,31 @@ namespace WebApplicationPods.Data
 
                 b.HasIndex(x => x.PedidoId).IsUnique();
                 b.HasIndex(x => new { x.EntregadorId, x.Status });
+            });
+
+            modelBuilder.Entity<NotificacaoModel>(b =>
+            {
+                b.ToTable("Notificacoes");
+
+                b.Property(x => x.Tipo).HasMaxLength(40).IsRequired();
+                b.Property(x => x.Titulo).HasMaxLength(120).IsRequired();
+                b.Property(x => x.Mensagem).HasMaxLength(500).IsRequired();
+                b.Property(x => x.Lida).HasDefaultValue(false).IsRequired();
+
+                b.HasOne(x => x.Pedido)
+                    .WithMany()
+                    .HasForeignKey(x => x.PedidoId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                b.HasOne(x => x.Loja)
+                    .WithMany()
+                    .HasForeignKey(x => x.LojaId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                b.HasIndex(x => new { x.LojaId, x.Lida, x.DataCadastro });
+                b.HasIndex(x => new { x.PedidoId, x.DataCadastro });
+
+                b.HasQueryFilter(x => _designTime || (!_hasLoja || x.LojaId == _lojaId));
             });
         }
     }

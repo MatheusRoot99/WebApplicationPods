@@ -1,6 +1,9 @@
 ﻿@using System.Text.Json
 @using WebApplicationPods.Models
 @using WebApplicationPods.Services
+@using System.Security.Claims
+@inject WebApplicationPods.Services.Interface.ICurrentLojaService CurrentLojaService
+@inject WebApplicationPods.Services.Interface.INotificationAppService NotificationAppService
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery
 @inject ILojaConfigService LojaSvc
 
@@ -14,6 +17,31 @@
     ViewData["StoreHeader"] = headerVM;
 
     var mobileBrand = headerVM?.Nome ?? "Conveniência";
+
+    var isAuthenticatedLayout = User.Identity?.IsAuthenticated == true;
+    var isLojistaLayout = User.IsInRole("Lojista");
+
+    int? GetLojaAtualLayout()
+    {
+        if (CurrentLojaService?.LojaId is int lojaAtual && lojaAtual > 0)
+            return lojaAtual;
+
+        var claimLojaId = User.FindFirst("LojaId")?.Value
+                       ?? User.FindFirst("lojaId")?.Value;
+
+        if (int.TryParse(claimLojaId, out var lojaIdClaim) && lojaIdClaim > 0)
+            return lojaIdClaim;
+
+        return null;
+    }
+
+    var lojaAtualLayoutId = isAuthenticatedLayout && isLojistaLayout
+        ? GetLojaAtualLayout()
+        : null;
+
+    var panelNotifCount = lojaAtualLayoutId.HasValue
+        ? await NotificationAppService.ContarNaoLidasAsync(lojaAtualLayoutId.Value)
+        : 0;
 }
 
 <!DOCTYPE html>
@@ -137,9 +165,23 @@
                                     <div class="dropdown">
                                         <button class="icon-btn position-relative" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notificações">
                                             <i class="fas fa-bell"></i>
-                                            <span id="notif-badge" class="badge bg-danger ms-1 visually-hidden">0</span>
+
+                                            @if (isLojistaLayout && panelNotifCount > 0)
+                                            {
+                                                <span class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle">
+                                                    @panelNotifCount
+                                                </span>
+                                            }
                                         </button>
-                                        @await Component.InvokeAsync("Notifications")
+
+                                        @if (isLojistaLayout)
+                                        {
+                                            @await Component.InvokeAsync("PanelNotifications")
+                                        }
+                                        else
+                                        {
+                                            @await Component.InvokeAsync("Notifications")
+                                        }
                                     </div>
                                 }
 
@@ -213,10 +255,25 @@
                                 @if (User.Identity?.IsAuthenticated == true)
                                 {
                                     <div class="nav-item dropdown">
-                                        <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="dropdown">
+                                        <a class="nav-link dropdown-toggle text-white position-relative" href="#" data-bs-toggle="dropdown">
                                             <i class="fas fa-bell"></i>
+
+                                            @if (isLojistaLayout && panelNotifCount > 0)
+                                            {
+                                                <span class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle">
+                                                    @panelNotifCount
+                                                </span>
+                                            }
                                         </a>
-                                        @await Component.InvokeAsync("Notifications")
+
+                                        @if (isLojistaLayout)
+                                        {
+                                            @await Component.InvokeAsync("PanelNotifications")
+                                        }
+                                        else
+                                        {
+                                            @await Component.InvokeAsync("Notifications")
+                                        }
                                     </div>
                                 }
 

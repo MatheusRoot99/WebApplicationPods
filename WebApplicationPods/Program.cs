@@ -224,6 +224,7 @@ builder.Services.AddScoped<IEmailSenderService, GmailEmailSenderService>();
 builder.Services.AddScoped<ILojaConfigService, LojaConfigService>();
 builder.Services.AddScoped<IEstoqueService, EstoqueService>();
 builder.Services.AddScoped<IEntregaAppService, EntregaAppService>();
+builder.Services.AddScoped<INotificationAppService, NotificationAppService>();
 builder.Services.AddScoped<ILojaConfigRepository, LojaConfigRepository>();
 
 builder.Services.AddDataProtection();

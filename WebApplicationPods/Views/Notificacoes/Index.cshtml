@@ -1,0 +1,127 @@
+﻿@model IEnumerable<WebApplicationPods.Models.NotificacaoModel>
+
+@{
+    ViewData["Title"] = "Notificações";
+    bool somenteNaoLidas = ViewBag.SomenteNaoLidas == true;
+    int totalNaoLidas = ViewBag.TotalNaoLidas is int total ? total : 0;
+    var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
+
+    string BadgeClass(string tipo) => (tipo ?? "").ToLowerInvariant() switch
+    {
+        "novo-pedido" => "bg-primary",
+        "atribuicao" => "bg-info text-dark",
+        "aceite" => "bg-info text-dark",
+        "coleta" => "bg-warning text-dark",
+        "rota" => "bg-warning text-dark",
+        "entregue" => "bg-success",
+        "nao-entregue" => "bg-danger",
+        _ => "bg-secondary"
+    };
+}
+
+<div class="container py-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+        <div>
+            <h2 class="mb-1">Central de notificações</h2>
+            <div class="text-muted">
+                Não lidas: <strong>@totalNaoLidas</strong>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <a asp-controller="Notificacoes"
+               asp-action="Index"
+               asp-route-somenteNaoLidas="false"
+               class="btn @(somenteNaoLidas ? "btn-outline-secondary" : "btn-dark")">
+                Todas
+            </a>
+
+            <a asp-controller="Notificacoes"
+               asp-action="Index"
+               asp-route-somenteNaoLidas="true"
+               class="btn @(somenteNaoLidas ? "btn-dark" : "btn-outline-secondary")">
+                Só não lidas
+            </a>
+
+            <form asp-controller="Notificacoes" asp-action="MarcarTodasComoLidas" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="fas fa-check-double me-2"></i>Marcar todas como lidas
+                </button>
+            </form>
+        </div>
+    </div>
+
+    @if (Model?.Any() != true)
+    {
+        <div class="alert alert-light border">
+            Nenhuma notificação encontrada.
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var n in Model)
+            {
+                var cardBorder = n.Lida ? "border" : "border border-primary";
+                var opacityClass = n.Lida ? "" : "";
+
+                <div class="col-12">
+                    <div class="card shadow-sm @cardBorder @opacityClass">
+                        <div class="card-body">
+                            <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                                        <h5 class="card-title mb-0">@n.Titulo</h5>
+                                        <span class="badge @BadgeClass(n.Tipo)">@n.Tipo</span>
+
+                                        @if (!n.Lida)
+                                        {
+                                            <span class="badge bg-danger">Não lida</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Lida</span>
+                                        }
+                                    </div>
+
+                                    <p class="card-text mb-2">@n.Mensagem</p>
+
+                                    <div class="small text-muted">
+                                        Criada em @n.DataCadastro.ToString("dd/MM/yyyy HH:mm")
+                                        @if (n.DataLeitura.HasValue)
+                                        {
+                                            <span> • Lida em @n.DataLeitura.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                                        }
+                                    </div>
+                                </div>
+
+                                <div class="d-flex flex-column flex-sm-row gap-2">
+                                    <a asp-controller="Notificacoes"
+                                       asp-action="IrPara"
+                                       asp-route-id="@n.Id"
+                                       class="btn btn-dark">
+                                        Abrir
+                                    </a>
+
+                                    @if (!n.Lida)
+                                    {
+                                        <form asp-controller="Notificacoes" asp-action="MarcarComoLida" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@n.Id" />
+                                            <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                            <button type="submit" class="btn btn-outline-primary">
+                                                Marcar como lida
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
