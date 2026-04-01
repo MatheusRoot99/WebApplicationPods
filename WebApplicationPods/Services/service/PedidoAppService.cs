@@ -13,15 +13,18 @@ namespace WebApplicationPods.Services.service
         private readonly IPedidoRepository _pedidoRepository;
         private readonly IHubContext<PedidosHub> _hub;
         private readonly INotificationAppService _notificationAppService;
+        private readonly IWhatsAppService _whatsAppService;
 
         public PedidoAppService(
             IPedidoRepository pedidoRepository,
             IHubContext<PedidosHub> hub,
-            INotificationAppService notificationAppService)
+            INotificationAppService notificationAppService,
+            IWhatsAppService whatsAppService)
         {
             _pedidoRepository = pedidoRepository;
             _hub = hub;
             _notificationAppService = notificationAppService;
+            _whatsAppService = whatsAppService;
         }
 
         public async Task<PedidoModel> CriarPedidoAsync(PedidoModel pedido, string? origem = null)
@@ -62,6 +65,7 @@ namespace WebApplicationPods.Services.service
             });
 
             await CriarNotificacaoNovoPedidoAsync(pedidoCriado);
+            await DispararWhatsAppNovoPedidoAsync(pedidoCriado);
 
             return pedidoCriado;
         }
@@ -104,6 +108,7 @@ namespace WebApplicationPods.Services.service
             });
 
             await CriarNotificacaoStatusAsync(atualizado, novoStatus);
+            await DispararWhatsAppPorStatusAsync(atualizado, novoStatus);
 
             return true;
         }
@@ -187,6 +192,49 @@ namespace WebApplicationPods.Services.service
                 mensagem,
                 tipo,
                 pedidoId: pedido.Id);
+        }
+
+        private async Task DispararWhatsAppNovoPedidoAsync(PedidoModel pedido)
+        {
+            await _whatsAppService.EnviarNovoPedidoClienteAsync(pedido);
+            await _whatsAppService.EnviarNovoPedidoLojistaAsync(pedido);
+        }
+
+        private async Task DispararWhatsAppPorStatusAsync(PedidoModel pedido, string novoStatus)
+        {
+            if (string.IsNullOrWhiteSpace(novoStatus))
+                return;
+
+            if (string.Equals(novoStatus, PedidoStatus.Pago, StringComparison.OrdinalIgnoreCase))
+            {
+                await _whatsAppService.EnviarPagamentoAprovadoClienteAsync(pedido);
+                return;
+            }
+
+            if (string.Equals(novoStatus, PedidoStatus.PagamentoFalhou, StringComparison.OrdinalIgnoreCase))
+            {
+                await _whatsAppService.EnviarPagamentoFalhouClienteAsync(pedido);
+                return;
+            }
+
+            if (string.Equals(novoStatus, PedidoStatus.Cancelado, StringComparison.OrdinalIgnoreCase))
+            {
+                await _whatsAppService.EnviarPedidoCanceladoClienteAsync(pedido);
+                return;
+            }
+
+            if (string.Equals(novoStatus, PedidoStatus.SaiuParaEntrega, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(novoStatus, PedidoEntregaStatus.SaiuParaEntrega, StringComparison.OrdinalIgnoreCase))
+            {
+                await _whatsAppService.EnviarSaiuParaEntregaClienteAsync(pedido);
+                return;
+            }
+
+            if (string.Equals(novoStatus, PedidoEntregaStatus.Entregue, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(novoStatus, PedidoStatus.Concluido, StringComparison.OrdinalIgnoreCase))
+            {
+                await _whatsAppService.EnviarPedidoEntregueClienteAsync(pedido);
+            }
         }
     }
 }

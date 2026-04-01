@@ -14,23 +14,27 @@ namespace WebApplicationPods.Services.service
         private readonly IPedidoAppService _pedidoAppService;
         private readonly INotificationAppService _notificationAppService;
         private readonly IHubContext<PedidosHub> _hub;
+        private readonly IWhatsAppService _whatsAppService;
 
         public EntregaAppService(
             BancoContext context,
             IPedidoAppService pedidoAppService,
             IHubContext<PedidosHub> hub,
-            INotificationAppService notificationAppService)
+            INotificationAppService notificationAppService,
+            IWhatsAppService whatsAppService)
         {
             _context = context;
             _pedidoAppService = pedidoAppService;
             _hub = hub;
             _notificationAppService = notificationAppService;
+            _whatsAppService = whatsAppService;
         }
 
         public async Task<bool> AtribuirEntregadorAsync(int pedidoId, int entregadorId, string? responsavel = null)
         {
             var pedido = await _context.Pedidos
                 .Include(x => x.Cliente)
+                .Include(x => x.Endereco)
                 .Include(x => x.Entrega)
                 .FirstOrDefaultAsync(x => x.Id == pedidoId);
 
@@ -107,6 +111,8 @@ namespace WebApplicationPods.Services.service
                 $"Pedido #{pedido.Id} atribuído",
                 $"Entregador {entregador.Nome} foi atribuído ao pedido.");
 
+            await _whatsAppService.EnviarEntregaAtribuidaEntregadorAsync(pedido, entregador);
+
             return true;
         }
 
@@ -138,6 +144,8 @@ namespace WebApplicationPods.Services.service
                 "aceite",
                 $"Pedido #{pedido.Id} aceito",
                 $"{pedido.Entregador?.Nome ?? "O entregador"} aceitou a entrega.");
+
+            await _whatsAppService.EnviarEntregaAceitaLojistaAsync(pedido);
 
             return true;
         }
@@ -266,6 +274,8 @@ namespace WebApplicationPods.Services.service
                 $"Pedido #{pedido.Id} entregue",
                 mensagemEntrega);
 
+            await _whatsAppService.EnviarEntregaConcluidaLojistaAsync(pedido, nomeRecebedorFinal);
+
             return true;
         }
 
@@ -310,12 +320,16 @@ namespace WebApplicationPods.Services.service
                 $"Pedido #{pedido.Id} não entregue",
                 $"{entregadorNome ?? "O entregador"} informou falha na entrega. Motivo: {motivoFinal}");
 
+            await _whatsAppService.EnviarFalhaEntregaLojistaAsync(pedido, motivoFinal);
+
             return true;
         }
 
         private async Task<PedidoModel?> ObterPedidoComEntregaAsync(int pedidoId)
         {
             return await _context.Pedidos
+                .Include(x => x.Cliente)
+                .Include(x => x.Endereco)
                 .Include(x => x.Entrega)
                 .Include(x => x.Entregador)
                     .ThenInclude(x => x!.Usuario)

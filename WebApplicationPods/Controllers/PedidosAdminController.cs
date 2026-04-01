@@ -319,7 +319,11 @@ namespace WebApplicationPods.Controllers
             }
 
             _pedidos.ExcluirLogico(id, User.Identity?.Name);
-            await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged", new { id, deleted = true });
+            var group = pedido.LojaId > 0
+                ? WebApplicationPods.Hubs.PedidosHub.LojaGroup(pedido.LojaId)
+                : WebApplicationPods.Hubs.PedidosHub.GlobalLojistasGroup;
+
+            await _hub.Clients.Group(group).SendAsync("PedidosChanged", new { id, deleted = true });
 
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 return Json(new { ok = true });
