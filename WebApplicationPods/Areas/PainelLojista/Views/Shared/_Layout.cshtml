@@ -3,6 +3,8 @@
 
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
+@inject WebApplicationPods.Services.Interface.ICurrentLojaService CurrentLojaService
+@inject WebApplicationPods.Services.Interface.INotificationAppService NotificationAppService
 
 @{
     var userName = User?.Identity?.Name ?? "Lojista";
@@ -53,6 +55,13 @@
     bool isPerfilActive =
         string.Equals(currentController, "Cliente", StringComparison.OrdinalIgnoreCase) &&
         string.Equals(currentAction, "Perfil", StringComparison.OrdinalIgnoreCase);
+
+    var panelLojaId = CurrentLojaService?.LojaId;
+
+    var panelNotifCount =
+        (User?.Identity?.IsAuthenticated == true && User.IsInRole("Lojista") && panelLojaId.HasValue)
+            ? await NotificationAppService.ContarNaoLidasAsync(panelLojaId.Value)
+            : 0;
 }
 
 <!DOCTYPE html>
@@ -332,6 +341,29 @@
                 </div>
 
                 <div class="d-flex align-items-center gap-2">
+                    @if (User?.Identity?.IsAuthenticated == true && User.IsInRole("Lojista"))
+                    {
+                        <div class="dropdown">
+                            <button type="button"
+                                    class="theme-toggle position-relative"
+                                    id="panelNotificationsToggle"
+                                    title="Notificações"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false">
+                                <i class="fas fa-bell"></i>
+
+                                <span id="panelNotificationsBadge"
+                                      class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle @(panelNotifCount > 0 ? "" : "d-none")">
+                                    @panelNotifCount
+                                </span>
+                            </button>
+
+                            <div id="panelNotificationsDropdownHost">
+                                @await Component.InvokeAsync("PanelNotifications", new { take = 8 })
+                            </div>
+                        </div>
+                    }
+
                     <button type="button" class="theme-toggle" id="btnThemePanel" title="Alternar tema">
                         <i class="fas fa-moon"></i>
                     </button>
@@ -398,6 +430,22 @@
             });
         })();
     </script>
+
+
+    @if (User?.Identity?.IsAuthenticated == true && User.IsInRole("Lojista"))
+    {
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"
+                crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+        <script src="~/js/panel-notifications.js" asp-append-version="true"></script>
+
+        <script>
+            window.__PANEL_NOTIFICATIONS__?.boot({
+                dropdownUrl: '@Url.Action("Dropdown", "Notificacoes", new { area = "" })',
+                countUrl: '@Url.Action("CountNaoLidas", "Notificacoes", new { area = "" })'
+            });
+        </script>
+    }
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

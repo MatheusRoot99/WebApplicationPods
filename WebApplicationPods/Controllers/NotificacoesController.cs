@@ -108,5 +108,31 @@ namespace WebApplicationPods.Controllers
 
             return RedirectToAction(nameof(Index));
         }
+
+        [HttpGet]
+        public async Task<IActionResult> Dropdown(int take = 8)
+        {
+            var lojaId = ObterLojaAtual();
+            if (!lojaId.HasValue)
+                return PartialView("~/Views/Notificacoes/_Dropdown.cshtml", new List<WebApplicationPods.Models.NotificacaoModel>());
+
+            var lista = await _notificationAppService.ObterRecentesAsync(
+                lojaId.Value,
+                take,
+                incluirLidas: true);
+
+            return PartialView("~/Views/Notificacoes/_Dropdown.cshtml", lista);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CountNaoLidas()
+        {
+            var lojaId = ObterLojaAtual();
+            var count = lojaId.HasValue
+                ? await _notificationAppService.ContarNaoLidasAsync(lojaId.Value)
+                : 0;
+
+            return Json(new { count });
+        }
     }
 }

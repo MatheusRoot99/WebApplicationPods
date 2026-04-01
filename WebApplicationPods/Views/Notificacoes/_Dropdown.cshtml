@@ -1,0 +1,72 @@
+﻿@model IEnumerable<WebApplicationPods.Models.NotificacaoModel>
+
+@{
+    var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
+}
+
+<ul class="dropdown-menu dropdown-menu-end shadow-sm p-0" style="min-width: 340px; max-width: 380px;">
+    <li class="px-3 py-2 border-bottom">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="dropdown-header p-0 m-0">Notificações do painel</h6>
+            <a asp-controller="Notificacoes" asp-action="Index" class="small text-decoration-none">Ver central</a>
+        </div>
+    </li>
+
+    @if (Model?.Any() == true)
+    {
+        foreach (var n in Model)
+        {
+            var bgClass = n.Lida ? "" : "bg-light";
+
+            <li>
+                <a class="dropdown-item py-3 @bgClass"
+                   asp-controller="Notificacoes"
+                   asp-action="IrPara"
+                   asp-route-id="@n.Id">
+                    <div class="d-flex gap-2 align-items-start">
+                        <span class="mt-1">
+                            <i class="fas fa-bell @(n.Lida ? "text-muted" : "text-danger")"></i>
+                        </span>
+
+                        <div class="flex-grow-1 overflow-hidden">
+                            <div class="d-flex justify-content-between gap-2">
+                                <strong class="small text-truncate">@n.Titulo</strong>
+                                @if (!n.Lida)
+                                {
+                                    <span class="badge bg-danger">Nova</span>
+                                }
+                            </div>
+
+                            <div class="small text-muted mt-1" style="white-space: normal;">
+                                @n.Mensagem
+                            </div>
+
+                            <div class="small text-muted mt-1">
+                                @n.DataCadastro.ToString("dd/MM/yyyy HH:mm")
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </li>
+        }
+
+        <li><hr class="dropdown-divider my-0" /></li>
+        <li>
+            <form asp-controller="Notificacoes" asp-action="MarcarTodasComoLidas" method="post" class="m-0">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                <button type="submit" class="dropdown-item py-2">
+                    <i class="fas fa-check-double me-2"></i>Marcar todas como lidas
+                </button>
+            </form>
+        </li>
+    }
+    else
+    {
+        <li>
+            <div class="px-3 py-3 text-muted small">
+                Nenhuma notificação no momento.
+            </div>
+        </li>
+    }
+</ul>

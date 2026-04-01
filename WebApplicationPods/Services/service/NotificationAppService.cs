@@ -1,5 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using WebApplicationPods.Data;
+using WebApplicationPods.Hubs;
 using WebApplicationPods.Models;
 using WebApplicationPods.Services.Interface;
 
@@ -8,10 +10,14 @@ namespace WebApplicationPods.Services.service
     public class NotificationAppService : INotificationAppService
     {
         private readonly BancoContext _context;
+        private readonly IHubContext<PedidosHub> _hub;
 
-        public NotificationAppService(BancoContext context)
+        public NotificationAppService(
+            BancoContext context,
+            IHubContext<PedidosHub> hub)
         {
             _context = context;
+            _hub = hub;
         }
 
         public async Task<NotificacaoModel> CriarAsync(
@@ -48,6 +54,7 @@ namespace WebApplicationPods.Services.service
             _context.Notificacoes.Add(notificacao);
             await _context.SaveChangesAsync();
 
+            await DispararAtualizacaoAsync(lojaId);
             return notificacao;
         }
 
@@ -59,6 +66,7 @@ namespace WebApplicationPods.Services.service
             if (lojaId <= 0) return new List<NotificacaoModel>();
 
             var query = _context.Notificacoes
+                .IgnoreQueryFilters()
                 .AsNoTracking()
                 .Where(x => x.LojaId == lojaId);
 
@@ -79,6 +87,7 @@ namespace WebApplicationPods.Services.service
             if (lojaId <= 0) return new List<NotificacaoModel>();
 
             var query = _context.Notificacoes
+                .IgnoreQueryFilters()
                 .AsNoTracking()
                 .Where(x => x.LojaId == lojaId);
 
@@ -96,6 +105,7 @@ namespace WebApplicationPods.Services.service
             if (lojaId <= 0) return 0;
 
             return await _context.Notificacoes
+                .IgnoreQueryFilters()
                 .AsNoTracking()
                 .CountAsync(x => x.LojaId == lojaId && !x.Lida);
         }
@@ -105,6 +115,7 @@ namespace WebApplicationPods.Services.service
             if (id <= 0 || lojaId <= 0) return null;
 
             return await _context.Notificacoes
+                .IgnoreQueryFilters()
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.Id == id && x.LojaId == lojaId);
         }
@@ -114,18 +125,20 @@ namespace WebApplicationPods.Services.service
             if (id <= 0 || lojaId <= 0) return false;
 
             var notificacao = await _context.Notificacoes
+                .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(x => x.Id == id && x.LojaId == lojaId);
 
             if (notificacao == null)
                 return false;
 
-            if (notificacao.Lida)
-                return true;
+            if (!notificacao.Lida)
+            {
+                notificacao.Lida = true;
+                notificacao.DataLeitura = DateTime.Now;
+                await _context.SaveChangesAsync();
+                await DispararAtualizacaoAsync(lojaId);
+            }
 
-            notificacao.Lida = true;
-            notificacao.DataLeitura = DateTime.Now;
-
-            await _context.SaveChangesAsync();
             return true;
         }
 
@@ -134,6 +147,7 @@ namespace WebApplicationPods.Services.service
             if (lojaId <= 0) return 0;
 
             var lista = await _context.Notificacoes
+                .IgnoreQueryFilters()
                 .Where(x => x.LojaId == lojaId && !x.Lida)
                 .ToListAsync();
 
@@ -149,7 +163,22 @@ namespace WebApplicationPods.Services.service
             }
 
             await _context.SaveChangesAsync();
+            await DispararAtualizacaoAsync(lojaId);
+
             return lista.Count;
+        }
+
+        private async Task DispararAtualizacaoAsync(int lojaId)
+        {
+            var unread = await ContarNaoLidasAsync(lojaId);
+
+            await _hub.Clients
+                .Group(PedidosHub.LojaGroup(lojaId))
+                .SendAsync("NotificacoesChanged", new
+                {
+                    lojaId,
+                    unread
+                });
         }
 
         private static string TrimOrEmpty(string? value)

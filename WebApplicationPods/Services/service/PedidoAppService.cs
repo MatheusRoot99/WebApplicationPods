@@ -10,16 +10,13 @@ namespace WebApplicationPods.Services.service
     {
         private readonly IPedidoRepository _pedidoRepository;
         private readonly IHubContext<PedidosHub> _hub;
-        private readonly INotificationAppService _notificationAppService;
 
         public PedidoAppService(
             IPedidoRepository pedidoRepository,
-            IHubContext<PedidosHub> hub,
-            INotificationAppService notificationAppService)
+            IHubContext<PedidosHub> hub)
         {
             _pedidoRepository = pedidoRepository;
             _hub = hub;
-            _notificationAppService = notificationAppService;
         }
 
         public async Task<PedidoModel> CriarPedidoAsync(PedidoModel pedido, string? origem = null)
@@ -34,17 +31,11 @@ namespace WebApplicationPods.Services.service
 
             var pedidoCriado = _pedidoRepository.ObterPorId(pedido.Id) ?? pedido;
 
-            if (pedidoCriado.LojaId > 0)
-            {
-                await _notificationAppService.CriarAsync(
-                    pedidoCriado.LojaId,
-                    $"Novo pedido #{pedidoCriado.Id}",
-                    $"Pedido realizado por {pedidoCriado.Cliente?.Nome ?? $"Cliente #{pedidoCriado.ClienteId}"} no valor de {pedidoCriado.ValorTotal:C}.",
-                    tipo: "novo-pedido",
-                    pedidoId: pedidoCriado.Id);
-            }
+            var group = pedidoCriado.LojaId > 0
+                ? PedidosHub.LojaGroup(pedidoCriado.LojaId)
+                : PedidosHub.GlobalLojistasGroup;
 
-            await _hub.Clients.Group("lojistas").SendAsync("NewOrder", new
+            await _hub.Clients.Group(group).SendAsync("NewOrder", new
             {
                 id = pedidoCriado.Id,
                 status = pedidoCriado.Status,
@@ -59,7 +50,7 @@ namespace WebApplicationPods.Services.service
                 origem = origem
             });
 
-            await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged", new
+            await _hub.Clients.Group(group).SendAsync("PedidosChanged", new
             {
                 id = pedidoCriado.Id,
                 status = pedidoCriado.Status
@@ -95,7 +86,11 @@ namespace WebApplicationPods.Services.service
             if (atualizado == null)
                 return false;
 
-            await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged", new
+            var group = atualizado.LojaId > 0
+                ? PedidosHub.LojaGroup(atualizado.LojaId)
+                : PedidosHub.GlobalLojistasGroup;
+
+            await _hub.Clients.Group(group).SendAsync("PedidosChanged", new
             {
                 id = atualizado.Id,
                 status = atualizado.Status
