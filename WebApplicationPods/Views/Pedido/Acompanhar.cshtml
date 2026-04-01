@@ -1,5 +1,6 @@
 ﻿@using WebApplicationPods.Models
 @using WebApplicationPods.Constants
+@using EntregaStatusConst = WebApplicationPods.Enum.EntregaStatus
 @model PedidoModel
 
 @{
@@ -22,13 +23,17 @@
 
     bool ehEntrega = Model?.EnderecoId.HasValue == true && Model.EnderecoId.Value > 0;
 
-
     bool statusPronto = string.Equals(statusAtual, PedidoStatus.Pronto, StringComparison.OrdinalIgnoreCase);
     bool statusAguardandoEntregador = string.Equals(statusAtual, PedidoEntregaStatus.AguardandoAtribuicao, StringComparison.OrdinalIgnoreCase);
     bool statusEntregadorAtribuido = string.Equals(statusAtual, PedidoEntregaStatus.Atribuido, StringComparison.OrdinalIgnoreCase);
     bool statusSaiuEntrega =
         string.Equals(statusAtual, PedidoStatus.SaiuParaEntrega, StringComparison.OrdinalIgnoreCase) ||
         string.Equals(statusAtual, PedidoEntregaStatus.SaiuParaEntrega, StringComparison.OrdinalIgnoreCase);
+
+    bool temComprovanteEntrega =
+        ehEntrega &&
+        Model?.Entrega != null &&
+        string.Equals(Model.Entrega.Status, EntregaStatusConst.Entregue, StringComparison.OrdinalIgnoreCase);
 
     string etapaEntregaTitulo;
     string etapaEntregaDescricao;
@@ -69,7 +74,8 @@
     if (!string.IsNullOrWhiteSpace(statusAtual))
     {
         if (statusAtual.Contains("Concl", StringComparison.OrdinalIgnoreCase) ||
-            statusAtual.Contains("Pago", StringComparison.OrdinalIgnoreCase))
+            statusAtual.Contains("Pago", StringComparison.OrdinalIgnoreCase) ||
+            statusAtual.Contains("Entreg", StringComparison.OrdinalIgnoreCase))
         {
             statusBadgeClass = "badge-soft ok";
         }
@@ -170,12 +176,10 @@
         </button>
     </div>
 
-    <!-- ACOMPANHAR -->
     <div class="tab @(temPedidoAtual ? "active" : "")" id="tab-track">
         @if (temPedidoAtual && Model != null)
         {
             <div class="grid-2">
-                <!-- Andamento -->
                 <div class="cardx">
                     <div class="cardx-h">
                         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
@@ -303,7 +307,6 @@
                     </div>
                 </div>
 
-                <!-- Resumo -->
                 <div class="d-flex flex-column gap-3">
                     <div class="cardx">
                         <div class="cardx-h">Resumo</div>
@@ -363,6 +366,40 @@
                         </div>
                     </div>
 
+                    @if (temComprovanteEntrega)
+                    {
+                        <div class="cardx">
+                            <div class="cardx-h">Comprovante de entrega</div>
+                            <div class="cardx-b">
+                                <div class="subtle">
+                                    <div>
+                                        <i class="bi bi-person-check"></i>
+                                        Recebido por: <strong>@(Model.Entrega?.NomeRecebedor ?? "-")</strong>
+                                    </div>
+
+                                    @if (!string.IsNullOrWhiteSpace(Model.Entrega?.ObservacaoEntrega))
+                                    {
+                                        <div class="mt-2">
+                                            <i class="bi bi-chat-left-text"></i>
+                                            @Model.Entrega!.ObservacaoEntrega
+                                        </div>
+                                    }
+                                </div>
+
+                                @if (!string.IsNullOrWhiteSpace(Model.Entrega?.ComprovanteEntregaUrl))
+                                {
+                                    <div class="mt-3">
+                                        <a href="@Model.Entrega!.ComprovanteEntregaUrl" target="_blank" rel="noopener">
+                                            <img src="@Model.Entrega.ComprovanteEntregaUrl"
+                                                 alt="Comprovante de entrega do pedido @Model.Id"
+                                                 style="width:100%; max-width:260px; border-radius:14px; border:1px solid rgba(0,0,0,.08);" />
+                                        </a>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+
                     @if (historico.Any())
                     {
                         <div class="cardx">
@@ -416,7 +453,6 @@
         }
     </div>
 
-    <!-- HISTÓRICO -->
     <div class="tab @(!temPedidoAtual ? "active" : "")" id="tab-history">
         <div class="cardx">
             <div class="cardx-h">Histórico de pedidos</div>
@@ -430,7 +466,8 @@
                             var badgeClass = "badge-soft";
 
                             if (st.Contains("Concl", StringComparison.OrdinalIgnoreCase) ||
-                            st.Contains("Pago", StringComparison.OrdinalIgnoreCase))
+                            st.Contains("Pago", StringComparison.OrdinalIgnoreCase) ||
+                            st.Contains("Entreg", StringComparison.OrdinalIgnoreCase))
                             {
                                 badgeClass = "badge-soft ok";
                             }
