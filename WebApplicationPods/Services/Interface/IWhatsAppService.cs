@@ -18,5 +18,11 @@ namespace WebApplicationPods.Services.Interface
         Task EnviarEntregaAceitaLojistaAsync(PedidoModel pedido);
         Task EnviarEntregaConcluidaLojistaAsync(PedidoModel pedido, string? nomeRecebedor = null);
         Task EnviarFalhaEntregaLojistaAsync(PedidoModel pedido, string motivo);
+
+        Task<bool> EnviarMensagemLivreAsync(
+            string telefone,
+            string mensagem,
+            string audience = "teste",
+            string? eventKey = "manual-teste");
     }
 }

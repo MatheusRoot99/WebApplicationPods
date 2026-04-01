@@ -28,7 +28,6 @@
                 </div>
             </div>
 
-            <!-- usa o toggle global do layout (html[data-theme]) -->
             <div class="theme-pill" role="group" aria-label="Tema do site">
                 <div class="label" id="themeLabel">
                     <i class="fa-solid fa-moon"></i>
@@ -45,10 +44,12 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
             </div>
         }
-        @if (!ViewData.ModelState.IsValid)
+
+        @if (TempData["Erro"] is string errMsg)
         {
-            <div class="alert alert-danger mt-3">
-                <strong>Corrija os campos abaixo.</strong>
+            <div class="alert alert-danger alert-dismissible fade show mt-3">
+                <i class="bi bi-exclamation-triangle me-2"></i>@errMsg
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
             </div>
         }
 
@@ -104,7 +105,8 @@
                         {
                             if (d == DiasSemanaFlags.Nenhum || d == DiasSemanaFlags.Todos) { continue; }
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox"
+                                <input class="form-check-input"
+                                       type="checkbox"
                                        name="DiasAbertosSelecionados"
                                        value="@((int)d)"
                                        @(Model.DiasAbertos.HasFlag(d) ? "checked" : "") />
@@ -145,11 +147,13 @@
                         <input asp-for="Logradouro" class="form-control" />
                         <span asp-validation-for="Logradouro" class="text-danger"></span>
                     </div>
+
                     <div class="col-md-2">
                         <label asp-for="Numero" class="form-label">Número</label>
                         <input asp-for="Numero" class="form-control" />
                         <span asp-validation-for="Numero" class="text-danger"></span>
                     </div>
+
                     <div class="col-md-4">
                         <label asp-for="Complemento" class="form-label">Complemento</label>
                         <input asp-for="Complemento" class="form-control" />
@@ -161,16 +165,19 @@
                         <input asp-for="Bairro" class="form-control" />
                         <span asp-validation-for="Bairro" class="text-danger"></span>
                     </div>
+
                     <div class="col-md-4">
                         <label asp-for="Cidade" class="form-label">Cidade</label>
                         <input asp-for="Cidade" class="form-control" />
                         <span asp-validation-for="Cidade" class="text-danger"></span>
                     </div>
+
                     <div class="col-md-2">
                         <label asp-for="Estado" class="form-label">UF</label>
                         <input asp-for="Estado" class="form-control text-uppercase" maxlength="2" />
                         <span asp-validation-for="Estado" class="text-danger"></span>
                     </div>
+
                     <div class="col-md-2">
                         <label asp-for="Cep" class="form-label">CEP</label>
                         <input asp-for="Cep" class="form-control" placeholder="00000-000" />
@@ -188,11 +195,13 @@
                         <input asp-for="Latitude" class="form-control" step="any" />
                         <span asp-validation-for="Latitude" class="text-danger"></span>
                     </div>
+
                     <div class="col-md-3">
                         <label asp-for="Longitude" class="form-label">Longitude</label>
                         <input asp-for="Longitude" class="form-control" step="any" />
                         <span asp-validation-for="Longitude" class="text-danger"></span>
                     </div>
+
                     <div class="col-md-6">
                         <label asp-for="MapsPlaceUrl" class="form-label">URL do Google Maps (opcional)</label>
                         <input asp-for="MapsPlaceUrl" class="form-control" placeholder="Cole a URL do place se já tiver" />
@@ -226,6 +235,51 @@
             </div>
         </form>
 
+        <section class="section mt-4">
+            <h2 class="section-title"><i class="bi bi-whatsapp me-2"></i>Teste rápido de WhatsApp</h2>
+
+            <form asp-action="EnviarWhatsAppTeste" method="post" class="card main-card p-3 p-md-4">
+                @Html.AntiForgeryToken()
+
+                <p class="text-muted mb-3">
+                    Use este bloco para validar o envio manual sem depender de um pedido real.
+                </p>
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="telefoneTeste" class="form-label">Telefone destino</label>
+                        <input id="telefoneTeste"
+                               name="telefoneTeste"
+                               class="form-control"
+                               placeholder="Ex.: (43) 99999-9999" />
+                        <div class="form-text">Pode informar com ou sem +55.</div>
+                    </div>
+
+                    <div class="col-md-8">
+                        <label for="mensagemTeste" class="form-label">Mensagem</label>
+                        <textarea id="mensagemTeste"
+                                  name="mensagemTeste"
+                                  class="form-control"
+                                  rows="4">*Teste de WhatsApp* ✅
+
+Mensagem enviada manualmente pelo painel do lojista.</textarea>
+                    </div>
+                </div>
+
+                <div class="mt-3 d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-send me-2"></i>Enviar teste
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            onclick="document.getElementById('mensagemTeste').value='*Teste de WhatsApp* ✅\n\nMensagem enviada manualmente pelo painel do lojista.';">
+                        Mensagem padrão
+                    </button>
+                </div>
+            </form>
+        </section>
+
         @if (isAdmin)
         {
             <form asp-action="LimparDuplicatas" method="post" class="mt-3">
@@ -245,32 +299,35 @@
         document.addEventListener('DOMContentLoaded', () => {
           const qs = (q) => document.querySelector(q);
 
-          // ===== THEME: usa o do layout (html[data-theme]) =====
           const btn = qs('#themeSwitch');
           const label = qs('#themeLabel');
 
-          function currentTheme(){
+          function currentTheme() {
             return document.documentElement.getAttribute('data-theme') || 'light';
           }
-          function setLabel(){
+
+          function setLabel() {
             const t = currentTheme();
             if (!label) return;
+
             label.innerHTML = (t === 'dark')
               ? '<i class="fa-solid fa-moon"></i><span>Dark</span>'
               : '<i class="fa-solid fa-sun"></i><span>Light</span>';
+
             btn?.classList.toggle('on', t === 'dark');
           }
-          function toggleTheme(){
+
+          function toggleTheme() {
             const t = currentTheme();
             const next = (t === 'dark') ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', next);
             try { localStorage.setItem('theme', next); } catch {}
             setLabel();
           }
+
           btn?.addEventListener('click', toggleTheme);
           setLabel();
 
-          // ===== MAP PREVIEW =====
           function montaEndereco() {
             const log = qs('#Logradouro')?.value?.trim() || '';
             const num = qs('#Numero')?.value?.trim() || '';
@@ -284,6 +341,7 @@
             let p2 = comp;
             let cidadeUf = cid && uf ? `${cid}/${uf}` : (cid || uf);
             let p3 = bai && cidadeUf ? `${bai} - ${cidadeUf}` : (bai || cidadeUf);
+
             return [p1, p2, p3, cep].filter(Boolean).join(', ');
           }
 
@@ -303,7 +361,9 @@
             const endPrev = qs('#enderecoPreview');
             const urlPrev = qs('#mapsUrlPreview');
             const btnMaps = qs('#btnAbrirMaps');
+
             if (endPrev) endPrev.textContent = montaEndereco();
+
             const url = montaMapsUrl();
             if (urlPrev) urlPrev.value = url;
             if (btnMaps) btnMaps.setAttribute('href', url);
@@ -313,13 +373,13 @@
             .forEach(sel => qs(sel)?.addEventListener('input', atualizarPreviews));
 
           qs('#Cep')?.addEventListener('input', (e) => {
-            let v = e.target.value.replace(/\D/g,'').slice(0,8);
-            if (v.length > 5) v = v.slice(0,5) + '-' + v.slice(5);
+            let v = e.target.value.replace(/\D/g, '').slice(0, 8);
+            if (v.length > 5) v = v.slice(0, 5) + '-' + v.slice(5);
             e.target.value = v;
           });
 
           qs('#Estado')?.addEventListener('input', (e) => {
-            e.target.value = e.target.value.replace(/[^A-Za-z]/g,'').slice(0,2).toUpperCase();
+            e.target.value = e.target.value.replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase();
           });
 
           qs('#btnCopyMaps')?.addEventListener('click', async () => {

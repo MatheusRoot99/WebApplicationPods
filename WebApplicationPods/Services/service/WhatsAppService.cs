@@ -170,6 +170,7 @@ Destino: {endereco}";
         public async Task EnviarEntregaAceitaLojistaAsync(PedidoModel pedido)
         {
             var entregador = pedido.Entregador?.Nome ?? "Entregador";
+
             var mensagem =
 $@"*Entrega aceita* ✅
 
@@ -200,6 +201,24 @@ Pedido *#{pedido.Id}* não foi entregue.
 Motivo: {motivo}";
 
             await EnviarParaLojistaAsync(pedido.LojaId, pedido.Id, "falha-entrega-lojista", mensagem);
+        }
+
+        public async Task<bool> EnviarMensagemLivreAsync(
+            string telefone,
+            string mensagem,
+            string audience = "teste",
+            string? eventKey = "manual-teste")
+        {
+            if (string.IsNullOrWhiteSpace(telefone) || string.IsNullOrWhiteSpace(mensagem))
+                return false;
+
+            return await EnviarCoreAsync(
+                telefone,
+                audience,
+                eventKey ?? "manual-teste",
+                mensagem.Trim(),
+                lojaId: 0,
+                pedidoId: null);
         }
 
         private async Task EnviarParaClienteAsync(PedidoModel pedido, string eventKey, string mensagem)
@@ -249,6 +268,7 @@ Motivo: {motivo}";
                 return;
 
             var telefone = await ObterTelefoneLojistaAsync(lojaId);
+
             await EnviarCoreAsync(
                 telefone,
                 "lojista",
@@ -258,7 +278,7 @@ Motivo: {motivo}";
                 pedidoId);
         }
 
-        private async Task EnviarCoreAsync(
+        private async Task<bool> EnviarCoreAsync(
             string? telefoneBruto,
             string audience,
             string eventKey,
@@ -273,7 +293,7 @@ Motivo: {motivo}";
                 _logger.LogDebug(
                     "WhatsApp ignorado: sem telefone válido. Audience={Audience}, Event={Event}, LojaId={LojaId}, PedidoId={PedidoId}",
                     audience, eventKey, lojaId, pedidoId);
-                return;
+                return false;
             }
 
             if (!_options.Enabled)
@@ -281,7 +301,7 @@ Motivo: {motivo}";
                 _logger.LogDebug(
                     "WhatsApp desabilitado. Audience={Audience}, Event={Event}, LojaId={LojaId}, PedidoId={PedidoId}",
                     audience, eventKey, lojaId, pedidoId);
-                return;
+                return false;
             }
 
             if (string.Equals(_options.Mode, "GenericWebhook", StringComparison.OrdinalIgnoreCase) &&
@@ -314,7 +334,7 @@ Motivo: {motivo}";
                         _logger.LogInformation(
                             "WhatsApp enviado via GenericWebhook. Audience={Audience}, Event={Event}, LojaId={LojaId}, PedidoId={PedidoId}, To={To}",
                             audience, eventKey, lojaId, pedidoId, MascararTelefone(destino));
-                        return;
+                        return true;
                     }
 
                     var body = await response.Content.ReadAsStringAsync();
@@ -322,7 +342,8 @@ Motivo: {motivo}";
                     _logger.LogWarning(
                         "Falha ao enviar WhatsApp via GenericWebhook. Status={StatusCode}, Audience={Audience}, Event={Event}, Body={Body}",
                         (int)response.StatusCode, audience, eventKey, body);
-                    return;
+
+                    return false;
                 }
                 catch (Exception ex)
                 {
@@ -330,13 +351,16 @@ Motivo: {motivo}";
                         ex,
                         "Erro ao enviar WhatsApp via GenericWebhook. Audience={Audience}, Event={Event}, LojaId={LojaId}, PedidoId={PedidoId}",
                         audience, eventKey, lojaId, pedidoId);
-                    return;
+
+                    return false;
                 }
             }
 
             _logger.LogInformation(
                 "[WhatsApp:Stub] Audience={Audience}, Event={Event}, LojaId={LojaId}, PedidoId={PedidoId}, To={To}, Message={Message}",
                 audience, eventKey, lojaId, pedidoId, MascararTelefone(destino), mensagem);
+
+            return true;
         }
 
         private async Task<string?> ObterTelefoneLojistaAsync(int lojaId)
@@ -377,9 +401,11 @@ Motivo: {motivo}";
         private static string MontarResumoEndereco(PedidoModel pedido)
         {
             if (pedido.RetiradaNoLocal)
+            {
                 return string.IsNullOrWhiteSpace(pedido.LojaEnderecoTexto)
                     ? "Retirada na loja"
                     : pedido.LojaEnderecoTexto!;
+            }
 
             var e = pedido.Endereco;
             if (e == null)
@@ -442,7 +468,9 @@ Motivo: {motivo}";
             if (string.IsNullOrWhiteSpace(nomeCompleto))
                 return fallback;
 
-            return nomeCompleto.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? fallback;
+            return nomeCompleto.Trim()
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .FirstOrDefault() ?? fallback;
         }
 
         private static string MascararTelefone(string telefone)

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using WebApplicationPods.Data;
 using WebApplicationPods.Models;
 using WebApplicationPods.Services;
+using WebApplicationPods.Services.Interface;
 
 namespace WebApplicationPods.Controllers
 {
@@ -14,10 +15,18 @@ namespace WebApplicationPods.Controllers
         private readonly ILojaConfigService _svc;
         private readonly IWebHostEnvironment _env;
         private readonly BancoContext _db;
+        private readonly IWhatsAppService _whatsAppService;
 
-        public LojaController(ILojaConfigService svc, IWebHostEnvironment env, BancoContext db)
+        public LojaController(
+            ILojaConfigService svc,
+            IWebHostEnvironment env,
+            BancoContext db,
+            IWhatsAppService whatsAppService)
         {
-            _svc = svc; _env = env; _db = db;
+            _svc = svc;
+            _env = env;
+            _db = db;
+            _whatsAppService = whatsAppService;
         }
 
         [HttpGet]
@@ -34,7 +43,6 @@ namespace WebApplicationPods.Controllers
             IFormFile? logoFile,
             [FromForm] int[]? DiasAbertosSelecionados)
         {
-            // 1) Dias Abertos (Flags)
             model.DiasAbertos = DiasSemanaFlags.Nenhum;
             if (DiasAbertosSelecionados is { Length: > 0 })
             {
@@ -42,16 +50,13 @@ namespace WebApplicationPods.Controllers
                     model.DiasAbertos |= (DiasSemanaFlags)v;
             }
 
-            // 2) Normalizações de endereço
             model.Estado = (model.Estado ?? "").Trim().ToUpper();
             var dig = new string((model.Cep ?? "").Where(char.IsDigit).ToArray());
             if (dig.Length == 8) model.Cep = $"{dig[..5]}-{dig[5..]}";
 
-            // 3) Carrega config atual pra reaproveitar/remover logo antiga
             var cfgAtual = await _svc.GetAsync() ?? new LojaConfig();
             var oldLogoPath = cfgAtual.LogoPath;
 
-            // 4) Upload de logo (com temp + move atômico)
             if (logoFile is { Length: > 0 })
             {
                 var ext = Path.GetExtension(logoFile.FileName).ToLowerInvariant();
@@ -83,25 +88,59 @@ namespace WebApplicationPods.Controllers
                                 _env.WebRootPath,
                                 oldLogoPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)
                             );
+
                             if (System.IO.File.Exists(physOld))
                                 System.IO.File.Delete(physOld);
                         }
-                        catch { /* ignora erro de IO */ }
+                        catch
+                        {
+                        }
                     }
                 }
             }
             else
             {
-                // sem nova logo -> mantém a existente
                 model.LogoPath = oldLogoPath;
             }
 
             if (!ModelState.IsValid)
                 return View(model);
 
-            // 5) Persiste (o service garante LojistaUserId do usuário atual)
             await _svc.UpsertAsync(model);
             TempData["Sucesso"] = "Configurações da loja atualizadas!";
+            return RedirectToAction(nameof(Editar));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EnviarWhatsAppTeste(string? telefoneTeste, string? mensagemTeste)
+        {
+            telefoneTeste = telefoneTeste?.Trim();
+            mensagemTeste = mensagemTeste?.Trim();
+
+            if (string.IsNullOrWhiteSpace(telefoneTeste))
+            {
+                TempData["Erro"] = "Informe um telefone para teste.";
+                return RedirectToAction(nameof(Editar));
+            }
+
+            if (string.IsNullOrWhiteSpace(mensagemTeste))
+            {
+                TempData["Erro"] = "Informe uma mensagem para teste.";
+                return RedirectToAction(nameof(Editar));
+            }
+
+            var ok = await _whatsAppService.EnviarMensagemLivreAsync(
+                telefoneTeste,
+                mensagemTeste,
+                audience: "teste-painel-lojista",
+                eventKey: "manual-teste");
+
+            if (ok)
+                TempData["Sucesso"] = "Teste de WhatsApp disparado com sucesso. Se o modo atual for Stub, confira o log da aplicação.";
+            else
+                TempData["Erro"] = "Não foi possível disparar o teste de WhatsApp. Verifique o telefone, o modo configurado e os logs.";
+
             return RedirectToAction(nameof(Editar));
         }
 
