@@ -304,56 +304,15 @@ Motivo: {motivo}";
                 return false;
             }
 
-            if (string.Equals(_options.Mode, "GenericWebhook", StringComparison.OrdinalIgnoreCase) &&
-                !string.IsNullOrWhiteSpace(_options.GenericWebhookUrl))
+            if (string.Equals(_options.Mode, "MetaCloudApi", StringComparison.OrdinalIgnoreCase))
             {
-                try
-                {
-                    using var request = new HttpRequestMessage(HttpMethod.Post, _options.GenericWebhookUrl);
-
-                    if (!string.IsNullOrWhiteSpace(_options.GenericWebhookToken))
-                    {
-                        request.Headers.Authorization =
-                            new AuthenticationHeaderValue("Bearer", _options.GenericWebhookToken);
-                    }
-
-                    request.Content = JsonContent.Create(new
-                    {
-                        to = destino,
-                        message = mensagem,
-                        audience,
-                        eventKey,
-                        lojaId,
-                        pedidoId
-                    });
-
-                    var response = await _http.SendAsync(request);
-
-                    if (response.IsSuccessStatusCode)
-                    {
-                        _logger.LogInformation(
-                            "WhatsApp enviado via GenericWebhook. Audience={Audience}, Event={Event}, LojaId={LojaId}, PedidoId={PedidoId}, To={To}",
-                            audience, eventKey, lojaId, pedidoId, MascararTelefone(destino));
-                        return true;
-                    }
-
-                    var body = await response.Content.ReadAsStringAsync();
-
-                    _logger.LogWarning(
-                        "Falha ao enviar WhatsApp via GenericWebhook. Status={StatusCode}, Audience={Audience}, Event={Event}, Body={Body}",
-                        (int)response.StatusCode, audience, eventKey, body);
-
-                    return false;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(
-                        ex,
-                        "Erro ao enviar WhatsApp via GenericWebhook. Audience={Audience}, Event={Event}, LojaId={LojaId}, PedidoId={PedidoId}",
-                        audience, eventKey, lojaId, pedidoId);
-
-                    return false;
-                }
+                return await EnviarViaMetaCloudApiAsync(
+                    destino,
+                    audience,
+                    eventKey,
+                    mensagem,
+                    lojaId,
+                    pedidoId);
             }
 
             _logger.LogInformation(
@@ -361,6 +320,83 @@ Motivo: {motivo}";
                 audience, eventKey, lojaId, pedidoId, MascararTelefone(destino), mensagem);
 
             return true;
+        }
+
+        private async Task<bool> EnviarViaMetaCloudApiAsync(
+            string destino,
+            string audience,
+            string eventKey,
+            string mensagem,
+            int lojaId,
+            int? pedidoId)
+        {
+            var phoneNumberId = _options.MetaPhoneNumberId?.Trim();
+            var accessToken = _options.MetaAccessToken?.Trim();
+            var apiVersion = (_options.MetaApiVersion ?? "v25.0").Trim();
+
+            if (string.IsNullOrWhiteSpace(phoneNumberId) || string.IsNullOrWhiteSpace(accessToken))
+            {
+                _logger.LogWarning(
+                    "Meta Cloud API não configurada. Audience={Audience}, Event={Event}, LojaId={LojaId}, PedidoId={PedidoId}",
+                    audience, eventKey, lojaId, pedidoId);
+                return false;
+            }
+
+            var endpoint = $"https://graph.facebook.com/{apiVersion}/{phoneNumberId}/messages";
+
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                request.Content = JsonContent.Create(new
+                {
+                    messaging_product = "whatsapp",
+                    recipient_type = "individual",
+                    to = destino,
+                    type = "text",
+                    text = new
+                    {
+                        preview_url = false,
+                        body = mensagem
+                    }
+                });
+
+                var response = await _http.SendAsync(request);
+                var body = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation(
+                        "WhatsApp enviado via Meta Cloud API. Audience={Audience}, Event={Event}, LojaId={LojaId}, PedidoId={PedidoId}, To={To}, Response={ResponseBody}",
+                        audience, eventKey, lojaId, pedidoId, MascararTelefone(destino), body);
+                    return true;
+                }
+
+                _logger.LogWarning(
+                    "Falha ao enviar WhatsApp via Meta Cloud API. Status={StatusCode}, Audience={Audience}, Event={Event}, LojaId={LojaId}, PedidoId={PedidoId}, To={To}, Body={Body}",
+                    (int)response.StatusCode,
+                    audience,
+                    eventKey,
+                    lojaId,
+                    pedidoId,
+                    MascararTelefone(destino),
+                    body);
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Erro ao enviar WhatsApp via Meta Cloud API. Audience={Audience}, Event={Event}, LojaId={LojaId}, PedidoId={PedidoId}, To={To}",
+                    audience,
+                    eventKey,
+                    lojaId,
+                    pedidoId,
+                    MascararTelefone(destino));
+
+                return false;
+            }
         }
 
         private async Task<string?> ObterTelefoneLojistaAsync(int lojaId)

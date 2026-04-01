@@ -227,7 +227,10 @@ builder.Services.AddScoped<IEstoqueService, EstoqueService>();
 builder.Services.AddScoped<IEntregaAppService, EntregaAppService>();
 builder.Services.AddScoped<INotificationAppService, NotificationAppService>();
 builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection("WhatsApp"));
-builder.Services.AddHttpClient<IWhatsAppService, WhatsAppService>();
+builder.Services.AddHttpClient<IWhatsAppService, WhatsAppService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 builder.Services.AddScoped<ILojaConfigRepository, LojaConfigRepository>();
 
 builder.Services.AddDataProtection();
