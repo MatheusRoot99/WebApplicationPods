@@ -115,9 +115,14 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            if (string.IsNullOrWhiteSpace(model.NomeRecebedor))
+            model.NomeRecebedor = model.NomeRecebedor?.Trim() ?? string.Empty;
+            model.ObservacaoEntrega = string.IsNullOrWhiteSpace(model.ObservacaoEntrega)
+                ? null
+                : model.ObservacaoEntrega.Trim();
+
+            if (!ModelState.IsValid)
             {
-                TempData["Erro"] = "Informe o nome de quem recebeu.";
+                TempData["Erro"] = GetFirstModelError() ?? "Revise os dados da prova de entrega.";
                 return RedirectToAction(nameof(Index));
             }
 
@@ -143,19 +148,32 @@ namespace WebApplicationPods.Controllers
                 comprovanteUrl);
 
             TempData[ok ? "Sucesso" : "Erro"] = ok
-                ? "Pedido marcado como entregue com comprovante."
+                ? "Pedido entregue com sucesso." + (comprovanteUrl != null ? " Comprovante salvo." : string.Empty)
                 : "Não foi possível concluir a entrega.";
 
             return RedirectToAction(nameof(Index));
         }
 
+        private string? GetFirstModelError()
+        {
+            return ModelState.Values
+                .SelectMany(x => x.Errors)
+                .Select(x => x.ErrorMessage)
+                .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+        }
+
         private static string? ValidateDeliveryImage(IFormFile file, out string extLower)
         {
             extLower = Path.GetExtension(file.FileName).ToLowerInvariant();
-            var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+            var allowedContentTypes = new[] { "image/jpeg", "image/png", "image/webp" };
 
-            if (!allowed.Contains(extLower))
+            if (!allowedExtensions.Contains(extLower))
                 return "A foto do comprovante deve estar em JPG, JPEG, PNG ou WEBP.";
+
+            if (!string.IsNullOrWhiteSpace(file.ContentType) &&
+                !allowedContentTypes.Contains(file.ContentType, StringComparer.OrdinalIgnoreCase))
+                return "Arquivo inválido para comprovante. Envie uma imagem JPG, PNG ou WEBP.";
 
             if (file.Length > 5 * 1024 * 1024)
                 return "A foto do comprovante não pode exceder 5MB.";

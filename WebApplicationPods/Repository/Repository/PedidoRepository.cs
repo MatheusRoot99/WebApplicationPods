@@ -69,6 +69,28 @@ namespace WebApplicationPods.Repository.Repository
             return q;
         }
 
+        private IQueryable<PedidoModel> PedidoCompletoQuery(IQueryable<PedidoModel>? query = null, bool asNoTracking = false)
+        {
+            query ??= BaseQuery();
+
+            query = query
+                .Include(p => p.Cliente)
+                .Include(p => p.Endereco)
+                .Include(p => p.Entregador)
+                    .ThenInclude(e => e!.Usuario)
+                .Include(p => p.Entrega)
+                .Include(p => p.PedidoItens)
+                    .ThenInclude(pi => pi.Produto)
+                .Include(p => p.Pagamentos)
+                .Include(p => p.Historico.OrderBy(h => h.DataCadastro))
+                .AsSplitQuery();
+
+            if (asNoTracking)
+                query = query.AsNoTracking();
+
+            return query;
+        }
+
         private static readonly Expression<Func<PedidoModel, bool>> PagoExpr =
                 p => p.Status != null
                      && p.Status != PedidoStatus.Cancelado
@@ -151,31 +173,15 @@ namespace WebApplicationPods.Repository.Repository
 
         public PedidoModel ObterPorId(int id)
         {
-            var q = BaseQuery();
-
-            return q
-                .Include(p => p.Cliente)
-                .Include(p => p.Endereco)
-                .Include(p => p.Entregador)
-                    .ThenInclude(e => e!.Usuario)
-                .Include(p => p.Entrega)
-                .Include(p => p.PedidoItens).ThenInclude(pi => pi.Produto)
-                .Include(p => p.Pagamentos)
-                .Include(p => p.Historico.OrderBy(h => h.DataCadastro))
+            return PedidoCompletoQuery()
                 .FirstOrDefault(p => p.Id == id)!;
         }
-
         public IEnumerable<PedidoModel> ObterPorCliente(int clienteId)
         {
-            return BaseQuery()
-                .Where(p => p.ClienteId == clienteId && !p.IsDeleted)
-                .Include(p => p.Endereco)
-                .Include(p => p.Entregador)
-                    .ThenInclude(e => e!.Usuario)
-                .Include(p => p.Entrega)
-                .Include(p => p.PedidoItens).ThenInclude(pi => pi.Produto)
+            return PedidoCompletoQuery(
+                    BaseQuery().Where(p => p.ClienteId == clienteId && !p.IsDeleted),
+                    asNoTracking: true)
                 .OrderByDescending(p => p.DataPedido)
-                .AsNoTracking()
                 .ToList();
         }
 
@@ -183,14 +189,7 @@ namespace WebApplicationPods.Repository.Repository
         {
             if (string.IsNullOrWhiteSpace(token)) return null;
 
-            return BaseQuery()
-                .Include(p => p.Cliente)
-                .Include(p => p.Endereco)
-                .Include(p => p.Entregador)
-                    .ThenInclude(e => e!.Usuario)
-                .Include(p => p.Entrega)
-                .Include(p => p.PedidoItens).ThenInclude(i => i.Produto)
-                .Include(p => p.Pagamentos)
+            return PedidoCompletoQuery()
                 .FirstOrDefault(p => p.RastreioToken == token && !p.IsDeleted);
         }
 

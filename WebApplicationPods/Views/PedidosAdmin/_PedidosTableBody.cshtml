@@ -12,6 +12,10 @@
 {
     var statusAtual = p.Status ?? string.Empty;
 
+    var mostrarProvaEntrega =
+    p.Entrega != null &&
+    string.Equals(p.Entrega.Status, EntregaStatus.Entregue, StringComparison.OrdinalIgnoreCase);
+
     var proximas = Array.Empty<string>();
     if (allowed != null && allowed.TryGetValue(statusAtual, out var arr) && arr != null)
         proximas = arr;
@@ -159,6 +163,25 @@
                        class="btn btn-sm btn-outline-info">
                         @(p.EntregadorId.HasValue ? "Alterar entregador" : "Atribuir entregador")
                     </a>
+                }
+
+                @if (mostrarProvaEntrega)
+                {
+                    <div class="small text-muted">
+                        <div><strong>Recebido por:</strong> @(p.Entrega?.NomeRecebedor ?? "-")</div>
+
+                        @if (!string.IsNullOrWhiteSpace(p.Entrega?.ObservacaoEntrega))
+                        {
+                            <div><strong>Obs:</strong> @p.Entrega!.ObservacaoEntrega</div>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(p.Entrega?.ComprovanteEntregaUrl))
+                        {
+                            <div>
+                                <a href="@p.Entrega!.ComprovanteEntregaUrl" target="_blank" rel="noopener">Ver comprovante</a>
+                            </div>
+                        }
+                    </div>
                 }
 
                 @if (string.Equals(p.Status, "Cancelado", StringComparison.OrdinalIgnoreCase))
