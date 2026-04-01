@@ -1,14 +1,18 @@
 ﻿@model IEnumerable<WebApplicationPods.Models.NotificacaoModel>
 
 @{
-    var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
+    var returnUrl = ViewBag.ReturnUrl as string;
+    if (string.IsNullOrWhiteSpace(returnUrl))
+    {
+        returnUrl = Url.Action("Index", "Notificacoes", new { area = "" }) ?? "/";
+    }
 }
 
 <ul class="dropdown-menu dropdown-menu-end shadow-sm p-0" style="min-width: 340px; max-width: 380px;">
     <li class="px-3 py-2 border-bottom">
         <div class="d-flex justify-content-between align-items-center">
             <h6 class="dropdown-header p-0 m-0">Notificações do painel</h6>
-            <a asp-controller="Notificacoes" asp-action="Index" class="small text-decoration-none">Ver central</a>
+            <a asp-area="" asp-controller="Notificacoes" asp-action="Index" class="small text-decoration-none">Ver central</a>
         </div>
     </li>
 
@@ -20,6 +24,7 @@
 
             <li>
                 <a class="dropdown-item py-3 @bgClass"
+                   asp-area=""
                    asp-controller="Notificacoes"
                    asp-action="IrPara"
                    asp-route-id="@n.Id">
@@ -52,7 +57,7 @@
 
         <li><hr class="dropdown-divider my-0" /></li>
         <li>
-            <form asp-controller="Notificacoes" asp-action="MarcarTodasComoLidas" method="post" class="m-0">
+            <form asp-area="" asp-controller="Notificacoes" asp-action="MarcarTodasComoLidas" method="post" class="m-0">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="returnUrl" value="@returnUrl" />
                 <button type="submit" class="dropdown-item py-2">

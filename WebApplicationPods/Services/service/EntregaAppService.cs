@@ -25,7 +25,6 @@ namespace WebApplicationPods.Services.service
             _pedidoAppService = pedidoAppService;
             _hub = hub;
             _notificationAppService = notificationAppService;
-
         }
 
         public async Task<bool> AtribuirEntregadorAsync(int pedidoId, int entregadorId, string? responsavel = null)
@@ -79,7 +78,6 @@ namespace WebApplicationPods.Services.service
                 pedido.Entrega.ComprovanteEntregaUrl = null;
             }
 
-            // compatibilidade temporária com o pedido
             pedido.EntregadorId = entregador.Id;
             pedido.DataAtribuicaoEntregador = DateTime.Now;
 
@@ -102,11 +100,12 @@ namespace WebApplicationPods.Services.service
                     status = EntregaStatusConst.Atribuida
                 });
             }
+
             await CriarNotificacaoLojaAsync(
-                  pedido,
-                  "atribuicao",
-                  $"Pedido #{pedido.Id} atribuído",
-                  $"Entregador {entregador.Nome} foi atribuído ao pedido.");
+                pedido,
+                "atribuicao",
+                $"Pedido #{pedido.Id} atribuído",
+                $"Entregador {entregador.Nome} foi atribuído ao pedido.");
 
             return true;
         }
@@ -135,10 +134,10 @@ namespace WebApplicationPods.Services.service
                 origem: "PainelEntregador");
 
             await CriarNotificacaoLojaAsync(
-                    pedido,
-                    "aceite",
-                    $"Pedido #{pedido.Id} aceito",
-                    $"{pedido.Entregador?.Nome ?? "O entregador"} aceitou a entrega.");
+                pedido,
+                "aceite",
+                $"Pedido #{pedido.Id} aceito",
+                $"{pedido.Entregador?.Nome ?? "O entregador"} aceitou a entrega.");
 
             return true;
         }
@@ -188,7 +187,6 @@ namespace WebApplicationPods.Services.service
             pedido.Entrega.DataSaidaParaEntrega = DateTime.Now;
             pedido.Entrega.DataAtualizacao = DateTime.Now;
 
-            // compatibilidade temporária
             pedido.DataSaiuParaEntrega = DateTime.Now;
 
             await _context.SaveChangesAsync();
@@ -240,7 +238,6 @@ namespace WebApplicationPods.Services.service
             pedido.Entrega.ComprovanteEntregaUrl = comprovanteEntregaUrl;
             pedido.Entrega.Observacao = $"Pedido entregue para {nomeRecebedorFinal}.";
 
-            // compatibilidade temporária
             pedido.DataEntregue = DateTime.Now;
 
             await _context.SaveChangesAsync();
@@ -259,11 +256,15 @@ namespace WebApplicationPods.Services.service
                 observacao: observacaoHistorico,
                 origem: "PainelEntregador");
 
+            var mensagemEntrega = $"{pedido.Entregador?.Nome ?? "O entregador"} concluiu a entrega. Recebido por {nomeRecebedorFinal}.";
+            if (!string.IsNullOrWhiteSpace(observacaoEntregaFinal))
+                mensagemEntrega += $" Observação: {observacaoEntregaFinal}";
+
             await CriarNotificacaoLojaAsync(
-                    pedido,
-                    "rota",
-                    $"Pedido #{pedido.Id} saiu para entrega",
-                    $"{pedido.Entregador?.Nome ?? "O entregador"} saiu para entrega.");
+                pedido,
+                "entregue",
+                $"Pedido #{pedido.Id} entregue",
+                mensagemEntrega);
 
             return true;
         }
@@ -281,6 +282,7 @@ namespace WebApplicationPods.Services.service
                 return false;
 
             var motivoFinal = motivo.Trim();
+            var entregadorNome = pedido.Entregador?.Nome;
 
             pedido.Entrega.Status = EntregaStatusConst.NaoEntregue;
             pedido.Entrega.DataAtualizacao = DateTime.Now;
@@ -289,7 +291,6 @@ namespace WebApplicationPods.Services.service
             pedido.Entrega.ObservacaoEntrega = null;
             pedido.Entrega.ComprovanteEntregaUrl = null;
 
-            // devolve o pedido para o lojista reatribuir
             pedido.EntregadorId = null;
             pedido.DataAtribuicaoEntregador = null;
 
@@ -298,16 +299,16 @@ namespace WebApplicationPods.Services.service
             await _pedidoAppService.AtualizarStatusAsync(
                 pedido.Id,
                 PedidoEntregaStatus.AguardandoAtribuicao,
-                nomeResponsavel: pedido.Entregador?.Nome,
+                nomeResponsavel: entregadorNome,
                 usuarioResponsavelId: entregadorUserId.ToString(),
                 observacao: $"Tentativa de entrega sem sucesso. Motivo: {motivoFinal}",
                 origem: "PainelEntregador");
 
             await CriarNotificacaoLojaAsync(
                 pedido,
-                "rota",
-                $"Pedido #{pedido.Id} saiu para entrega",
-                $"{pedido.Entregador?.Nome ?? "O entregador"} saiu para entrega.");
+                "nao-entregue",
+                $"Pedido #{pedido.Id} não entregue",
+                $"{entregadorNome ?? "O entregador"} informou falha na entrega. Motivo: {motivoFinal}");
 
             return true;
         }
@@ -340,7 +341,7 @@ namespace WebApplicationPods.Services.service
                 || StatusEh(status, EntregaStatusConst.EmRota);
         }
 
-        private Task CriarNotificacaoLojaAsync(PedidoModel pedido,string tipo,string titulo,string mensagem)
+        private Task CriarNotificacaoLojaAsync(PedidoModel pedido, string tipo, string titulo, string mensagem)
         {
             if (pedido.LojaId <= 0)
                 return Task.CompletedTask;

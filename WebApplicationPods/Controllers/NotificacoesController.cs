@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using WebApplicationPods.Models;
 using WebApplicationPods.Services.Interface;
 
 namespace WebApplicationPods.Controllers
@@ -25,7 +26,7 @@ namespace WebApplicationPods.Controllers
             if (!lojaId.HasValue)
             {
                 TempData["Erro"] = "Loja atual não encontrada.";
-                return RedirectToAction("Index", "PedidosAdmin");
+                return RedirectToAction("Index", "PedidosAdmin", new { area = "" });
             }
 
             var lista = await _notificationAppService.ObterCentralAsync(
@@ -54,7 +55,12 @@ namespace WebApplicationPods.Controllers
 
             if (notificacao.PedidoId.HasValue)
             {
-                return RedirectToAction("Index", "PedidosAdmin", new { filtro = "dia" });
+                return RedirectToAction("Index", "PedidosAdmin", new
+                {
+                    area = "",
+                    filtro = "dia",
+                    highlight = notificacao.PedidoId.Value
+                });
             }
 
             return RedirectToAction(nameof(Index));
@@ -87,6 +93,36 @@ namespace WebApplicationPods.Controllers
             return RedirectToLocalOrIndex(returnUrl);
         }
 
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> Dropdown(int take = 8, string? returnUrl = null)
+        {
+            ViewBag.ReturnUrl = ObterReturnUrlSeguro(returnUrl);
+
+            var lojaId = ObterLojaAtual();
+            if (!lojaId.HasValue)
+                return PartialView("~/Views/Notificacoes/_Dropdown.cshtml", new List<NotificacaoModel>());
+
+            var lista = await _notificationAppService.ObterRecentesAsync(
+                lojaId.Value,
+                take,
+                incluirLidas: true);
+
+            return PartialView("~/Views/Notificacoes/_Dropdown.cshtml", lista);
+        }
+
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> CountNaoLidas()
+        {
+            var lojaId = ObterLojaAtual();
+            var count = lojaId.HasValue
+                ? await _notificationAppService.ContarNaoLidasAsync(lojaId.Value)
+                : 0;
+
+            return Json(new { count });
+        }
+
         private int? ObterLojaAtual()
         {
             if (_currentLoja?.LojaId is int lojaAtual && lojaAtual > 0)
@@ -106,33 +142,15 @@ namespace WebApplicationPods.Controllers
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
                 return Redirect(returnUrl);
 
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Index), new { area = "" });
         }
 
-        [HttpGet]
-        public async Task<IActionResult> Dropdown(int take = 8)
+        private string ObterReturnUrlSeguro(string? returnUrl)
         {
-            var lojaId = ObterLojaAtual();
-            if (!lojaId.HasValue)
-                return PartialView("~/Views/Notificacoes/_Dropdown.cshtml", new List<WebApplicationPods.Models.NotificacaoModel>());
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                return returnUrl;
 
-            var lista = await _notificationAppService.ObterRecentesAsync(
-                lojaId.Value,
-                take,
-                incluirLidas: true);
-
-            return PartialView("~/Views/Notificacoes/_Dropdown.cshtml", lista);
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> CountNaoLidas()
-        {
-            var lojaId = ObterLojaAtual();
-            var count = lojaId.HasValue
-                ? await _notificationAppService.ContarNaoLidasAsync(lojaId.Value)
-                : 0;
-
-            return Json(new { count });
+            return Url.Action(nameof(Index), "Notificacoes", new { area = "" }) ?? "/";
         }
     }
 }

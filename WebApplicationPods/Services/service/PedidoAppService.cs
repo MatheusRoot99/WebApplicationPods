@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using System.Globalization;
+using WebApplicationPods.Constants;
 using WebApplicationPods.Hubs;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
@@ -10,13 +12,16 @@ namespace WebApplicationPods.Services.service
     {
         private readonly IPedidoRepository _pedidoRepository;
         private readonly IHubContext<PedidosHub> _hub;
+        private readonly INotificationAppService _notificationAppService;
 
         public PedidoAppService(
             IPedidoRepository pedidoRepository,
-            IHubContext<PedidosHub> hub)
+            IHubContext<PedidosHub> hub,
+            INotificationAppService notificationAppService)
         {
             _pedidoRepository = pedidoRepository;
             _hub = hub;
+            _notificationAppService = notificationAppService;
         }
 
         public async Task<PedidoModel> CriarPedidoAsync(PedidoModel pedido, string? origem = null)
@@ -55,6 +60,8 @@ namespace WebApplicationPods.Services.service
                 id = pedidoCriado.Id,
                 status = pedidoCriado.Status
             });
+
+            await CriarNotificacaoNovoPedidoAsync(pedidoCriado);
 
             return pedidoCriado;
         }
@@ -96,6 +103,8 @@ namespace WebApplicationPods.Services.service
                 status = atualizado.Status
             });
 
+            await CriarNotificacaoStatusAsync(atualizado, novoStatus);
+
             return true;
         }
 
@@ -108,11 +117,76 @@ namespace WebApplicationPods.Services.service
         {
             return await AtualizarStatusAsync(
                 pedidoId,
-                "Pago",
+                PedidoStatus.Pago,
                 nomeResponsavel,
                 usuarioResponsavelId,
                 observacao,
                 origem);
+        }
+
+        private Task CriarNotificacaoNovoPedidoAsync(PedidoModel pedido)
+        {
+            if (pedido.LojaId <= 0)
+                return Task.CompletedTask;
+
+            var cliente = pedido.Cliente?.Nome ?? $"Cliente #{pedido.ClienteId}";
+            var total = pedido.ValorTotal.ToString("C", CultureInfo.GetCultureInfo("pt-BR"));
+
+            return _notificationAppService.CriarAsync(
+                pedido.LojaId,
+                $"Novo pedido #{pedido.Id}",
+                $"{cliente} fez um pedido no valor de {total}.",
+                tipo: "novo-pedido",
+                pedidoId: pedido.Id);
+        }
+
+        private Task CriarNotificacaoStatusAsync(PedidoModel pedido, string novoStatus)
+        {
+            if (pedido.LojaId <= 0 || string.IsNullOrWhiteSpace(novoStatus))
+                return Task.CompletedTask;
+
+            string? tipo = null;
+            string? titulo = null;
+            string? mensagem = null;
+
+            if (string.Equals(novoStatus, PedidoStatus.AguardandoConfirmacaoDinheiro, StringComparison.OrdinalIgnoreCase))
+            {
+                tipo = "pagamento";
+                titulo = $"Pedido #{pedido.Id} aguardando confirmação";
+                mensagem = "Pagamento em dinheiro pendente de confirmação manual.";
+            }
+            else if (string.Equals(novoStatus, PedidoStatus.Pago, StringComparison.OrdinalIgnoreCase))
+            {
+                tipo = "pagamento";
+                titulo = $"Pedido #{pedido.Id} pago";
+                mensagem = "O pagamento do pedido foi confirmado.";
+            }
+            else if (string.Equals(novoStatus, PedidoStatus.PagamentoFalhou, StringComparison.OrdinalIgnoreCase))
+            {
+                tipo = "pagamento";
+                titulo = $"Pagamento do pedido #{pedido.Id} falhou";
+                mensagem = "O pedido teve falha na confirmação do pagamento.";
+            }
+            else if (string.Equals(novoStatus, PedidoStatus.Cancelado, StringComparison.OrdinalIgnoreCase))
+            {
+                tipo = "cancelamento";
+                titulo = $"Pedido #{pedido.Id} cancelado";
+                mensagem = "O pedido foi cancelado.";
+            }
+
+            if (string.IsNullOrWhiteSpace(tipo) ||
+                string.IsNullOrWhiteSpace(titulo) ||
+                string.IsNullOrWhiteSpace(mensagem))
+            {
+                return Task.CompletedTask;
+            }
+
+            return _notificationAppService.CriarAsync(
+                pedido.LojaId,
+                titulo,
+                mensagem,
+                tipo,
+                pedidoId: pedido.Id);
         }
     }
 }
