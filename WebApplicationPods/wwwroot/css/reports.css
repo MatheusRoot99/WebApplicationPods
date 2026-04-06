@@ -1,31 +1,40 @@
 ﻿/* =========================================================
    Reports (Admin) — integrado ao tema global (light/dark)
-   NÃO redefine :root com paleta fixa.
-   Depende dos tokens do site.css:
-   --bg --text --muted --border --primary --primary-dark
-   --brand-start --brand-end --shadow-1 --radius-lg
-   --glass --glass-border (se existir) - senão usa fallback
+   usando toda a largura disponível da área de conteúdo
    ========================================================= */
 
 :root {
     --page-pad-bottom: calc(var(--mbn-height, 68px) + 16px);
 }
 
-/* espaço para bottom-nav */
-.page-pad {
+/* ocupa toda a área útil */
+.page-pad.container {
+    width: 100%;
+    max-width: none !important;
+    margin: 0;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
     padding-bottom: var(--page-pad-bottom);
 }
 
-    /* Título */
-    .page-pad h2 {
-        font-weight: 900;
-        color: var(--text);
-        margin: 0;
-        letter-spacing: -.02em;
+@media (min-width: 1200px) {
+    .page-pad.container {
+        padding-left: 1.25rem !important;
+        padding-right: 1.25rem !important;
     }
+}
+
+/* Título */
+.page-pad h2 {
+    font-weight: 900;
+    color: var(--text);
+    margin: 0;
+    letter-spacing: -.02em;
+}
 
 /* Toolbar (filtros) */
 .toolbar {
+    width: 100%;
     background: var(--glass, rgba(255,255,255,.70));
     border: 1px solid var(--glass-border, rgba(255,255,255,.45));
     backdrop-filter: blur(10px);
@@ -72,7 +81,7 @@
         color: #fff;
     }
 
-/* Cards (não quebra o Bootstrap inteiro: limita ao container do relatório) */
+/* Cards */
 .page-pad .card {
     border: 1px solid var(--border);
     border-radius: var(--radius-lg, 18px);
@@ -81,9 +90,9 @@
     background: var(--bg-elev-2, #fff);
 }
 
-/* Header do card (gradiente mais “soft”, legível no dark) */
+/* Header do card */
 .page-pad .card-header {
-    background: linear-gradient(135deg, color-mix(in srgb, var(--brand-start) 88%, #000 12%), color-mix(in srgb, var(--brand-end) 92%, #000 8%) );
+    background: linear-gradient( 135deg, color-mix(in srgb, var(--brand-start) 88%, #000 12%), color-mix(in srgb, var(--brand-end) 92%, #000 8%) );
     color: #fff;
     font-weight: 900;
     border: 0;
@@ -149,6 +158,11 @@
 
 /* Mobile */
 @media (max-width: 576px) {
+    .page-pad.container {
+        padding-left: .75rem !important;
+        padding-right: .75rem !important;
+    }
+
     .chart-wrap.h320 {
         height: 280px;
     }

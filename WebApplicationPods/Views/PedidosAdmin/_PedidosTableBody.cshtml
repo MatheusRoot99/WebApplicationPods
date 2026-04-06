@@ -8,198 +8,221 @@
     var pedidos = Model?.OrderByDescending(x => x.DataPedido) ?? Enumerable.Empty<PedidoModel>();
 }
 
-@foreach (var p in pedidos)
+@if (!pedidos.Any())
 {
-    var statusAtual = p.Status ?? string.Empty;
-
-    var mostrarProvaEntrega =
-    p.Entrega != null &&
-    string.Equals(p.Entrega.Status, EntregaStatus.Entregue, StringComparison.OrdinalIgnoreCase);
-
-    var proximas = Array.Empty<string>();
-    if (allowed != null && allowed.TryGetValue(statusAtual, out var arr) && arr != null)
-        proximas = arr;
-
-    if (!p.RetiradaNoLocal &&
-        string.Equals(statusAtual, PedidoStatus.Pronto, StringComparison.OrdinalIgnoreCase))
-    {
-        proximas = proximas
-            .Where(x =>
-                !string.Equals(x, PedidoStatus.SaiuParaEntrega, StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(x, PedidoStatus.Concluido, StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-    }
-
-    var pagamentoPixManualPendente = p.Pagamentos?
-        .OrderByDescending(pg => pg.Id)
-        .FirstOrDefault(pg =>
-            pg.Metodo == PaymentMethod.Pix &&
-            string.Equals(pg.Provider, "PixManual", StringComparison.OrdinalIgnoreCase) &&
-            pg.Status == PaymentStatus.Pending);
-
-    var metodo = (p.MetodoPagamento ?? string.Empty).ToLowerInvariant();
-    var isDinheiroOuDebito = metodo == "dinheiro" || metodo == "cartão de débito" || metodo == "cartao de debito";
-    var podeAprovarNaEntrega =
-        isDinheiroOuDebito &&
-        string.Equals(p.Status, "Aguardando Pagamento (Entrega)", StringComparison.OrdinalIgnoreCase);
-
-    var podeAtribuirEntregador =
-        !p.RetiradaNoLocal &&
-        (
-            string.Equals(statusAtual, PedidoStatus.Pronto, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(statusAtual, PedidoEntregaStatus.AguardandoAtribuicao, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(statusAtual, PedidoEntregaStatus.Atribuido, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(statusAtual, PedidoEntregaStatus.SaiuParaEntrega, StringComparison.OrdinalIgnoreCase)
-        );
-
-    var motivoEntrega = string.Empty;
-    var mostrarMotivoEntrega =
-        p.Entrega != null &&
-        string.Equals(p.Entrega.Status, EntregaStatus.NaoEntregue, StringComparison.OrdinalIgnoreCase) &&
-        !string.IsNullOrWhiteSpace(p.Entrega.Observacao);
-
-    if (mostrarMotivoEntrega)
-        motivoEntrega = p.Entrega!.Observacao!;
-
-    <tr data-id="@p.Id" data-order-id="@p.Id">
-        <td data-th="Cliente">
-            <div class="cell-primary">
-                <div class="title">@((p.Cliente?.Nome) ?? "—")</div>
-                <div class="sub">@($"#{p.Id} • {p.PedidoItens?.Count ?? 0} itens")</div>
-            </div>
-        </td>
-
-        <td data-th="Data">
-            @p.DataPedido.ToString("dd/MM HH:mm")
-        </td>
-
-        <td data-th="Total" class="text-end">
-            @p.ValorTotal.ToString("C")
-        </td>
-
-        <td data-th="Pagamento">
-            @((p.MetodoPagamento ?? "—"))
-        </td>
-
-        <td data-th="Status">
-            <div class="d-flex flex-column align-items-start gap-1">
-                <span class="badge badge-state" data-state="@statusAtual">@statusAtual</span>
-
-                @if (mostrarMotivoEntrega)
-                {
-                    <small class="text-danger fw-semibold">Falha anterior: @motivoEntrega</small>
-                }
-            </div>
-        </td>
-
-        <td data-th="Ações" class="text-end">
-            <div class="actions-wrap">
-                @if (proximas.Any())
-                {
-                    <div class="btn-group btn-group-sm actions-group" role="group" aria-label="Ações do pedido">
-                        @foreach (var prox in proximas)
-                        {
-                            var lowered = (prox ?? string.Empty).ToLowerInvariant();
-                            var label = prox;
-                            var css = "btn btn-outline-secondary btn-sm";
-
-                            if (lowered.Contains("pago")) { label = "Aprovar"; css = "btn btn-success btn-sm"; }
-                            else if (lowered.Contains("prepara")) { label = "Iniciar"; css = "btn btn-primary btn-sm"; }
-                            else if (lowered.Contains("pronto")) { label = "Pronto"; css = "btn btn-warning btn-sm"; }
-                            else if (lowered.Contains("saiu") && lowered.Contains("entrega")) { label = "Saiu p/ Entrega"; css = "btn btn-secondary btn-sm"; }
-                            else if (lowered.Contains("entregue")) { label = "Entregue"; css = "btn btn-dark btn-sm"; }
-                            else if (lowered.Contains("cancel")) { label = "Cancelar"; css = "btn btn-danger btn-sm"; }
-
-                            <form class="d-inline js-inline-action"
-                                  data-action="status"
-                                  data-success="Status atualizado!"
-                                  data-confirm="@((lowered.Contains("cancel")) ? "Confirmar cancelamento do pedido?" : "")"
-                                  action="@Url.Action("AtualizarStatus", "PedidosAdmin")"
-                                  method="post">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="id" value="@p.Id" />
-                                <input type="hidden" name="status" value="@prox" />
-                                <button type="submit" class="@css">@label</button>
-                            </form>
-                        }
-                    </div>
-                }
-
-                @if (pagamentoPixManualPendente != null)
-                {
-                    <form class="d-inline js-inline-action"
-                          data-action="confirmar-pix"
-                          data-success="PIX confirmado e estoque baixado!"
-                          action="@Url.Action("ConfirmarPixManual", "Pagamento")"
-                          method="post">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="pagamentoId" value="@pagamentoPixManualPendente.Id" />
-                        <button type="submit" class="btn btn-success btn-sm">
-                            Confirmar PIX
-                        </button>
-                    </form>
-                }
-
-                @if (podeAprovarNaEntrega)
-                {
-                    <form class="d-inline js-inline-action"
-                          data-action="aprovar-entrega"
-                          data-success="Pagamento aprovado na entrega e estoque baixado!"
-                          action="@Url.Action("AprovarPagamentoEntrega", "Pagamento")"
-                          method="post">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="pedidoId" value="@p.Id" />
-                        <button type="submit" class="btn btn-success btn-sm">
-                            Aprovar na entrega
-                        </button>
-                    </form>
-                }
-
-                @if (podeAtribuirEntregador)
-                {
-                    <a asp-controller="PedidosAdmin"
-                       asp-action="AtribuirEntregador"
-                       asp-route-id="@p.Id"
-                       class="btn btn-sm btn-outline-info">
-                        @(p.EntregadorId.HasValue ? "Alterar entregador" : "Atribuir entregador")
-                    </a>
-                }
-
-                @if (mostrarProvaEntrega)
-                {
-                    <div class="small text-muted">
-                        <div><strong>Recebido por:</strong> @(p.Entrega?.NomeRecebedor ?? "-")</div>
-
-                        @if (!string.IsNullOrWhiteSpace(p.Entrega?.ObservacaoEntrega))
-                        {
-                            <div><strong>Obs:</strong> @p.Entrega!.ObservacaoEntrega</div>
-                        }
-
-                        @if (!string.IsNullOrWhiteSpace(p.Entrega?.ComprovanteEntregaUrl))
-                        {
-                            <div>
-                                <a href="@p.Entrega!.ComprovanteEntregaUrl" target="_blank" rel="noopener">Ver comprovante</a>
-                            </div>
-                        }
-                    </div>
-                }
-
-                @if (string.Equals(p.Status, "Cancelado", StringComparison.OrdinalIgnoreCase))
-                {
-                    <form class="d-inline js-inline-action"
-                          data-action="excluir"
-                          data-success="Pedido excluído."
-                          data-confirm="Excluir este pedido?"
-                          action="@Url.Action("Excluir", "PedidosAdmin")"
-                          method="post">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="id" value="@p.Id" />
-                        <button type="submit" class="btn btn-sm btn-excluir">
-                            <i class="bi bi-trash"></i> Excluir
-                        </button>
-                    </form>
-                }
+    <tr>
+        <td colspan="6">
+            <div class="orders-empty-state">
+                Nenhum pedido encontrado com os filtros atuais.
             </div>
         </td>
     </tr>
+}
+else
+{
+    @foreach (var p in pedidos)
+    {
+        var statusAtual = p.Status ?? string.Empty;
+        var nomeEntregador = p.Entregador?.Nome ?? p.Entrega?.Entregador?.Nome;
+
+        var mostrarProvaEntrega =
+        p.Entrega != null &&
+        string.Equals(p.Entrega.Status, EntregaStatus.Entregue, StringComparison.OrdinalIgnoreCase);
+
+        var proximas = Array.Empty<string>();
+        if (allowed != null && allowed.TryGetValue(statusAtual, out var arr) && arr != null)
+            proximas = arr;
+
+        if (!p.RetiradaNoLocal &&
+            string.Equals(statusAtual, PedidoStatus.Pronto, StringComparison.OrdinalIgnoreCase))
+        {
+            proximas = proximas
+                .Where(x =>
+                    !string.Equals(x, PedidoStatus.SaiuParaEntrega, StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(x, PedidoStatus.Concluido, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+        }
+
+        var pagamentoPixManualPendente = p.Pagamentos?
+            .OrderByDescending(pg => pg.Id)
+            .FirstOrDefault(pg =>
+                pg.Metodo == PaymentMethod.Pix &&
+                string.Equals(pg.Provider, "PixManual", StringComparison.OrdinalIgnoreCase) &&
+                pg.Status == PaymentStatus.Pending);
+
+        var metodo = (p.MetodoPagamento ?? string.Empty).ToLowerInvariant();
+        var isDinheiroOuDebito = metodo == "dinheiro" || metodo == "cartão de débito" || metodo == "cartao de debito";
+        var podeAprovarNaEntrega =
+            isDinheiroOuDebito &&
+            string.Equals(p.Status, "Aguardando Pagamento (Entrega)", StringComparison.OrdinalIgnoreCase);
+
+        var podeAtribuirEntregador =
+            !p.RetiradaNoLocal &&
+            (
+                string.Equals(statusAtual, PedidoStatus.Pronto, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(statusAtual, PedidoEntregaStatus.AguardandoAtribuicao, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(statusAtual, PedidoEntregaStatus.Atribuido, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(statusAtual, PedidoEntregaStatus.SaiuParaEntrega, StringComparison.OrdinalIgnoreCase)
+            );
+
+        var motivoEntrega = string.Empty;
+        var mostrarMotivoEntrega =
+            p.Entrega != null &&
+            string.Equals(p.Entrega.Status, EntregaStatus.NaoEntregue, StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(p.Entrega.Observacao);
+
+        if (mostrarMotivoEntrega)
+            motivoEntrega = p.Entrega!.Observacao!;
+
+        <tr data-id="@p.Id" data-order-id="@p.Id">
+            <td data-th="Cliente">
+                <div class="cell-primary">
+                    <div class="title">@((p.Cliente?.Nome) ?? "—")</div>
+                    <div class="sub">@($"#{p.Id} • {p.PedidoItens?.Count ?? 0} itens")</div>
+                    @if (!string.IsNullOrWhiteSpace(p.Cliente?.Telefone))
+                    {
+                        <div class="sub">@p.Cliente!.Telefone</div>
+                    }
+                </div>
+            </td>
+
+            <td data-th="Data">
+                @p.DataPedido.ToString("dd/MM HH:mm")
+            </td>
+
+            <td data-th="Total" class="text-end">
+                @p.ValorTotal.ToString("C")
+            </td>
+
+            <td data-th="Pagamento">
+                @((p.MetodoPagamento ?? "—"))
+            </td>
+
+            <td data-th="Status">
+                <div class="d-flex flex-column align-items-start gap-1">
+                    <span class="badge badge-state" data-state="@statusAtual">@statusAtual</span>
+
+                    @if (!string.IsNullOrWhiteSpace(nomeEntregador))
+                    {
+                        <small class="text-info-emphasis fw-semibold">Entregador: @nomeEntregador</small>
+                    }
+
+                    @if (mostrarMotivoEntrega)
+                    {
+                        <small class="text-danger fw-semibold">Falha anterior: @motivoEntrega</small>
+                    }
+                </div>
+            </td>
+
+            <td data-th="Ações" class="text-end">
+                <div class="actions-wrap">
+                    @if (proximas.Any())
+                    {
+                        <div class="btn-group btn-group-sm actions-group" role="group" aria-label="Ações do pedido">
+                            @foreach (var prox in proximas)
+                            {
+                                var lowered = (prox ?? string.Empty).ToLowerInvariant();
+                                var label = prox;
+                                var css = "btn btn-outline-secondary btn-sm";
+
+                                if (lowered.Contains("pago")) { label = "Aprovar"; css = "btn btn-success btn-sm"; }
+                                else if (lowered.Contains("prepara")) { label = "Iniciar"; css = "btn btn-primary btn-sm"; }
+                                else if (lowered.Contains("pronto")) { label = "Pronto"; css = "btn btn-warning btn-sm"; }
+                                else if (lowered.Contains("saiu") && lowered.Contains("entrega")) { label = "Saiu p/ Entrega"; css = "btn btn-secondary btn-sm"; }
+                                else if (lowered.Contains("entregue")) { label = "Entregue"; css = "btn btn-dark btn-sm"; }
+                                else if (lowered.Contains("cancel")) { label = "Cancelar"; css = "btn btn-danger btn-sm"; }
+
+                                <form class="d-inline js-inline-action"
+                                      data-action="status"
+                                      data-success="Status atualizado!"
+                                      data-confirm="@((lowered.Contains("cancel")) ? "Confirmar cancelamento do pedido?" : "")"
+                                      action="@Url.Action("AtualizarStatus", "PedidosAdmin")"
+                                      method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@p.Id" />
+                                    <input type="hidden" name="status" value="@prox" />
+                                    <button type="submit" class="@css">@label</button>
+                                </form>
+                            }
+                        </div>
+                    }
+
+                    @if (pagamentoPixManualPendente != null)
+                    {
+                        <form class="d-inline js-inline-action"
+                              data-action="confirmar-pix"
+                              data-success="PIX confirmado e estoque baixado!"
+                              action="@Url.Action("ConfirmarPixManual", "Pagamento")"
+                              method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="pagamentoId" value="@pagamentoPixManualPendente.Id" />
+                            <button type="submit" class="btn btn-success btn-sm">
+                                Confirmar PIX
+                            </button>
+                        </form>
+                    }
+
+                    @if (podeAprovarNaEntrega)
+                    {
+                        <form class="d-inline js-inline-action"
+                              data-action="aprovar-entrega"
+                              data-success="Pagamento aprovado na entrega e estoque baixado!"
+                              action="@Url.Action("AprovarPagamentoEntrega", "Pagamento")"
+                              method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="pedidoId" value="@p.Id" />
+                            <button type="submit" class="btn btn-success btn-sm">
+                                Aprovar na entrega
+                            </button>
+                        </form>
+                    }
+
+                    @if (podeAtribuirEntregador)
+                    {
+                        <a asp-controller="PedidosAdmin"
+                           asp-action="AtribuirEntregador"
+                           asp-route-id="@p.Id"
+                           class="btn btn-sm btn-outline-info">
+                            @(p.EntregadorId.HasValue ? "Alterar entregador" : "Atribuir entregador")
+                        </a>
+                    }
+
+                    @if (mostrarProvaEntrega)
+                    {
+                        <div class="small text-muted">
+                            <div><strong>Recebido por:</strong> @(p.Entrega?.NomeRecebedor ?? "-")</div>
+
+                            @if (!string.IsNullOrWhiteSpace(p.Entrega?.ObservacaoEntrega))
+                            {
+                                <div><strong>Obs:</strong> @p.Entrega!.ObservacaoEntrega</div>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(p.Entrega?.ComprovanteEntregaUrl))
+                            {
+                                <div>
+                                    <a href="@p.Entrega!.ComprovanteEntregaUrl" target="_blank" rel="noopener">Ver comprovante</a>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    @if (string.Equals(p.Status, "Cancelado", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <form class="d-inline js-inline-action"
+                              data-action="excluir"
+                              data-success="Pedido excluído."
+                              data-confirm="Excluir este pedido?"
+                              action="@Url.Action("Excluir", "PedidosAdmin")"
+                              method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@p.Id" />
+                            <button type="submit" class="btn btn-sm btn-excluir">
+                                <i class="bi bi-trash"></i> Excluir
+                            </button>
+                        </form>
+                    }
+                </div>
+            </td>
+        </tr>
+    }
 }

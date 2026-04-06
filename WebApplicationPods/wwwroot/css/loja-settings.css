@@ -2,10 +2,27 @@
    LOJA SETTINGS (page css)
    - Escopado: nada de :root, nada de body global
    - Dark automático via html[data-theme="dark"]
+   - Expandido para usar toda a largura disponível
    ========================================================= */
 
 .loja-settings-page {
     padding-bottom: calc(var(--mbn-height, 68px) + 16px);
+}
+
+    /* usa toda a largura útil da área principal */
+    .loja-settings-page.container {
+        width: 100%;
+        max-width: none !important;
+        margin: 0;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+@media (min-width: 1200px) {
+    .loja-settings-page.container {
+        padding-left: 1.25rem !important;
+        padding-right: 1.25rem !important;
+    }
 }
 
 /* Fundo da página (escopado na wrapper do conteúdo) */
@@ -19,7 +36,7 @@
     border-radius: 26px;
     padding: 22px;
     border: 1px solid color-mix(in srgb, var(--border, rgba(15,23,42,.10)) 55%, transparent);
-    background: linear-gradient(180deg, color-mix(in srgb, var(--bg-elev, rgba(255,255,255,.92)) 85%, transparent), color-mix(in srgb, var(--bg-elev, rgba(255,255,255,.92)) 65%, transparent));
+    background: linear-gradient( 180deg, color-mix(in srgb, var(--bg-elev, rgba(255,255,255,.92)) 85%, transparent), color-mix(in srgb, var(--bg-elev, rgba(255,255,255,.92)) 65%, transparent) );
     box-shadow: var(--shadow-2, 0 18px 60px rgba(0,0,0,.16));
     position: relative;
     overflow: hidden;
@@ -341,11 +358,16 @@ html[data-theme="dark"] #loja-settings .maps-block {
 }
 
 #loja-settings #mapsUrlPreview {
-    font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 /* Mobile */
 @media (max-width: 575.98px) {
+    .loja-settings-page.container {
+        padding-left: .75rem !important;
+        padding-right: .75rem !important;
+    }
+
     #loja-settings {
         padding: 16px;
         border-radius: 22px;

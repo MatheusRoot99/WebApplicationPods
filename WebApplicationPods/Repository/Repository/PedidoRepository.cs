@@ -228,29 +228,29 @@ namespace WebApplicationPods.Repository.Repository
             string? usuarioResponsavelId = null,
             string? observacao = null,
             string? origem = null)
-                {
-                    if (string.IsNullOrWhiteSpace(status)) return;
+        {
+            if (string.IsNullOrWhiteSpace(status)) return;
 
-                    var pedido = BaseQuery().FirstOrDefault(p => p.Id == pedidoId);
-                    if (pedido == null) return;
+            var pedido = BaseQuery().FirstOrDefault(p => p.Id == pedidoId);
+            if (pedido == null) return;
 
-                    if (string.Equals(pedido.Status, status, StringComparison.OrdinalIgnoreCase))
-                        return;
+            if (string.Equals(pedido.Status, status, StringComparison.OrdinalIgnoreCase))
+                return;
 
-                    var statusAnterior = pedido.Status;
+            var statusAnterior = pedido.Status;
 
-                    RegistrarHistorico(
-                        pedido,
-                        status,
-                        nomeResponsavel,
-                        usuarioResponsavelId,
-                        observacao,
-                        origem);
+            RegistrarHistorico(
+                pedido,
+                status,
+                nomeResponsavel,
+                usuarioResponsavelId,
+                observacao,
+                origem);
 
-                    pedido.Status = status;
-                    AtualizarDatasPorStatus(pedido, status);
+            pedido.Status = status;
+            AtualizarDatasPorStatus(pedido, status);
 
-                    _context.SaveChanges();
+            _context.SaveChanges();
         }
 
         public decimal ObterTotalVendasHoje()
@@ -387,15 +387,79 @@ namespace WebApplicationPods.Repository.Repository
 
         public IEnumerable<PedidoModel> Buscar(AdminOrdersFilterDTO f)
         {
+            f ??= new AdminOrdersFilterDTO();
+
+            var filtroBase = (f.Filtro ?? "abertos").Trim().ToLowerInvariant();
+
             var q = BaseQuery()
                 .Where(p => !p.IsDeleted)
                 .Include(p => p.Cliente)
                 .Include(p => p.PedidoItens)
                 .Include(p => p.Pagamentos)
+                .Include(p => p.Entregador)
+                .Include(p => p.Entrega)
+                    .ThenInclude(e => e.Entregador)
                 .AsQueryable();
 
-            if (f.From.HasValue) q = q.Where(p => p.DataPedido >= f.From.Value);
-            if (f.To.HasValue) q = q.Where(p => p.DataPedido < f.To.Value);
+            if (filtroBase == "dia")
+            {
+                var hoje = DateTime.Today;
+                var amanha = hoje.AddDays(1);
+                q = q.Where(p => p.DataPedido >= hoje && p.DataPedido < amanha);
+            }
+            else if (filtroBase != "todos")
+            {
+                q = q.Where(p => StatusVisiveisAbertos.Contains(p.Status));
+            }
+
+            if (f.PedidoId.HasValue && f.PedidoId.Value > 0)
+                q = q.Where(p => p.Id == f.PedidoId.Value);
+
+            var dataInicial = f.DataInicial ?? f.From;
+            var dataFinal = f.DataFinal ?? f.To;
+
+            if (dataInicial.HasValue)
+            {
+                var inicio = dataInicial.Value.Date;
+                q = q.Where(p => p.DataPedido >= inicio);
+            }
+
+            if (dataFinal.HasValue)
+            {
+                var fimExclusivo = dataFinal.Value.Date.AddDays(1);
+                q = q.Where(p => p.DataPedido < fimExclusivo);
+            }
+
+            if (!string.IsNullOrWhiteSpace(f.Status))
+            {
+                var status = f.Status.Trim();
+                q = q.Where(p => p.Status == status);
+            }
+
+            if (f.EntregadorId.HasValue && f.EntregadorId.Value > 0)
+            {
+                var entregadorId = f.EntregadorId.Value;
+                q = q.Where(p =>
+                    p.EntregadorId == entregadorId ||
+                    (p.Entrega != null && p.Entrega.EntregadorId == entregadorId));
+            }
+
+            if (!string.IsNullOrWhiteSpace(f.Telefone))
+            {
+                var telefone = new string(f.Telefone.Where(char.IsDigit).ToArray());
+                if (!string.IsNullOrWhiteSpace(telefone))
+                {
+                    q = q.Where(p =>
+                        p.Cliente != null &&
+                        ((p.Cliente.Telefone ?? "")
+                            .Replace("(", "")
+                            .Replace(")", "")
+                            .Replace("-", "")
+                            .Replace(" ", "")
+                            .Replace("+", ""))
+                        .Contains(telefone));
+                }
+            }
 
             if (!string.IsNullOrWhiteSpace(f.Method))
             {
@@ -403,15 +467,33 @@ namespace WebApplicationPods.Repository.Repository
                 q = q.Where(p => (p.MetodoPagamento ?? "") == m);
             }
 
-            if (f.OnlyPaid) q = q.Where(PagoExpr);
+            if (f.OnlyPaid)
+                q = q.Where(PagoExpr);
 
             if (!string.IsNullOrWhiteSpace(f.Q))
             {
-                var qLower = f.Q.ToLower();
+                var termo = f.Q.Trim();
+                var termoLower = termo.ToLower();
+                var digits = new string(termo.Where(char.IsDigit).ToArray());
+                var hasDigits = !string.IsNullOrWhiteSpace(digits);
+                var numeroPedido = int.TryParse(digits, out var pedidoIdBusca) ? pedidoIdBusca : (int?)null;
+
                 q = q.Where(p =>
-                    (p.Cliente != null && p.Cliente.Nome != null && p.Cliente.Nome.ToLower().Contains(qLower))
-                    || (p.MetodoPagamento != null && p.MetodoPagamento.ToLower().Contains(qLower))
-                    || (p.Status != null && p.Status.ToLower().Contains(qLower))
+                    (numeroPedido.HasValue && p.Id == numeroPedido.Value)
+                    || (p.Cliente != null && p.Cliente.Nome != null && p.Cliente.Nome.ToLower().Contains(termoLower))
+                    || (p.Cliente != null && p.Cliente.Email != null && p.Cliente.Email.ToLower().Contains(termoLower))
+                    || (hasDigits && p.Cliente != null && p.Cliente.Telefone != null &&
+                        p.Cliente.Telefone
+                            .Replace("(", "")
+                            .Replace(")", "")
+                            .Replace("-", "")
+                            .Replace(" ", "")
+                            .Replace("+", "")
+                            .Contains(digits))
+                    || (p.MetodoPagamento != null && p.MetodoPagamento.ToLower().Contains(termoLower))
+                    || (p.Status != null && p.Status.ToLower().Contains(termoLower))
+                    || (p.Entregador != null && p.Entregador.Nome != null && p.Entregador.Nome.ToLower().Contains(termoLower))
+                    || (p.Entrega != null && p.Entrega.Entregador != null && p.Entrega.Entregador.Nome != null && p.Entrega.Entregador.Nome.ToLower().Contains(termoLower))
                 );
             }
 

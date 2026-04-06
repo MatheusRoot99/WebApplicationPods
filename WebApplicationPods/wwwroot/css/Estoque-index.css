@@ -1,29 +1,39 @@
 ﻿/* =========================================================
    Estoque (Index) — integrado ao tema global (light/dark)
-   NÃO redefine :root com paleta fixa.
-   Depende dos tokens do site.css:
-   --bg --text --muted --border --primary --primary-dark
-   --brand-start --brand-end --shadow-1 --radius --radius-lg
+   versão expandida para usar toda a largura disponível
    ========================================================= */
 
 :root {
-    /* altura da topbar (ajuste fino se precisar) */
     --appbar-height: 56px;
-    /* status */
     --ok: #10b981;
     --low: #f59e0b;
     --zero: #ef4444;
-    /* layout */
     --page-pad-bottom: calc(var(--mbn-height, 68px) + 16px);
 }
 
 /* página */
 .estoque-page {
-    background: transparent; /* quem pinta é o page-hero / body */
+    background: transparent;
     padding-bottom: var(--page-pad-bottom);
 }
 
-/* header sticky (fica “glass” e funciona no dark) */
+    /* faz a página usar toda a largura útil */
+    .estoque-page .container-xxl {
+        width: 100%;
+        max-width: none !important;
+        margin: 0;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+@media (min-width: 1200px) {
+    .estoque-page .container-xxl {
+        padding-left: 1.25rem !important;
+        padding-right: 1.25rem !important;
+    }
+}
+
+/* header sticky */
 .page-header {
     position: sticky;
     top: var(--appbar-height);
@@ -121,8 +131,9 @@
     border-radius: 12px;
 }
 
-/* TABELA desktop */
+/* tabela desktop */
 .table-responsive.d-none.d-md-block {
+    width: 100%;
     border-radius: var(--radius-lg, 18px);
     box-shadow: var(--shadow-1);
     background: var(--bg-elev-2, #fff);
@@ -132,6 +143,7 @@
 
 /* tabela */
 .estoque-table {
+    width: 100%;
     --head-bg: color-mix(in srgb, var(--text) 4%, transparent);
     --row-border: var(--border);
     --row-hover: color-mix(in srgb, var(--primary) 6%, transparent);
@@ -139,7 +151,6 @@
     border-spacing: 0;
 }
 
-    /* header sticky do thead (sem “top” bugado) */
     .estoque-table thead th {
         background: var(--head-bg) !important;
         color: var(--text) !important;
@@ -147,7 +158,7 @@
         white-space: nowrap;
         border-bottom: 1px solid var(--row-border) !important;
         position: sticky;
-        top: 0; /* sticky dentro do table-responsive */
+        top: 0;
         z-index: 5;
     }
 
@@ -174,7 +185,7 @@
         color: color-mix(in srgb, var(--muted) 80%, transparent);
     }
 
-/* miniatura do produto */
+/* miniatura */
 .prod-thumb {
     width: 40px;
     height: 40px;
@@ -199,7 +210,7 @@
     text-overflow: ellipsis;
 }
 
-/* status dot */
+/* status */
 .status-dot {
     width: 10px;
     height: 10px;
@@ -220,7 +231,7 @@
     background: var(--zero);
 }
 
-/* badge “data” (não usa bg-light fixo) */
+/* badge data */
 .badge-soft {
     display: inline-flex;
     align-items: center;
@@ -234,35 +245,43 @@
     color: var(--text);
 }
 
-/* colunas (opcional) */
-.estoque-table th:nth-child(2), .estoque-table td:nth-child(2) {
+/* colunas */
+.estoque-table th:nth-child(2),
+.estoque-table td:nth-child(2) {
     width: 180px;
 }
 
-.estoque-table th:nth-child(3), .estoque-table td:nth-child(3) {
+.estoque-table th:nth-child(3),
+.estoque-table td:nth-child(3) {
     width: 90px;
 }
 
-.estoque-table th:nth-child(4), .estoque-table td:nth-child(4) {
+.estoque-table th:nth-child(4),
+.estoque-table td:nth-child(4) {
     width: 140px;
 }
 
-.estoque-table th:nth-child(5), .estoque-table td:nth-child(5) {
+.estoque-table th:nth-child(5),
+.estoque-table td:nth-child(5) {
     width: 160px;
 }
 
-.estoque-table th:last-child, .estoque-table td:last-child {
+.estoque-table th:last-child,
+.estoque-table td:last-child {
     width: 86px;
 }
 
-/* =========================================================
-   MOBILE: cards (você já usa .estoque-cards)
-   ========================================================= */
+/* mobile */
 .estoque-cards {
     display: none;
 }
 
 @media (max-width: 767.98px) {
+    .estoque-page .container-xxl {
+        padding-left: .75rem !important;
+        padding-right: .75rem !important;
+    }
+
     .estoque-cards {
         display: grid;
         gap: .95rem;
@@ -292,7 +311,7 @@
         gap: .75rem;
         align-items: center;
         padding: .95rem 1rem .75rem;
-        background: linear-gradient(180deg, color-mix(in srgb, var(--bg-elev-2) 90%, transparent), color-mix(in srgb, var(--text) 2%, transparent) );
+        background: linear-gradient( 180deg, color-mix(in srgb, var(--bg-elev-2) 90%, transparent), color-mix(in srgb, var(--text) 2%, transparent) );
     }
 
     .ec-thumb {
@@ -365,10 +384,10 @@
         padding: .65rem 1rem .95rem;
         border-top: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
     }
+}
 
-    @media (max-width: 360px) {
-        .ec-row {
-            --label-w: 108px;
-        }
+@media (max-width: 360px) {
+    .ec-row {
+        --label-w: 108px;
     }
 }

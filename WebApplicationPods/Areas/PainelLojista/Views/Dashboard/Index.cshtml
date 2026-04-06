@@ -1,7 +1,13 @@
-﻿@{
-    // Layout = "~/Views/Shared/_Layout.cshtml";
+﻿@using System.Globalization
+@using WebApplicationPods.Models
+@model PainelLojistaDashboardViewModel
+
+@{
     ViewData["Title"] = "Painel do Lojista";
-    var userName = User?.Identity?.Name ?? "Lojista";
+
+    var cultura = CultureInfo.GetCultureInfo("pt-BR");
+    var maxPedidosDia = Model.Serie7Dias.Any() ? Math.Max(Model.Serie7Dias.Max(x => x.Quantidade), 1) : 1;
+    var maxStatus = Model.PedidosPorStatus.Any() ? Math.Max(Model.PedidosPorStatus.Max(x => x.Quantidade), 1) : 1;
 }
 
 @section Styles {
@@ -10,140 +16,146 @@
 
 <div class="container-fluid lojista-dashboard py-3 py-md-4">
 
-    <!-- Cabeçalho -->
     <div class="ld-header mb-4">
         <div class="ld-header-main">
             <h1 class="ld-title">
                 <i class="fa-solid fa-store me-2"></i>
-                Painel do Lojista
+                @Model.LojaNome
             </h1>
-            <p class="ld-subtitle">
-                Olá, @userName. Gerencie produtos, pedidos e configurações da sua loja pelo menu ao lado.
+            <p class="ld-subtitle mb-1">
+                Olá, @Model.SaudacaoNome. Aqui está o resumo operacional mais importante da sua loja.
+            </p>
+            <p class="ld-subtitle mb-0">
+                Sprint 7 começou pelo ponto mais seguro agora: dashboard real, com dados do pedido, entrega e histórico.
             </p>
         </div>
+
         <div class="ld-header-tag">
-            <span class="ld-chip ld-chip-online">
-                <i class="fa-solid fa-circle me-1"></i>
-                Loja conectada
+            <span class="ld-chip @(Model.LojaOnline ? "ld-chip-online" : "ld-chip-offline")">
+                <i class="fa-solid @(Model.LojaOnline ? "fa-circle" : "fa-pause") me-1"></i>
+                @Model.StatusLojaTexto
             </span>
+            <div class="ld-header-note">@Model.StatusLojaMensagem</div>
         </div>
     </div>
 
-    <!-- Cards de resumo -->
     <div class="row g-3 g-md-4 mb-4">
-        <div class="col-12 col-md-6 col-xl-3">
+        <div class="col-12 col-md-6 col-xl-2">
             <div class="ld-stat-card ld-stat-primary">
                 <div class="ld-stat-header">
                     <span class="ld-stat-label">Pedidos hoje</span>
                     <i class="fa-solid fa-receipt ld-stat-icon"></i>
                 </div>
-                <div class="ld-stat-value">0</div>
-                <div class="ld-stat-footer">Assim que os pedidos entrarem, eles aparecem aqui.</div>
+                <div class="ld-stat-value">@Model.PedidosHoje</div>
+                <div class="ld-stat-footer">Pedidos criados desde 00:00 de hoje.</div>
             </div>
         </div>
 
-        <div class="col-12 col-md-6 col-xl-3">
+        <div class="col-12 col-md-6 col-xl-2">
             <div class="ld-stat-card ld-stat-success">
                 <div class="ld-stat-header">
-                    <span class="ld-stat-label">Faturamento (últimos 7 dias)</span>
-                    <i class="fa-solid fa-coins ld-stat-icon"></i>
+                    <span class="ld-stat-label">Faturamento hoje</span>
+                    <i class="fa-solid fa-sack-dollar ld-stat-icon"></i>
                 </div>
-                <div class="ld-stat-value">R$ 0,00</div>
-                <div class="ld-stat-footer">Integraremos com os pedidos em seguida.</div>
+                <div class="ld-stat-value">@Model.FaturamentoHojeFormatado</div>
+                <div class="ld-stat-footer">Desconsidera cancelados e falhas de pagamento.</div>
             </div>
         </div>
 
-        <div class="col-12 col-md-6 col-xl-3">
+        <div class="col-12 col-md-6 col-xl-2">
             <div class="ld-stat-card ld-stat-warning">
                 <div class="ld-stat-header">
-                    <span class="ld-stat-label">Produtos ativos</span>
-                    <i class="fa-solid fa-box-open ld-stat-icon"></i>
+                    <span class="ld-stat-label">Pedidos pendentes</span>
+                    <i class="fa-solid fa-clock ld-stat-icon"></i>
                 </div>
-                <div class="ld-stat-value">0</div>
-                <div class="ld-stat-footer">Use “Gerenciar Produtos” no menu para cadastrar.</div>
+                <div class="ld-stat-value">@Model.PedidosPendentes</div>
+                <div class="ld-stat-footer">Pedidos ainda não finalizados.</div>
             </div>
         </div>
 
-        <div class="col-12 col-md-6 col-xl-3">
+        <div class="col-12 col-md-6 col-xl-2">
             <div class="ld-stat-card ld-stat-info">
                 <div class="ld-stat-header">
-                    <span class="ld-stat-label">Status da loja</span>
-                    <i class="fa-solid fa-signal ld-stat-icon"></i>
+                    <span class="ld-stat-label">Entregas em andamento</span>
+                    <i class="fa-solid fa-motorcycle ld-stat-icon"></i>
                 </div>
-                <div class="ld-stat-value ld-badge-status">
-                    <span class="ld-dot"></span> Em operação
+                <div class="ld-stat-value">@Model.EntregasEmAndamento</div>
+                <div class="ld-stat-footer">Atribuídas, aceitas, coletadas ou em rota.</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-2">
+            <div class="ld-stat-card ld-stat-secondary">
+                <div class="ld-stat-header">
+                    <span class="ld-stat-label">Ticket médio 7 dias</span>
+                    <i class="fa-solid fa-chart-simple ld-stat-icon"></i>
                 </div>
-                <div class="ld-stat-footer">
-                    Configure horários e mensagem em <strong>Configurações da Loja</strong>.
+                <div class="ld-stat-value">@Model.TicketMedio7DiasFormatado</div>
+                <div class="ld-stat-footer">Baseado apenas em pedidos válidos para receita.</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-2">
+            <div class="ld-stat-card ld-stat-dark">
+                <div class="ld-stat-header">
+                    <span class="ld-stat-label">Produto mais vendido</span>
+                    <i class="fa-solid fa-star ld-stat-icon"></i>
                 </div>
+                <div class="ld-stat-value ld-text-wrap">@Model.ProdutoMaisVendidoNome</div>
+                <div class="ld-stat-footer">@Model.ProdutoMaisVendidoQuantidade item(ns) nos últimos 7 dias.</div>
             </div>
         </div>
     </div>
 
-    <!-- Colunas principais -->
-    <!-- Colunas principais -->
-    <div class="row g-3 g-md-4">
-        <!-- Atalhos rápidos -->
-        <div class="col-12 col-lg-6">
-            <div class="ld-card">
+    <div class="row g-3 g-md-4 mb-4">
+        <div class="col-12 col-xl-4">
+            <div class="ld-card h-100">
                 <div class="ld-card-header">
                     <h2 class="ld-card-title">
                         <i class="fa-solid fa-bolt-lightning me-2"></i>
                         Atalhos rápidos
                     </h2>
-                    <p class="ld-card-subtitle">
-                        Acesso direto às telas mais usadas no dia a dia.
-                    </p>
+                    <p class="ld-card-subtitle">Acesso direto às áreas mais usadas do dia a dia.</p>
                 </div>
                 <div class="ld-card-body">
                     <div class="ld-quick-links">
                         <a asp-area="" asp-controller="PedidosAdmin" asp-action="Index" class="ld-quick-link">
-                            <div class="ld-quick-icon">
-                                <i class="fa-solid fa-receipt"></i>
-                            </div>
+                            <div class="ld-quick-icon"><i class="fa-solid fa-clipboard-list"></i></div>
                             <div>
                                 <div class="ld-quick-title">Pedidos</div>
-                                <div class="ld-quick-text">Visualizar e acompanhar pedidos em tempo real.</div>
+                                <div class="ld-quick-text">Acompanhar pedidos, mudar status e atribuir entregador.</div>
+                            </div>
+                        </a>
+
+                        <a asp-area="PainelLojista" asp-controller="Entregadores" asp-action="Index" class="ld-quick-link">
+                            <div class="ld-quick-icon"><i class="fa-solid fa-motorcycle"></i></div>
+                            <div>
+                                <div class="ld-quick-title">Entregadores</div>
+                                <div class="ld-quick-text">Cadastrar, editar e acompanhar disponibilidade.</div>
+                            </div>
+                        </a>
+
+                        <a asp-area="" asp-controller="Entregador" asp-action="Index" class="ld-quick-link">
+                            <div class="ld-quick-icon"><i class="fa-solid fa-route"></i></div>
+                            <div>
+                                <div class="ld-quick-title">Painel do entregador</div>
+                                <div class="ld-quick-text">Ver o fluxo real das entregas mobile-first.</div>
                             </div>
                         </a>
 
                         <a asp-area="PainelLojista" asp-controller="Produto" asp-action="Index" class="ld-quick-link">
-                            <div class="ld-quick-icon">
-                                <i class="fa-solid fa-boxes-stacked"></i>
-                            </div>
+                            <div class="ld-quick-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
                             <div>
-                                <div class="ld-quick-title">Gerenciar Produtos</div>
-                                <div class="ld-quick-text">Cadastrar, editar e controlar estoque.</div>
-                            </div>
-                        </a>
-
-                        <a asp-area="" asp-controller="Categoria" asp-action="Index" class="ld-quick-link">
-                            <div class="ld-quick-icon">
-                                <i class="fa-solid fa-tags"></i>
-                            </div>
-                            <div>
-                                <div class="ld-quick-title">Categorias</div>
-                                <div class="ld-quick-text">Organizar seus produtos por categoria.</div>
+                                <div class="ld-quick-title">Produtos</div>
+                                <div class="ld-quick-text">Controlar catálogo, estoque e itens ativos.</div>
                             </div>
                         </a>
 
                         <a asp-area="PainelLojista" asp-controller="Loja" asp-action="Editar" class="ld-quick-link">
-                            <div class="ld-quick-icon">
-                                <i class="fa-solid fa-gear"></i>
-                            </div>
+                            <div class="ld-quick-icon"><i class="fa-solid fa-gear"></i></div>
                             <div>
-                                <div class="ld-quick-title">Configurações da Loja</div>
-                                <div class="ld-quick-text">Horário de funcionamento, endereço e status.</div>
-                            </div>
-                        </a>
-
-                        <a asp-area="PainelLojista" asp-controller="PaymentConfig" asp-action="Edit" asp-route-provider="Stripe" class="ld-quick-link">
-                            <div class="ld-quick-icon">
-                                <i class="fa-solid fa-credit-card"></i>
-                            </div>
-                            <div>
-                                <div class="ld-quick-title">Configurações de Pagamento</div>
-                                <div class="ld-quick-text">Credenciais e métodos de pagamento disponíveis.</div>
+                                <div class="ld-quick-title">Configurações da loja</div>
+                                <div class="ld-quick-text">Revisar status, funcionamento e dados da operação.</div>
                             </div>
                         </a>
                     </div>
@@ -151,46 +163,154 @@
             </div>
         </div>
 
-        <!-- Status da operação -->
-        <div class="col-12 col-lg-6">
-            <div class="ld-card">
+        <div class="col-12 col-xl-4">
+            <div class="ld-card h-100">
                 <div class="ld-card-header">
                     <h2 class="ld-card-title">
-                        <i class="fa-solid fa-chart-line me-2"></i>
-                        Status da operação
+                        <i class="fa-solid fa-chart-column me-2"></i>
+                        Últimos 7 dias
                     </h2>
                     <p class="ld-card-subtitle">
-                        Resumo rápido da situação da sua loja.
+                        @Model.PedidosUltimos7Dias pedido(s) e @Model.FaturamentoUltimos7DiasFormatado em faturamento válido no período.
                     </p>
+                </div>
+                <div class="ld-card-body">
+                    <div class="ld-chart">
+                        @foreach (var item in Model.Serie7Dias)
+                        {
+                            var altura = Math.Max(14, (int)Math.Round((item.Quantidade / (decimal)maxPedidosDia) * 100m));
+                            var tooltip = $"{item.Quantidade} pedido(s) • {item.Total.ToString("C", cultura)}";
+                            <div class="ld-chart-item">
+                                <div class="ld-chart-col-wrap">
+                                    <div class="ld-chart-col" style="height:@altura%" title="@tooltip"></div>
+                                </div>
+                                <div class="ld-chart-value">@item.Quantidade</div>
+                                <div class="ld-chart-label">@item.Dia.ToString("dd/MM")</div>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="ld-mini-kpis mt-3">
+                        <div class="ld-mini-kpi">
+                            <span class="label">Produtos ativos</span>
+                            <strong>@Model.ProdutosAtivos</strong>
+                        </div>
+                        <div class="ld-mini-kpi">
+                            <span class="label">Entregas em andamento</span>
+                            <strong>@Model.EntregasEmAndamento</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-4">
+            <div class="ld-card h-100">
+                <div class="ld-card-header">
+                    <h2 class="ld-card-title">
+                        <i class="fa-solid fa-layer-group me-2"></i>
+                        Pedidos por status
+                    </h2>
+                    <p class="ld-card-subtitle">Distribuição atual dos pedidos da loja.</p>
+                </div>
+                <div class="ld-card-body">
+                    @if (Model.PedidosPorStatus.Any())
+                    {
+                        <div class="ld-status-bars">
+                            @foreach (var item in Model.PedidosPorStatus)
+                            {
+                                var largura = Math.Max(8, (int)Math.Round((item.Quantidade / (decimal)maxStatus) * 100m));
+                                <div class="ld-status-bar-item">
+                                    <div class="ld-status-bar-head">
+                                        <span>@item.Status</span>
+                                        <strong>@item.Quantidade</strong>
+                                    </div>
+                                    <div class="ld-status-bar-track">
+                                        <div class="ld-status-bar-fill" style="width:@largura%"></div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="ld-empty">Ainda não há pedidos para montar esse resumo.</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 g-md-4">
+        <div class="col-12 col-lg-5">
+            <div class="ld-card h-100">
+                <div class="ld-card-header">
+                    <h2 class="ld-card-title">
+                        <i class="fa-solid fa-satellite-dish me-2"></i>
+                        Status da operação
+                    </h2>
+                    <p class="ld-card-subtitle">Leitura rápida do que já está saudável na operação.</p>
                 </div>
                 <div class="ld-card-body">
                     <ul class="ld-status-list">
                         <li>
-                            <span class="ld-status-dot ld-ok"></span>
-                            Integração de pedidos ativa
-                            <small>Os pedidos da sua loja aparecerão normalmente aqui.</small>
+                            <span><span class="ld-status-dot @(Model.LojaOnline ? "ld-ok" : "ld-warn")"></span> Loja @Model.StatusLojaTexto.ToLowerInvariant()</span>
+                            <small>@Model.StatusLojaMensagem</small>
                         </li>
                         <li>
-                            <span class="ld-status-dot ld-ok"></span>
-                            Pagamentos configurados
-                            <small>Verifique as credenciais na tela de “Configurações de Pagamento”.</small>
+                            <span><span class="ld-status-dot ld-ok"></span> Pedidos e histórico centralizados</span>
+                            <small>O dashboard já está lendo pedidos, histórico e entregas do banco atual.</small>
                         </li>
                         <li>
-                            <span class="ld-status-dot ld-warn"></span>
-                            Produtos cadastrados
-                            <small>Se ainda não cadastrou produtos, comece por “Gerenciar Produtos”.</small>
+                            <span><span class="ld-status-dot ld-ok"></span> Entregas integradas ao fluxo</span>
+                            <small>@Model.EntregasEmAndamento entrega(s) em andamento agora.</small>
                         </li>
                         <li>
-                            <span class="ld-status-dot ld-info"></span>
-                            Horário de funcionamento
-                            <small>Ajuste horários e mensagem personalizada em “Configurações da Loja”.</small>
+                            <span><span class="ld-status-dot @(Model.ProdutosAtivos > 0 ? "ld-info" : "ld-warn")"></span> Catálogo ativo</span>
+                            <small>@Model.ProdutosAtivos produto(s) ativo(s) disponíveis no momento.</small>
                         </li>
                     </ul>
 
                     <div class="ld-tip">
                         <i class="fa-solid fa-lightbulb me-2"></i>
-                        <span>Dica: mantenha estoque, horários e pagamentos sempre atualizados para evitar perda de vendas.</span>
+                        <span>Com o dashboard pronto, o próximo passo natural fica sendo evoluir a tela de pedidos com filtros rápidos por telefone, número, status, data e entregador.</span>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-7">
+            <div class="ld-card h-100">
+                <div class="ld-card-header">
+                    <h2 class="ld-card-title">
+                        <i class="fa-solid fa-clock-rotate-left me-2"></i>
+                        Últimas movimentações
+                    </h2>
+                    <p class="ld-card-subtitle">Leitura rápida das mudanças mais recentes no fluxo dos pedidos.</p>
+                </div>
+                <div class="ld-card-body">
+                    @if (Model.UltimasMovimentacoes.Any())
+                    {
+                        <div class="ld-timeline-list">
+                            @foreach (var item in Model.UltimasMovimentacoes)
+                            {
+                                <div class="ld-timeline-item">
+                                    <div class="ld-timeline-dot"></div>
+                                    <div class="ld-timeline-content">
+                                        <div class="ld-timeline-top">
+                                            <strong>@item.Titulo</strong>
+                                            <span>@item.Data.ToString("dd/MM/yyyy HH:mm")</span>
+                                        </div>
+                                        <div class="ld-timeline-text">@item.Descricao</div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="ld-empty">Ainda não há movimentações registradas no histórico para mostrar aqui.</div>
+                    }
                 </div>
             </div>
         </div>

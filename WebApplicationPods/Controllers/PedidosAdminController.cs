@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using WebApplicationPods.Constants;
 using WebApplicationPods.Data;
 using WebApplicationPods.DTO;
 using WebApplicationPods.Helper;
@@ -112,28 +113,88 @@ namespace WebApplicationPods.Controllers
                 .ToList();
         }
 
-        [HttpGet]
-        public IActionResult Index(string? filtro = "abertos")
+        private static string NormalizarFiltro(string? filtro)
         {
-            var lista = string.Equals(filtro, "dia", StringComparison.OrdinalIgnoreCase)
-                ? _pedidos.ObterDoDia()
-                : _pedidos.ObterAbertos();
+            if (string.IsNullOrWhiteSpace(filtro))
+                return "abertos";
 
-            ViewBag.Filtro = filtro;
+            var normalizado = filtro.Trim().ToLowerInvariant();
+            return normalizado switch
+            {
+                "dia" => "dia",
+                "todos" => "todos",
+                _ => "abertos"
+            };
+        }
+
+        private static List<SelectListItem> ObterStatusOptions()
+        {
+            var statuses = new[]
+            {
+                PedidoStatus.Pendente,
+                PedidoStatus.AguardandoPagamento,
+                PedidoStatus.AguardandoPagamentoEntrega,
+                PedidoStatus.AguardandoConfirmacaoDinheiro,
+                PedidoStatus.Pago,
+                PedidoStatus.EmPreparacao,
+                PedidoStatus.Pronto,
+                PedidoEntregaStatus.AguardandoAtribuicao,
+                PedidoEntregaStatus.Atribuido,
+                PedidoStatus.SaiuParaEntrega,
+                PedidoEntregaStatus.SaiuParaEntrega,
+                PedidoEntregaStatus.Entregue,
+                PedidoStatus.Concluido,
+                PedidoStatus.Cancelado,
+                PedidoStatus.PagamentoFalhou
+            };
+
+            return statuses
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(x => new SelectListItem { Value = x, Text = x })
+                .ToList();
+        }
+
+        private async Task<PedidosAdminIndexViewModel> MontarIndexVmAsync(AdminOrdersFilterDTO filtros)
+        {
+            filtros ??= new AdminOrdersFilterDTO();
+            filtros.Filtro = NormalizarFiltro(filtros.Filtro);
+
+            var pedidos = _pedidos.Buscar(filtros).ToList();
+
+            var vm = new PedidosAdminIndexViewModel
+            {
+                Pedidos = pedidos,
+                Filtros = filtros,
+                StatusOptions = ObterStatusOptions(),
+                Entregadores = await CarregarEntregadoresAsync(),
+                TotalEncontrado = pedidos.Count,
+                ModoTitulo = filtros.Filtro switch
+                {
+                    "dia" => "de hoje",
+                    "todos" => "gerais",
+                    _ => "abertos"
+                }
+            };
+
+            return vm;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Index([FromQuery] AdminOrdersFilterDTO filtros)
+        {
+            var vm = await MontarIndexVmAsync(filtros);
             ViewBag.Allowed = PedidoStatusRules.AllowedTransitions;
-
-            return View("~/Views/PedidosAdmin/Index.cshtml", lista);
+            return View("~/Views/PedidosAdmin/Index.cshtml", vm);
         }
 
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-        public IActionResult Table(string? filtro = "abertos")
+        public IActionResult Table([FromQuery] AdminOrdersFilterDTO filtros)
         {
-            var lista = string.Equals(filtro, "dia", StringComparison.OrdinalIgnoreCase)
-                ? _pedidos.ObterDoDia()
-                : _pedidos.ObterAbertos();
+            filtros ??= new AdminOrdersFilterDTO();
+            filtros.Filtro = NormalizarFiltro(filtros.Filtro);
 
-            ViewBag.Filtro = filtro;
+            var lista = _pedidos.Buscar(filtros);
             ViewBag.Allowed = PedidoStatusRules.AllowedTransitions;
 
             return PartialView("~/Views/PedidosAdmin/_PedidosTableBody.cshtml", lista);
