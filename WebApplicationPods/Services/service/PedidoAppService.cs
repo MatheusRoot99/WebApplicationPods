@@ -208,12 +208,25 @@ namespace WebApplicationPods.Services.service
             if (string.Equals(novoStatus, PedidoStatus.Pago, StringComparison.OrdinalIgnoreCase))
             {
                 await _whatsAppService.EnviarPagamentoAprovadoClienteAsync(pedido);
+                await _whatsAppService.EnviarPagamentoAprovadoLojistaAsync(pedido);
                 return;
             }
 
             if (string.Equals(novoStatus, PedidoStatus.PagamentoFalhou, StringComparison.OrdinalIgnoreCase))
             {
                 await _whatsAppService.EnviarPagamentoFalhouClienteAsync(pedido);
+                return;
+            }
+
+            if (string.Equals(novoStatus, PedidoStatus.EmPreparacao, StringComparison.OrdinalIgnoreCase))
+            {
+                await _whatsAppService.EnviarPedidoEmPreparacaoClienteAsync(pedido);
+                return;
+            }
+
+            if (string.Equals(novoStatus, PedidoStatus.Pronto, StringComparison.OrdinalIgnoreCase))
+            {
+                await _whatsAppService.EnviarPedidoProntoClienteAsync(pedido);
                 return;
             }
 

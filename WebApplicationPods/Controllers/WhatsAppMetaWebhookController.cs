@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using WebApplicationPods.Models;
 using WebApplicationPods.Options;
@@ -8,6 +11,11 @@ namespace WebApplicationPods.Controllers
     [ApiController]
     public class WhatsAppMetaWebhookController : ControllerBase
     {
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
         private readonly WhatsAppOptions _options;
         private readonly ILogger<WhatsAppMetaWebhookController> _logger;
 
@@ -47,11 +55,39 @@ namespace WebApplicationPods.Controllers
 
         [HttpPost("/webhooks/whatsapp/meta")]
         [IgnoreAntiforgeryToken]
-        public IActionResult Receive([FromBody] MetaWhatsAppWebhookPayload? payload)
+        public async Task<IActionResult> Receive()
         {
+            string rawBody;
+
+            using (var reader = new StreamReader(Request.Body, Encoding.UTF8))
+            {
+                rawBody = await reader.ReadToEndAsync();
+            }
+
+            if (string.IsNullOrWhiteSpace(rawBody))
+            {
+                _logger.LogWarning("Webhook Meta recebido com body vazio.");
+                return Ok();
+            }
+
+            if (!ValidarAssinatura(rawBody))
+                return Unauthorized();
+
+            MetaWhatsAppWebhookPayload? payload;
+
+            try
+            {
+                payload = JsonSerializer.Deserialize<MetaWhatsAppWebhookPayload>(rawBody, JsonOptions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Falha ao desserializar payload do webhook Meta.");
+                return Ok();
+            }
+
             if (payload == null)
             {
-                _logger.LogWarning("Webhook Meta recebido com payload nulo.");
+                _logger.LogWarning("Webhook Meta recebido com payload nulo após desserialização.");
                 return Ok();
             }
 
@@ -122,6 +158,46 @@ namespace WebApplicationPods.Controllers
             }
 
             return Ok();
+        }
+
+        private bool ValidarAssinatura(string rawBody)
+        {
+            var appSecret = _options.MetaAppSecret?.Trim();
+
+            if (string.IsNullOrWhiteSpace(appSecret))
+            {
+                _logger.LogWarning("Webhook Meta recebido sem MetaAppSecret configurado. Assinatura não será validada.");
+                return true;
+            }
+
+            if (!Request.Headers.TryGetValue("X-Hub-Signature-256", out var signatureHeaderValues))
+            {
+                _logger.LogWarning("Webhook Meta recebido sem header X-Hub-Signature-256.");
+                return false;
+            }
+
+            var signatureHeader = signatureHeaderValues.ToString()?.Trim();
+            if (string.IsNullOrWhiteSpace(signatureHeader) ||
+                !signatureHeader.StartsWith("sha256=", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning("Header X-Hub-Signature-256 inválido.");
+                return false;
+            }
+
+            var receivedHex = signatureHeader["sha256=".Length..].Trim();
+
+            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(appSecret));
+            var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(rawBody));
+            var computedHex = Convert.ToHexString(computedHash).ToLowerInvariant();
+
+            var valid = CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(computedHex),
+                Encoding.UTF8.GetBytes(receivedHex.ToLowerInvariant()));
+
+            if (!valid)
+                _logger.LogWarning("Assinatura do webhook Meta inválida.");
+
+            return valid;
         }
     }
 }

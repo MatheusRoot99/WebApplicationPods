@@ -8,7 +8,11 @@ namespace WebApplicationPods.Services.Interface
         Task EnviarNovoPedidoLojistaAsync(PedidoModel pedido);
 
         Task EnviarPagamentoAprovadoClienteAsync(PedidoModel pedido);
+        Task EnviarPagamentoAprovadoLojistaAsync(PedidoModel pedido);
         Task EnviarPagamentoFalhouClienteAsync(PedidoModel pedido);
+
+        Task EnviarPedidoEmPreparacaoClienteAsync(PedidoModel pedido);
+        Task EnviarPedidoProntoClienteAsync(PedidoModel pedido);
         Task EnviarPedidoCanceladoClienteAsync(PedidoModel pedido);
 
         Task EnviarSaiuParaEntregaClienteAsync(PedidoModel pedido);

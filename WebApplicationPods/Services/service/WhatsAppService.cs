@@ -82,6 +82,21 @@ Acompanhe aqui:
             await EnviarParaClienteAsync(pedido, "pagamento-aprovado-cliente", mensagem);
         }
 
+        public async Task EnviarPagamentoAprovadoLojistaAsync(PedidoModel pedido)
+        {
+            var cliente = pedido.Cliente?.Nome ?? $"Cliente #{pedido.ClienteId}";
+            var total = pedido.ValorTotal.ToString("C", PtBr);
+
+            var mensagem =
+$@"*Pagamento aprovado* 💳
+
+O pagamento do pedido *#{pedido.Id}* foi confirmado.
+Cliente: {cliente}
+Total: *{total}*.";
+
+            await EnviarParaLojistaAsync(pedido.LojaId, pedido.Id, "pagamento-aprovado-lojista", mensagem);
+        }
+
         public async Task EnviarPagamentoFalhouClienteAsync(PedidoModel pedido)
         {
             var link = await MontarLinkAcompanhamentoAsync(pedido);
@@ -95,6 +110,42 @@ Confira o pedido aqui:
 {link}";
 
             await EnviarParaClienteAsync(pedido, "pagamento-falhou-cliente", mensagem);
+        }
+
+        public async Task EnviarPedidoEmPreparacaoClienteAsync(PedidoModel pedido)
+        {
+            var link = await MontarLinkAcompanhamentoAsync(pedido);
+
+            var mensagem =
+$@"*Pedido em preparação* 👨‍🍳
+
+O pedido *#{pedido.Id}* já está sendo preparado pela loja.
+
+Acompanhe aqui:
+{link}";
+
+            await EnviarParaClienteAsync(pedido, "pedido-em-preparacao-cliente", mensagem);
+        }
+
+        public async Task EnviarPedidoProntoClienteAsync(PedidoModel pedido)
+        {
+            var link = await MontarLinkAcompanhamentoAsync(pedido);
+
+            var mensagem = pedido.RetiradaNoLocal
+                ? $@"*Pedido pronto para retirada* ✅
+
+O pedido *#{pedido.Id}* já está pronto para retirada na loja.
+
+Confira os detalhes aqui:
+{link}"
+                : $@"*Pedido pronto* ✅
+
+O pedido *#{pedido.Id}* já está pronto e aguardando a próxima etapa da entrega.
+
+Acompanhe aqui:
+{link}";
+
+            await EnviarParaClienteAsync(pedido, "pedido-pronto-cliente", mensagem);
         }
 
         public async Task EnviarPedidoCanceladoClienteAsync(PedidoModel pedido)

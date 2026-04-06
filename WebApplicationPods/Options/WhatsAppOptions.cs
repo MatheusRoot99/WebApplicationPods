@@ -14,5 +14,9 @@
         public string? MetaPhoneNumberId { get; set; }
         public string? MetaAccessToken { get; set; }
         public string? MetaWebhookVerifyToken { get; set; }
+
+        // App Secret do aplicativo Meta.
+        // Quando preenchido, o webhook POST pode validar a assinatura X-Hub-Signature-256.
+        public string? MetaAppSecret { get; set; }
     }
 }
