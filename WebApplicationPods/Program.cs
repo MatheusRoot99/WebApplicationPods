@@ -22,8 +22,15 @@ using WebApplicationPods.Services.service;
 var builder = WebApplication.CreateBuilder(args);
 
 // ==================== MODO LOCALHOST ====================
-var LOCALHOST_ONLY = true;
+var LOCALHOST_ONLY =
+    builder.Configuration.GetValue<bool?>("DevelopmentSettings:LocalhostOnly")
+    ?? builder.Configuration.GetValue<bool?>("AppSettings:LocalhostOnly")
+    ?? builder.Environment.IsDevelopment();
 
+var USE_HTTPS_REDIRECTION =
+    builder.Configuration.GetValue<bool?>("DevelopmentSettings:UseHttpsRedirection")
+    ?? builder.Configuration.GetValue<bool?>("AppSettings:UseHttpsRedirection")
+    ?? true;
 // ==================== Cultura global pt-BR ====================
 var ptBR = new CultureInfo("pt-BR");
 ptBR.NumberFormat.NumberDecimalSeparator = ",";
@@ -258,7 +265,10 @@ else
 }
 
 // para localhost também pode usar HTTPS se estiver configurado
-app.UseHttpsRedirection();
+if (USE_HTTPS_REDIRECTION)
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseStaticFiles();
 app.UseRouting();
