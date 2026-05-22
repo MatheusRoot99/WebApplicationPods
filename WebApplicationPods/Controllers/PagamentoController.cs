@@ -11,6 +11,8 @@ using WebApplicationPods.Payments;
 using WebApplicationPods.Payments.Options;
 using WebApplicationPods.Repository.Interface;
 using WebApplicationPods.Services.Interface;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace WebApplicationPods.Controllers
 {
@@ -52,6 +54,91 @@ namespace WebApplicationPods.Controllers
         }
 
         // ========= Helpers internos =========
+
+        private bool ValidarAssinaturaMercadoPago(HttpRequest request)
+        {
+            var secret = _cfg["Payments:MercadoPago:WebhookSecret"];
+
+            if (string.IsNullOrWhiteSpace(secret))
+                return false;
+
+            var xSignature = request.Headers["x-signature"].FirstOrDefault();
+            var xRequestId = request.Headers["x-request-id"].FirstOrDefault();
+
+            if (string.IsNullOrWhiteSpace(xSignature) || string.IsNullOrWhiteSpace(xRequestId))
+                return false;
+
+            var partes = xSignature.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+            string? ts = null;
+            string? v1 = null;
+
+            foreach (var parte in partes)
+            {
+                var keyValue = parte.Split('=', 2, StringSplitOptions.TrimEntries);
+
+                if (keyValue.Length != 2)
+                    continue;
+
+                if (string.Equals(keyValue[0], "ts", StringComparison.OrdinalIgnoreCase))
+                    ts = keyValue[1];
+
+                if (string.Equals(keyValue[0], "v1", StringComparison.OrdinalIgnoreCase))
+                    v1 = keyValue[1];
+            }
+
+            if (string.IsNullOrWhiteSpace(ts) || string.IsNullOrWhiteSpace(v1))
+                return false;
+
+            if (!TimestampMercadoPagoEstaDentroDaTolerancia(ts))
+                return false;
+
+            var dataId = request.Query["data.id"].FirstOrDefault();
+
+            if (string.IsNullOrWhiteSpace(dataId))
+                dataId = request.Query["id"].FirstOrDefault();
+
+            if (string.IsNullOrWhiteSpace(dataId))
+                return false;
+
+            var manifest = $"id:{dataId};request-id:{xRequestId};ts:{ts};";
+
+            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+            var hashBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(manifest));
+            var hash = Convert.ToHexString(hashBytes).ToLowerInvariant();
+
+            return ComparacaoSegura(hash, v1);
+        }
+
+        private static bool TimestampMercadoPagoEstaDentroDaTolerancia(string ts)
+        {
+            if (!long.TryParse(ts, out var timestamp))
+                return false;
+
+            DateTimeOffset enviadoEm;
+
+            try
+            {
+                enviadoEm = DateTimeOffset.FromUnixTimeMilliseconds(timestamp);
+            }
+            catch
+            {
+                return false;
+            }
+
+            var agora = DateTimeOffset.UtcNow;
+            var diferenca = agora - enviadoEm;
+
+            return diferenca.Duration() <= TimeSpan.FromMinutes(10);
+        }
+
+        private static bool ComparacaoSegura(string valorCalculado, string valorRecebido)
+        {
+            var a = Encoding.UTF8.GetBytes(valorCalculado);
+            var b = Encoding.UTF8.GetBytes(valorRecebido);
+
+            return a.Length == b.Length && CryptographicOperations.FixedTimeEquals(a, b);
+        }
 
         private static PaymentMethod MapMetodo(string metodo)
         {
@@ -101,10 +188,18 @@ namespace WebApplicationPods.Controllers
         [HttpGet]
         [AllowAnonymous]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-        public async Task<IActionResult> Checkout(int pedidoId)
+        public async Task<IActionResult> Checkout(int pedidoId, string? t = null)
         {
             var pedido = _pedidos.ObterPorId(pedidoId);
             if (pedido == null) return NotFound();
+
+            if (!PodeAcessarPedido(pedido, t))
+            {
+                TempData["Erro"] = "Não foi possível identificar seu pedido.";
+                return RedirectToAction("Buscar", "Pedido");
+            }
+
+            ViewBag.OrderToken = pedido.RastreioToken;
 
             var metodo = MapMetodo(pedido.MetodoPagamento);
 
@@ -169,18 +264,25 @@ namespace WebApplicationPods.Controllers
         [HttpGet]
         [AllowAnonymous]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-        public async Task<IActionResult> Status(int id)
+        public async Task<IActionResult> Status(int id, string? t = null)
         {
             var p = await _db.Pagamentos
                 .Include(x => x.Pedido)
                 .FirstOrDefaultAsync(x => x.Id == id);
-            if (p == null) return NotFound();
+
+            if (p == null)
+                return NotFound();
+
+            if (!PodeAcessarPedido(p.Pedido, t))
+                return Unauthorized(new { paid = false, status = "Unauthorized" });
 
             bool IsTerminal(PaymentStatus s) =>
-                s == PaymentStatus.Paid || s == PaymentStatus.Failed || s == PaymentStatus.Canceled;
+                s == PaymentStatus.Paid ||
+                s == PaymentStatus.Failed ||
+                s == PaymentStatus.Canceled;
 
-            // Timeout de PIX
             var timeoutMinutes = 15;
+
             if (int.TryParse(_cfg["Payments:Pix:TimeoutMinutes"], out var cfgMin) && cfgMin > 0)
                 timeoutMinutes = cfgMin;
 
@@ -196,7 +298,9 @@ namespace WebApplicationPods.Controllers
                 {
                     p.Status = PaymentStatus.Canceled;
                     p.CanceledAt = now;
+
                     await _db.SaveChangesAsync();
+
                     await _pedidoAppService.AtualizarStatusAsync(
                         p.PedidoId,
                         "Cancelado",
@@ -218,7 +322,6 @@ namespace WebApplicationPods.Controllers
 
                 await EnsureBaixaEstoqueAsync(p.PedidoId);
 
-                // <<< limpa carrinho desta sessão (uma única vez)
                 ClearCartOnceForThisSession(p.PedidoId);
             }
 
@@ -230,7 +333,9 @@ namespace WebApplicationPods.Controllers
                 brand = p.CardBrand,
                 paidAt = p.PaidAt,
                 pedidoId = p.PedidoId,
-                redirect = isPaid ? Url.Action("Confirmacao", "Carrinho", new { id = p.PedidoId }) : null,
+                redirect = isPaid
+                    ? Url.Action("Confirmacao", "Carrinho", new { id = p.PedidoId, t = p.Pedido?.RastreioToken })
+                    : null,
                 expiresAt = expiresAtUtc?.ToString("o"),
                 remainingSeconds
             });
@@ -256,28 +361,41 @@ namespace WebApplicationPods.Controllers
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ConfirmCard(int id, [FromBody] object clientPayload)
+        public async Task<IActionResult> ConfirmCard(int id, string? t, [FromBody] object clientPayload)
         {
-            var ok = await _payments.ConfirmCardAsync(id, clientPayload?.ToString());
+            var pagamentoAntes = await _db.Pagamentos
+                .Include(x => x.Pedido)
+                .FirstOrDefaultAsync(x => x.Id == id);
 
-            // pegar pagamento atualizado + pedido
+            if (pagamentoAntes == null)
+                return NotFound(new { success = false, message = "Pagamento não encontrado." });
+
+            if (!PodeAcessarPedido(pagamentoAntes.Pedido, t))
+                return Unauthorized(new { success = false, message = "Pedido não autorizado." });
+
+            var ok = await _payments.ConfirmCardAsync(id, clientPayload?.ToString() ?? string.Empty);
+
             var p = await _db.Pagamentos
-                .Include(x => x.Pedido).ThenInclude(pd => pd.Cliente)
+                .Include(x => x.Pedido)
+                .ThenInclude(pd => pd.Cliente)
                 .FirstOrDefaultAsync(x => x.Id == id);
 
             string? redirect = null;
 
             if (ok && p != null)
             {
-                // marca pedido como pago (idempotente)
                 await MarcarPedidoComoPago(p.PedidoId);
                 await EnsureBaixaEstoqueAsync(p.PedidoId);
                 ClearCartOnceForThisSession(p.PedidoId);
 
-                // 🔔 notifica lojistas agora
-                if (p.Pedido != null) await NotifyPaidAsync(p.Pedido);
+                if (p.Pedido != null)
+                    await NotifyPaidAsync(p.Pedido);
 
-                redirect = Url.Action("Confirmacao", "Carrinho", new { id = p.PedidoId });
+                redirect = Url.Action("Confirmacao", "Carrinho", new
+                {
+                    id = p.PedidoId,
+                    t = p.Pedido?.RastreioToken
+                });
             }
 
             return Ok(new { success = ok, redirect });
@@ -287,16 +405,30 @@ namespace WebApplicationPods.Controllers
         /// <summary>Webhook do provedor (MP). Atualiza o pagamento no banco. Limpeza do carrinho acontece via Status/ConfirmCard/Confirmacao.</summary>
         [HttpPost]
         [AllowAnonymous]
+        [IgnoreAntiforgeryToken]
         public async Task<IActionResult> Webhook()
         {
+            if (!ValidarAssinaturaMercadoPago(Request))
+            {
+                return Unauthorized(new
+                {
+                    ok = false,
+                    message = "Assinatura do Mercado Pago inválida."
+                });
+            }
+
             await _payments.ApplyWebhookAsync(Request);
-            return Ok();
+
+            return Ok(new
+            {
+                ok = true
+            });
         }
 
         /// <summary>Cancelar pagamento enquanto não pago.</summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Cancelar(int id)
+        public async Task<IActionResult> Cancelar(int id, string? t = null)
         {
             var p = await _db.Pagamentos
                 .Include(x => x.Pedido)
@@ -305,6 +437,9 @@ namespace WebApplicationPods.Controllers
             if (p == null)
                 return Json(new { ok = false, message = "Pagamento não encontrado." });
 
+            if (!PodeAcessarPedido(p.Pedido, t))
+                return Unauthorized(new { ok = false, message = "Pedido não autorizado." });
+
             if (p.Status == PaymentStatus.Paid)
                 return Json(new { ok = false, message = "Pagamento já aprovado; não é possível cancelar." });
 
@@ -312,6 +447,7 @@ namespace WebApplicationPods.Controllers
             {
                 p.Status = PaymentStatus.Canceled;
                 p.CanceledAt = DateTime.UtcNow;
+
                 await _db.SaveChangesAsync();
 
                 await _pedidoAppService.AtualizarStatusAsync(
@@ -321,7 +457,11 @@ namespace WebApplicationPods.Controllers
                     origem: "PagamentoController.Cancelar");
             }
 
-            return Json(new { ok = true, redirect = Url.Action("Index", "Carrinho") });
+            return Json(new
+            {
+                ok = true,
+                redirect = Url.Action("Index", "Carrinho")
+            });
         }
 
         /// <summary>Aprovação manual do lojista (Dinheiro/Débito na entrega).</summary>
@@ -398,6 +538,22 @@ namespace WebApplicationPods.Controllers
 
             TempData["Sucesso"] = "PIX confirmado e estoque atualizado.";
             return RedirectToAction("DetalhesPedido", "Admin", new { id = p.PedidoId });
+        }
+
+        private bool PodeAcessarPedido(PedidoModel? pedido, string? token)
+        {
+            if (pedido == null)
+                return false;
+
+            if (User?.Identity?.IsAuthenticated == true)
+            {
+                if (User.IsInRole("Admin") || User.IsInRole("Lojista"))
+                    return true;
+            }
+
+            return !string.IsNullOrWhiteSpace(token) &&
+                   !string.IsNullOrWhiteSpace(pedido.RastreioToken) &&
+                   string.Equals(pedido.RastreioToken, token, StringComparison.OrdinalIgnoreCase);
         }
 
     }

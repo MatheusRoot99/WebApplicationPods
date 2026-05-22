@@ -287,10 +287,9 @@ namespace WebApplicationPods.Controllers
 
             return RedirectToAction(nameof(Resumo));
         }
-
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-        public IActionResult Confirmacao(int id)
+        public IActionResult Confirmacao(int id, string? t = null)
         {
             var guard = EnsureLojaOrRedirect();
             if (guard != null) return guard;
@@ -302,10 +301,17 @@ namespace WebApplicationPods.Controllers
                 return RedirectToAction("Index");
             }
 
+            if (!PodeAcessarPedido(pedido, t))
+            {
+                TempData["Erro"] = "Não foi possível identificar seu pedido.";
+                return RedirectToAction("Buscar", "Pedido");
+            }
+
             if (string.Equals(pedido.Status, "Pago", StringComparison.OrdinalIgnoreCase))
             {
                 var flagKey = $"CartClearedForOrder_{id}";
                 var already = HttpContext.Session.GetString(flagKey);
+
                 if (!string.Equals(already, "1", StringComparison.Ordinal))
                 {
                     _carrinhoRepository.LimparCarrinho();
@@ -314,7 +320,31 @@ namespace WebApplicationPods.Controllers
             }
 
             ViewBag.PedidoId = pedido.Id;
+            ViewBag.RastreioToken = pedido.RastreioToken;
+
             return View(pedido);
+        }
+
+        private bool PodeAcessarPedido(PedidoModel pedido, string? token)
+        {
+            if (User?.Identity?.IsAuthenticated == true)
+            {
+                if (User.IsInRole("Admin") || User.IsInRole("Lojista"))
+                    return true;
+            }
+
+            var telefoneSessao = HttpContext.Session.GetString("ClienteTelefone");
+
+            if (!string.IsNullOrWhiteSpace(telefoneSessao) &&
+                pedido.Cliente != null &&
+                string.Equals(pedido.Cliente.Telefone, telefoneSessao, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return !string.IsNullOrWhiteSpace(token) &&
+                   !string.IsNullOrWhiteSpace(pedido.RastreioToken) &&
+                   string.Equals(pedido.RastreioToken, token, StringComparison.OrdinalIgnoreCase);
         }
 
         [HttpPost]
@@ -679,7 +709,7 @@ namespace WebApplicationPods.Controllers
                 HttpContext.Session.Remove("ClienteConfirmado");
 
                 TempData["Sucesso"] = "Pedido realizado com sucesso! Pagamento na entrega.";
-                return RedirectToAction("Confirmacao", new { id = pedido.Id });
+                return RedirectToAction("Confirmacao", new { id = pedido.Id, t = pedido.RastreioToken });
             }
 
             pedido.Status = "Pendente";
@@ -688,7 +718,7 @@ namespace WebApplicationPods.Controllers
             SetLastOrderCookie(pedido.RastreioToken);
             HttpContext.Session.Remove("ClienteConfirmado");
 
-            return RedirectToAction("Checkout", "Pagamento", new { pedidoId = pedido.Id });
+            return RedirectToAction("Checkout", "Pagamento", new { pedidoId = pedido.Id, t = pedido.RastreioToken });
         }
 
         [HttpPost]

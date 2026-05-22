@@ -4,13 +4,12 @@
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Pagamento";
-    var isPaid = Model.Status == PaymentStatus.Paid;
-    // Gera token anti-CSRF e grava cookie; usamos o valor no header do fetch.
-    var afToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
 
-    // URL de acompanhamento: tenta Pedidos/Acompanhar; fallback p/ Carrinho/Confirmacao
-    var trackUrl = Url.Action("Acompanhar", "Pedidos", new { id = Model.PedidoId })
-                  ?? Url.Action("Confirmacao", "Carrinho", new { id = Model.PedidoId });
+    var isPaid = Model.Status == PaymentStatus.Paid;
+    var afToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+    var orderToken = ViewBag.OrderToken as string ?? Model.Pedido?.RastreioToken;
+
+    var trackUrl = Url.Action("Acompanhar", "Pedido", new { id = Model.PedidoId, t = orderToken });
 }
 
 @section Styles {
@@ -219,7 +218,7 @@
                     <div class="mt-3">
                         <a id="btn-acompanhar-pedido"
                            class="btn btn-outline-primary w-100 @(isPaid ? "" : "d-none")"
-                           href="@Url.Action("Acompanhar", "Pedido", new { id = Model.PedidoId })">
+                           href="@Url.Action("Acompanhar", "Pedido", new { id = Model.PedidoId, t = orderToken })">
                             Acompanhar pedido
                         </a>
                     </div>
@@ -245,9 +244,9 @@
           mpPublicKey: '@(ViewBag.MP_PublicKey ?? "")',
           antiForgery: '@afToken',
           // URLs auxiliares
-          confirmCardUrl: '@Url.Action("ConfirmCard", "Pagamento", new { id = Model.Id })',
-          cancelUrl: '@Url.Action("Cancelar", "Pagamento", new { id = Model.Id })',
-          cartUrl: '@Url.Action("Index", "Carrinho")',
+          statusUrl: '@Url.Action("Status", "Pagamento", new { id = Model.Id, t = orderToken })',
+          confirmCardUrl: '@Url.Action("ConfirmCard", "Pagamento", new { id = Model.Id, t = orderToken })',
+          cancelUrl: '@Url.Action("Cancelar", "Pagamento", new { id = Model.Id, t = orderToken })',
           // opcional: string do amount (para o Brick)
           amountStr: '@Model.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture)'
         };
