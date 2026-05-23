@@ -27,6 +27,7 @@ namespace WebApplicationPods.Controllers
         private readonly IHubContext<PedidosHub> _hub;
         private readonly ICurrentLojaService _currentLoja;
         private readonly IWebHostEnvironment _env;
+        private readonly IConfiguration _configuration;
 
         public CarrinhoController(
             ICarrinhoRepository carrinhoRepository,
@@ -38,7 +39,8 @@ namespace WebApplicationPods.Controllers
             ILojaConfigRepository lojaRepo,
             IHubContext<PedidosHub> hub,
             ICurrentLojaService currentLoja,
-            IWebHostEnvironment env)
+            IWebHostEnvironment env,
+            IConfiguration configuration)
         {
             _carrinhoRepository = carrinhoRepository;
             _produtoRepository = produtoRepository;
@@ -50,13 +52,18 @@ namespace WebApplicationPods.Controllers
             _hub = hub;
             _currentLoja = currentLoja;
             _env = env;
+            _configuration = configuration;
         }
 
         private bool IsAjax()
             => string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
 
         private bool IgnorarLojaNoAmbienteAtual()
-            => _env.IsDevelopment();
+        {
+            return _configuration.GetValue<bool?>("DevelopmentSettings:LocalhostOnly")
+                ?? _configuration.GetValue<bool?>("AppSettings:LocalhostOnly")
+                ?? _env.IsDevelopment();
+        }
 
         private IActionResult? EnsureLojaOrRedirect()
         {
@@ -83,13 +90,13 @@ namespace WebApplicationPods.Controllers
 
         private int GetLojaIdOrFail()
         {
+            if (_currentLoja?.LojaId is int lojaId && lojaId > 0)
+                return lojaId;
+
             if (IgnorarLojaNoAmbienteAtual())
                 return 0;
 
-            if (_currentLoja?.LojaId is not int lojaId || lojaId <= 0)
-                throw new InvalidOperationException("Loja atual não definida. Verifique o middleware multi-loja.");
-
-            return lojaId;
+            throw new InvalidOperationException("Loja atual não definida. Acesse pelo subdomínio da loja.");
         }
 
         private void SetLastOrderCookie(string? token)
@@ -656,7 +663,17 @@ namespace WebApplicationPods.Controllers
                 }
             }
 
-            var lojaId = TryGetLojaId() ?? 0;
+            int lojaId;
+
+            try
+            {
+                lojaId = GetLojaIdOrFail();
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["Erro"] = ex.Message;
+                return RedirectToAction("Index", "Home");
+            }
 
             var pedido = new PedidoModel
             {

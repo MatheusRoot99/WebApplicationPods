@@ -4,6 +4,9 @@
     {
         string GetRootHostWithPort();
         string GetScheme();
+
         string BuildPublicStoreUrl(string subdominio);
+        string BuildPainelUrl();
+        string BuildAdminUrl();
     }
 }

@@ -16,15 +16,14 @@ namespace WebApplicationPods.Middlewares
         public async Task Invoke(HttpContext ctx)
         {
             var path = (ctx.Request.Path.Value ?? "").ToLowerInvariant();
-            var host = (ctx.Request.Host.Host ?? "").ToLowerInvariant();
+            var host = (ctx.Request.Host.Host ?? "").Trim().ToLowerInvariant();
 
-            // ✅ 1) BYPASS para estáticos e rotas técnicas
-            // (isso impede redirecionar /css/*.css, /js/*.js, imagens, etc.)
             if (Path.HasExtension(path) ||
                 path.StartsWith("/css") ||
                 path.StartsWith("/js") ||
                 path.StartsWith("/lib") ||
                 path.StartsWith("/images") ||
+                path.StartsWith("/imagens") ||
                 path.StartsWith("/uploads") ||
                 path.StartsWith("/favicon") ||
                 path.StartsWith("/hubs") ||
@@ -41,7 +40,6 @@ namespace WebApplicationPods.Middlewares
                 return;
             }
 
-            // ✅ 2) Só trata ENTRADA ("/")
             var isRoot = path == "/" || path == "";
             if (!isRoot)
             {
@@ -49,14 +47,11 @@ namespace WebApplicationPods.Middlewares
                 return;
             }
 
-            // ✅ 3) Redireciona localhost APENAS na raiz (/)
-            // (não mexe em /css, /js, etc porque já bypassou acima)
             if (host == "localhost" || host == "127.0.0.1")
             {
                 var port = ctx.Request.Host.Port;
                 var scheme = ctx.Request.Scheme;
                 var newHost = "admin.lvh.me";
-
                 var newPath = "/Conta/Login";
                 var queryString = ctx.Request.QueryString.HasValue ? ctx.Request.QueryString.Value : "";
 
@@ -68,21 +63,11 @@ namespace WebApplicationPods.Middlewares
                 return;
             }
 
-            // loja-*.lvh.me => catálogo
-            if (host.StartsWith("loja-") || host.StartsWith("loja."))
-            {
-                ctx.Response.Redirect("/Home/Index");
-                return;
-            }
-
-            // admin.* e painel.* => Login ou Dashboard
-            if (host.StartsWith("admin.") || host.StartsWith("painel."))
+            if (host.StartsWith("admin."))
             {
                 if (ctx.User?.Identity?.IsAuthenticated == true)
                 {
-                    ctx.Response.Redirect(host.StartsWith("admin.")
-                        ? "/Admin/Dashboard"
-                        : "/PainelLojista/Dashboard");
+                    ctx.Response.Redirect("/Admin/Dashboard");
                     return;
                 }
 
@@ -90,8 +75,49 @@ namespace WebApplicationPods.Middlewares
                 return;
             }
 
-            // qualquer outro host => Login
-            ctx.Response.Redirect("/Conta/Login");
+            if (host.StartsWith("painel."))
+            {
+                if (ctx.User?.Identity?.IsAuthenticated == true)
+                {
+                    ctx.Response.Redirect("/PainelLojista/Dashboard");
+                    return;
+                }
+
+                ctx.Response.Redirect("/Conta/Login");
+                return;
+            }
+
+            if (EhSubdominioDeLoja(host))
+            {
+                ctx.Response.Redirect("/Home/Index");
+                return;
+            }
+
+            await _next(ctx);
+        }
+
+        private static bool EhSubdominioDeLoja(string host)
+        {
+            if (string.IsNullOrWhiteSpace(host))
+                return false;
+
+            if (host is "localhost" or "127.0.0.1" or "::1")
+                return false;
+
+            var parts = host.Split('.', StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length < 3)
+                return false;
+
+            var sub = parts[0].Trim().ToLowerInvariant();
+
+            if (string.IsNullOrWhiteSpace(sub))
+                return false;
+
+            if (sub is "www" or "admin" or "painel" or "api")
+                return false;
+
+            return true;
         }
     }
 }

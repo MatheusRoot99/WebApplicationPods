@@ -4,6 +4,9 @@
 @{
     Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
     ViewData["Title"] = "Lojas";
+
+    var painelUrl = StoreUrlBuilder.BuildPainelUrl();
+    var adminUrl = StoreUrlBuilder.BuildAdminUrl();
 }
 
 <div class="admin-page-header">
@@ -11,12 +14,20 @@
     <p>Gerencie as lojas da plataforma</p>
 </div>
 
-<div class="mb-3">
+<div class="mb-3 d-flex gap-2 flex-wrap">
     <a asp-area="Admin"
        asp-controller="Lojas"
        asp-action="Create"
        class="btn btn-primary">
         <i class="fa fa-plus"></i> Nova loja
+    </a>
+
+    <a href="@painelUrl" target="_blank" rel="noopener" class="btn btn-outline-secondary">
+        Abrir painel
+    </a>
+
+    <a href="@adminUrl" target="_blank" rel="noopener" class="btn btn-outline-secondary">
+        Abrir admin
     </a>
 </div>
 
@@ -35,7 +46,7 @@
             <tr>
                 <th>Nome</th>
                 <th>Subdomínio</th>
-                <th>Link público</th>
+                <th>Link da loja</th>
                 <th>Plano</th>
                 <th>Dono / Lojista</th>
                 <th>Ativa</th>
@@ -50,11 +61,16 @@
 
                 <tr>
                     <td>@loja.Nome</td>
-                    <td>@loja.Subdominio</td>
                     <td>
-                        <a href="@publicUrl" target="_blank" rel="noopener">
-                            @publicUrl
-                        </a>
+                        <code>@loja.Subdominio</code>
+                    </td>
+                    <td>
+                        <div class="d-flex flex-column gap-1">
+                            <a href="@publicUrl" target="_blank" rel="noopener">
+                                @publicUrl
+                            </a>
+                            <small class="text-muted">Link que o cliente usa para comprar nessa loja.</small>
+                        </div>
                     </td>
                     <td>@(string.IsNullOrWhiteSpace(loja.Plano) ? "-" : loja.Plano)</td>
                     <td>
@@ -93,7 +109,7 @@
                               asp-route-id="@loja.Id"
                               method="post"
                               class="d-inline"
-                              onsubmit="return confirm('Confirma excluir esta loja? Esta ação não pode ser desfeita?');">
+                              onsubmit="return confirm('Confirma excluir esta loja? Esta ação não pode ser desfeita.');">
                             @Html.AntiForgeryToken()
                             <button type="submit" class="btn btn-sm btn-outline-danger">
                                 <i class="fa fa-trash"></i>

@@ -22,19 +22,22 @@ namespace WebApplicationPods.Controllers
         private readonly IWebHostEnvironment _hostEnvironment;
         private readonly BancoContext _context;
         private readonly ICurrentLojaService _currentLoja;
+        private readonly IConfiguration _configuration;
 
         public ProdutoController(
             IProdutoRepository produtoRepository,
             ICategoriaRepository categoriaRepository,
             IWebHostEnvironment hostEnvironment,
             BancoContext context,
-            ICurrentLojaService currentLoja)
+            ICurrentLojaService currentLoja,
+            IConfiguration configuration)
         {
             _produtoRepository = produtoRepository;
             _categoriaRepository = categoriaRepository;
             _hostEnvironment = hostEnvironment;
             _context = context;
             _currentLoja = currentLoja;
+            _configuration = configuration;
         }
 
         private void FlashOk(string msg)
@@ -49,16 +52,59 @@ namespace WebApplicationPods.Controllers
             TempData["FlashSource"] = "Produto";
         }
 
-        private const int LOJA_FIXA_ID = 9;
-
-        private int GetLojaIdOrFail()
+        private bool IgnorarLojaNoAmbienteAtual()
         {
-            return LOJA_FIXA_ID;
+            return _configuration.GetValue<bool?>("DevelopmentSettings:LocalhostOnly")
+                ?? _configuration.GetValue<bool?>("AppSettings:LocalhostOnly")
+                ?? _hostEnvironment.IsDevelopment();
+        }
+
+        private int? GetLojaIdDoUsuario()
+        {
+            var claimLojaId = User.FindFirst("LojaId")?.Value
+                           ?? User.FindFirst("lojaId")?.Value;
+
+            if (int.TryParse(claimLojaId, out var lojaId) && lojaId > 0)
+                return lojaId;
+
+            return null;
         }
 
         private int? GetLojaIdOrNull()
         {
-            return LOJA_FIXA_ID;
+            if (_currentLoja?.LojaId is int lojaAtual && lojaAtual > 0)
+                return lojaAtual;
+
+            var lojaUsuario = GetLojaIdDoUsuario();
+            if (lojaUsuario.HasValue)
+                return lojaUsuario.Value;
+
+            if (IgnorarLojaNoAmbienteAtual())
+                return null;
+
+            return null;
+        }
+
+        private int GetLojaIdOrFail()
+        {
+            if (_currentLoja?.LojaId is int lojaAtual && lojaAtual > 0)
+                return lojaAtual;
+
+            var lojaUsuario = GetLojaIdDoUsuario();
+            if (lojaUsuario.HasValue)
+                return lojaUsuario.Value;
+
+            if (IgnorarLojaNoAmbienteAtual())
+            {
+                var defaultLojaId =
+                    _configuration.GetValue<int?>("DevelopmentSettings:DefaultLojaId")
+                    ?? _configuration.GetValue<int?>("AppSettings:DefaultLojaId");
+
+                if (defaultLojaId.HasValue && defaultLojaId.Value > 0)
+                    return defaultLojaId.Value;
+            }
+
+            throw new InvalidOperationException("Loja atual não definida. Acesse pelo subdomínio da loja ou vincule o usuário a uma loja.");
         }
 
         private static bool IsPod(ProdutoTipo tipo) => tipo == ProdutoTipo.PodVape;

@@ -236,18 +236,14 @@
             referrerpolicy="no-referrer"></script>
 
     <script>
-        // Config repassada para o JS externo
         window.CHECKOUT_CONFIG = {
           paymentId: @Model.Id,
-          statusUrl: '@Url.Action("Status", "Pagamento")?id=@Model.Id',
           initialStatus: '@Model.Status',
           mpPublicKey: '@(ViewBag.MP_PublicKey ?? "")',
           antiForgery: '@afToken',
-          // URLs auxiliares
           statusUrl: '@Url.Action("Status", "Pagamento", new { id = Model.Id, t = orderToken })',
           confirmCardUrl: '@Url.Action("ConfirmCard", "Pagamento", new { id = Model.Id, t = orderToken })',
           cancelUrl: '@Url.Action("Cancelar", "Pagamento", new { id = Model.Id, t = orderToken })',
-          // opcional: string do amount (para o Brick)
           amountStr: '@Model.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture)'
         };
     </script>

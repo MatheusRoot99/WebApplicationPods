@@ -16,6 +16,7 @@ namespace WebApplicationPods.Repository.Repository
         private readonly BancoContext _context;
         private readonly IHttpContextAccessor _http;
         private readonly ICurrentLojaService _currentLoja;
+        private readonly IConfiguration _configuration;
 
         private static readonly string[] StatusVisiveisAbertos = new[]
         {
@@ -33,11 +34,12 @@ namespace WebApplicationPods.Repository.Repository
             PedidoEntregaStatus.SaiuParaEntrega
         };
 
-        public PedidoRepository(BancoContext context, IHttpContextAccessor http, ICurrentLojaService currentLoja)
+        public PedidoRepository(BancoContext context, IHttpContextAccessor http, ICurrentLojaService currentLoja, IConfiguration configuration)
         {
             _context = context;
             _http = http;
             _currentLoja = currentLoja;
+            _configuration = configuration;
         }
 
         // ===================== Helpers =====================
@@ -48,12 +50,43 @@ namespace WebApplicationPods.Repository.Repository
             return user?.Identity?.IsAuthenticated == true && user.IsInRole("Admin");
         }
 
+        private bool IsLocalhostOnly()
+        {
+            return _configuration.GetValue<bool?>("DevelopmentSettings:LocalhostOnly")
+                ?? _configuration.GetValue<bool?>("AppSettings:LocalhostOnly")
+                ?? false;
+        }
+
+        private int? LojaIdDoUsuario()
+        {
+            var user = _http.HttpContext?.User;
+
+            if (user?.Identity?.IsAuthenticated != true)
+                return null;
+
+            var lojaIdClaim = user.FindFirst("LojaId")?.Value
+                           ?? user.FindFirst("lojaId")?.Value;
+
+            if (int.TryParse(lojaIdClaim, out var lojaId) && lojaId > 0)
+                return lojaId;
+
+            return null;
+        }
+
         private int? LojaIdContext()
         {
-            // Multi-loja desativado por enquanto.
-            // Futuramente, pode voltar com:
-            // if (IsAdmin()) return null;
-            // if (_currentLoja?.LojaId is int lojaId && lojaId > 0) return lojaId;
+            if (IsLocalhostOnly())
+                return null;
+
+            if (IsAdmin())
+                return null;
+
+            if (_currentLoja?.LojaId is int lojaAtual && lojaAtual > 0)
+                return lojaAtual;
+
+            var lojaUsuario = LojaIdDoUsuario();
+            if (lojaUsuario.HasValue)
+                return lojaUsuario.Value;
 
             return null;
         }
