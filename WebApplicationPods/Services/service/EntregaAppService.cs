@@ -36,7 +36,10 @@ namespace WebApplicationPods.Services.service
 
             var entregador = await _context.Entregadores
                 .Include(x => x.Usuario)
-                .FirstOrDefaultAsync(x => x.Id == entregadorId && x.Ativo);
+                .FirstOrDefaultAsync(x =>
+                    x.Id == entregadorId &&
+                    x.Ativo &&
+                    x.LojaId == pedido.LojaId);
 
             if (entregador == null)
                 return false;
@@ -69,7 +72,6 @@ namespace WebApplicationPods.Services.service
                 pedido.Entrega.Observacao = $"Entregador atribuído: {entregador.Nome}";
             }
 
-            // compatibilidade temporária com o pedido
             pedido.EntregadorId = entregador.Id;
             pedido.DataAtribuicaoEntregador = DateTime.Now;
 
@@ -160,8 +162,6 @@ namespace WebApplicationPods.Services.service
             pedido.Entrega.Status = EntregaStatusConst.EmRota;
             pedido.Entrega.DataSaidaParaEntrega = DateTime.Now;
             pedido.Entrega.DataAtualizacao = DateTime.Now;
-
-            // compatibilidade temporária
             pedido.DataSaiuParaEntrega = DateTime.Now;
 
             await _context.SaveChangesAsync();
@@ -189,8 +189,6 @@ namespace WebApplicationPods.Services.service
             pedido.Entrega.Status = EntregaStatusConst.Entregue;
             pedido.Entrega.DataConclusao = DateTime.Now;
             pedido.Entrega.DataAtualizacao = DateTime.Now;
-
-            // compatibilidade temporária
             pedido.DataEntregue = DateTime.Now;
 
             await _context.SaveChangesAsync();
@@ -224,7 +222,6 @@ namespace WebApplicationPods.Services.service
             pedido.Entrega.DataAtualizacao = DateTime.Now;
             pedido.Entrega.Observacao = motivoFinal;
 
-            // devolve o pedido para o lojista reatribuir
             pedido.EntregadorId = null;
             pedido.DataAtribuicaoEntregador = null;
 
@@ -253,7 +250,8 @@ namespace WebApplicationPods.Services.service
         private static bool EntregaPertenceAoUsuario(PedidoModel pedido, int entregadorUserId)
         {
             return pedido.Entregador?.Usuario != null &&
-                   pedido.Entregador.Usuario.Id == entregadorUserId;
+                   pedido.Entregador.Usuario.Id == entregadorUserId &&
+                   pedido.Entregador.LojaId == pedido.LojaId;
         }
 
         private static bool StatusEh(string? atual, string esperado)

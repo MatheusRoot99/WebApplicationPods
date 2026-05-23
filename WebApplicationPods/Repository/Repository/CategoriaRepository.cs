@@ -17,13 +17,16 @@ namespace WebApplicationPods.Repository.Repository
         public IEnumerable<CategoriaModel> ObterTodos()
         {
             return _context.Categorias
+                .AsNoTracking()
                 .OrderBy(c => c.Nome)
                 .ToList();
         }
 
         public CategoriaModel ObterPorId(int id)
         {
-            return _context.Categorias.Find(id);
+            return _context.Categorias
+                .Include(c => c.Produtos)
+                .FirstOrDefault(c => c.Id == id)!;
         }
 
         public void Adicionar(CategoriaModel categoria)
@@ -37,24 +40,34 @@ namespace WebApplicationPods.Repository.Repository
 
         public void Atualizar(CategoriaModel categoria)
         {
+            if (categoria == null)
+                throw new ArgumentNullException(nameof(categoria));
+
             _context.Categorias.Update(categoria);
             _context.SaveChanges();
         }
 
         public void Remover(int id)
         {
-            var categoria = _context.Categorias.Find(id);
-            if (categoria != null)
-            {
-                _context.Categorias.Remove(categoria);
-                _context.SaveChanges();
-            }
+            var categoria = _context.Categorias
+                .Include(c => c.Produtos)
+                .FirstOrDefault(c => c.Id == id);
+
+            if (categoria == null)
+                return;
+
+            if (categoria.Produtos.Any())
+                throw new InvalidOperationException("Não é possível excluir categoria com produtos vinculados.");
+
+            _context.Categorias.Remove(categoria);
+            _context.SaveChanges();
         }
 
         public IEnumerable<CategoriaModel> ObterCategoriasAtivas()
         {
             return _context.Categorias
-                .Where(c => !c.Produtos.Any(p => !p.Ativo))
+                .AsNoTracking()
+                .Where(c => c.Produtos.Any(p => p.Ativo))
                 .OrderBy(c => c.Nome)
                 .ToList();
         }

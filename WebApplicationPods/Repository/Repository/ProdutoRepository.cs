@@ -1,24 +1,44 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using WebApplicationPods.Data;
-using WebApplicationPods.Enum;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
+using WebApplicationPods.Services.Interface;
 
 namespace WebApplicationPods.Repository.Repository
 {
     public class ProdutoRepository : IProdutoRepository
     {
         private readonly BancoContext _context;
+        private readonly ICurrentLojaService _currentLoja;
+        private readonly IHttpContextAccessor _http;
 
-        public ProdutoRepository(BancoContext context)
+        public ProdutoRepository(
+            BancoContext context,
+            ICurrentLojaService currentLoja,
+            IHttpContextAccessor http)
         {
             _context = context;
+            _currentLoja = currentLoja;
+            _http = http;
+        }
+
+        private IQueryable<ProdutoModel> BaseQuery()
+        {
+            var q = _context.Produtos.AsQueryable();
+
+            if (_http.HttpContext?.User?.IsInRole("Admin") == true)
+                return q;
+
+            if (_currentLoja?.LojaId is int lojaId && lojaId > 0)
+                q = q.Where(x => x.LojaId == lojaId);
+
+            return q;
         }
 
         public IEnumerable<ProdutoModel> ObterTodos()
         {
-            return _context.Produtos
+            return BaseQuery()
                 .Include(p => p.Categoria)
                 .Include(p => p.Variacoes)
                 .Where(p => p.Ativo)
@@ -28,29 +48,33 @@ namespace WebApplicationPods.Repository.Repository
 
         public ProdutoModel? ObterPorId(int id)
         {
-            var produto = _context.Produtos
+            var produto = BaseQuery()
                 .Include(p => p.Categoria)
                 .Include(p => p.Variacoes)
                 .FirstOrDefault(p => p.Id == id);
 
-            if (produto == null) return null;
+            if (produto == null)
+                return null;
 
             if (!string.IsNullOrEmpty(produto.SaboresQuantidades))
             {
                 try
                 {
                     produto.SaboresQuantidadesList =
-                        JsonConvert.DeserializeObject<List<ProdutoModel.SaborQuantidade>>(produto.SaboresQuantidades)
+                        JsonConvert.DeserializeObject<List<ProdutoModel.SaborQuantidade>>
+                        (produto.SaboresQuantidades)
                         ?? new List<ProdutoModel.SaborQuantidade>();
                 }
                 catch
                 {
-                    produto.SaboresQuantidadesList = new List<ProdutoModel.SaborQuantidade>();
+                    produto.SaboresQuantidadesList =
+                        new List<ProdutoModel.SaborQuantidade>();
                 }
             }
             else
             {
-                produto.SaboresQuantidadesList = new List<ProdutoModel.SaborQuantidade>();
+                produto.SaboresQuantidadesList =
+                    new List<ProdutoModel.SaborQuantidade>();
             }
 
             return produto;
@@ -58,50 +82,64 @@ namespace WebApplicationPods.Repository.Repository
 
         public void Adicionar(ProdutoModel produto)
         {
+            if (produto == null)
+                throw new ArgumentNullException(nameof(produto));
+
             _context.Produtos.Add(produto);
+
             _context.SaveChanges();
         }
 
         public void Atualizar(ProdutoModel produto)
         {
+            if (produto == null)
+                throw new ArgumentNullException(nameof(produto));
+
             _context.Produtos.Update(produto);
+
             _context.SaveChanges();
         }
 
         public void Remover(int id)
         {
-            var produto = _context.Produtos.Find(id);
-            if (produto != null)
-            {
-                produto.Ativo = false;
-                _context.SaveChanges();
-            }
+            var produto = BaseQuery()
+                .FirstOrDefault(x => x.Id == id);
+
+            if (produto == null)
+                return;
+
+            produto.Ativo = false;
+
+            _context.SaveChanges();
         }
 
         public IEnumerable<ProdutoModel> ObterPorCategoria(int categoriaId)
         {
-            return _context.Produtos
+            return BaseQuery()
                 .Include(p => p.Categoria)
                 .Include(p => p.Variacoes)
-                .Where(p => p.CategoriaId == categoriaId && p.Ativo)
+                .Where(p =>
+                    p.CategoriaId == categoriaId &&
+                    p.Ativo)
                 .OrderBy(p => p.Nome)
                 .ToList();
         }
 
         public IEnumerable<ProdutoModel> ObterMaisVendidos(int quantidade = 5)
         {
-            return _context.Produtos
+            return BaseQuery()
                 .Include(p => p.Categoria)
                 .Include(p => p.Variacoes)
                 .Where(p => p.Ativo)
-                .OrderByDescending(p => p.PedidoItens.Sum(pi => pi.Quantidade))
+                .OrderByDescending(p =>
+                    p.PedidoItens.Sum(pi => pi.Quantidade))
                 .Take(quantidade)
                 .ToList();
         }
 
         public IQueryable<ProdutoModel> Query()
         {
-            return _context.Produtos
+            return BaseQuery()
                 .Include(p => p.Categoria)
                 .Include(p => p.Variacoes)
                 .Where(p => p.Ativo)
@@ -110,9 +148,11 @@ namespace WebApplicationPods.Repository.Repository
 
         public IEnumerable<ProdutoModel> ObterMaisPopulares(int take = 8)
         {
-            return _context.Produtos
+            return BaseQuery()
                 .Include(p => p.Variacoes)
-                .Where(p => p.Ativo && p.Estoque > 0)
+                .Where(p =>
+                    p.Ativo &&
+                    p.Estoque > 0)
                 .OrderByDescending(p => p.PedidoItens.Count())
                 .ThenByDescending(p => p.MaisVendido)
                 .ThenByDescending(p => p.Avaliacao)
@@ -122,28 +162,31 @@ namespace WebApplicationPods.Repository.Repository
                 .ToList();
         }
 
-        // =============================
-        // HOME: FILTROS (CORRIGIDO)
-        // =============================
         public List<ProdutoModel> FiltrarProdutos(FiltrosModel filtros)
         {
-            var query = _context.Produtos
+            var query = BaseQuery()
                 .Include(p => p.Categoria)
                 .Where(p => p.Ativo);
 
             if (!string.IsNullOrWhiteSpace(filtros.Termo))
             {
                 var t = filtros.Termo.Trim();
+
                 query = query.Where(p =>
                     p.Nome.Contains(t) ||
-                    (p.Descricao != null && p.Descricao.Contains(t)) ||
-                    (p.Marca != null && p.Marca.Contains(t)));
+                    (p.Descricao != null &&
+                     p.Descricao.Contains(t)) ||
+                    (p.Marca != null &&
+                     p.Marca.Contains(t)));
             }
 
             if (!string.IsNullOrWhiteSpace(filtros.Categoria))
-                query = query.Where(p => p.Categoria != null && p.Categoria.Nome == filtros.Categoria);
+            {
+                query = query.Where(p =>
+                    p.Categoria != null &&
+                    p.Categoria.Nome == filtros.Categoria);
+            }
 
-            // (Se ainda quiser usar enquanto existir campo)
             if (!string.IsNullOrWhiteSpace(filtros.Sabor))
                 query = query.Where(p => p.Sabor == filtros.Sabor);
 
@@ -151,57 +194,84 @@ namespace WebApplicationPods.Repository.Repository
                 query = query.Where(p => p.Cor == filtros.Cor);
 
             if (filtros.PrecoMin.HasValue)
-                query = query.Where(p => p.Preco >= filtros.PrecoMin.Value);
+                query = query.Where(p =>
+                    p.Preco >= filtros.PrecoMin.Value);
 
             if (filtros.PrecoMax.HasValue)
-                query = query.Where(p => p.Preco <= filtros.PrecoMax.Value);
+                query = query.Where(p =>
+                    p.Preco <= filtros.PrecoMax.Value);
 
             if (filtros.AvaliacaoMin.HasValue)
-                query = query.Where(p => p.Avaliacao >= filtros.AvaliacaoMin.Value);
+                query = query.Where(p =>
+                    p.Avaliacao >= filtros.AvaliacaoMin.Value);
 
             if (filtros.ApenasPromocoes)
-                query = query.Where(p => p.PrecoPromocional.HasValue && p.PrecoPromocional < p.Preco);
+            {
+                query = query.Where(p =>
+                    p.PrecoPromocional.HasValue &&
+                    p.PrecoPromocional < p.Preco);
+            }
 
             if (filtros.ApenasEstoque)
                 query = query.Where(p => p.Estoque > 0);
 
             query = filtros.OrdenarPor switch
             {
-                "avaliacao" => query.OrderByDescending(p => p.Avaliacao),
-                "recente" => query.OrderByDescending(p => p.DataCadastro),
-                "preco-asc" => query.OrderBy(p => p.PrecoPromocional.HasValue && p.PrecoPromocional < p.Preco ? p.PrecoPromocional : p.Preco),
-                "preco-desc" => query.OrderByDescending(p => p.PrecoPromocional.HasValue && p.PrecoPromocional < p.Preco ? p.PrecoPromocional : p.Preco),
-                _ => query.OrderByDescending(p => p.MaisVendido)
+                "avaliacao" =>
+                    query.OrderByDescending(p => p.Avaliacao),
+
+                "recente" =>
+                    query.OrderByDescending(p => p.DataCadastro),
+
+                "preco-asc" =>
+                    query.OrderBy(p =>
+                        p.PrecoPromocional.HasValue &&
+                        p.PrecoPromocional < p.Preco
+                            ? p.PrecoPromocional
+                            : p.Preco),
+
+                "preco-desc" =>
+                    query.OrderByDescending(p =>
+                        p.PrecoPromocional.HasValue &&
+                        p.PrecoPromocional < p.Preco
+                            ? p.PrecoPromocional
+                            : p.Preco),
+
+                _ =>
+                    query.OrderByDescending(p => p.MaisVendido)
             };
 
-            return query.AsNoTracking().ToList();
+            return query
+                .AsNoTracking()
+                .ToList();
         }
-
-
 
         public List<string> ObterCategoriasDistintas()
         {
-            return _context.Produtos
+            return BaseQuery()
                 .Include(p => p.Categoria)
-                .Where(p => p.Ativo && p.Categoria != null && !string.IsNullOrEmpty(p.Categoria.Nome))
+                .Where(p =>
+                    p.Ativo &&
+                    p.Categoria != null &&
+                    !string.IsNullOrEmpty(p.Categoria.Nome))
                 .Select(p => p.Categoria!.Nome)
                 .Distinct()
                 .OrderBy(c => c)
                 .ToList();
         }
 
-        // ✅ AGORA PEGA OS SABORES DO POD NAS VARIAÇÕES
         public List<string> ObterSaboresDistintos()
         {
-            return new List<string>(); // não usamos mais
+            return new List<string>();
         }
-
 
         public List<string> ObterCoresDistintas()
         {
-            return _context.Produtos
-                .Where(p => p.Ativo && !string.IsNullOrEmpty(p.Cor))
-                .Select(p => p.Cor)
+            return BaseQuery()
+                .Where(p =>
+                    p.Ativo &&
+                    !string.IsNullOrEmpty(p.Cor))
+                .Select(p => p.Cor!)
                 .Distinct()
                 .OrderBy(c => c)
                 .ToList();

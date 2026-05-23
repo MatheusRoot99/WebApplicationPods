@@ -11,17 +11,68 @@ namespace WebApplicationPods.Controllers
     {
         private readonly ICategoriaRepository _categoriaRepository;
         private readonly ICurrentLojaService _currentLoja;
+        private readonly IConfiguration _configuration;
+        private readonly IWebHostEnvironment _env;
 
-        public CategoriaController(ICategoriaRepository categoriaRepository, ICurrentLojaService currentLoja)
+        public CategoriaController(
+            ICategoriaRepository categoriaRepository,
+            ICurrentLojaService currentLoja,
+            IConfiguration configuration,
+            IWebHostEnvironment env)
         {
             _categoriaRepository = categoriaRepository;
             _currentLoja = currentLoja;
+            _configuration = configuration;
+            _env = env;
+        }
+
+        private bool IgnorarLojaNoAmbienteAtual()
+        {
+            return _configuration.GetValue<bool?>("DevelopmentSettings:LocalhostOnly")
+                ?? _configuration.GetValue<bool?>("AppSettings:LocalhostOnly")
+                ?? _env.IsDevelopment();
+        }
+
+        private int? GetLojaIdDoUsuario()
+        {
+            var claimLojaId = User.FindFirst("LojaId")?.Value
+                           ?? User.FindFirst("lojaId")?.Value;
+
+            if (int.TryParse(claimLojaId, out var lojaId) && lojaId > 0)
+                return lojaId;
+
+            return null;
         }
 
         private int GetLojaIdOrFail()
         {
-            // Multi-loja desativado por enquanto
-            return 1;
+            if (_currentLoja?.LojaId is int lojaAtual && lojaAtual > 0)
+                return lojaAtual;
+
+            var lojaUsuario = GetLojaIdDoUsuario();
+            if (lojaUsuario.HasValue)
+                return lojaUsuario.Value;
+
+            if (IgnorarLojaNoAmbienteAtual())
+            {
+                var defaultLojaId =
+                    _configuration.GetValue<int?>("DevelopmentSettings:DefaultLojaId")
+                    ?? _configuration.GetValue<int?>("AppSettings:DefaultLojaId");
+
+                if (defaultLojaId.HasValue && defaultLojaId.Value > 0)
+                    return defaultLojaId.Value;
+            }
+
+            throw new InvalidOperationException("Loja atual não definida. Acesse pelo painel da loja ou vincule o usuário a uma loja.");
+        }
+
+        private bool PodeGerenciarCategoria(CategoriaModel categoria)
+        {
+            if (User.IsInRole("Admin"))
+                return true;
+
+            var lojaId = GetLojaIdOrFail();
+            return categoria.LojaId == lojaId;
         }
 
         public IActionResult Index()
@@ -32,7 +83,7 @@ namespace WebApplicationPods.Controllers
 
         public IActionResult Criar()
         {
-            return View();
+            return View(new CategoriaModel());
         }
 
         [HttpPost]
@@ -47,6 +98,7 @@ namespace WebApplicationPods.Controllers
             try
             {
                 categoria.LojaId = GetLojaIdOrFail();
+
                 _categoriaRepository.Adicionar(categoria);
 
                 TempData["MensagemSucesso"] = "Categoria cadastrada com sucesso!";
@@ -64,6 +116,9 @@ namespace WebApplicationPods.Controllers
             var categoria = _categoriaRepository.ObterPorId(id);
             if (categoria == null) return NotFound();
 
+            if (!PodeGerenciarCategoria(categoria))
+                return Forbid();
+
             return View(categoria);
         }
 
@@ -74,16 +129,16 @@ namespace WebApplicationPods.Controllers
             if (id != categoria.Id) return NotFound();
 
             ModelState.Remove(nameof(CategoriaModel.Produtos));
-            if (!ModelState.IsValid) return View(categoria);
+
+            if (!ModelState.IsValid)
+                return View(categoria);
 
             try
             {
-                var lojaId = GetLojaIdOrFail();
-
                 var existente = _categoriaRepository.ObterPorId(id);
                 if (existente == null) return NotFound();
 
-                if (existente.LojaId != lojaId && !User.IsInRole("Admin"))
+                if (!PodeGerenciarCategoria(existente))
                     return Forbid();
 
                 existente.Nome = categoria.Nome;
@@ -106,6 +161,9 @@ namespace WebApplicationPods.Controllers
             var categoria = _categoriaRepository.ObterPorId(id);
             if (categoria == null) return NotFound();
 
+            if (!PodeGerenciarCategoria(categoria))
+                return Forbid();
+
             if (categoria.Produtos?.Any() == true)
             {
                 TempData["MensagemErro"] = "Não é possível excluir esta categoria pois existem produtos vinculados.";
@@ -122,9 +180,7 @@ namespace WebApplicationPods.Controllers
             var categoria = _categoriaRepository.ObterPorId(id);
             if (categoria == null) return NotFound();
 
-            var lojaId = GetLojaIdOrFail();
-
-            if (categoria.LojaId != lojaId && !User.IsInRole("Admin"))
+            if (!PodeGerenciarCategoria(categoria))
                 return Forbid();
 
             _categoriaRepository.Remover(id);

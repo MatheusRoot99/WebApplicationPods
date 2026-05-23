@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.SignalR;
@@ -24,6 +25,7 @@ namespace WebApplicationPods.Controllers
         private readonly IEntregaAppService _entregaAppService;
         private readonly BancoContext _context;
         private readonly ICurrentLojaService _currentLoja;
+        private readonly UserManager<ApplicationUser> _userManager;
 
         public PedidosAdminController(
             IPedidoRepository pedidos,
@@ -31,7 +33,8 @@ namespace WebApplicationPods.Controllers
             IPedidoAppService pedidoAppService,
             IEntregaAppService entregaAppService,
             BancoContext context,
-            ICurrentLojaService currentLoja)
+            ICurrentLojaService currentLoja,
+            UserManager<ApplicationUser> userManager)
         {
             _pedidos = pedidos;
             _hub = hub;
@@ -39,6 +42,7 @@ namespace WebApplicationPods.Controllers
             _entregaAppService = entregaAppService;
             _context = context;
             _currentLoja = currentLoja;
+            _userManager = userManager;
         }
 
         private int? ObterLojaAtual()
@@ -55,9 +59,36 @@ namespace WebApplicationPods.Controllers
             return null;
         }
 
-        private async Task<List<SelectListItem>> CarregarEntregadoresAsync(int? pedidoLojaId = null)
+        private async Task<int?> ObterLojaAtualAsync()
         {
             var lojaAtual = ObterLojaAtual();
+
+            if (lojaAtual.HasValue)
+                return lojaAtual.Value;
+
+            var user = await _userManager.GetUserAsync(User);
+            return user?.LojaId;
+        }
+
+        private async Task<bool> PodeGerenciarPedidoAsync(PedidoModel? pedido)
+        {
+            if (pedido == null)
+                return false;
+
+            if (User.IsInRole("Admin"))
+                return true;
+
+            var lojaAtual = await ObterLojaAtualAsync();
+
+            return lojaAtual.HasValue &&
+                   lojaAtual.Value > 0 &&
+                   pedido.LojaId == lojaAtual.Value;
+        }
+
+        private async Task<List<SelectListItem>> CarregarEntregadoresAsync(int? pedidoLojaId = null)
+        {
+            var lojaAtual = await ObterLojaAtualAsync();
+
             var lojaBase = pedidoLojaId.GetValueOrDefault() > 0
                 ? pedidoLojaId
                 : lojaAtual;
@@ -78,7 +109,10 @@ namespace WebApplicationPods.Controllers
                     .ToListAsync();
             }
 
-            if (!entregadores.Any() && lojaAtual.HasValue && lojaAtual.Value > 0)
+            if (!entregadores.Any() &&
+                lojaAtual.HasValue &&
+                lojaAtual.Value > 0 &&
+                lojaAtual != lojaBase)
             {
                 entregadores = await _context.Entregadores
                     .Include(x => x.Usuario)
@@ -88,15 +122,6 @@ namespace WebApplicationPods.Controllers
                             x.LojaId == lojaAtual.Value ||
                             (x.Usuario != null && x.Usuario.LojaId == lojaAtual.Value)
                         ))
-                    .OrderBy(x => x.Nome)
-                    .ToListAsync();
-            }
-
-            if (!entregadores.Any())
-            {
-                entregadores = await _context.Entregadores
-                    .Include(x => x.Usuario)
-                    .Where(x => x.Ativo)
                     .OrderBy(x => x.Nome)
                     .ToListAsync();
             }
@@ -155,6 +180,9 @@ namespace WebApplicationPods.Controllers
             if (pedido == null)
                 return NotFound();
 
+            if (!await PodeGerenciarPedidoAsync(pedido))
+                return Forbid();
+
             var vm = new PedidoAtribuirEntregadorViewModel
             {
                 PedidoId = pedido.Id,
@@ -186,6 +214,9 @@ namespace WebApplicationPods.Controllers
                 TempData["Erro"] = "Pedido não encontrado.";
                 return RedirectToAction(nameof(Index));
             }
+
+            if (!await PodeGerenciarPedidoAsync(pedidoReload))
+                return Forbid();
 
             vm.ClienteNome = pedidoReload.Cliente?.Nome ?? "-";
             vm.StatusAtual = pedidoReload.Status ?? "-";
@@ -222,6 +253,7 @@ namespace WebApplicationPods.Controllers
         public async Task<IActionResult> AtualizarStatus(int id, string status)
         {
             var pedido = _pedidos.ObterPorId(id);
+
             if (pedido is null)
             {
                 if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
@@ -230,6 +262,9 @@ namespace WebApplicationPods.Controllers
                 TempData["Erro"] = "Pedido não encontrado.";
                 return RedirectToAction(nameof(Index));
             }
+
+            if (!await PodeGerenciarPedidoAsync(pedido))
+                return Forbid();
 
             var atual = pedido.Status ?? string.Empty;
 
@@ -261,7 +296,8 @@ namespace WebApplicationPods.Controllers
         [HttpGet]
         public IActionResult Relatorio(string? modo = "dia", DateTime? data = null, int? ano = null, int? mes = null)
         {
-            DateTime inicio, fim;
+            DateTime inicio;
+            DateTime fim;
             string periodoDesc;
 
             if (string.Equals(modo, "mes", StringComparison.OrdinalIgnoreCase))
@@ -300,6 +336,7 @@ namespace WebApplicationPods.Controllers
         public async Task<IActionResult> Excluir(int id)
         {
             var pedido = _pedidos.ObterPorId(id);
+
             if (pedido is null)
             {
                 if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
@@ -308,6 +345,9 @@ namespace WebApplicationPods.Controllers
                 TempData["Erro"] = "Pedido não encontrado.";
                 return RedirectToAction(nameof(Index));
             }
+
+            if (!await PodeGerenciarPedidoAsync(pedido))
+                return Forbid();
 
             if (!string.Equals(pedido.Status, "Cancelado", StringComparison.OrdinalIgnoreCase))
             {
@@ -319,7 +359,12 @@ namespace WebApplicationPods.Controllers
             }
 
             _pedidos.ExcluirLogico(id, User.Identity?.Name);
-            await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged", new { id, deleted = true });
+
+            await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged", new
+            {
+                id,
+                deleted = true
+            });
 
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 return Json(new { ok = true });

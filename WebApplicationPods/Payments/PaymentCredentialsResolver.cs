@@ -4,8 +4,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using WebApplicationPods.Data;
-using WebApplicationPods.Models;               // ApplicationUser, MerchantPaymentConfig
-using WebApplicationPods.Payments.Options;    // PaymentsOptions
+using WebApplicationPods.Models;
+using WebApplicationPods.Payments.Options;
+using WebApplicationPods.Services.Interface;
 
 namespace WebApplicationPods.Payments
 {
@@ -14,46 +15,28 @@ namespace WebApplicationPods.Payments
         private readonly BancoContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IOptions<PaymentsOptions> _defaults;
+        private readonly ICurrentLojaService _currentLoja;
 
         public PaymentCredentialsResolver(
             BancoContext db,
             UserManager<ApplicationUser> userManager,
-            IOptions<PaymentsOptions> defaults)
+            IOptions<PaymentsOptions> defaults,
+            ICurrentLojaService currentLoja)
         {
             _db = db;
             _userManager = userManager;
             _defaults = defaults;
+            _currentLoja = currentLoja;
         }
 
-        /// <summary>
-        /// 1) credenciais do usuário;
-        /// 2) se anônimo/não achou, usa a PRIMEIRA config do provider (loja);
-        /// 3) fallback no appsettings (PaymentsOptions).
-        /// </summary>
         public async Task<T> GetAsync<T>(ClaimsPrincipal user, string provider) where T : class, new()
         {
-            // --- 1) do usuário atual (se houver) ---
-            T? typed = await TryGetFromDbAsync<T>(user, provider);
+            var typed = await TryGetFromDbAsync<T>(user, provider);
             if (typed is not null) return typed;
 
-            // --- 2) default da loja (primeira linha do provider) ---
-            var anyRow = await _db.MerchantPaymentConfigs
-                .AsNoTracking()
-                .Where(c => c.Provider == provider)
-                .OrderBy(c => c.UserId)
-                .FirstOrDefaultAsync();
+            typed = await TryGetFromCurrentStoreAsync<T>(provider);
+            if (typed is not null) return typed;
 
-            if (anyRow is not null && !string.IsNullOrWhiteSpace(anyRow.ConfigJson))
-            {
-                try
-                {
-                    typed = JsonSerializer.Deserialize<T>(anyRow.ConfigJson);
-                    if (typed is not null) return typed;
-                }
-                catch { /* fallback */ }
-            }
-
-            // --- 3) fallback: appsettings.json ---
             return provider switch
             {
                 "MercadoPago" => _defaults.Value.MercadoPago as T ?? new T(),
@@ -65,6 +48,7 @@ namespace WebApplicationPods.Payments
         private async Task<T?> TryGetFromDbAsync<T>(ClaimsPrincipal user, string provider) where T : class
         {
             var userIdStr = _userManager.GetUserId(user);
+
             if (!string.IsNullOrEmpty(userIdStr) && int.TryParse(userIdStr, out var userId))
             {
                 var cfg = await _db.MerchantPaymentConfigs
@@ -75,12 +59,56 @@ namespace WebApplicationPods.Payments
                 {
                     try
                     {
-                        // Se houver criptografia, desencripte aqui antes de deserializar.
                         return JsonSerializer.Deserialize<T>(cfg.ConfigJson);
                     }
-                    catch { /* fallback */ }
+                    catch
+                    {
+                    }
                 }
             }
+
+            return null;
+        }
+
+        private async Task<T?> TryGetFromCurrentStoreAsync<T>(string provider) where T : class
+        {
+            if (_currentLoja?.LojaId is not int lojaId || lojaId <= 0)
+                return null;
+
+            var loja = await _db.Lojas
+                .AsNoTracking()
+                .Include(x => x.Config)
+                .FirstOrDefaultAsync(x => x.Id == lojaId && x.Ativa);
+
+            if (loja == null)
+                return null;
+
+            var userIds = new[] { loja.DonoUserId, loja.Config?.LojistaUserId }
+                .Where(x => x.HasValue && x.Value > 0)
+                .Select(x => x!.Value)
+                .Distinct()
+                .ToList();
+
+            foreach (var userId in userIds)
+            {
+                var cfg = await _db.MerchantPaymentConfigs
+                    .AsNoTracking()
+                    .SingleOrDefaultAsync(c => c.UserId == userId && c.Provider == provider);
+
+                if (cfg == null || string.IsNullOrWhiteSpace(cfg.ConfigJson))
+                    continue;
+
+                try
+                {
+                    var typed = JsonSerializer.Deserialize<T>(cfg.ConfigJson);
+                    if (typed is not null)
+                        return typed;
+                }
+                catch
+                {
+                }
+            }
+
             return null;
         }
     }

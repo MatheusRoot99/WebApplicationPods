@@ -237,6 +237,12 @@ namespace WebApplicationPods.Repository.Repository
 
         public IEnumerable<PedidoHistoricoModel> ObterHistorico(int pedidoId)
         {
+            var pedidoExiste = BaseQuery()
+                .Any(p => p.Id == pedidoId);
+
+            if (!pedidoExiste)
+                return Enumerable.Empty<PedidoHistoricoModel>();
+
             return _context.PedidoHistoricos
                 .Where(h => h.PedidoId == pedidoId)
                 .OrderBy(h => h.DataCadastro)

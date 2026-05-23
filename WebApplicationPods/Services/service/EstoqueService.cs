@@ -7,7 +7,11 @@ namespace WebApplicationPods.Services.service
     public class EstoqueService : IEstoqueService
     {
         private readonly BancoContext _context;
-        public EstoqueService(BancoContext context) => _context = context;
+
+        public EstoqueService(BancoContext context)
+        {
+            _context = context;
+        }
 
         public async Task BaixarEstoquePedidoAsync(int pedidoId)
         {
@@ -18,13 +22,17 @@ namespace WebApplicationPods.Services.service
                 .ThenInclude(i => i.Produto)
                 .FirstOrDefaultAsync(p => p.Id == pedidoId);
 
-            if (pedido == null) throw new InvalidOperationException("Pedido não encontrado.");
+            if (pedido == null)
+                throw new InvalidOperationException("Pedido não encontrado.");
 
             foreach (var item in pedido.PedidoItens.Where(i => !i.EstoqueBaixado))
             {
-                var prod = await _context.Produtos.FirstAsync(p => p.Id == item.ProdutoId);
+                var prod = await _context.Produtos
+                    .FirstOrDefaultAsync(p => p.Id == item.ProdutoId && p.LojaId == pedido.LojaId);
 
-                // Se usa sabores com estoque por sabor:
+                if (prod == null)
+                    throw new InvalidOperationException($"Produto #{item.ProdutoId} não encontrado na loja do pedido.");
+
                 prod.DeserializarSaboresQuantidades();
 
                 if (!string.IsNullOrWhiteSpace(item.Sabor) && prod.SaboresQuantidadesList?.Any() == true)
@@ -42,20 +50,17 @@ namespace WebApplicationPods.Services.service
                 }
                 else
                 {
-                    // Estoque total (sem sabor)
                     if (prod.Estoque < item.Quantidade)
                         throw new InvalidOperationException($"Estoque insuficiente do produto '{prod.Nome}'.");
+
                     prod.Estoque -= item.Quantidade;
                 }
 
-                // Recalcula estoque total a partir dos sabores, se for o seu caso:
                 if (prod.SaboresQuantidadesList?.Any() == true)
                 {
                     prod.Estoque = prod.SaboresQuantidadesList.Sum(s => s.Quantidade);
                     prod.SerializarSaboresQuantidades();
                 }
-
-                _context.Produtos.Update(prod);
 
                 item.EstoqueBaixado = true;
                 item.EstoqueBaixadoEm = DateTime.UtcNow;
