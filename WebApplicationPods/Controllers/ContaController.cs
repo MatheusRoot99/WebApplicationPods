@@ -33,6 +33,8 @@ namespace WebApplicationPods.Controllers
         [HttpGet, AllowAnonymous]
         public async Task<IActionResult> Login(string? returnUrl = null)
         {
+            var safeReturnUrl = returnUrl ?? string.Empty;
+
             if (User.Identity?.IsAuthenticated == true)
             {
                 var user = await _userManager.GetUserAsync(User);
@@ -43,7 +45,6 @@ namespace WebApplicationPods.Controllers
                     var isLojista = roles.Any(r => r.Equals("Lojista", StringComparison.OrdinalIgnoreCase));
                     var isEntregador = roles.Any(r => r.Equals("Entregador", StringComparison.OrdinalIgnoreCase));
 
-                    // se estiver autenticado, mas sem role válida, derruba sessão
                     if (!isAdmin && !isLojista && !isEntregador)
                     {
                         await _signInManager.SignOutAsync();
@@ -54,25 +55,30 @@ namespace WebApplicationPods.Controllers
                         Response.Cookies.Delete("SitePods.Session");
 
                         TempData["Erro"] = "Sua sessão anterior não tem permissão para este portal. Faça login novamente.";
-                        ViewData["ReturnUrl"] = returnUrl;
-                        return View(new LoginViewModel { ReturnUrl = returnUrl });
+                        ViewData["ReturnUrl"] = safeReturnUrl;
+                        return View(new LoginViewModel { ReturnUrl = safeReturnUrl });
                     }
                 }
 
                 return RedirectToAppropriatePage();
             }
 
-            ViewData["ReturnUrl"] = returnUrl;
-            return View(new LoginViewModel { ReturnUrl = returnUrl });
+            ViewData["ReturnUrl"] = safeReturnUrl;
+            return View(new LoginViewModel { ReturnUrl = safeReturnUrl });
         }
 
         [HttpPost, AllowAnonymous]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel vm, string? returnUrl = null)
         {
-            returnUrl = !string.IsNullOrWhiteSpace(returnUrl) ? returnUrl : vm.ReturnUrl;
-            ViewData["ReturnUrl"] = returnUrl;
-            vm.ReturnUrl = returnUrl;
+            var safeReturnUrl = !string.IsNullOrWhiteSpace(returnUrl)
+            ? returnUrl
+            : vm.ReturnUrl;
+
+            safeReturnUrl ??= string.Empty;
+
+            ViewData["ReturnUrl"] = safeReturnUrl;
+            vm.ReturnUrl = safeReturnUrl;
 
             if (!ModelState.IsValid)
                 return View(vm);
@@ -93,6 +99,12 @@ namespace WebApplicationPods.Controllers
                 if (user == null)
                 {
                     ModelState.AddModelError(string.Empty, "Usuário não encontrado.");
+                    return View(vm);
+                }
+
+                if (string.IsNullOrWhiteSpace(user.UserName))
+                {
+                    ModelState.AddModelError(string.Empty, "Usuário sem nome de acesso configurado.");
                     return View(vm);
                 }
 
@@ -131,11 +143,12 @@ namespace WebApplicationPods.Controllers
                 }
 
                 // respeita returnUrl somente se for local e compatível com a role
-                if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                if (!string.IsNullOrWhiteSpace(safeReturnUrl) && Url.IsLocalUrl(safeReturnUrl))
                 {
-                    if (IsReturnUrlCompatibleWithRole(returnUrl, isAdmin, isLojista, isEntregador))
-                        return Redirect(returnUrl);
+                    if (IsReturnUrlCompatibleWithRole(safeReturnUrl, isAdmin, isLojista, isEntregador))
+                        return Redirect(safeReturnUrl);
                 }
+
 
                 // fallbacks corretos
                 if (isAdmin)

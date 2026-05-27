@@ -319,8 +319,8 @@ namespace WebApplicationPods.Controllers
             }
 
             // aplica alterações
-            cliente.Nome = vm.Nome?.Trim();
-            cliente.Email = string.IsNullOrWhiteSpace(vm.Email) ? null : vm.Email!.Trim();
+            cliente.Nome = vm.Nome?.Trim() ?? string.Empty;
+            cliente.Email = string.IsNullOrWhiteSpace(vm.Email) ? null : vm.Email.Trim();
             cliente.Telefone = telNovo;
 
             _context.SaveChanges();

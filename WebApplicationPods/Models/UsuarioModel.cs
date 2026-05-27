@@ -9,16 +9,16 @@ namespace WebApplicationPods.Models
 
         [Required(ErrorMessage = "O nome é obrigatório")]
         [StringLength(150, ErrorMessage = "O nome deve ter no máximo 150 caracteres")]
-        public string Nome { get; set; }
+        public string Nome { get; set; } = string.Empty;
 
         // Armazene CPF só com dígitos (ex: "12345678901")
         [Required(ErrorMessage = "O CPF é obrigatório")]
         [StringLength(11, MinimumLength = 11, ErrorMessage = "CPF deve ter 11 dígitos")]
-        public string CPF { get; set; }
+        public string CPF { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "A senha é obrigatória")]
         [MinLength(6, ErrorMessage = "A senha deve ter pelo menos 6 caracteres")]
-        public string Senha { get; set; }
+        public string Senha { get; set; } = string.Empty;
 
         // Campos opcionais (podem ser nulos)
         public string? Email { get; set; }

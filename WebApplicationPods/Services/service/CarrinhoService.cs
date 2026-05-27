@@ -1,6 +1,4 @@
-﻿
-
-using WebApplicationPods.Helper;
+﻿using WebApplicationPods.Helper;
 using WebApplicationPods.Models;
 using WebApplicationPods.Services.Interface;
 
@@ -18,7 +16,9 @@ namespace WebApplicationPods.Services.service
 
         public CarrinhoModel ObterCarrinho()
         {
-            var session = _httpContextAccessor.HttpContext.Session;
+            var session = _httpContextAccessor.HttpContext?.Session
+                ?? throw new InvalidOperationException("Sessão não disponível. Verifique UseSession().");
+
             var carrinho = session.GetObject<CarrinhoModel>(_sessionKey);
 
             if (carrinho == null)
@@ -38,10 +38,9 @@ namespace WebApplicationPods.Services.service
             if (itemExistente != null)
             {
                 itemExistente.Quantidade += quantidade;
+
                 if (!string.IsNullOrEmpty(observacoes))
-                {
                     itemExistente.Observacoes = observacoes;
-                }
             }
             else
             {
@@ -90,9 +89,10 @@ namespace WebApplicationPods.Services.service
 
         private void SalvarCarrinho(CarrinhoModel carrinho)
         {
-            _httpContextAccessor.HttpContext.Session.SetObject(_sessionKey, carrinho);
-        }
+            var session = _httpContextAccessor.HttpContext?.Session
+                ?? throw new InvalidOperationException("Sessão não disponível. Verifique UseSession().");
 
-        
+            session.SetObject(_sessionKey, carrinho);
+        }
     }
 }
