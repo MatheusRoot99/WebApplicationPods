@@ -1,5 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using System.Linq.Expressions;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using WebApplicationPods.Data;
 using WebApplicationPods.DTO;
@@ -17,6 +19,7 @@ namespace WebApplicationPods.Repository.Repository
         private readonly IHttpContextAccessor _http;
         private readonly ICurrentLojaService _currentLoja;
         private readonly IConfiguration _configuration;
+        private readonly UserManager<ApplicationUser> _userManager;
 
         private static readonly string[] StatusVisiveisAbertos = new[]
         {
@@ -34,12 +37,18 @@ namespace WebApplicationPods.Repository.Repository
             PedidoEntregaStatus.SaiuParaEntrega
         };
 
-        public PedidoRepository(BancoContext context, IHttpContextAccessor http, ICurrentLojaService currentLoja, IConfiguration configuration)
+        public PedidoRepository(
+            BancoContext context,
+            IHttpContextAccessor http,
+            ICurrentLojaService currentLoja,
+            IConfiguration configuration,
+            UserManager<ApplicationUser> userManager)
         {
             _context = context;
             _http = http;
             _currentLoja = currentLoja;
             _configuration = configuration;
+            _userManager = userManager;
         }
 
         // ===================== Helpers =====================
@@ -70,14 +79,19 @@ namespace WebApplicationPods.Repository.Repository
             if (int.TryParse(lojaIdClaim, out var lojaId) && lojaId > 0)
                 return lojaId;
 
-            return null;
+            var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(userIdClaim, out var userId) || userId <= 0)
+                return null;
+
+            return _userManager.Users
+                .AsNoTracking()
+                .Where(x => x.Id == userId)
+                .Select(x => x.LojaId)
+                .FirstOrDefault();
         }
 
         private int? LojaIdContext()
         {
-            if (IsLocalhostOnly())
-                return null;
-
             if (IsAdmin())
                 return null;
 
@@ -87,6 +101,13 @@ namespace WebApplicationPods.Repository.Repository
             var lojaUsuario = LojaIdDoUsuario();
             if (lojaUsuario.HasValue)
                 return lojaUsuario.Value;
+
+            var user = _http.HttpContext?.User;
+            if (user?.Identity?.IsAuthenticated == true && user.IsInRole("Lojista"))
+                return -1;
+
+            if (IsLocalhostOnly())
+                return null;
 
             return null;
         }
@@ -182,7 +203,7 @@ namespace WebApplicationPods.Repository.Repository
 
         // ===================== CRUD / Consultas =====================
 
-        public PedidoModel ObterPorId(int id)
+        public PedidoModel? ObterPorId(int id)
         {
             var q = BaseQuery();
 
@@ -257,29 +278,29 @@ namespace WebApplicationPods.Repository.Repository
             string? usuarioResponsavelId = null,
             string? observacao = null,
             string? origem = null)
-                {
-                    if (string.IsNullOrWhiteSpace(status)) return;
+        {
+            if (string.IsNullOrWhiteSpace(status)) return;
 
-                    var pedido = BaseQuery().FirstOrDefault(p => p.Id == pedidoId);
-                    if (pedido == null) return;
+            var pedido = BaseQuery().FirstOrDefault(p => p.Id == pedidoId);
+            if (pedido == null) return;
 
-                    if (string.Equals(pedido.Status, status, StringComparison.OrdinalIgnoreCase))
-                        return;
+            if (string.Equals(pedido.Status, status, StringComparison.OrdinalIgnoreCase))
+                return;
 
-                    var statusAnterior = pedido.Status;
+            var statusAnterior = pedido.Status;
 
-                    RegistrarHistorico(
-                        pedido,
-                        status,
-                        nomeResponsavel,
-                        usuarioResponsavelId,
-                        observacao,
-                        origem);
+            RegistrarHistorico(
+                pedido,
+                status,
+                nomeResponsavel,
+                usuarioResponsavelId,
+                observacao,
+                origem);
 
-                    pedido.Status = status;
-                    AtualizarDatasPorStatus(pedido, status);
+            pedido.Status = status;
+            AtualizarDatasPorStatus(pedido, status);
 
-                    _context.SaveChanges();
+            _context.SaveChanges();
         }
 
         public decimal ObterTotalVendasHoje()

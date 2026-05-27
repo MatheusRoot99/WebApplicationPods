@@ -5,6 +5,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
+using WebApplicationPods.Data;
 using WebApplicationPods.Enum;
 using WebApplicationPods.Models;
 using WebApplicationPods.Payments.Options;
@@ -17,6 +19,7 @@ namespace WebApplicationPods.Payments.Gateways
         private readonly IPaymentCredentialsResolver _resolver;
         private readonly IHttpContextAccessor _httpCtx;
         private readonly IConfiguration _cfg;
+        private readonly BancoContext _db;
 
         public string Provider => "MercadoPago";
 
@@ -24,22 +27,26 @@ namespace WebApplicationPods.Payments.Gateways
             HttpClient http,
             IPaymentCredentialsResolver resolver,
             IHttpContextAccessor httpCtx,
-            IConfiguration cfg)
+            IConfiguration cfg,
+            BancoContext db)
         {
             _http = http;
             _resolver = resolver;
             _httpCtx = httpCtx;
             _cfg = cfg;
+            _db = db;
 
             if (_http.BaseAddress == null)
                 _http.BaseAddress = new Uri("https://api.mercadopago.com/");
         }
 
-        private async Task<string> ResolveAccessTokenAsync()
+        private async Task<string> ResolveAccessTokenAsync(int? lojaId = null)
         {
             var user = _httpCtx.HttpContext?.User;
 
-            var creds = await _resolver.GetAsync<MercadoPagoOptions>(user!, "MercadoPago");
+            var creds = lojaId.HasValue && lojaId.Value > 0
+                ? await _resolver.GetForLojaAsync<MercadoPagoOptions>(lojaId.Value, "MercadoPago")
+                : await _resolver.GetAsync<MercadoPagoOptions>(user!, "MercadoPago");
             var token = creds?.AccessToken;
 
             token ??= _cfg["Payments:MercadoPago:AccessToken"];
@@ -63,7 +70,7 @@ namespace WebApplicationPods.Payments.Gateways
         {
             if (amount <= 0) throw new ArgumentOutOfRangeException(nameof(amount));
 
-            var token = await ResolveAccessTokenAsync();
+            var token = await ResolveAccessTokenAsync(pedido.LojaId);
 
             // Dados do pagador – use os dados reais do seu cliente; em sandbox, use e-mail de usuário de teste
             var payer = new
@@ -158,8 +165,11 @@ namespace WebApplicationPods.Payments.Gateways
 
         // =================== STATUS ===================
         public async Task<PaymentStatus> GetStatusAsync(string providerPaymentId)
+            => await GetStatusAsync(providerPaymentId, null);
+
+        private async Task<PaymentStatus> GetStatusAsync(string providerPaymentId, int? lojaId)
         {
-            var token = await ResolveAccessTokenAsync();
+            var token = await ResolveAccessTokenAsync(lojaId);
             using var req = new HttpRequestMessage(HttpMethod.Get, $"v1/payments/{providerPaymentId}");
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             var resp = await _http.SendAsync(req);
@@ -217,7 +227,14 @@ namespace WebApplicationPods.Payments.Gateways
             if (!string.Equals(type, "payment", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(id))
                 return ("", PaymentStatus.Pending, null, "evento_ignorado");
 
-            var status = await GetStatusAsync(id);
+            var lojaId = await _db.Pagamentos
+                .IgnoreQueryFilters()
+                .Include(p => p.Pedido)
+                .Where(p => p.Provider == Provider && p.ProviderPaymentId == id)
+                .Select(p => (int?)p.Pedido.LojaId)
+                .FirstOrDefaultAsync();
+
+            var status = await GetStatusAsync(id, lojaId);
             return (id, status, null, "");
         }
 

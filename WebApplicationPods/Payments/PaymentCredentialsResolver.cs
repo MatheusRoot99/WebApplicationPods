@@ -45,6 +45,19 @@ namespace WebApplicationPods.Payments
             };
         }
 
+        public async Task<T> GetForLojaAsync<T>(int lojaId, string provider) where T : class, new()
+        {
+            var typed = await TryGetFromStoreAsync<T>(lojaId, provider);
+            if (typed is not null) return typed;
+
+            return provider switch
+            {
+                "MercadoPago" => _defaults.Value.MercadoPago as T ?? new T(),
+                "Stripe" => _defaults.Value.Stripe as T ?? new T(),
+                _ => new T()
+            };
+        }
+
         private async Task<T?> TryGetFromDbAsync<T>(ClaimsPrincipal user, string provider) where T : class
         {
             var userIdStr = _userManager.GetUserId(user);
@@ -73,6 +86,14 @@ namespace WebApplicationPods.Payments
         private async Task<T?> TryGetFromCurrentStoreAsync<T>(string provider) where T : class
         {
             if (_currentLoja?.LojaId is not int lojaId || lojaId <= 0)
+                return null;
+
+            return await TryGetFromStoreAsync<T>(lojaId, provider);
+        }
+
+        private async Task<T?> TryGetFromStoreAsync<T>(int lojaId, string provider) where T : class
+        {
+            if (lojaId <= 0)
                 return null;
 
             var loja = await _db.Lojas

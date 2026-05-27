@@ -29,6 +29,7 @@ namespace WebApplicationPods.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(UserCreateViewModel vm)
         {
             ViewBag.Roles = new[] { "Admin", "Lojista", "Cliente" };

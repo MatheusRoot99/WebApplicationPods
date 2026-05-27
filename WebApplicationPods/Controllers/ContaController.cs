@@ -216,7 +216,15 @@ namespace WebApplicationPods.Controllers
         public IActionResult AcessoNegado() => View();
 
         [HttpGet, AllowAnonymous]
-        public IActionResult ForgotPassword() => View(new ForgotPasswordViewModel());
+        public IActionResult ForgotPassword(string? email = null)
+        {
+            var vm = new ForgotPasswordViewModel
+            {
+                Email = IsValidEmail(email ?? string.Empty) ? email! : string.Empty
+            };
+
+            return View(vm);
+        }
 
         [HttpPost, AllowAnonymous]
         [ValidateAntiForgeryToken]
@@ -254,7 +262,8 @@ namespace WebApplicationPods.Controllers
                 || u.PhoneNumber == entradaDigitos
                 || u.Email == input);
 
-            return Json(new { exists = user != null, email = user?.Email ?? input });
+            var email = IsValidEmail(input) ? input : null;
+            return Json(new { exists = user != null, email });
         }
 
         [HttpGet, AllowAnonymous]
@@ -262,7 +271,12 @@ namespace WebApplicationPods.Controllers
 
         [HttpGet, AllowAnonymous]
         public IActionResult ResetPassword(string email, string token)
-            => View(new ResetPasswordViewModel { Email = email, Token = token });
+        {
+            if (!IsValidEmail(email) || string.IsNullOrWhiteSpace(token))
+                return RedirectToAction(nameof(ForgotPassword));
+
+            return View(new ResetPasswordViewModel { Email = email, Token = token });
+        }
 
         [HttpPost, AllowAnonymous]
         [ValidateAntiForgeryToken]

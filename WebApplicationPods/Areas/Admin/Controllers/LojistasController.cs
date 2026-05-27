@@ -44,6 +44,7 @@ namespace WebApplicationPods.Areas.Admin.Controllers
 
         // POST: /Admin/Lojistas/Create
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(LojistaCreateViewModel vm)
         {
             if (!ModelState.IsValid) return View(vm);
@@ -115,6 +116,7 @@ namespace WebApplicationPods.Areas.Admin.Controllers
 
         // POST: /Admin/Lojistas/Edit/5
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(LojistaEditViewModel vm)
         {
             if (!ModelState.IsValid) return View(vm);
@@ -161,6 +163,7 @@ namespace WebApplicationPods.Areas.Admin.Controllers
 
         // POST: /Admin/Lojistas/ResetSenha/5
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> ResetSenha(int id, string novaSenha)
         {
             if (string.IsNullOrWhiteSpace(novaSenha) || novaSenha.Length < 6)
@@ -172,6 +175,12 @@ namespace WebApplicationPods.Areas.Admin.Controllers
             var u = await _userManager.FindByIdAsync(id.ToString());
             if (u == null) return NotFound();
 
+            if (!await _userManager.IsInRoleAsync(u, "Lojista"))
+            {
+                TempData["Erro"] = "Usuário informado não é lojista.";
+                return RedirectToAction(nameof(Index));
+            }
+
             var token = await _userManager.GeneratePasswordResetTokenAsync(u);
             var res = await _userManager.ResetPasswordAsync(u, token, novaSenha);
             TempData[res.Succeeded ? "Sucesso" : "Erro"] =
@@ -182,10 +191,23 @@ namespace WebApplicationPods.Areas.Admin.Controllers
 
         // POST: /Admin/Lojistas/Delete/5
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
             var u = await _userManager.FindByIdAsync(id.ToString());
             if (u == null) return NotFound();
+
+            if (!await _userManager.IsInRoleAsync(u, "Lojista"))
+            {
+                TempData["Erro"] = "Usuário informado não é lojista.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (u.LojaId.HasValue)
+            {
+                TempData["Erro"] = "Este lojista está vinculado a uma loja. Remova ou troque o dono da loja antes de excluir.";
+                return RedirectToAction(nameof(Index));
+            }
 
             var res = await _userManager.DeleteAsync(u);
             TempData[res.Succeeded ? "Sucesso" : "Erro"] =

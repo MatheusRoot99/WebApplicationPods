@@ -741,6 +741,12 @@ namespace WebApplicationPods.Controllers
             if (file.Length > 2 * 1024 * 1024)
                 return "O tamanho da imagem não pode exceder 2MB.";
 
+            if (file.Length == 0)
+                return "A imagem enviada está vazia.";
+
+            if (!HasValidImageSignature(file, extLower))
+                return "O arquivo enviado não parece ser uma imagem válida.";
+
             return null;
         }
 
@@ -752,11 +758,54 @@ namespace WebApplicationPods.Controllers
 
             var fileName = MakeShortFileName(productName, extLower);
             var caminho = Path.Combine(pastaUploads, fileName);
+            var tempPath = Path.Combine(pastaUploads, $"{Guid.NewGuid():N}.tmp");
 
-            using var fs = new FileStream(caminho, FileMode.Create);
-            await file.CopyToAsync(fs);
+            await using (var fs = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                await file.CopyToAsync(fs);
+            }
+
+            System.IO.File.Move(tempPath, caminho, overwrite: false);
 
             return $"/imagens/produtos/{fileName}";
+        }
+
+        private static bool HasValidImageSignature(IFormFile file, string extLower)
+        {
+            Span<byte> header = stackalloc byte[12];
+
+            using var stream = file.OpenReadStream();
+            var read = stream.Read(header);
+
+            return extLower switch
+            {
+                ".jpg" or ".jpeg" => read >= 3 &&
+                                      header[0] == 0xFF &&
+                                      header[1] == 0xD8 &&
+                                      header[2] == 0xFF,
+
+                ".png" => read >= 8 &&
+                          header[0] == 0x89 &&
+                          header[1] == 0x50 &&
+                          header[2] == 0x4E &&
+                          header[3] == 0x47 &&
+                          header[4] == 0x0D &&
+                          header[5] == 0x0A &&
+                          header[6] == 0x1A &&
+                          header[7] == 0x0A,
+
+                ".webp" => read >= 12 &&
+                           header[0] == 0x52 &&
+                           header[1] == 0x49 &&
+                           header[2] == 0x46 &&
+                           header[3] == 0x46 &&
+                           header[8] == 0x57 &&
+                           header[9] == 0x45 &&
+                           header[10] == 0x42 &&
+                           header[11] == 0x50,
+
+                _ => false
+            };
         }
 
         private static string MakeShortFileName(string? productName, string extLower)

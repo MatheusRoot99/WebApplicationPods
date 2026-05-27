@@ -336,8 +336,15 @@ namespace WebApplicationPods.Controllers
         {
             if (User?.Identity?.IsAuthenticated == true)
             {
-                if (User.IsInRole("Admin") || User.IsInRole("Lojista"))
+                if (User.IsInRole("Admin"))
                     return true;
+
+                if (User.IsInRole("Lojista"))
+                {
+                    return _currentLoja.LojaId is int lojaId &&
+                           lojaId > 0 &&
+                           pedido.LojaId == lojaId;
+                }
             }
 
             var telefoneSessao = HttpContext.Session.GetString("ClienteTelefone");
@@ -747,6 +754,17 @@ namespace WebApplicationPods.Controllers
 
             try
             {
+                var telefone = HttpContext.Session.GetString("ClienteTelefone");
+                var clienteSessao = string.IsNullOrWhiteSpace(telefone)
+                    ? null
+                    : _clienteRepository.ObterPorTelefone(telefone);
+
+                if (clienteSessao == null || clienteSessao.Id != ClienteId)
+                {
+                    TempData["Erro"] = "Sessão inválida. Faça login novamente.";
+                    return RedirectToAction("Login", "Auth");
+                }
+
                 endereco.ClienteId = ClienteId;
                 endereco.Estado = (endereco.Estado ?? "").Trim().ToUpper();
 
@@ -819,6 +837,17 @@ namespace WebApplicationPods.Controllers
 
             try
             {
+                var telefone = HttpContext.Session.GetString("ClienteTelefone");
+                var clienteSessao = string.IsNullOrWhiteSpace(telefone)
+                    ? null
+                    : _clienteRepository.ObterPorTelefone(telefone);
+
+                if (clienteSessao == null || clienteSessao.Id != ClienteId)
+                {
+                    TempData["Erro"] = "Sessão inválida. Faça login novamente.";
+                    return RedirectToAction("Login", "Auth");
+                }
+
                 var novoId = _clienteRepository.RemoverEndereco(ClienteId, id);
 
                 if (novoId.HasValue)

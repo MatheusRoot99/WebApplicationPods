@@ -6,7 +6,7 @@ namespace WebApplicationPods.Repository.Interface
 {
     public interface IPedidoRepository
     {
-        PedidoModel ObterPorId(int id);
+        PedidoModel? ObterPorId(int id);
         IEnumerable<PedidoModel> ObterPorCliente(int clienteId);
         void Adicionar(PedidoModel pedido);
 

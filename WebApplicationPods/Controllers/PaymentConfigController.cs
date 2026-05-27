@@ -7,7 +7,7 @@ using WebApplicationPods.Data;
 using WebApplicationPods.Models;
 using WebApplicationPods.Payments.Options;
 
-[Authorize]
+[Authorize(Roles = "Admin,Lojista")]
 public class PaymentConfigController : Controller
 {
     private readonly BancoContext _db;
@@ -20,10 +20,25 @@ public class PaymentConfigController : Controller
         _userManager = userManager;
     }
 
+    private static string NormalizeProvider(string? provider)
+    {
+        if (string.Equals(provider, "MercadoPago", StringComparison.OrdinalIgnoreCase))
+            return "MercadoPago";
+
+        if (string.Equals(provider, "PixManual", StringComparison.OrdinalIgnoreCase))
+            return "PixManual";
+
+        return "Stripe";
+    }
+
     [HttpGet]
     public async Task<IActionResult> Edit(string provider = "Stripe")
     {
+        provider = NormalizeProvider(provider);
         var user = await _userManager.GetUserAsync(User);
+
+        if (user == null)
+            return Challenge();
 
         // carrega SOMENTE a config do provider selecionado
         var entity = await _db.MerchantPaymentConfigs
@@ -70,9 +85,14 @@ public class PaymentConfigController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(PaymentConfigEditViewModel model)
     {
+        model.Provider = NormalizeProvider(model.Provider);
+
         if (!ModelState.IsValid) return View(ViewPath, model);
 
         var user = await _userManager.GetUserAsync(User);
+
+        if (user == null)
+            return Challenge();
 
         // upsert por (UserId, Provider)
         var entity = await _db.MerchantPaymentConfigs

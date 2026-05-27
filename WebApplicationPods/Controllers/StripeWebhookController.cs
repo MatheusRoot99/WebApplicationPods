@@ -5,9 +5,11 @@ using WebApplicationPods.Data;
 using WebApplicationPods.Enum;
 using WebApplicationPods.Hubs;
 using WebApplicationPods.Models;
-using WebApplicationPods.Repository.Interface;
+using WebApplicationPods.Payments;
+using WebApplicationPods.Payments.Options;
 using WebApplicationPods.Services.Interface;
 using Microsoft.AspNetCore.SignalR;
+using System.Text.Json;
 
 namespace WebApplicationPods.Controllers
 {
@@ -20,19 +22,22 @@ namespace WebApplicationPods.Controllers
         private readonly IPedidoAppService _pedidoAppService;
         private readonly IEstoqueService _estoque;
         private readonly IHubContext<PedidosHub> _hub;
+        private readonly IPaymentCredentialsResolver _creds;
 
         public StripeWebhookController(
             BancoContext db,
             IConfiguration cfg,
             IPedidoAppService pedidoAppService,
             IEstoqueService estoque,
-            IHubContext<PedidosHub> hub)
+            IHubContext<PedidosHub> hub,
+            IPaymentCredentialsResolver creds)
         {
             _db = db;
             _cfg = cfg;
             _pedidoAppService = pedidoAppService;
             _estoque = estoque;
             _hub = hub;
+            _creds = creds;
         }
 
         [HttpPost]
@@ -41,13 +46,15 @@ namespace WebApplicationPods.Controllers
         {
             var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
             var signatureHeader = Request.Headers["Stripe-Signature"].FirstOrDefault();
-            var webhookSecret = _cfg["Payments:Stripe:WebhookSecret"];
-
-            if (string.IsNullOrWhiteSpace(webhookSecret))
-                return StatusCode(StatusCodes.Status500InternalServerError, "Stripe WebhookSecret não configurado.");
 
             if (string.IsNullOrWhiteSpace(signatureHeader))
                 return BadRequest("Header Stripe-Signature ausente.");
+
+            var providerPaymentId = ExtrairPaymentIntentId(json);
+            var webhookSecret = await ObterWebhookSecretAsync(providerPaymentId);
+
+            if (string.IsNullOrWhiteSpace(webhookSecret))
+                return StatusCode(StatusCodes.Status500InternalServerError, "Stripe WebhookSecret não configurado.");
 
             Event stripeEvent;
 
@@ -86,6 +93,56 @@ namespace WebApplicationPods.Controllers
             return Ok();
         }
 
+        private static string? ExtrairPaymentIntentId(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+                return null;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("data", out var dataEl) &&
+                    dataEl.ValueKind == JsonValueKind.Object &&
+                    dataEl.TryGetProperty("object", out var objectEl) &&
+                    objectEl.ValueKind == JsonValueKind.Object &&
+                    objectEl.TryGetProperty("id", out var idEl) &&
+                    idEl.ValueKind == JsonValueKind.String)
+                {
+                    return idEl.GetString();
+                }
+            }
+            catch
+            {
+            }
+
+            return null;
+        }
+
+        private async Task<string?> ObterWebhookSecretAsync(string? providerPaymentId)
+        {
+            if (!string.IsNullOrWhiteSpace(providerPaymentId))
+            {
+                var lojaId = await _db.Pagamentos
+                    .IgnoreQueryFilters()
+                    .Include(p => p.Pedido)
+                    .Where(p => p.Provider == "Stripe" && p.ProviderPaymentId == providerPaymentId)
+                    .Select(p => (int?)p.Pedido.LojaId)
+                    .FirstOrDefaultAsync();
+
+                if (lojaId.HasValue && lojaId.Value > 0)
+                {
+                    var lojaCreds = await _creds.GetForLojaAsync<StripeOptions>(lojaId.Value, "Stripe");
+
+                    if (!string.IsNullOrWhiteSpace(lojaCreds.WebhookSecret))
+                        return lojaCreds.WebhookSecret;
+                }
+            }
+
+            return _cfg["Payments:Stripe:WebhookSecret"];
+        }
+
         private async Task AplicarPaymentIntentSucceeded(Event stripeEvent)
         {
             var intent = stripeEvent.Data.Object as PaymentIntent;
@@ -93,6 +150,7 @@ namespace WebApplicationPods.Controllers
                 return;
 
             var payment = await _db.Pagamentos
+                .IgnoreQueryFilters()
                 .Include(x => x.Pedido)
                 .ThenInclude(p => p.Cliente)
                 .FirstOrDefaultAsync(x =>
@@ -132,6 +190,7 @@ namespace WebApplicationPods.Controllers
                 return;
 
             var payment = await _db.Pagamentos
+                .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(x =>
                     x.Provider == "Stripe" &&
                     x.ProviderPaymentId == intent.Id);
@@ -160,6 +219,7 @@ namespace WebApplicationPods.Controllers
                 return;
 
             var payment = await _db.Pagamentos
+                .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(x =>
                     x.Provider == "Stripe" &&
                     x.ProviderPaymentId == intent.Id);

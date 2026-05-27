@@ -44,7 +44,10 @@ namespace WebApplicationPods.Payments.Gateways
         public async Task<PixInitResult> CreatePixAsync(PedidoModel pedido, decimal amount)
         {
             var user = _httpCtx.HttpContext?.User;
-            var opts = await _resolver.GetAsync<PixManualOptions>(user!, Provider);
+            var opts = pedido.LojaId > 0
+                ? await _resolver.GetForLojaAsync<PixManualOptions>(pedido.LojaId, Provider)
+                : await _resolver.GetAsync<PixManualOptions>(user!, Provider);
+
             if (opts == null || string.IsNullOrWhiteSpace(opts.PixKey))
                 throw new InvalidOperationException("PixManual não configurado (PixKey ausente).");
 

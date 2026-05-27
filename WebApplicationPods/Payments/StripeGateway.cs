@@ -22,10 +22,12 @@ public class StripeGateway : IPaymentGateway
     }
 
     // Carrega credenciais do lojista (ou defaults do appsettings) e seta ApiKey
-    private async Task<StripeOptions> GetCfgAsync(ClaimsPrincipal? user = null)
+    private async Task<StripeOptions> GetCfgAsync(ClaimsPrincipal? user = null, int? lojaId = null)
     {
-        var cfg = await _resolver.GetAsync<StripeOptions>(user ?? new ClaimsPrincipal(), Provider)
-                  ?? new StripeOptions();
+        var cfg = lojaId.HasValue && lojaId.Value > 0
+            ? await _resolver.GetForLojaAsync<StripeOptions>(lojaId.Value, Provider)
+            : await _resolver.GetAsync<StripeOptions>(user ?? new ClaimsPrincipal(), Provider);
+
         StripeConfiguration.ApiKey = cfg.SecretKey;
         return cfg;
     }
@@ -48,7 +50,7 @@ public class StripeGateway : IPaymentGateway
     // (assinatura nova com 'amount')
     public async Task<PixInitResult> CreatePixAsync(PedidoModel pedido, decimal amount)
     {
-        await GetCfgAsync();
+        await GetCfgAsync(lojaId: pedido.LojaId);
         var service = new PaymentIntentService();
         var intent = await service.CreateAsync(new PaymentIntentCreateOptions
         {
@@ -71,7 +73,7 @@ public class StripeGateway : IPaymentGateway
     // (assinatura nova com 'amount')
     public async Task<CardInitResult> CreateCardPaymentAsync(PedidoModel pedido, PaymentMethod method, decimal amount)
     {
-        await GetCfgAsync();
+        await GetCfgAsync(lojaId: pedido.LojaId);
         var service = new PaymentIntentService();
         var intent = await service.CreateAsync(new PaymentIntentCreateOptions
         {

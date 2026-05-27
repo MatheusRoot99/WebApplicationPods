@@ -10,6 +10,7 @@ using WebApplicationPods.Data;
 using WebApplicationPods.Enum;
 using WebApplicationPods.Hubs;
 using WebApplicationPods.Models;
+using WebApplicationPods.Payments.Options;
 using WebApplicationPods.Repository.Interface;
 using WebApplicationPods.Services.Interface;
 
@@ -44,23 +45,30 @@ namespace WebApplicationPods.Payments
         }
 
         // ===== Helpers de provedor =====
-        private async Task<string> ResolvePixProviderAsync()
+        private async Task<string> ResolvePixProviderAsync(PedidoModel pedido)
         {
-            var user = _httpContextAccessor.HttpContext?.User;
-            var pixManual = await _creds.GetAsync<WebApplicationPods.Payments.Options.PixManualOptions>(user!, "PixManual");
+            var pixManual = pedido.LojaId > 0
+                ? await _creds.GetForLojaAsync<PixManualOptions>(pedido.LojaId, "PixManual")
+                : await _creds.GetAsync<PixManualOptions>(_httpContextAccessor.HttpContext?.User!, "PixManual");
+
             if (pixManual != null && !string.IsNullOrWhiteSpace(pixManual.PixKey))
                 return "PixManual";
+
             return "MercadoPago";
         }
 
-        private async Task<string> ResolveCardProviderAsync()
+        private async Task<string> ResolveCardProviderAsync(PedidoModel pedido)
         {
             var user = _httpContextAccessor.HttpContext?.User;
 
-            var mp = await _creds.GetAsync<WebApplicationPods.Payments.Options.MercadoPagoOptions>(user!, "MercadoPago");
+            var mp = pedido.LojaId > 0
+                ? await _creds.GetForLojaAsync<MercadoPagoOptions>(pedido.LojaId, "MercadoPago")
+                : await _creds.GetAsync<MercadoPagoOptions>(user!, "MercadoPago");
             var mpOk = mp != null && !string.IsNullOrWhiteSpace(mp.PublicKey) && !string.IsNullOrWhiteSpace(mp.AccessToken);
 
-            var st = await _creds.GetAsync<WebApplicationPods.Payments.Options.StripeOptions>(user!, "Stripe");
+            var st = pedido.LojaId > 0
+                ? await _creds.GetForLojaAsync<StripeOptions>(pedido.LojaId, "Stripe")
+                : await _creds.GetAsync<StripeOptions>(user!, "Stripe");
             var stOk = st != null && !string.IsNullOrWhiteSpace(st.PublishableKey) && !string.IsNullOrWhiteSpace(st.SecretKey);
 
             if (stOk) return "Stripe";
@@ -100,8 +108,8 @@ namespace WebApplicationPods.Payments
         {
             var provider =
                  metodo == PaymentMethod.Cash ? "None" :
-                 metodo == PaymentMethod.Pix ? await ResolvePixProviderAsync() :
-                 (metodo == PaymentMethod.CardCredit || metodo == PaymentMethod.CardDebit) ? await ResolveCardProviderAsync() :
+                 metodo == PaymentMethod.Pix ? await ResolvePixProviderAsync(pedido) :
+                 (metodo == PaymentMethod.CardCredit || metodo == PaymentMethod.CardDebit) ? await ResolveCardProviderAsync(pedido) :
                  "None";
 
             var gateway = provider == "None" ? null : _gatewayFactory(provider);

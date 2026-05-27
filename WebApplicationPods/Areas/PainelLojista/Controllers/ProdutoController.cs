@@ -1,17 +1,22 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApplicationPods.Data;
+using WebApplicationPods.Services.Interface;
 
 namespace WebApplicationPods.Areas.PainelLojista.Controllers
 {
     [Area("PainelLojista")]
+    [Authorize(Roles = "Lojista,Admin")]
     public class ProdutoController : Controller
     {
         private readonly BancoContext _context;
+        private readonly ICurrentLojaService _currentLoja;
 
-        public ProdutoController(BancoContext context)
+        public ProdutoController(BancoContext context, ICurrentLojaService currentLoja)
         {
             _context = context;
+            _currentLoja = currentLoja;
         }
 
         [HttpGet]
@@ -20,7 +25,6 @@ namespace WebApplicationPods.Areas.PainelLojista.Controllers
             return RedirectToAction("Index", "Produto", new { area = "" });
         }
 
-       
         [HttpGet]
         public IActionResult CriarPadrao()
         {
@@ -54,13 +58,17 @@ namespace WebApplicationPods.Areas.PainelLojista.Controllers
         [HttpGet]
         public async Task<IActionResult> Visualizar(int id)
         {
+            if (_currentLoja.LojaId is not int lojaId || lojaId <= 0)
+                return Forbid();
+
             var produto = await _context.Produtos
                 .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.Id == id);
+                .FirstOrDefaultAsync(p => p.Id == id && p.LojaId == lojaId);
 
-            if (produto == null) return NotFound();
+            if (produto == null)
+                return NotFound();
 
-            return View(produto); // Areas/PainelLojista/Views/Produto/Visualizar.cshtml
+            return View(produto);
         }
     }
 }

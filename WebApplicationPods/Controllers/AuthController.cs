@@ -54,6 +54,14 @@ namespace WebApplicationPods.Controllers
             return (d[9] - '0') == d1 && (d[10] - '0') == d2;
         }
 
+        private string LocalRedirectTarget(string? returnUrl, string fallbackAction = "Resumo", string fallbackController = "Carrinho")
+        {
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                return returnUrl;
+
+            return Url.Action(fallbackAction, fallbackController) ?? "/";
+        }
+
         public AuthController(
             BancoContext context,
             ICarrinhoRepository carrinhoRepository,
@@ -73,7 +81,7 @@ namespace WebApplicationPods.Controllers
             var telSess = HttpContext.Session.GetString("ClienteTelefone");
             if (!string.IsNullOrWhiteSpace(telSess))
             {
-                return Redirect(returnUrl ?? Url.Action("Index", "Home")!);
+                return Redirect(LocalRedirectTarget(returnUrl, "Index", "Home"));
             }
 
             // 2) tenta cookie lembrado
@@ -113,8 +121,8 @@ namespace WebApplicationPods.Controllers
                 HttpContext.Session.SetString("ClienteTelefone", tel);
                 HttpContext.Session.SetString("ClienteConfirmado", "1");
                 _remember.SetCookie(Response, tel, vm.ClienteNome, TimeSpan.FromDays(90));
-                var returnUrl = vm.ReturnUrl ?? TempData["ReturnUrl"]?.ToString() ?? Url.Action("Index", "Home")!;
-                return Redirect(returnUrl);
+                var returnUrl = vm.ReturnUrl ?? TempData["ReturnUrl"]?.ToString();
+                return Redirect(LocalRedirectTarget(returnUrl, "Index", "Home"));
             }
 
             var cliente = _context.Clientes
@@ -131,8 +139,8 @@ namespace WebApplicationPods.Controllers
             HttpContext.Session.SetString("ClienteConfirmado", "1");
             _remember.SetCookie(Response, tel, cliente.Nome, TimeSpan.FromDays(90));
 
-            var dest = vm.ReturnUrl ?? TempData["ReturnUrl"]?.ToString() ?? Url.Action("Resumo", "Carrinho")!;
-            return Redirect(dest);
+            var dest = vm.ReturnUrl ?? TempData["ReturnUrl"]?.ToString();
+            return Redirect(LocalRedirectTarget(dest));
         }
 
         // ======================= CADASTRO RÁPIDO ==========================
@@ -234,9 +242,7 @@ namespace WebApplicationPods.Controllers
             HttpContext.Session.SetString("ClienteConfirmado", "1");
             _remember.SetCookie(Response, cliente.Telefone, cliente.Nome, TimeSpan.FromDays(90));
 
-            return Redirect(string.IsNullOrWhiteSpace(returnUrl)
-                ? Url.Action("Resumo", "Carrinho")!
-                : returnUrl);
+            return Redirect(LocalRedirectTarget(returnUrl));
         }
 
         // ============================ TROCAR ==============================
@@ -324,9 +330,7 @@ namespace WebApplicationPods.Controllers
             _remember.SetCookie(Response, telNovo, cliente.Nome, TimeSpan.FromDays(90));
 
             TempData["Sucesso"] = "Informações atualizadas com sucesso!";
-            return Redirect(string.IsNullOrWhiteSpace(vm.ReturnUrl)
-                ? Url.Action("Resumo", "Carrinho")!
-                : vm.ReturnUrl!);
+            return Redirect(LocalRedirectTarget(vm.ReturnUrl));
         }
     }
 }

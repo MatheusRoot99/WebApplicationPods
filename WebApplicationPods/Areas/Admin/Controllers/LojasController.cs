@@ -81,6 +81,19 @@ namespace WebApplicationPods.Areas.Admin.Controllers
             }
 
             var sub = NormalizeSubdominio(vm.Subdominio);
+            if (string.IsNullOrWhiteSpace(sub))
+            {
+                ModelState.AddModelError(nameof(vm.Subdominio), "Informe um subdomínio válido.");
+                vm.Lojistas = await GetLojistasSelectListAsync(vm.DonoUserId);
+                return View(vm);
+            }
+
+            if (!await DonoPodeSerVinculadoAsync(vm.DonoUserId, lojaIdAtual: null))
+            {
+                ModelState.AddModelError(nameof(vm.DonoUserId), "O lojista selecionado não existe, não possui perfil Lojista ou já está vinculado a outra loja.");
+                vm.Lojistas = await GetLojistasSelectListAsync(vm.DonoUserId);
+                return View(vm);
+            }
 
             var existsSub = await _context.Lojas.AnyAsync(l => l.Subdominio == sub);
             if (existsSub)
@@ -170,6 +183,19 @@ namespace WebApplicationPods.Areas.Admin.Controllers
             if (loja == null) return NotFound();
 
             var sub = NormalizeSubdominio(vm.Subdominio);
+            if (string.IsNullOrWhiteSpace(sub))
+            {
+                ModelState.AddModelError(nameof(vm.Subdominio), "Informe um subdomínio válido.");
+                vm.Lojistas = await GetLojistasSelectListAsync(vm.DonoUserId);
+                return View(vm);
+            }
+
+            if (!await DonoPodeSerVinculadoAsync(vm.DonoUserId, loja.Id))
+            {
+                ModelState.AddModelError(nameof(vm.DonoUserId), "O lojista selecionado não existe, não possui perfil Lojista ou já está vinculado a outra loja.");
+                vm.Lojistas = await GetLojistasSelectListAsync(vm.DonoUserId);
+                return View(vm);
+            }
 
             var existsSub = await _context.Lojas
                 .AnyAsync(l => l.Id != loja.Id && l.Subdominio == sub);
@@ -234,6 +260,20 @@ namespace WebApplicationPods.Areas.Admin.Controllers
 
             if (loja == null) return NotFound();
 
+            var possuiProdutos = await _context.Produtos
+                .IgnoreQueryFilters()
+                .AnyAsync(p => p.LojaId == loja.Id);
+
+            var possuiPedidos = await _context.Pedidos
+                .IgnoreQueryFilters()
+                .AnyAsync(p => p.LojaId == loja.Id);
+
+            if (possuiProdutos || possuiPedidos)
+            {
+                TempData["Erro"] = "Esta loja possui produtos ou pedidos. Para preservar o histórico, desative a loja em vez de excluir.";
+                return RedirectToAction(nameof(Index));
+            }
+
             // limpa LojaId de usuários que estejam apontando para essa loja
             var users = await _userManager.Users
                 .Where(u => u.LojaId == loja.Id)
@@ -267,6 +307,31 @@ namespace WebApplicationPods.Areas.Admin.Controllers
                     Selected = selectedId.HasValue && u.Id == selectedId.Value
                 })
                 .ToList();
+        }
+
+        private async Task<bool> DonoPodeSerVinculadoAsync(int? donoUserId, int? lojaIdAtual)
+        {
+            if (!donoUserId.HasValue)
+                return true;
+
+            var user = await _userManager.FindByIdAsync(donoUserId.Value.ToString());
+            if (user == null)
+                return false;
+
+            if (!await _userManager.IsInRoleAsync(user, "Lojista"))
+                return false;
+
+            var jaEhDonoDeOutraLoja = await _context.Lojas
+                .AsNoTracking()
+                .AnyAsync(l =>
+                    l.DonoUserId == donoUserId.Value &&
+                    (!lojaIdAtual.HasValue || l.Id != lojaIdAtual.Value));
+
+            if (jaEhDonoDeOutraLoja)
+                return false;
+
+            return !user.LojaId.HasValue ||
+                   (lojaIdAtual.HasValue && user.LojaId.Value == lojaIdAtual.Value);
         }
 
         private static string NormalizeSubdominio(string sub)

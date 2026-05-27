@@ -15,7 +15,7 @@ namespace WebApplicationPods.Repositories
         private readonly ILogger<CarrinhoRepository> _logger;
         private readonly BancoContext _context;
         private readonly ICurrentLojaService _currentLoja;
-        private readonly IWebHostEnvironment _env;
+        private readonly IConfiguration _configuration;
 
         private const string CarrinhoSessionKeyPrefix = "Carrinho_";
         private const int LojaFallbackDev = 0;
@@ -26,27 +26,31 @@ namespace WebApplicationPods.Repositories
             ILogger<CarrinhoRepository> logger,
             BancoContext context,
             ICurrentLojaService currentLoja,
-            IWebHostEnvironment env)
+            IConfiguration configuration)
         {
             _http = httpContextAccessor;
             _produtoRepository = produtoRepository;
             _logger = logger;
             _context = context;
             _currentLoja = currentLoja;
-            _env = env;
+            _configuration = configuration;
         }
 
         // ===================== Helpers =====================
 
-        private bool IgnorarLojaNoAmbienteAtual()
-            => _env.IsDevelopment();
+        private bool PermitirCarrinhoSemLoja()
+        {
+            return _configuration.GetValue<bool?>("DevelopmentSettings:LocalhostOnly")
+                ?? _configuration.GetValue<bool?>("AppSettings:LocalhostOnly")
+                ?? false;
+        }
 
         private int GetLojaIdOrFallback()
         {
             if (_currentLoja?.LojaId is int lojaId && lojaId > 0)
                 return lojaId;
 
-            if (IgnorarLojaNoAmbienteAtual())
+            if (PermitirCarrinhoSemLoja())
                 return LojaFallbackDev;
 
             throw new InvalidOperationException("Loja atual não definida. Verifique o middleware multi-loja.");
@@ -110,8 +114,7 @@ namespace WebApplicationPods.Repositories
                         if (produto == null)
                             continue;
 
-                        // Em produção: protege multi-loja
-                        if (!IgnorarLojaNoAmbienteAtual())
+                        if (lojaId > 0)
                         {
                             if (produto.LojaId != 0 && produto.LojaId != lojaId)
                                 continue;
@@ -193,8 +196,7 @@ namespace WebApplicationPods.Repositories
 
             var lojaId = GetLojaIdOrFallback();
 
-            // Só valida loja em produção
-            if (!IgnorarLojaNoAmbienteAtual())
+            if (lojaId > 0)
             {
                 if (produto.LojaId != 0 && produto.LojaId != lojaId)
                     throw new InvalidOperationException("Produto não pertence à loja atual.");

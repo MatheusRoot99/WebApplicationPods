@@ -4,35 +4,71 @@ using System.Security.Claims;
 using WebApplicationPods.Constants;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
+using WebApplicationPods.Services.Interface;
 
 namespace WebApplicationPods.Controllers
 {
     public class PedidoController : Controller
     {
         private readonly IPedidoRepository _pedidoRepository;
+        private readonly ICurrentLojaService _currentLoja;
 
-        public PedidoController(IPedidoRepository pedidoRepository)
+        public PedidoController(
+            IPedidoRepository pedidoRepository,
+            ICurrentLojaService currentLoja)
         {
             _pedidoRepository = pedidoRepository;
+            _currentLoja = currentLoja;
         }
 
         public IActionResult Index() => View();
 
-        private static bool CanViewPedido(PedidoModel p, ClaimsPrincipal user, string? token)
+        private int? ObterLojaAtual()
         {
-            if (user?.Identity?.IsAuthenticated == true)
-            {
-                if (user.IsInRole("Lojista") || user.IsInRole("Admin")) return true;
+            if (_currentLoja.LojaId is int lojaAtual && lojaAtual > 0)
+                return lojaAtual;
 
-                var cidStr = user.FindFirstValue("ClienteId");
-                if (int.TryParse(cidStr, out var cid) && cid == p.ClienteId) return true;
+            var lojaIdClaim = User.FindFirst("LojaId")?.Value
+                           ?? User.FindFirst("lojaId")?.Value;
+
+            if (int.TryParse(lojaIdClaim, out var lojaId) && lojaId > 0)
+                return lojaId;
+
+            return null;
+        }
+
+        private bool CanViewPedido(PedidoModel pedido, string? token)
+        {
+            if (User?.Identity?.IsAuthenticated == true)
+            {
+                if (User.IsInRole("Admin"))
+                    return true;
+
+                if (User.IsInRole("Lojista"))
+                {
+                    var lojaAtual = ObterLojaAtual();
+                    return lojaAtual.HasValue &&
+                           lojaAtual.Value > 0 &&
+                           pedido.LojaId == lojaAtual.Value;
+                }
+
+                var clienteIdStr = User.FindFirstValue("ClienteId");
+                if (int.TryParse(clienteIdStr, out var clienteId) &&
+                    clienteId > 0 &&
+                    clienteId == pedido.ClienteId)
+                {
+                    return true;
+                }
             }
 
-            if (!string.IsNullOrEmpty(token) &&
-                string.Equals(token, p.RastreioToken, StringComparison.Ordinal))
-                return true;
+            return TokenConfere(pedido, token);
+        }
 
-            return false;
+        private static bool TokenConfere(PedidoModel pedido, string? token)
+        {
+            return !string.IsNullOrWhiteSpace(token) &&
+                   !string.IsNullOrWhiteSpace(pedido.RastreioToken) &&
+                   string.Equals(token, pedido.RastreioToken, StringComparison.Ordinal);
         }
 
         private static bool StatusEh(string? atual, string esperado)
@@ -63,13 +99,9 @@ namespace WebApplicationPods.Controllers
                 return 4;
             }
 
-            // retirada local: "Pronto" já representa etapa 4
             if (retiradaNoLocal && StatusEh(status, PedidoStatus.Pronto))
-            {
                 return 4;
-            }
 
-            // entrega: ainda não saiu, mas já está na fase logística
             if (StatusEh(status, PedidoStatus.Pronto) ||
                 StatusEh(status, PedidoEntregaStatus.AguardandoAtribuicao) ||
                 StatusEh(status, PedidoEntregaStatus.Atribuido))
@@ -98,8 +130,6 @@ namespace WebApplicationPods.Controllers
             return 0;
         }
 
-        // GET /Pedido/Acompanhar/123?t=TOKEN
-        [HttpGet]
         [HttpGet]
         public IActionResult Acompanhar(int id, string? t = null)
         {
@@ -110,14 +140,10 @@ namespace WebApplicationPods.Controllers
             if (pedido == null)
                 return RedirectToAction("Index", "Home");
 
-            // Se existir token de rastreio no pedido, valida quando vier na URL
-            if (!string.IsNullOrWhiteSpace(pedido.RastreioToken))
+            if (!CanViewPedido(pedido, t))
             {
-                if (string.IsNullOrWhiteSpace(t) ||
-                    !string.Equals(pedido.RastreioToken, t, StringComparison.OrdinalIgnoreCase))
-                {
-                    return RedirectToAction("Index", "Home");
-                }
+                TempData["Erro"] = "Não foi possível identificar seu pedido.";
+                return RedirectToAction(nameof(Buscar));
             }
 
             var ultimosPedidos = Enumerable.Empty<PedidoModel>();
@@ -132,55 +158,31 @@ namespace WebApplicationPods.Controllers
                     .ToList();
             }
 
-            var historico = _pedidoRepository
+            ViewBag.Ultimos = ultimosPedidos;
+            ViewBag.Historico = _pedidoRepository
                 .ObterHistorico(pedido.Id)
                 .OrderByDescending(x => x.DataCadastro)
                 .ToList();
-
-            ViewBag.Ultimos = ultimosPedidos;
-            ViewBag.Historico = historico;
 
             return View(pedido);
         }
 
         [HttpGet]
+        [AllowAnonymous]
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult StatusJson(int id, string? t = null)
         {
             if (id <= 0)
-            {
-                return Json(new
-                {
-                    ok = false,
-                    message = "Pedido inválido."
-                });
-            }
+                return Json(new { ok = false, message = "Pedido inválido." });
 
             var pedido = _pedidoRepository.ObterPorId(id);
             if (pedido == null)
-            {
-                return Json(new
-                {
-                    ok = false,
-                    message = "Pedido não encontrado."
-                });
-            }
+                return Json(new { ok = false, message = "Pedido não encontrado." });
 
-            if (!string.IsNullOrWhiteSpace(pedido.RastreioToken))
-            {
-                if (string.IsNullOrWhiteSpace(t) ||
-                    !string.Equals(pedido.RastreioToken, t, StringComparison.OrdinalIgnoreCase))
-                {
-                    return Json(new
-                    {
-                        ok = false,
-                        message = "Token de rastreio inválido."
-                    });
-                }
-            }
+            if (!CanViewPedido(pedido, t))
+                return Json(new { ok = false, message = "Token de rastreio inválido ou sem permissão." });
 
-            int step = ObterStepPedido(pedido);
-
-            var times = new Dictionary<string, string?>()
+            var times = new Dictionary<string, string?>
             {
                 ["0"] = pedido.DataPedido != default ? pedido.DataPedido.ToString("o") : null,
                 ["1"] = pedido.DataAguardandoPagamento?.ToString("o"),
@@ -195,8 +197,8 @@ namespace WebApplicationPods.Controllers
                 ok = true,
                 id = pedido.Id,
                 status = pedido.Status,
-                step = step,
-                times = times,
+                step = ObterStepPedido(pedido),
+                times,
                 dataPedido = pedido.DataPedido,
                 dataAguardandoPagamento = pedido.DataAguardandoPagamento,
                 dataPagamentoAprovado = pedido.DataPagamentoAprovado,
@@ -210,9 +212,6 @@ namespace WebApplicationPods.Controllers
 
         private static int ObterStepPedido(PedidoModel pedido)
         {
-            if (pedido == null)
-                return 0;
-
             return MapStep(pedido.Status, pedido.RetiradaNoLocal);
         }
 
@@ -221,42 +220,45 @@ namespace WebApplicationPods.Controllers
         public IActionResult ResumoPedidoCliente(int id, string? t)
         {
             var pedido = _pedidoRepository.ObterPorId(id);
-            if (pedido == null) return NotFound();
+            if (pedido == null)
+                return NotFound();
 
-            if (!CanViewPedido(pedido, HttpContext.User, t))
+            if (!CanViewPedido(pedido, t))
             {
                 TempData["Erro"] = "Não foi possível identificar seu pedido.";
                 return RedirectToAction(nameof(Buscar));
             }
+
             ViewBag.Historico = _pedidoRepository.ObterHistorico(pedido.Id);
             return View("ResumoPedidoCliente", pedido);
         }
 
-        // GET /Pedido/Status?id=123&t=TOKEN
         [HttpGet]
         [AllowAnonymous]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Status(int id, string? t)
         {
-            var p = _pedidoRepository.ObterPorId(id);
-            if (p == null) return NotFound();
-            if (!CanViewPedido(p, HttpContext.User, t)) return Unauthorized();
+            var pedido = _pedidoRepository.ObterPorId(id);
+            if (pedido == null)
+                return NotFound();
 
-            var step = MapStep(p.Status, p.RetiradaNoLocal);
+            if (!CanViewPedido(pedido, t))
+                return Unauthorized();
+
             var times = new Dictionary<string, string?>
             {
-                ["0"] = p.DataPedido.ToString("o"),
-                ["1"] = p.DataAguardandoPagamento?.ToString("o"),
-                ["2"] = p.DataPagamentoAprovado?.ToString("o"),
-                ["3"] = p.DataInicioPreparo?.ToString("o"),
-                ["4"] = p.DataSaiuParaEntregaOuRetirada?.ToString("o"),
-                ["5"] = p.DataConcluido?.ToString("o")
+                ["0"] = pedido.DataPedido.ToString("o"),
+                ["1"] = pedido.DataAguardandoPagamento?.ToString("o"),
+                ["2"] = pedido.DataPagamentoAprovado?.ToString("o"),
+                ["3"] = pedido.DataInicioPreparo?.ToString("o"),
+                ["4"] = pedido.DataSaiuParaEntregaOuRetirada?.ToString("o"),
+                ["5"] = pedido.DataConcluido?.ToString("o")
             };
 
             return Json(new
             {
-                status = p.Status,
-                step,
+                status = pedido.Status,
+                step = MapStep(pedido.Status, pedido.RetiradaNoLocal),
                 times,
                 serverTime = DateTime.UtcNow.ToString("o")
             });
@@ -266,14 +268,15 @@ namespace WebApplicationPods.Controllers
         [AllowAnonymous]
         public IActionResult Ultimo()
         {
-            var user = HttpContext.User;
-
-            if (user?.Identity?.IsAuthenticated == true && (user.IsInRole("Lojista") || user.IsInRole("Admin")))
-                return RedirectToAction("Index", "PedidosAdmin", new { filtro = "dia" });
-
-            if (user?.Identity?.IsAuthenticated == true)
+            if (User?.Identity?.IsAuthenticated == true &&
+                (User.IsInRole("Lojista") || User.IsInRole("Admin")))
             {
-                var clienteIdStr = user.FindFirstValue("ClienteId");
+                return RedirectToAction("Index", "PedidosAdmin", new { filtro = "dia" });
+            }
+
+            if (User?.Identity?.IsAuthenticated == true)
+            {
+                var clienteIdStr = User.FindFirstValue("ClienteId");
                 if (int.TryParse(clienteIdStr, out var clienteId) && clienteId > 0)
                 {
                     var finais = new[] { "Cancelado", "Pagamento Falhou", "Entregue", "Concluído" };
@@ -317,7 +320,7 @@ namespace WebApplicationPods.Controllers
                 return View();
             }
 
-            if (!CanViewPedido(pedido, HttpContext.User, token))
+            if (!CanViewPedido(pedido, token))
             {
                 TempData["Erro"] = "Token inválido ou sem permissão.";
                 return View();

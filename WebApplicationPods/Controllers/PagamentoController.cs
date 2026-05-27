@@ -56,10 +56,57 @@ namespace WebApplicationPods.Controllers
             _currentLoja = currentLoja;
         }
 
-        private bool ValidarAssinaturaMercadoPago(HttpRequest request)
+        private async Task<string?> ExtrairMercadoPagoPaymentIdAsync(HttpRequest request)
         {
-            var secret = _cfg["Payments:MercadoPago:WebhookSecret"];
+            var dataId = request.Query["data.id"].FirstOrDefault();
 
+            if (string.IsNullOrWhiteSpace(dataId))
+                dataId = request.Query["id"].FirstOrDefault();
+
+            if (!string.IsNullOrWhiteSpace(dataId))
+                return dataId;
+
+            request.EnableBuffering();
+
+            using var sr = new StreamReader(request.Body, Encoding.UTF8, leaveOpen: true);
+            var body = await sr.ReadToEndAsync();
+            request.Body.Position = 0;
+
+            if (string.IsNullOrWhiteSpace(body))
+                return null;
+
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(body);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("data", out var dataEl) &&
+                    dataEl.ValueKind == System.Text.Json.JsonValueKind.Object &&
+                    dataEl.TryGetProperty("id", out var idEl))
+                {
+                    return idEl.ValueKind == System.Text.Json.JsonValueKind.Number
+                        ? idEl.GetInt64().ToString()
+                        : idEl.GetString();
+                }
+
+                if (root.TryGetProperty("resource", out var resourceEl) &&
+                    resourceEl.ValueKind == System.Text.Json.JsonValueKind.String)
+                {
+                    var resource = resourceEl.GetString() ?? "";
+                    var lastSlash = resource.LastIndexOf('/');
+                    if (lastSlash >= 0 && lastSlash + 1 < resource.Length)
+                        return resource[(lastSlash + 1)..];
+                }
+            }
+            catch
+            {
+            }
+
+            return null;
+        }
+
+        private bool ValidarAssinaturaMercadoPago(HttpRequest request, string? secret, string? dataId)
+        {
             if (string.IsNullOrWhiteSpace(secret))
                 return false;
 
@@ -93,11 +140,6 @@ namespace WebApplicationPods.Controllers
 
             if (!TimestampMercadoPagoEstaDentroDaTolerancia(ts))
                 return false;
-
-            var dataId = request.Query["data.id"].FirstOrDefault();
-
-            if (string.IsNullOrWhiteSpace(dataId))
-                dataId = request.Query["id"].FirstOrDefault();
 
             if (string.IsNullOrWhiteSpace(dataId))
                 return false;
@@ -427,7 +469,28 @@ namespace WebApplicationPods.Controllers
         [IgnoreAntiforgeryToken]
         public async Task<IActionResult> Webhook()
         {
-            if (!ValidarAssinaturaMercadoPago(Request))
+            var providerPaymentId = await ExtrairMercadoPagoPaymentIdAsync(Request);
+
+            var payment = string.IsNullOrWhiteSpace(providerPaymentId)
+                ? null
+                : await _db.Pagamentos
+                    .IgnoreQueryFilters()
+                    .Include(p => p.Pedido)
+                    .FirstOrDefaultAsync(p =>
+                        p.Provider == "MercadoPago" &&
+                        p.ProviderPaymentId == providerPaymentId);
+
+            string? webhookSecret = null;
+
+            if (payment?.Pedido?.LojaId is int lojaId && lojaId > 0)
+            {
+                var lojaCreds = await _creds.GetForLojaAsync<MercadoPagoOptions>(lojaId, "MercadoPago");
+                webhookSecret = lojaCreds.WebhookSecret;
+            }
+
+            webhookSecret ??= _cfg["Payments:MercadoPago:WebhookSecret"];
+
+            if (!ValidarAssinaturaMercadoPago(Request, webhookSecret, providerPaymentId))
             {
                 return Unauthorized(new
                 {

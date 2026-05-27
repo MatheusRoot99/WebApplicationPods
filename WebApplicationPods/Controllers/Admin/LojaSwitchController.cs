@@ -20,7 +20,7 @@ namespace WebApplicationPods.Controllers.Admin
         public IActionResult Set(int lojaId, string? returnUrl = null)
         {
             _currentLoja.SetLojaId(lojaId);
-            if (!string.IsNullOrWhiteSpace(returnUrl))
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
                 return LocalRedirect(returnUrl);
 
             return RedirectToAction("Index", "Home");
@@ -31,7 +31,7 @@ namespace WebApplicationPods.Controllers.Admin
         public IActionResult Clear(string? returnUrl = null)
         {
             _currentLoja.ClearLoja();
-            if (!string.IsNullOrWhiteSpace(returnUrl))
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
                 return LocalRedirect(returnUrl);
 
             return RedirectToAction("Index", "Home");
