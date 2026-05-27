@@ -446,7 +446,7 @@ namespace WebApplicationPods.Controllers
             var p = await _db.Pagamentos
                 .IgnoreQueryFilters()
                 .Include(x => x.Pedido)
-                .ThenInclude(pd => pd.Cliente)
+                .ThenInclude(pd => pd!.Cliente)
                 .FirstOrDefaultAsync(x => x.Id == id);
 
             string? redirect = null;
@@ -592,7 +592,7 @@ namespace WebApplicationPods.Controllers
             var p = await _db.Pagamentos
                 .IgnoreQueryFilters()
                 .Include(x => x.Pedido)
-                .ThenInclude(pd => pd.Cliente)
+                .ThenInclude(pd => pd!.Cliente)
                 .FirstOrDefaultAsync(x => x.Id == pagamentoId);
 
             if (p == null)

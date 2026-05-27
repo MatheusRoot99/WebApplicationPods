@@ -13,37 +13,37 @@ namespace WebApplicationPods.Models
 
         [Required(ErrorMessage = "O logradouro é obrigatório")]
         [StringLength(100, ErrorMessage = "O logradouro deve ter no máximo 100 caracteres")]
-        public string Logradouro { get; set; }
+        public string Logradouro { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "O número é obrigatório")]
         [StringLength(20, ErrorMessage = "O número deve ter no máximo 20 caracteres")]
-        public string Numero { get; set; }
+        public string Numero { get; set; } = string.Empty;
 
         [StringLength(50, ErrorMessage = "O complemento deve ter no máximo 50 caracteres")]
         public string? Complemento { get; set; }
 
         [Required(ErrorMessage = "O bairro é obrigatório")]
         [StringLength(50, ErrorMessage = "O bairro deve ter no máximo 50 caracteres")]
-        public string Bairro { get; set; }
+        public string Bairro { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "A cidade é obrigatória")]
         [StringLength(50, ErrorMessage = "A cidade deve ter no máximo 50 caracteres")]
-        public string Cidade { get; set; }
+        public string Cidade { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "O estado é obrigatório")]
         [StringLength(2, MinimumLength = 2, ErrorMessage = "UF deve ter 2 caracteres")]
-        public string Estado { get; set; }
+        public string Estado { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "O CEP é obrigatório")]
         [RegularExpression(@"^\d{5}-\d{3}$", ErrorMessage = "CEP inválido")]
         [Display(Name = "CEP")]
-        public string CEP { get; set; }
+        public string CEP { get; set; } = string.Empty;
 
         public bool Principal { get; set; } = false;
         public bool Ativo { get; set; } = true;
-        // Relacionamento
+
         [ForeignKey("ClienteId")]
-        [ValidateNever] // <- evita validar Cliente.Nome/Email/etc ao validar Endereco
+        [ValidateNever]
         public ClienteModel? Cliente { get; set; }
     }
 }

@@ -128,7 +128,7 @@ namespace WebApplicationPods.Controllers
                     .IgnoreQueryFilters()
                     .Include(p => p.Pedido)
                     .Where(p => p.Provider == "Stripe" && p.ProviderPaymentId == providerPaymentId)
-                    .Select(p => (int?)p.Pedido.LojaId)
+                    .Select(p => p.Pedido != null ? (int?)p.Pedido.LojaId : null)
                     .FirstOrDefaultAsync();
 
                 if (lojaId.HasValue && lojaId.Value > 0)
@@ -152,7 +152,7 @@ namespace WebApplicationPods.Controllers
             var payment = await _db.Pagamentos
                 .IgnoreQueryFilters()
                 .Include(x => x.Pedido)
-                .ThenInclude(p => p.Cliente)
+                .ThenInclude(p => p!.Cliente)
                 .FirstOrDefaultAsync(x =>
                     x.Provider == "Stripe" &&
                     x.ProviderPaymentId == intent.Id);

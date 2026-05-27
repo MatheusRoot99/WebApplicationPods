@@ -231,7 +231,7 @@ namespace WebApplicationPods.Payments.Gateways
                 .IgnoreQueryFilters()
                 .Include(p => p.Pedido)
                 .Where(p => p.Provider == Provider && p.ProviderPaymentId == id)
-                .Select(p => (int?)p.Pedido.LojaId)
+                .Select(p => p.Pedido != null ? (int?)p.Pedido.LojaId : null)
                 .FirstOrDefaultAsync();
 
             var status = await GetStatusAsync(id, lojaId);

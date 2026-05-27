@@ -7,17 +7,17 @@ namespace WebApplicationPods.Models
     {
         [Required(ErrorMessage = "Informe Telefone, CPF ou e-mail")]
         [Display(Name = "Telefone, CPF ou e-mail")]
-        public string TelefoneOuCpf { get; set; }
+        public string TelefoneOuCpf { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Informe a senha")]
         [DataType(DataType.Password)]
         [Display(Name = "Senha")]
-        public string Senha { get; set; }
+        public string Senha { get; set; } = string.Empty;
 
         [Display(Name = "Lembrar-me")]
         public bool LembrarMe { get; set; }
 
         [ValidateNever]
-        public string ReturnUrl { get; set; }
+        public string ReturnUrl { get; set; } = string.Empty;
     }
 }
