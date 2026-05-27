@@ -49,9 +49,17 @@ namespace WebApplicationPods.Middlewares
             bool isAdminHost = host.StartsWith("admin.");
             bool isPainelHost = host.StartsWith("painel.");
 
-            bool isAuth = user?.Identity?.IsAuthenticated == true;
-            bool isAdmin = isAuth && user.IsInRole("Admin");
-            bool isLojista = isAuth && user.IsInRole("Lojista");
+            var identity = user?.Identity;
+            bool isAuth = identity?.IsAuthenticated == true;
+
+            if (!isAuth)
+            {
+                await _next(context);
+                return;
+            }
+
+            bool isAdmin = user!.IsInRole("Admin");
+            bool isLojista = user.IsInRole("Lojista");
 
             // Se não está autenticado, deixa passar
             if (!isAuth)

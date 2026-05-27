@@ -28,7 +28,7 @@ namespace WebApplicationPods.Repository.Repository
 
         // ======================= CLIENTE =======================
 
-        public ClienteModel ObterPorTelefone(string telefone)
+        public ClienteModel? ObterPorTelefone(string telefone)
         {
             telefone = SoDigitos(telefone);
             return _context.Clientes
@@ -37,7 +37,7 @@ namespace WebApplicationPods.Repository.Repository
                 .FirstOrDefault(c => c.Telefone == telefone);
         }
 
-        public ClienteModel ObterPorId(int id)
+        public ClienteModel? ObterPorId(int id)
         {
             return _context.Clientes
                 .Include(c => c.Enderecos) // filtrados por QueryFilter (Ativo = true)
@@ -80,7 +80,7 @@ namespace WebApplicationPods.Repository.Repository
                 .ToList();
         }
 
-        public EnderecoModel ObterEnderecoPrincipal(int clienteId)
+        public EnderecoModel? ObterEnderecoPrincipal(int clienteId)
         {
             return _context.Enderecos
                 .FirstOrDefault(e => e.ClienteId == clienteId && e.Principal);
@@ -129,7 +129,7 @@ namespace WebApplicationPods.Repository.Repository
             tx.Commit();
         }
 
-        public EnderecoModel ObterEnderecoPorId(int enderecoId)
+        public EnderecoModel? ObterEnderecoPorId(int enderecoId)
         {
             // QueryFilter aplica Ativo; se precisar buscar inativos, use IgnoreQueryFilters() aqui.
             return _context.Enderecos.FirstOrDefault(e => e.Id == enderecoId);

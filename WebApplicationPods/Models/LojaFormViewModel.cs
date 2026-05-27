@@ -9,11 +9,11 @@ namespace WebApplicationPods.ViewModels
 
         [Required, StringLength(120)]
         [Display(Name = "Nome da loja")]
-        public string Nome { get; set; }
+        public string Nome { get; set; } = string.Empty;
 
         [Required, StringLength(60)]
         [Display(Name = "Subdomínio")]
-        public string Subdominio { get; set; }
+        public string Subdominio { get; set; } = string.Empty;
 
         [StringLength(30)]
         [Display(Name = "Plano")]

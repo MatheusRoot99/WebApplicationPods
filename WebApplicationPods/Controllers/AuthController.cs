@@ -204,7 +204,7 @@ namespace WebApplicationPods.Controllers
             {
                 Telefone = model.Telefone,
                 Nome = model.Nome?.Trim() ?? string.Empty,
-                Email = string.IsNullOrWhiteSpace(model.Email) ? null : model.Email.Trim(),
+                Email = string.IsNullOrWhiteSpace(model.Email) ? string.Empty : model.Email.Trim(),
                 Cpf = cpfDigitos, // <- use sempre a propriedade mapeada
                 DataNascimento = model.DataNascimento!.Value,
                 DataCadastro = DateTime.Now,
@@ -320,7 +320,7 @@ namespace WebApplicationPods.Controllers
 
             // aplica alterações
             cliente.Nome = vm.Nome?.Trim() ?? string.Empty;
-            cliente.Email = string.IsNullOrWhiteSpace(vm.Email) ? null : vm.Email.Trim();
+            cliente.Email = string.IsNullOrWhiteSpace(vm.Email) ? string.Empty : vm.Email.Trim();
             cliente.Telefone = telNovo;
 
             _context.SaveChanges();

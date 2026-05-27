@@ -106,10 +106,10 @@ namespace WebApplicationPods.Areas.Admin.Controllers
             var vm = new LojistaEditViewModel
             {
                 Id = u.Id,
-                Nome = u.Nome,
-                CPF = u.CPF,
-                PhoneNumber = u.PhoneNumber,
-                Email = u.Email
+                Nome = u.Nome ?? string.Empty,
+                CPF = u.CPF ?? string.Empty,
+                PhoneNumber = u.PhoneNumber ?? string.Empty,
+                Email = u.Email ?? string.Empty
             };
             return View(vm);
         }

@@ -13,10 +13,10 @@ namespace WebApplicationPods.Services.service
 
         public async Task SendAsync(string toEmail, string subject, string htmlBody)
         {
-            var host = _cfg["Smtp:Host"];
+            var host = _cfg["Smtp:Host"] ?? throw new InvalidOperationException("Configuração Smtp:Host não informada.");
             var port = int.Parse(_cfg["Smtp:Port"] ?? "587");
-            var user = _cfg["Smtp:User"];
-            var pass = _cfg["Smtp:Password"];
+            var user = _cfg["Smtp:User"] ?? throw new InvalidOperationException("Configuração Smtp:User não informada.");
+            var pass = _cfg["Smtp:Password"] ?? throw new InvalidOperationException("Configuração Smtp:Password não informada.");
             var fromName = _cfg["Smtp:FromName"] ?? user;
             var fromAddress = _cfg["Smtp:FromAddress"] ?? user;
 
