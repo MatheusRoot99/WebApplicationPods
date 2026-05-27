@@ -9,11 +9,11 @@
     public class CarrinhoItemDTO
     {
         public int ProdutoId { get; set; }
-        public string Nome { get; set; }
+        public string Nome { get; set; } = string.Empty;
         public decimal PrecoUnitario { get; set; }
-        public string ImagemUrl { get; set; }
+        public string ImagemUrl { get; set; } = string.Empty;
         public int Quantidade { get; set; }
-        public string Sabor { get; set; }
-        public string Observacoes { get; set; }
+        public string Sabor { get; set; } = string.Empty;
+        public string Observacoes { get; set; } = string.Empty;
     }
 }

@@ -18,7 +18,7 @@ namespace WebApplicationPods.Repositories
         private readonly IConfiguration _configuration;
 
         private const string CarrinhoSessionKeyPrefix = "Carrinho_";
-        private const int LojaFallbackDev = 0;
+        //private const int LojaFallbackDev = 0;
 
         public CarrinhoRepository(
             IHttpContextAccessor httpContextAccessor,
@@ -45,13 +45,27 @@ namespace WebApplicationPods.Repositories
                 ?? false;
         }
 
+        private int? ObterLojaPadraoDesenvolvimento()
+        {
+            var lojaId = _configuration.GetValue<int?>("DevelopmentSettings:DefaultLojaId")
+                      ?? _configuration.GetValue<int?>("AppSettings:DefaultLojaId");
+
+            return lojaId.HasValue && lojaId.Value > 0
+                ? lojaId.Value
+                : null;
+        }
+
         private int GetLojaIdOrFallback()
         {
             if (_currentLoja?.LojaId is int lojaId && lojaId > 0)
                 return lojaId;
 
+            var lojaPadraoDev = ObterLojaPadraoDesenvolvimento();
+            if (lojaPadraoDev.HasValue)
+                return lojaPadraoDev.Value;
+
             if (PermitirCarrinhoSemLoja())
-                return LojaFallbackDev;
+                return 0;
 
             throw new InvalidOperationException("Loja atual não definida. Verifique o middleware multi-loja.");
         }
@@ -162,18 +176,17 @@ namespace WebApplicationPods.Repositories
             var carrinhoDTO = new CarrinhoDTO
             {
                 Total = carrinho.Total,
-                Itens = (carrinho.Itens ?? new List<CarrinhoItemViewModel>())
-                    .Select(i => new CarrinhoItemDTO
-                    {
-                        ProdutoId = i.Produto.Id,
-                        Nome = i.Produto.Nome,
-                        PrecoUnitario = i.PrecoUnitario,
-                        ImagemUrl = i.Produto.ImagemUrl,
-                        Quantidade = i.Quantidade,
-                        Sabor = i.Sabor,
-                        Observacoes = i.Observacoes
-                    })
-                    .ToList()
+                Itens = (carrinho.Itens ?? new List<CarrinhoItemViewModel>()).Select(i => new CarrinhoItemDTO
+                     {
+                         ProdutoId = i.Produto.Id,
+                         Nome = i.Produto.Nome,
+                         PrecoUnitario = i.PrecoUnitario,
+                         ImagemUrl = i.Produto.ImagemUrl ?? string.Empty,
+                         Quantidade = i.Quantidade,
+                         Sabor = i.Sabor ?? string.Empty,
+                         Observacoes = i.Observacoes ?? string.Empty
+                     })
+                .ToList()
             };
 
             var options = new JsonSerializerOptions
@@ -223,9 +236,9 @@ namespace WebApplicationPods.Repositories
                     Produto = produto,
                     Quantidade = quantidade,
                     PrecoUnitario = produto.PrecoPromocional ?? produto.Preco,
-                    Observacoes = observacoes,
-                    Sabor = sabor,
-                    ImagemUrl = produto.ImagemUrl
+                    Observacoes = observacoes ?? string.Empty,
+                    Sabor = sabor ?? string.Empty,
+                    ImagemUrl = produto.ImagemUrl ?? string.Empty
                 });
             }
 

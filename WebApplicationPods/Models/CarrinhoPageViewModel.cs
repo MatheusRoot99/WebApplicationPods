@@ -1,5 +1,4 @@
-﻿// Models/ViewModels/CarrinhoPageViewModel.cs
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace WebApplicationPods.Models
 {
@@ -12,8 +11,8 @@ namespace WebApplicationPods.Models
     public class ProdutoResumoVM
     {
         public int Id { get; set; }
-        public string Nome { get; set; }
-        public string ImagemUrl { get; set; }
+        public string Nome { get; set; } = string.Empty;
+        public string ImagemUrl { get; set; } = string.Empty;
         public decimal Preco { get; set; }
         public decimal? PrecoPromocional { get; set; }
 

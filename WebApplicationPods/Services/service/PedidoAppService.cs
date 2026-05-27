@@ -31,7 +31,7 @@ namespace WebApplicationPods.Services.service
 
             var pedidoCriado = _pedidoRepository.ObterPorId(pedido.Id) ?? pedido;
 
-            await _hub.Clients.Group("lojistas").SendAsync("NewOrder", new
+            await _hub.Clients.Groups(PedidosHub.DestinosPedido(pedidoCriado.LojaId)).SendAsync("NewOrder", new
             {
                 id = pedidoCriado.Id,
                 status = pedidoCriado.Status,
@@ -46,7 +46,7 @@ namespace WebApplicationPods.Services.service
                 origem = origem
             });
 
-            await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged", new
+            await _hub.Clients.Groups(PedidosHub.DestinosPedido(pedidoCriado.LojaId)).SendAsync("PedidosChanged", new
             {
                 id = pedidoCriado.Id,
                 status = pedidoCriado.Status
@@ -82,7 +82,7 @@ namespace WebApplicationPods.Services.service
             if (atualizado == null)
                 return false;
 
-            await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged", new
+            await _hub.Clients.Groups(PedidosHub.DestinosPedido(atualizado.LojaId)).SendAsync("PedidosChanged", new
             {
                 id = atualizado.Id,
                 status = atualizado.Status

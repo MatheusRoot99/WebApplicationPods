@@ -360,7 +360,7 @@ namespace WebApplicationPods.Controllers
 
             _pedidos.ExcluirLogico(id, User.Identity?.Name);
 
-            await _hub.Clients.Group("lojistas").SendAsync("PedidosChanged", new
+            await _hub.Clients.Groups(PedidosHub.DestinosPedido(pedido.LojaId)).SendAsync("PedidosChanged", new
             {
                 id,
                 deleted = true

@@ -4,6 +4,6 @@ namespace WebApplicationPods.Services.Interface
 {
     public interface ICepService
     {
-        Task<EnderecoModel> BuscarCepAsync(string cep);
+        Task<EnderecoModel?> BuscarCepAsync(string cep);
     }
 }

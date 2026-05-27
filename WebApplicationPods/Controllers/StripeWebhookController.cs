@@ -253,7 +253,7 @@ namespace WebApplicationPods.Controllers
 
         private Task NotificarPedidoPago(PedidoModel pedido)
         {
-            return _hub.Clients.Group("lojistas").SendAsync("NewOrder", new
+            return _hub.Clients.Groups(PedidosHub.DestinosPedido(pedido.LojaId)).SendAsync("NewOrder", new
             {
                 id = pedido.Id,
                 cliente = pedido.Cliente?.Nome ?? $"Cliente #{pedido.ClienteId}",

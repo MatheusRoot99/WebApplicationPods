@@ -15,7 +15,7 @@ namespace WebApplicationPods.Services.service
 
         public async Task<EnderecoModel?> BuscarCepAsync(string cep)
         {
-            var resp = await _httpClient.GetAsync($"{cep}/json/"); // BaseAddress já está em https://viacep.com.br/ws/
+            var resp = await _httpClient.GetAsync($"{cep}/json/");
             if (!resp.IsSuccessStatusCode) return null;
 
             var json = await resp.Content.ReadAsStringAsync();
@@ -26,15 +26,14 @@ namespace WebApplicationPods.Services.service
 
             if (dto == null || dto.Erro == true) return null;
 
-            // 🔁 MAPEAMENTO explícito para seu modelo
             return new EnderecoModel
             {
-                CEP = dto.Cep,
-                Logradouro = dto.Logradouro,
-                Complemento = dto.Complemento,
-                Bairro = dto.Bairro,
-                Cidade = dto.Localidade, // <— aqui está o pulo do gato
-                Estado = dto.Uf          // <— idem
+                CEP = dto.Cep ?? string.Empty,
+                Logradouro = dto.Logradouro ?? string.Empty,
+                Complemento = dto.Complemento ?? string.Empty,
+                Bairro = dto.Bairro ?? string.Empty,
+                Cidade = dto.Localidade ?? string.Empty,
+                Estado = dto.Uf ?? string.Empty
             };
         }
     }

@@ -11,7 +11,7 @@ namespace WebApplicationPods.Validation
     {
         public CpfAttribute() : base("CPF inválido.") { }
 
-        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
             var s = value as string;
             if (string.IsNullOrWhiteSpace(s))

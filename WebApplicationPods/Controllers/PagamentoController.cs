@@ -259,6 +259,7 @@ namespace WebApplicationPods.Controllers
             var metodo = MapMetodo(pedido.MetodoPagamento);
 
             var existing = await _db.Pagamentos
+                .IgnoreQueryFilters()
                 .Where(p => p.PedidoId == pedido.Id && p.Metodo == metodo)
                 .Where(p => p.Status != PaymentStatus.Paid &&
                             p.Status != PaymentStatus.Canceled &&
@@ -320,7 +321,9 @@ namespace WebApplicationPods.Controllers
                 Total = total
             };
 
-            var mpCreds = await _creds.GetAsync<MercadoPagoOptions>(User, "MercadoPago");
+            var mpCreds = pedido.LojaId > 0
+                ? await _creds.GetForLojaAsync<MercadoPagoOptions>(pedido.LojaId, "MercadoPago")
+                : await _creds.GetAsync<MercadoPagoOptions>(User, "MercadoPago");
             ViewBag.MP_PublicKey = mpCreds?.PublicKey ?? _cfg["Payments:MercadoPago:PublicKey"];
 
             return View(payment);
@@ -332,6 +335,7 @@ namespace WebApplicationPods.Controllers
         public async Task<IActionResult> Status(int id, string? t = null)
         {
             var p = await _db.Pagamentos
+                .IgnoreQueryFilters()
                 .Include(x => x.Pedido)
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -409,7 +413,7 @@ namespace WebApplicationPods.Controllers
 
         private Task NotifyPaidAsync(PedidoModel pedido)
         {
-            return _hub.Clients.Group("lojistas").SendAsync("NewOrder", new
+            return _hub.Clients.Groups(PedidosHub.DestinosPedido(pedido.LojaId)).SendAsync("NewOrder", new
             {
                 id = pedido.Id,
                 cliente = pedido.Cliente?.Nome ?? $"Cliente #{pedido.ClienteId}",
@@ -427,6 +431,7 @@ namespace WebApplicationPods.Controllers
         public async Task<IActionResult> ConfirmCard(int id, string? t, [FromBody] object clientPayload)
         {
             var pagamentoAntes = await _db.Pagamentos
+                .IgnoreQueryFilters()
                 .Include(x => x.Pedido)
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -439,6 +444,7 @@ namespace WebApplicationPods.Controllers
             var ok = await _payments.ConfirmCardAsync(id, clientPayload?.ToString() ?? string.Empty);
 
             var p = await _db.Pagamentos
+                .IgnoreQueryFilters()
                 .Include(x => x.Pedido)
                 .ThenInclude(pd => pd.Cliente)
                 .FirstOrDefaultAsync(x => x.Id == id);
@@ -509,6 +515,7 @@ namespace WebApplicationPods.Controllers
         public async Task<IActionResult> Cancelar(int id, string? t = null)
         {
             var p = await _db.Pagamentos
+                .IgnoreQueryFilters()
                 .Include(x => x.Pedido)
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -548,6 +555,7 @@ namespace WebApplicationPods.Controllers
         public async Task<IActionResult> AprovarPagamentoEntrega(int pedidoId)
         {
             var pedido = await _db.Pedidos
+                .IgnoreQueryFilters()
                 .Include(p => p.Cliente)
                 .FirstOrDefaultAsync(p => p.Id == pedidoId);
 
@@ -582,6 +590,7 @@ namespace WebApplicationPods.Controllers
         public async Task<IActionResult> ConfirmarPixManual(int pagamentoId)
         {
             var p = await _db.Pagamentos
+                .IgnoreQueryFilters()
                 .Include(x => x.Pedido)
                 .ThenInclude(pd => pd.Cliente)
                 .FirstOrDefaultAsync(x => x.Id == pagamentoId);
