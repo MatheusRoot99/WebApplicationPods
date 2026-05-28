@@ -68,11 +68,11 @@ namespace WebApplicationPods.Payments.Gateways
         // =================== PIX ===================
         public async Task<PixInitResult> CreatePixAsync(PedidoModel pedido, decimal amount)
         {
-            if (amount <= 0) throw new ArgumentOutOfRangeException(nameof(amount));
+            if (amount <= 0)
+                throw new ArgumentOutOfRangeException(nameof(amount));
 
             var token = await ResolveAccessTokenAsync(pedido.LojaId);
 
-            // Dados do pagador – use os dados reais do seu cliente; em sandbox, use e-mail de usuário de teste
             var payer = new
             {
                 email = string.IsNullOrWhiteSpace(pedido?.Cliente?.Email)
@@ -83,7 +83,9 @@ namespace WebApplicationPods.Payments.Gateways
                 identification = new
                 {
                     type = "CPF",
-                    number = string.IsNullOrWhiteSpace(pedido?.Cliente?.Cpf) ? "19119119100" : pedido.Cliente.Cpf
+                    number = string.IsNullOrWhiteSpace(pedido?.Cliente?.Cpf)
+                        ? "19119119100"
+                        : pedido.Cliente.Cpf
                 }
             };
 
@@ -93,14 +95,10 @@ namespace WebApplicationPods.Payments.Gateways
                 description = $"Pedido #{pedido?.Id}",
                 payment_method_id = "pix",
                 payer,
-                //external_reference = pedido?.Id?.ToString(),
-                // configure seu webhook público (ngrok, Railway, domínio, etc.)
-                // sem webhook você ainda consegue gerar o QR, mas não recebe update automático
-                notification_url = "https://seu-dominio.com/webhooks/mercadopago"
-                // binary_mode = true, // opcional (aprova apenas se for aprovado)
+                external_reference = pedido?.Id.ToString(),
+                notification_url = ResolveNotificationUrl()
             };
 
-            // garanta que a URL é absoluta para evitar BaseAddress incorreta
             using var req = new HttpRequestMessage(HttpMethod.Post, "https://api.mercadopago.com/v1/payments");
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             req.Headers.TryAddWithoutValidation("X-Idempotency-Key", Guid.NewGuid().ToString("N"));
@@ -146,6 +144,26 @@ namespace WebApplicationPods.Payments.Gateways
             };
         }
 
+        private string ResolveNotificationUrl()
+        {
+            var configured = _cfg["Payments:MercadoPago:NotificationUrl"];
+
+            if (!string.IsNullOrWhiteSpace(configured))
+                return configured.Trim();
+
+            var request = _httpCtx.HttpContext?.Request;
+
+            if (request == null)
+                throw new InvalidOperationException("Não foi possível montar a URL pública do webhook do Mercado Pago.");
+
+            var scheme = _cfg["AppSettings:PublicScheme"]
+                ?? _cfg["DevelopmentSettings:PublicScheme"]
+                ?? request.Scheme;
+
+            var host = request.Host.Value;
+
+            return $"{scheme}://{host}/Pagamento/Webhook";
+        }
 
         // =================== CARTÃO (stub, se usar Stripe p/ cartão) ===================
         public Task<CardInitResult> CreateCardPaymentAsync(PedidoModel pedido, PaymentMethod method, decimal amount)

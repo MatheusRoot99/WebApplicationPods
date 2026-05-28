@@ -1,11 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Globalization;
-using System.Linq;
-using System.Reflection;
-using System.Threading.Tasks;
 using WebApplicationPods.Data;
 using WebApplicationPods.Enum;
 using WebApplicationPods.Hubs;
@@ -25,6 +20,7 @@ namespace WebApplicationPods.Payments
         private readonly IPedidoAppService _pedidoAppService;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IPaymentCredentialsResolver _creds;
+        private readonly IEstoqueService _estoque;
 
         public PaymentService(
             Func<string, IPaymentGateway> gatewayFactory,
@@ -33,6 +29,7 @@ namespace WebApplicationPods.Payments
             IHubContext<PedidosHub> hub,
             IHttpContextAccessor httpContextAccessor,
             IPaymentCredentialsResolver creds,
+            IEstoqueService estoque,
             IPedidoAppService pedidoAppService)
         {
             _gatewayFactory = gatewayFactory;
@@ -41,10 +38,10 @@ namespace WebApplicationPods.Payments
             _hub = hub;
             _httpContextAccessor = httpContextAccessor;
             _creds = creds;
+            _estoque = estoque;
             _pedidoAppService = pedidoAppService;
         }
 
-        // ===== Helpers de provedor =====
         private async Task<string> ResolvePixProviderAsync(PedidoModel pedido)
         {
             var pixManual = pedido.LojaId > 0
@@ -64,57 +61,67 @@ namespace WebApplicationPods.Payments
             var mp = pedido.LojaId > 0
                 ? await _creds.GetForLojaAsync<MercadoPagoOptions>(pedido.LojaId, "MercadoPago")
                 : await _creds.GetAsync<MercadoPagoOptions>(user!, "MercadoPago");
-            var mpOk = mp != null && !string.IsNullOrWhiteSpace(mp.PublicKey) && !string.IsNullOrWhiteSpace(mp.AccessToken);
+
+            var mpOk = mp != null &&
+                       !string.IsNullOrWhiteSpace(mp.PublicKey) &&
+                       !string.IsNullOrWhiteSpace(mp.AccessToken);
 
             var st = pedido.LojaId > 0
                 ? await _creds.GetForLojaAsync<StripeOptions>(pedido.LojaId, "Stripe")
                 : await _creds.GetAsync<StripeOptions>(user!, "Stripe");
-            var stOk = st != null && !string.IsNullOrWhiteSpace(st.PublishableKey) && !string.IsNullOrWhiteSpace(st.SecretKey);
+
+            var stOk = st != null &&
+                       !string.IsNullOrWhiteSpace(st.PublishableKey) &&
+                       !string.IsNullOrWhiteSpace(st.SecretKey);
 
             if (stOk) return "Stripe";
             if (mpOk) return "MercadoPago";
+
             return "Stripe";
         }
 
-        // ===== Cálculo do total (itens + frete − descontos) =====
-        private static decimal TotalParaCobranca(PedidoModel p)
+        // ===== Cálculo do total (itens + frete) =====
+        private static decimal TotalParaCobranca(PedidoModel pedido)
         {
-            var subtotal = p.ValorTotal;
+            var subtotalItens = pedido.PedidoItens?.Any() == true
+                ? pedido.PedidoItens.Sum(i => i.PrecoUnitario * i.Quantidade)
+                : pedido.ValorTotal;
 
-            // tenta encontrar campos comuns de frete/desconto por nome
-            decimal frete = TryGetDecimalProp(p, "TaxaEntrega")
-                          + TryGetDecimalProp(p, "ValorEntrega")
-                          + TryGetDecimalProp(p, "Frete");
-
-            decimal desconto = TryGetDecimalProp(p, "Desconto")
-                             + TryGetDecimalProp(p, "ValorDesconto");
-
-            var total = subtotal + frete - desconto;
+            var total = subtotalItens + pedido.TaxaEntrega;
             return total < 0 ? 0 : total;
         }
 
-        private static decimal TryGetDecimalProp(object obj, string propName)
-        {
-            var pi = obj.GetType().GetProperty(propName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-            if (pi == null) return 0m;
-            var raw = pi.GetValue(obj);
-            if (raw == null) return 0m;
-            try { return Convert.ToDecimal(raw, CultureInfo.InvariantCulture); }
-            catch { return 0m; }
-        }
+        //private static decimal TryGetDecimalProp(object obj, string propName)
+        //{
+        //    var pi = obj.GetType().GetProperty(
+        //        propName,
+        //        BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
 
-        // ===== Fluxo principal =====
+        //    if (pi == null) return 0m;
+
+        //    var raw = pi.GetValue(obj);
+        //    if (raw == null) return 0m;
+
+        //    try
+        //    {
+        //        return Convert.ToDecimal(raw, CultureInfo.InvariantCulture);
+        //    }
+        //    catch
+        //    {
+        //        return 0m;
+        //    }
+        //}
+
         public async Task<PaymentModel> StartPaymentAsync(PedidoModel pedido, PaymentMethod metodo)
         {
             var provider =
-                 metodo == PaymentMethod.Cash ? "None" :
-                 metodo == PaymentMethod.Pix ? await ResolvePixProviderAsync(pedido) :
-                 (metodo == PaymentMethod.CardCredit || metodo == PaymentMethod.CardDebit) ? await ResolveCardProviderAsync(pedido) :
-                 "None";
+                metodo == PaymentMethod.Cash ? "None" :
+                metodo == PaymentMethod.Pix ? await ResolvePixProviderAsync(pedido) :
+                metodo == PaymentMethod.CardCredit || metodo == PaymentMethod.CardDebit ? await ResolveCardProviderAsync(pedido) :
+                "None";
 
             var gateway = provider == "None" ? null : _gatewayFactory(provider);
-
-            // valor final que será cobrado (inclui frete/descontos)
+            // valor final que será cobrado (itens + taxa de entrega)
             var amount = TotalParaCobranca(pedido);
 
             var payment = new PaymentModel
@@ -136,6 +143,7 @@ namespace WebApplicationPods.Payments
             if (metodo == PaymentMethod.Pix && gateway is not null)
             {
                 var r = await gateway.CreatePixAsync(pedido, amount);
+
                 payment.ProviderPaymentId = r.ProviderPaymentId ?? string.Empty;
                 payment.PixQrData = r.QrData ?? string.Empty;
                 payment.PixQrBase64Png = r.QrBase64Png;
@@ -144,6 +152,7 @@ namespace WebApplicationPods.Payments
             else if ((metodo == PaymentMethod.CardCredit || metodo == PaymentMethod.CardDebit) && gateway is not null)
             {
                 var r = await gateway.CreateCardPaymentAsync(pedido, metodo, amount);
+
                 payment.ProviderPaymentId = r.ProviderPaymentId ?? string.Empty;
                 payment.ClientSecretOrToken = r.ClientSecretOrToken ?? string.Empty;
                 payment.Status = PaymentStatus.RequiresAction;
@@ -151,9 +160,9 @@ namespace WebApplicationPods.Payments
             else if (metodo == PaymentMethod.Cash)
             {
                 await _pedidoAppService.AtualizarStatusAsync(
-                     pedido.Id,
-                     "Aguardando Confirmação (Dinheiro)",
-                     origem: "PaymentService.StartPayment");
+                    pedido.Id,
+                    "Aguardando Confirmação (Dinheiro)",
+                    origem: "PaymentService.StartPayment");
 
                 payment.Status = PaymentStatus.Pending;
             }
@@ -165,12 +174,15 @@ namespace WebApplicationPods.Payments
         public async Task<bool> ConfirmCardAsync(int paymentId, string clientPayloadJson)
         {
             var payment = await _db.Set<PaymentModel>().FindAsync(paymentId);
-            if (payment == null) return false;
+
+            if (payment == null)
+                return false;
 
             var gateway = _gatewayFactory(payment.Provider);
             var result = await gateway.ConfirmCardPaymentAsync(payment.ProviderPaymentId, clientPayloadJson);
 
             payment.Status = result.Success ? PaymentStatus.Paid : PaymentStatus.Failed;
+
             if (result.Success)
             {
                 payment.PaidAt = DateTime.UtcNow;
@@ -181,6 +193,7 @@ namespace WebApplicationPods.Payments
             await _db.SaveChangesAsync();
 
             var pedido = _pedidos.ObterPorId(payment.PedidoId);
+
             if (pedido != null)
             {
                 await _pedidoAppService.AtualizarStatusAsync(
@@ -196,21 +209,38 @@ namespace WebApplicationPods.Payments
         {
             var mp = _gatewayFactory("MercadoPago");
             var parsed = await mp.HandleWebhookAsync(request);
+
             await ApplyWebhookParsedAsync(parsed);
         }
 
-        private async Task ApplyWebhookParsedAsync((string providerPaymentId, PaymentStatus newStatus, decimal? paidAmount, string extra) parsed)
+        private async Task EnsureBaixaEstoqueAsync(int pedidoId)
         {
-            if (string.IsNullOrWhiteSpace(parsed.providerPaymentId)) return;
+            var existeNaoBaixado = await _db.Set<PedidoItemModel>()
+                .AnyAsync(i => i.PedidoId == pedidoId && !i.EstoqueBaixado);
+
+            if (existeNaoBaixado)
+                await _estoque.BaixarEstoquePedidoAsync(pedidoId);
+        }
+
+        private async Task ApplyWebhookParsedAsync(
+            (string providerPaymentId, PaymentStatus newStatus, decimal? paidAmount, string extra) parsed)
+        {
+            if (string.IsNullOrWhiteSpace(parsed.providerPaymentId))
+                return;
 
             var payment = await _db.Set<PaymentModel>()
+                .Include(p => p.Pedido)
+                .ThenInclude(p => p!.Cliente)
                 .FirstOrDefaultAsync(p => p.ProviderPaymentId == parsed.providerPaymentId);
-            if (payment == null) return;
+
+            if (payment == null)
+                return;
 
             if (payment.Status == PaymentStatus.Paid && parsed.newStatus != PaymentStatus.Paid)
                 return;
 
             payment.Status = parsed.newStatus;
+
             if (parsed.newStatus == PaymentStatus.Paid)
                 payment.PaidAt = DateTime.UtcNow;
 
@@ -220,12 +250,31 @@ namespace WebApplicationPods.Payments
                 parsed.newStatus == PaymentStatus.Paid ? "Pago" :
                 parsed.newStatus == PaymentStatus.Failed ? "Pagamento Falhou" :
                 parsed.newStatus == PaymentStatus.Canceled ? "Cancelado" :
-                                                             "Pendente";
+                "Pendente";
 
             await _pedidoAppService.AtualizarStatusAsync(
-                     payment.PedidoId,
-                     statusTexto,
-                     origem: "PaymentService.Webhook");
+                payment.PedidoId,
+                statusTexto,
+                origem: "PaymentService.Webhook");
+
+            if (parsed.newStatus == PaymentStatus.Paid)
+            {
+                await EnsureBaixaEstoqueAsync(payment.PedidoId);
+
+                if (payment.Pedido != null)
+                {
+                    await _hub.Clients.Groups(PedidosHub.DestinosPedido(payment.Pedido.LojaId)).SendAsync("NewOrder", new
+                    {
+                        id = payment.Pedido.Id,
+                        cliente = payment.Pedido.Cliente?.Nome ?? $"Cliente #{payment.Pedido.ClienteId}",
+                        valor = payment.Pedido.ValorTotal,
+                        quando = payment.Pedido.DataPedido.ToString("o"),
+                        metodo = payment.Pedido.MetodoPagamento,
+                        status = "Pago",
+                        retirada = payment.Pedido.RetiradaNoLocal
+                    });
+                }
+            }
         }
     }
 }

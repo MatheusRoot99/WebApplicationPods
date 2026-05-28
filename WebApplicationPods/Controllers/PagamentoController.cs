@@ -307,7 +307,7 @@ namespace WebApplicationPods.Controllers
             var subtotalCheio = itensResumo.Sum(x => (decimal)x.SubtotalCheio);
             var desconto = Math.Max(0m, subtotalCheio - subtotal);
             var frete = pedido.TaxaEntrega;
-            var total = pedido.ValorTotal > 0 ? pedido.ValorTotal : subtotal + frete;
+            var total = payment.Amount > 0 ? payment.Amount : subtotal + frete;
 
             payment.Pedido = pedido;
 
@@ -324,6 +324,7 @@ namespace WebApplicationPods.Controllers
             var mpCreds = pedido.LojaId > 0
                 ? await _creds.GetForLojaAsync<MercadoPagoOptions>(pedido.LojaId, "MercadoPago")
                 : await _creds.GetAsync<MercadoPagoOptions>(User, "MercadoPago");
+
             ViewBag.MP_PublicKey = mpCreds?.PublicKey ?? _cfg["Payments:MercadoPago:PublicKey"];
 
             return View(payment);
