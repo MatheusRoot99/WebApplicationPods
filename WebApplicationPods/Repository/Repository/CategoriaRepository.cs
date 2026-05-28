@@ -2,21 +2,42 @@
 using WebApplicationPods.Data;
 using WebApplicationPods.Models;
 using WebApplicationPods.Repository.Interface;
+using WebApplicationPods.Services.Interface;
 
 namespace WebApplicationPods.Repository.Repository
 {
     public class CategoriaRepository : ICategoriaRepository
     {
         private readonly BancoContext _context;
+        private readonly ICurrentLojaService _currentLoja;
+        private readonly IHttpContextAccessor _http;
 
-        public CategoriaRepository(BancoContext context)
+        public CategoriaRepository(
+            BancoContext context,
+            ICurrentLojaService currentLoja,
+            IHttpContextAccessor http)
         {
             _context = context;
+            _currentLoja = currentLoja;
+            _http = http;
+        }
+
+        private IQueryable<CategoriaModel> BaseQuery()
+        {
+            var q = _context.Categorias.AsQueryable();
+
+            if (_http.HttpContext?.User?.IsInRole("Admin") == true)
+                return q;
+
+            if (_currentLoja?.LojaId is int lojaId && lojaId > 0)
+                q = q.Where(c => c.LojaId == lojaId);
+
+            return q;
         }
 
         public IEnumerable<CategoriaModel> ObterTodos()
         {
-            return _context.Categorias
+            return BaseQuery()
                 .AsNoTracking()
                 .OrderBy(c => c.Nome)
                 .ToList();
@@ -24,7 +45,7 @@ namespace WebApplicationPods.Repository.Repository
 
         public CategoriaModel ObterPorId(int id)
         {
-            return _context.Categorias
+            return BaseQuery()
                 .Include(c => c.Produtos)
                 .FirstOrDefault(c => c.Id == id)!;
         }
@@ -33,6 +54,13 @@ namespace WebApplicationPods.Repository.Repository
         {
             if (categoria == null)
                 throw new ArgumentNullException(nameof(categoria));
+
+            if (_http.HttpContext?.User?.IsInRole("Admin") != true &&
+                _currentLoja?.LojaId is int lojaId &&
+                lojaId > 0)
+            {
+                categoria.LojaId = lojaId;
+            }
 
             _context.Categorias.Add(categoria);
             _context.SaveChanges();
@@ -43,13 +71,26 @@ namespace WebApplicationPods.Repository.Repository
             if (categoria == null)
                 throw new ArgumentNullException(nameof(categoria));
 
+            if (_http.HttpContext?.User?.IsInRole("Admin") != true &&
+                _currentLoja?.LojaId is int lojaId &&
+                lojaId > 0)
+            {
+                var pertenceLoja = BaseQuery()
+                    .Any(c => c.Id == categoria.Id);
+
+                if (!pertenceLoja)
+                    throw new UnauthorizedAccessException("Categoria não pertence à loja atual.");
+
+                categoria.LojaId = lojaId;
+            }
+
             _context.Categorias.Update(categoria);
             _context.SaveChanges();
         }
 
         public void Remover(int id)
         {
-            var categoria = _context.Categorias
+            var categoria = BaseQuery()
                 .Include(c => c.Produtos)
                 .FirstOrDefault(c => c.Id == id);
 
@@ -65,7 +106,7 @@ namespace WebApplicationPods.Repository.Repository
 
         public IEnumerable<CategoriaModel> ObterCategoriasAtivas()
         {
-            return _context.Categorias
+            return BaseQuery()
                 .AsNoTracking()
                 .Where(c => c.Produtos.Any(p => p.Ativo))
                 .OrderBy(c => c.Nome)

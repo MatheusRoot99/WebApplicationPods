@@ -858,6 +858,10 @@ namespace WebApplicationPods.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("EmbalagemNome")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<bool>("EstoqueBaixado")
                         .HasColumnType("bit");
 
@@ -880,12 +884,27 @@ namespace WebApplicationPods.Migrations
                     b.Property<int>("ProdutoId")
                         .HasColumnType("int");
 
+                    b.Property<string>("ProdutoNomeSnapshot")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
                     b.Property<int>("Quantidade")
                         .HasColumnType("int");
 
                     b.Property<string>("Sabor")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("TipoProdutoSnapshot")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("UnidadeVendaDescricao")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<int?>("UnidadesPorEmbalagem")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 

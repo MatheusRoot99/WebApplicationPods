@@ -10,9 +10,14 @@
 
     var firstItem = Model?.PedidoItens?.FirstOrDefault();
     var thumb = firstItem?.Produto?.ImagemUrl ?? "https://via.placeholder.com/80x80?text=%20";
-    var title = firstItem?.Produto?.Nome ?? "Pedido";
-    var totalUnidades = Model?.PedidoItens?.Sum(i => i.Quantidade) ?? 0;
-    var extras = totalUnidades > 1 ? $"+ {totalUnidades - 1} itens" : $"{totalUnidades} un";
+    var title = firstItem?.NomeExibicao ?? "Pedido";
+
+    var totalItens = Model?.PedidoItens?.Sum(i => i.Quantidade) ?? 0;
+    var totalFisico = Model?.PedidoItens?.Sum(i => i.TotalUnidadesFisicas) ?? 0;
+
+    var extras = totalFisico > totalItens
+        ? $"{totalItens} item(ns) • {totalFisico} unidades físicas"
+        : (totalItens > 1 ? $"{totalItens} itens" : $"{totalItens} un");
 }
 
 @section Styles {
@@ -21,7 +26,7 @@
 
 
 
-<<div class="wrap">
+<div class="wrap">
     <!-- Header -->
     <div class="cardx">
         <div class="cardx-h">
@@ -83,13 +88,15 @@
                 @foreach (var it in Model?.PedidoItens ?? Enumerable.Empty<WebApplicationPods.Models.PedidoItemModel>())
                 {
                     var item = it!;
-                    var nome = item.Produto?.Nome ?? $"Produto #{item.ProdutoId}";
+                    var nome = item.NomeExibicao;
                     var img = item.Produto?.ImagemUrl ?? "https://via.placeholder.com/80x80?text=%20";
+                    var resumoQuantidade = item.ResumoQuantidadeExibicao;
 
                     <div class="it">
                         <img class="it-img" src="@img" alt="@nome" />
                         <div>
-                            <div class="it-name">@nome x @item.Quantidade</div>
+                            <div class="it-name">@nome</div>
+                            <div class="it-sabor">@resumoQuantidade</div>
 
                             @if (!string.IsNullOrWhiteSpace(item.Observacoes))
                             {

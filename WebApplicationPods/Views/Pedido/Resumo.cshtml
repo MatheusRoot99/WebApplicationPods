@@ -16,26 +16,55 @@
                     <h4 class="mb-0">Itens do Pedido</h4>
                 </div>
                 <div class="card-body">
-                    @foreach (var item in Model.Itens)
+                    @if (Model?.Itens != null && Model.Itens.Any())
                     {
-                        <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
-                            <div class="d-flex align-items-center">
-                                <img src="@item.Produto" alt="@item.Produto.Nome" class="img-thumbnail" style="max-width: 60px; margin-right: 15px;">
-                                <div>
-                                    <h5 class="mb-1">@item.Produto.Nome</h5>
-                                    <small class="text-muted">Quantidade: @item.Quantidade</small>
-                                    @if (!string.IsNullOrEmpty(item.Observacoes))
-                                    {
-                                        <div class="mt-1">
-                                            <small><strong>Obs:</strong> @item.Observacoes</small>
-                                        </div>
-                                    }
+                        foreach (var item in Model.Itens)
+                        {
+                            var produto = item.Produto;
+                            var nome = produto?.Nome ?? $"Produto #{item.ProdutoId}";
+                            var img = !string.IsNullOrWhiteSpace(produto?.ImagemUrl)
+                            ? produto.ImagemUrl
+                            : "https://via.placeholder.com/80x80?text=Produto";
+
+                            var resumoQuantidade = produto?.EhEmbalagemComposta == true
+                            ? $"{item.Quantidade} {(item.Quantidade == 1 ? produto.EmbalagemVendaSingular : produto.EmbalagemVendaPlural)} com {produto.UnidadesFisicasPorEmbalagem} unidades ({item.Quantidade * produto.UnidadesFisicasPorEmbalagem} unidades físicas)"
+                            : (item.Quantidade == 1 ? "1 unidade" : $"{item.Quantidade} unidades");
+
+                            <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                                <div class="d-flex align-items-center">
+                                    <img src="@img"
+                                         alt="@nome"
+                                         class="img-thumbnail"
+                                         style="max-width: 60px; margin-right: 15px;">
+
+                                    <div>
+                                        <h5 class="mb-1">@nome</h5>
+                                        <small class="text-muted">@resumoQuantidade</small>
+
+                                        @if (!string.IsNullOrWhiteSpace(item.Sabor))
+                                        {
+                                            <div class="mt-1">
+                                                <small><strong>Sabor:</strong> @item.Sabor</small>
+                                            </div>
+                                        }
+
+                                        @if (!string.IsNullOrWhiteSpace(item.Observacoes))
+                                        {
+                                            <div class="mt-1">
+                                                <small><strong>Obs:</strong> @item.Observacoes</small>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span>@item.Subtotal.ToString("C")</span>
                                 </div>
                             </div>
-                            <div class="text-right">
-                                <span>@item.Subtotal.ToString("C")</span>
-                            </div>
-                        </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-muted">Nenhum item encontrado no carrinho.</div>
                     }
                 </div>
             </div>
@@ -49,7 +78,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between mb-2">
                         <span>Subtotal:</span>
-                        <span>@Model.Total.ToString("C")</span>
+                        <span>@(Model?.Total.ToString("C") ?? "R$ 0,00")</span>
                     </div>
                     <div class="d-flex justify-content-between mb-3">
                         <span>Frete:</span>
@@ -58,7 +87,7 @@
                     <hr>
                     <div class="d-flex justify-content-between font-weight-bold">
                         <span>Total:</span>
-                        <span>@Model.Total.ToString("C")</span>
+                        <span>@(Model?.Total.ToString("C") ?? "R$ 0,00")</span>
                     </div>
 
                     <div class="mt-4">
@@ -66,7 +95,7 @@
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="metodoPagamento" id="pix" value="Pix" checked>
                             <label class="form-check-label" for="pix">
-                                Pix (5% de desconto)
+                                Pix
                             </label>
                         </div>
                         <div class="form-check">
@@ -88,10 +117,8 @@
 
 @section Scripts {
     <script>
-        document.getElementById('finalizarPedido').addEventListener('click', function() {
-            // Aqui você pode adicionar lógica para enviar o pedido
-            alert('Pedido finalizado com sucesso! Redirecionando...');
-            // window.location.href = '/Pedido/Confirmacao';
+        document.getElementById('finalizarPedido')?.addEventListener('click', function() {
+            window.location.href = '/Carrinho/Finalizar';
         });
     </script>
 }

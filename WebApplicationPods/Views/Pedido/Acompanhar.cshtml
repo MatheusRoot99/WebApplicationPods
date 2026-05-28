@@ -270,12 +270,13 @@
                             {
                                 foreach (var it in Model.PedidoItens)
                                 {
-                                    var nome = it?.Produto?.Nome ?? $"Produto #{it?.ProdutoId}";
+                                    var nome = it?.NomeExibicao ?? $"Produto #{it?.ProdutoId}";
                                     var img = !string.IsNullOrWhiteSpace(it?.Produto?.ImagemUrl)
                                     ? it.Produto.ImagemUrl
                                     : "https://via.placeholder.com/80x80?text=Produto";
 
                                     var observacaoItem = it?.Observacoes;
+                                    var resumoQuantidade = it?.ResumoQuantidadeExibicao ?? $"{it?.Quantidade ?? 0} unidade(s)";
                                     var quantidade = it?.Quantidade ?? 0;
                                     var totalItem = (it?.PrecoUnitario ?? 0m) * quantidade;
 
@@ -283,7 +284,8 @@
                                         <img class="it-img" src="@img" alt="@nome" />
 
                                         <div class="flex-grow-1">
-                                            <div class="it-name">@nome x @quantidade</div>
+                                            <div class="it-name">@nome</div>
+                                            <div class="it-sabor">@resumoQuantidade</div>
 
                                             @if (!string.IsNullOrWhiteSpace(observacaoItem))
                                             {
@@ -452,7 +454,10 @@
                             : "https://via.placeholder.com/80x80?text=Pedido";
 
                             var qtdItens = p.PedidoItens?.Sum(x => x.Quantidade) ?? 0;
-                            var textoItens = qtdItens == 1 ? "1 item" : $"{qtdItens} itens";
+                            var qtdFisica = p.PedidoItens?.Sum(x => x.TotalUnidadesFisicas) ?? 0;
+                            var textoItens = qtdFisica > qtdItens
+                            ? $"{qtdItens} item(ns) • {qtdFisica} unidades físicas"
+                            : (qtdItens == 1 ? "1 item" : $"{qtdItens} itens");
 
                             <div class="order-card">
                                 <img class="order-thumb" src="@thumb" alt="Pedido #@p.Id" />

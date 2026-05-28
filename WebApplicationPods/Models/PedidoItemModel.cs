@@ -29,7 +29,28 @@ namespace WebApplicationPods.Models
         [StringLength(200)]
         public string? Sabor { get; set; }
 
+        // ============================
+        // SNAPSHOT DO PRODUTO NO PEDIDO
+        // ============================
+        // Esses campos guardam como o produto era no momento da compra.
+        // Assim, se o lojista alterar o produto depois, o pedido antigo continua correto.
+
+        [StringLength(120)]
+        public string? ProdutoNomeSnapshot { get; set; }
+
+        [StringLength(50)]
+        public string? TipoProdutoSnapshot { get; set; }
+
+        [StringLength(50)]
+        public string? EmbalagemNome { get; set; }
+
+        public int? UnidadesPorEmbalagem { get; set; }
+
+        [StringLength(120)]
+        public string? UnidadeVendaDescricao { get; set; }
+
         public bool EstoqueBaixado { get; set; } = false;
+
         public DateTime? EstoqueBaixadoEm { get; set; }
 
         [ForeignKey(nameof(PedidoId))]
@@ -37,5 +58,37 @@ namespace WebApplicationPods.Models
 
         [ForeignKey(nameof(ProdutoId))]
         public ProdutoModel Produto { get; set; } = null!;
+
+        [NotMapped]
+        public string NomeExibicao =>
+            !string.IsNullOrWhiteSpace(ProdutoNomeSnapshot)
+                ? ProdutoNomeSnapshot
+                : Produto?.Nome ?? $"Produto #{ProdutoId}";
+
+        [NotMapped]
+        public string UnidadeVendaExibicao =>
+            !string.IsNullOrWhiteSpace(UnidadeVendaDescricao)
+                ? UnidadeVendaDescricao
+                : "unidade";
+
+        [NotMapped]
+        public int TotalUnidadesFisicas =>
+            Quantidade * Math.Max(UnidadesPorEmbalagem ?? 1, 1);
+
+        [NotMapped]
+        public string ResumoQuantidadeExibicao
+        {
+            get
+            {
+                var unidades = Math.Max(UnidadesPorEmbalagem ?? 1, 1);
+
+                if (unidades <= 1)
+                    return Quantidade == 1
+                        ? "1 unidade"
+                        : $"{Quantidade} unidades";
+
+                return $"{Quantidade} × {UnidadeVendaExibicao} ({TotalUnidadesFisicas} unidades)";
+            }
+        }
     }
 }

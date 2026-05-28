@@ -405,7 +405,28 @@ namespace WebApplicationPods.Controllers
                 var carrinho = _carrinhoRepository.ObterCarrinho();
                 var count = carrinho?.Itens?.Sum(i => i.Quantidade) ?? 0;
 
-                if (IsAjax()) return Json(new { ok = true, count, nome = produto.Nome, buyNow });
+                var total = carrinho.Total.ToString("C", CultureInfo.GetCultureInfo("pt-BR"));
+
+                var itemResumo = produto.EhEmbalagemComposta
+                    ? $"{quantidade} {(quantidade == 1 ? produto.EmbalagemVendaSingular : produto.EmbalagemVendaPlural)} × {produto.UnidadesFisicasPorEmbalagem} unidades"
+                    : (quantidade == 1 ? "1 unidade" : $"{quantidade} unidades");
+
+                var subtotalItem = (
+                    (produto.EstaEmPromocao() && produto.PrecoPromocional.HasValue
+                        ? produto.PrecoPromocional.Value
+                        : produto.Preco) * quantidade
+                ).ToString("C", CultureInfo.GetCultureInfo("pt-BR"));
+
+                if (IsAjax()) return Json(new
+                {
+                    ok = true,
+                    count,
+                    nome = produto.Nome,
+                    buyNow,
+                    total,
+                    itemResumo,
+                    subtotalItem
+                });
 
                 TempData["Sucesso"] = "Adicionado ao carrinho!";
                 return buyNow
@@ -699,12 +720,21 @@ namespace WebApplicationPods.Controllers
                 {
                     ProdutoId = i.Produto.Id,
                     Quantidade = i.Quantidade,
+
                     PrecoOriginal = i.Produto.Preco,
                     PrecoUnitario = i.Produto.EstaEmPromocao() && i.Produto.PrecoPromocional.HasValue
-                        ? i.Produto.PrecoPromocional.Value
-                        : i.Produto.Preco,
+                    ? i.Produto.PrecoPromocional.Value
+                    : i.Produto.Preco,
+
                     Observacoes = i.Observacoes,
                     Sabor = i.Sabor,
+
+                    ProdutoNomeSnapshot = i.Produto.Nome,
+                    TipoProdutoSnapshot = i.Produto.TipoProduto.ToString(),
+                    EmbalagemNome = i.Produto.EmbalagemVendaSingular,
+                    UnidadesPorEmbalagem = i.Produto.UnidadesFisicasPorEmbalagem,
+                    UnidadeVendaDescricao = i.Produto.UnidadeVendaDescricao,
+
                     EstoqueBaixado = false,
                     EstoqueBaixadoEm = null
                 }).ToList()

@@ -5,9 +5,9 @@
 
     var pedidoId = Model?.Id;
     var token = Model?.RastreioToken ?? ViewBag.RastreioToken as string;
-    var subtotal = Model?.ValorTotal ?? 0m;
+    var subtotal = Model?.PedidoItens?.Sum(i => i.PrecoUnitario * i.Quantidade) ?? Model?.ValorTotal ?? 0m;
     var taxaEntrega = Model?.TaxaEntrega ?? 0m;
-    var total = Model?.ValorTotalComEntrega ?? 0m;
+    var total = Model?.ValorTotalComEntrega ?? (subtotal + taxaEntrega);
 }
 
 @section Styles {
@@ -24,6 +24,45 @@
     {
         <div class="card border-0 shadow-sm mb-3">
             <div class="card-body">
+                @if (Model.PedidoItens != null && Model.PedidoItens.Any())
+                {
+                    <div class="mb-3">
+                        <h5 class="mb-3">Itens do pedido</h5>
+
+                        @foreach (var item in Model.PedidoItens)
+                        {
+                            var nome = item.NomeExibicao;
+                            var resumoQuantidade = item.ResumoQuantidadeExibicao;
+                            var totalItem = item.PrecoUnitario * item.Quantidade;
+                            var img = item.Produto?.ImagemUrl ?? "https://via.placeholder.com/80x80?text=Produto";
+
+                            <div class="d-flex align-items-center gap-3 border-bottom py-2">
+                                <img src="@img"
+                                     alt="@nome"
+                                     style="width:56px;height:56px;object-fit:cover;border-radius:12px;" />
+
+                                <div class="flex-grow-1">
+                                    <div class="fw-semibold">@nome</div>
+                                    <div class="text-muted small">@resumoQuantidade</div>
+
+                                    @if (!string.IsNullOrWhiteSpace(item.Observacoes))
+                                    {
+                                        <div class="text-muted small">
+                                            <strong>Obs:</strong> @item.Observacoes
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="fw-semibold text-nowrap">
+                                    @totalItem.ToString("C")
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <hr />
+                }
+
                 <div class="d-flex justify-content-between mb-2">
                     <span>Subtotal</span>
                     <strong>@subtotal.ToString("C")</strong>
