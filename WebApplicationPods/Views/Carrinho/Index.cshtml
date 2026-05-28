@@ -273,7 +273,7 @@
             <h5 class="pop-title">Mais populares</h5>
 
             <div class="pop-grid">
-                @foreach (var p in Model.Populares)
+                @foreach (var p in Model?.Populares ?? Enumerable.Empty<WebApplicationPods.Models.ProdutoResumoVM>())
                 {
                     <article class="pop-card">
                         <div class="pop-img">
@@ -287,7 +287,7 @@
                                 @if (p.EmPromocao)
                                 {
                                     <span class="old">@p.Preco.ToString("C", ptBR)</span>
-                                    <span class="now">@p.PrecoPromocional.Value.ToString("C", ptBR)</span>
+                                    <span class="now">@((p.PrecoPromocional ?? p.Preco).ToString("C", ptBR))</span>
                                 }
                                 else
                                 {

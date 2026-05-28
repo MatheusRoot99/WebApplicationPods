@@ -45,7 +45,7 @@ namespace WebApplicationPods.Mapping
         public static void UpdateFromViewModel(this ClienteModel m, ClienteViewModel vm)
         {
             m.Nome = (vm.Nome ?? "").Trim();
-            m.Email = string.IsNullOrWhiteSpace(vm.Email) ? null : vm.Email.Trim();
+            m.Email = string.IsNullOrWhiteSpace(vm.Email) ? string.Empty : vm.Email.Trim();
             m.Telefone = OnlyDigits(vm.Telefone);
             m.Cpf = OnlyDigits(vm.CPF); // sempre salvar apenas dígitos
             m.DataNascimento = vm.DataNascimento;
@@ -59,7 +59,7 @@ namespace WebApplicationPods.Mapping
             return new ClienteModel
             {
                 Nome = (vm.Nome ?? "").Trim(),
-                Email = string.IsNullOrWhiteSpace(vm.Email) ? null : vm.Email.Trim(),
+                Email = string.IsNullOrWhiteSpace(vm.Email) ? string.Empty : vm.Email.Trim(),
                 Telefone = OnlyDigits(vm.Telefone),
                 Cpf = OnlyDigits(vm.CPF),
                 DataNascimento = vm.DataNascimento,

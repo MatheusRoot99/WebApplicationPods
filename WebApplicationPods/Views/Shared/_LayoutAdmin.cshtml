@@ -8,7 +8,7 @@
         ? (User.Identity!.Name ?? "Admin")
         : "Admin";
 
-    var isAdmin = User.IsInRole("Admin");
+    var isAdmin = User?.IsInRole("Admin") == true;
 
     string currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
 }

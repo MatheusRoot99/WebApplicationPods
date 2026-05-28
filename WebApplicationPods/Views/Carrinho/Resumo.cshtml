@@ -8,7 +8,7 @@
     ViewData["Title"] = "Resumo do Pedido";
     var loja = ViewBag.Loja as LojaConfig;
 
-    string FormatarTelefone(string telefone)
+    string FormatarTelefone(string? telefone)
     {
         if (string.IsNullOrWhiteSpace(telefone)) return "";
 
@@ -25,7 +25,7 @@
         return telefone;
     }
 
-    int? TentarObterInt(object obj, params string[] nomes)
+    int? TentarObterInt(object? obj, params string[] nomes)
     {
         if (obj == null) return null;
 
@@ -45,7 +45,7 @@
         return null;
     }
 
-    decimal? TentarObterDecimal(object obj, params string[] nomes)
+    decimal? TentarObterDecimal(object? obj, params string[] nomes)
     {
         if (obj == null) return null;
 
@@ -96,7 +96,7 @@
         return qtd == 1 ? "1 un." : $"{qtd} un.";
     }
 
-    decimal ObterPrecoUnitario(dynamic item)
+    decimal ObterPrecoUnitario(dynamic? item)
     {
         decimal? preco =
             TentarObterDecimal(item, "PrecoUnitario", "ValorUnitario", "Preco") ??
@@ -105,7 +105,7 @@
         return preco ?? 0;
     }
 
-    decimal ObterSubtotalItem(dynamic item)
+    decimal ObterSubtotalItem(dynamic? item)
     {
         var qtd = (int)(item?.Quantidade ?? 0);
         if (qtd <= 0) qtd = 1;
@@ -179,8 +179,8 @@
                             <div class="col-md-4">
                                 <div class="info-box info-box-premium compact-info-box">
                                     <small>Nome</small>
-                                    <div class="fw-semibold info-value text-truncate" title="@Model.Cliente.Nome">
-                                        @Model.Cliente.Nome
+                                    <div class="fw-semibold info-value text-truncate" title="@(Model?.Cliente?.Nome ?? string.Empty)">
+                                        @(Model?.Cliente?.Nome ?? string.Empty)
                                     </div>
                                 </div>
                             </div>
@@ -235,7 +235,7 @@
                                 </label>
                             </div>
 
-                            <div id="pickupBox" class="pickup-box mb-3 @(Model.RetiradaNoLocal ? "" : "d-none")">
+                            <div id="pickupBox" class="pickup-box mb-3 @((Model?.RetiradaNoLocal == true) ? "" : "d-none")">
                                 <div class="title mb-1">
                                     <i class="bi bi-shop me-1"></i> @(loja?.Nome ?? "Retirada na loja")
                                 </div>
@@ -249,14 +249,14 @@
                                 }
                             </div>
 
-                            <div id="containerEntrega" class="@(Model.RetiradaNoLocal ? "d-none" : "") animate__animated animate__fadeIn">
+                            <div id="containerEntrega" class="@((Model?.RetiradaNoLocal == true) ? "d-none" : "") animate__animated animate__fadeIn">
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold">Selecione um endereço</label>
 
                                     <div class="d-flex gap-2 mb-3">
                                         <select asp-for="EnderecoSelecionadoId" class="form-select" id="enderecoSelect">
                                             <option value="">Selecione...</option>
-                                            @foreach (var e in Model.EnderecosDisponiveis)
+                                            @foreach (var e in Model?.EnderecosDisponiveis ?? Enumerable.Empty<WebApplicationPods.Models.EnderecoModel>())
                                             {
                                                 <option value="@e.Id"
                                                         data-logradouro="@e.Logradouro"
@@ -292,8 +292,8 @@
                                     </div>
                                 </div>
 
-                                <div id="enderecoDetalhes" class="address-card @(Model.EnderecoEntrega == null ? "empty" : "")">
-                                    @if (Model.EnderecoEntrega != null)
+                                <div id="enderecoDetalhes" class="address-card @(Model?.EnderecoEntrega == null ? "empty" : "")">
+                                    @if (Model?.EnderecoEntrega != null)
                                     {
                                         <div class="d-flex justify-content-between align-items-start mb-2">
                                             <h6 class="mb-0 d-flex align-items-center gap-2">
@@ -424,7 +424,7 @@
                         </div> *@
 
                         <div class="compact-items">
-                            @foreach (var item in Model.Carrinho.Itens)
+                            @foreach (var item in Model?.Carrinho?.Itens ?? Enumerable.Empty<WebApplicationPods.Models.CarrinhoItemViewModel>())
                             {
                                 var qtd = item.Quantidade;
                                 var nome = item.Produto?.Nome ?? "Produto";
@@ -435,7 +435,7 @@
 
                                 <div class="compact-item">
                                     <div class="compact-item-image">
-                                        <img src="@item.Produto.ImagemUrl" alt="@nome">
+                                        <img src="@(item.Produto?.ImagemUrl ?? "https://via.placeholder.com/80x80?text=%20")" alt="@nome">
                                         <span class="compact-item-qty">@qtd</span>
                                     </div>
 
@@ -470,12 +470,12 @@
 
                             <div class="compact-summary-row">
                                 <span>Entrega</span>
-                                <strong id="taxaEntregaLabel">@(Model.RetiradaNoLocal ? "Grátis" : "R$ 5,00")</strong>
+                                <strong id="taxaEntregaLabel">@((Model?.RetiradaNoLocal == true) ? "Grátis" : "R$ 5,00")</strong>
                             </div>
 
                             <div class="compact-summary-row compact-status-row">
                                 <span>Tipo</span>
-                                <strong id="tipoEntregaLabel">@(Model.RetiradaNoLocal ? "Retirada" : "Entrega")</strong>
+                                <strong id="tipoEntregaLabel">@((Model?.RetiradaNoLocal == true) ? "Retirada" : "Entrega")</strong>
                             </div>
 
                             <div class="compact-summary-divider"></div>
@@ -513,7 +513,7 @@
 
             <form asp-action="AdicionarEndereco" method="post" id="formEnderecoModal">
                 @Html.AntiForgeryToken()
-                <input type="hidden" name="ClienteId" value="@Model.Cliente.Id" />
+                <input type="hidden" name="ClienteId" value="@(Model?.Cliente?.Id ?? 0)" />
 
                 <div class="modal-body">
                     <div class="row g-3">
@@ -580,7 +580,7 @@
 
             <form id="formEditarEndereco" asp-action="AtualizarEndereco" method="post">
                 @Html.AntiForgeryToken()
-                <input type="hidden" name="ClienteId" value="@Model.Cliente.Id" />
+                <input type="hidden" name="ClienteId" value="@(Model?.Cliente?.Id ?? 0)" />
                 <input type="hidden" id="edit_Id" name="Id" />
 
                 <div class="modal-body">
@@ -641,7 +641,7 @@
     </div>
 </div>
 
-@if (Model.PrecisaConfirmar)
+@if (Model?.PrecisaConfirmar == true)
 {
     <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true" aria-labelledby="confirmTitle" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
@@ -702,7 +702,7 @@
 
             <form asp-action="ExcluirEndereco" method="post" id="formExcluirEndereco" class="m-0">
                 @Html.AntiForgeryToken()
-                <input type="hidden" name="ClienteId" value="@Model.Cliente.Id" />
+                <input type="hidden" name="ClienteId" value="@(Model?.Cliente?.Id ?? 0)" />
                 <input type="hidden" id="del_Id" name="id" />
 
                 <div class="modal-body delete-modal-body">
@@ -1021,7 +1021,7 @@
             const totalGeralLabel = document.getElementById('totalGeralLabel');
             const tipoEntregaLabel = document.getElementById('tipoEntregaLabel');
             const pickupBox = document.getElementById('pickupBox');
-            const subtotal = parseFloat('@Model.Carrinho.Total.ToString(System.Globalization.CultureInfo.InvariantCulture)');
+            const subtotal = parseFloat('@((Model?.Carrinho?.Total ?? 0m).ToString(System.Globalization.CultureInfo.InvariantCulture))');
             const taxaPadrao = 5;
 
             function atualizarTotais() {

@@ -38,12 +38,12 @@
                 <a asp-action="ExportarCsv"
                    asp-all-route-data="@(new Dictionary<string, string>
                    {
-                       [nameof(Model.Filtros.Categoria)] = Model.Filtros.Categoria,
+                       [nameof(Model.Filtros.Categoria)] = Model.Filtros.Categoria ?? string.Empty,
                        [nameof(Model.Filtros.ApenasBaixoEstoque)] = Model.Filtros.ApenasBaixoEstoque.ToString(),
                        [nameof(Model.Filtros.ApenasEsgotados)] = Model.Filtros.ApenasEsgotados.ToString(),
-                       [nameof(Model.Filtros.LancamentoDe)] = Model.Filtros.LancamentoDe?.ToString("yyyy-MM-dd"),
-                       [nameof(Model.Filtros.LancamentoAte)] = Model.Filtros.LancamentoAte?.ToString("yyyy-MM-dd"),
-                       [nameof(Model.Filtros.OrdenarPor)] = Model.Filtros.OrdenarPor,
+                       [nameof(Model.Filtros.LancamentoDe)] = Model.Filtros.LancamentoDe?.ToString("yyyy-MM-dd") ?? string.Empty,
+                       [nameof(Model.Filtros.LancamentoAte)] = Model.Filtros.LancamentoAte?.ToString("yyyy-MM-dd") ?? string.Empty,
+                       [nameof(Model.Filtros.OrdenarPor)] = Model.Filtros.OrdenarPor ?? string.Empty,
                        [nameof(Model.Filtros.LimiteBaixoEstoque)] = Model.Filtros.LimiteBaixoEstoque.ToString()
                    })"
                    class="btn btn-outline-secondary">

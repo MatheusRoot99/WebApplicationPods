@@ -38,19 +38,19 @@
     {
         etapaEntregaTitulo = "Pronto para retirada";
         etapaEntregaDescricao = "Seu pedido está pronto para retirada no local.";
-        etapaEntregaHora = Model.DataSaiuParaEntregaOuRetirada?.ToString("HH:mm") ?? "—";
+        etapaEntregaHora = Model?.DataSaiuParaEntregaOuRetirada?.ToString("HH:mm") ?? "—";
     }
     else if (statusSaiuEntrega)
     {
         etapaEntregaTitulo = "Saiu para entrega";
         etapaEntregaDescricao = "Seu pedido está a caminho.";
-        etapaEntregaHora = Model.DataSaiuParaEntregaOuRetirada?.ToString("HH:mm") ?? "—";
+        etapaEntregaHora = Model?.DataSaiuParaEntregaOuRetirada?.ToString("HH:mm") ?? "—";
     }
     else if (statusEntregadorAtribuido)
     {
         etapaEntregaTitulo = "Entregador atribuído";
         etapaEntregaDescricao = "Seu pedido foi atribuído a um entregador e será retirado em breve.";
-        etapaEntregaHora = Model.DataAtribuicaoEntregador?.ToString("HH:mm") ?? "—";
+        etapaEntregaHora = Model?.DataAtribuicaoEntregador?.ToString("HH:mm") ?? "—";
     }
     else if (statusAguardandoEntregador || statusPronto)
     {
@@ -62,7 +62,7 @@
     {
         etapaEntregaTitulo = ehEntrega ? "Saiu para entrega" : "Pronto para retirada";
         etapaEntregaDescricao = ehEntrega ? "Seu pedido está a caminho." : "Seu pedido está pronto para retirada no local.";
-        etapaEntregaHora = Model.DataSaiuParaEntregaOuRetirada?.ToString("HH:mm") ?? "—";
+        etapaEntregaHora = Model?.DataSaiuParaEntregaOuRetirada?.ToString("HH:mm") ?? "—";
     }
 
     string statusBadgeClass = "badge-soft";
