@@ -372,3 +372,38 @@
         }
     }
 }
+.status-dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.dot-ok {
+    background: #22c55e;
+}
+
+.dot-low {
+    background: #f59e0b;
+}
+
+.dot-zero {
+    background: #ef4444;
+}
+
+.estoque-table tbody tr:has(.dot-zero) {
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.estoque-table tbody tr:has(.dot-low) {
+    background: rgba(245, 158, 11, 0.08);
+}
+
+.ec-card:has(.dot-zero) {
+    border: 1px solid rgba(239, 68, 68, 0.45);
+}
+
+.ec-card:has(.dot-low) {
+    border: 1px solid rgba(245, 158, 11, 0.45);
+}

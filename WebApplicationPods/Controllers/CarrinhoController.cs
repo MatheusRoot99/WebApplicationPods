@@ -364,19 +364,46 @@ namespace WebApplicationPods.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult AdicionarItem(int produtoId, int quantidade, string? sabor = null,
-                                          string? observacoes = null, bool buyNow = false)
+                                  string? observacoes = null, bool buyNow = false)
         {
             var guard = EnsureLojaOrRedirect();
             if (guard != null) return guard;
 
             try
             {
+                if (quantidade <= 0)
+                {
+                    if (IsAjax()) return Json(new { ok = false, error = "Informe uma quantidade válida." });
+
+                    TempData["Erro"] = "Informe uma quantidade válida.";
+                    return RedirectToAction("Index", "Home");
+                }
+
                 var produto = _produtoRepository.ObterPorId(produtoId);
                 if (produto == null)
                 {
                     if (IsAjax()) return Json(new { ok = false, error = "Produto não encontrado." });
+
                     TempData["Erro"] = "Produto não encontrado.";
                     return RedirectToAction("Index", "Home");
+                }
+
+                if (produto.EstaEsgotado)
+                {
+                    if (IsAjax()) return Json(new { ok = false, error = "Produto esgotado." });
+
+                    TempData["Erro"] = "Produto esgotado.";
+                    return RedirectToAction("Detalhes", "Produto", new { id = produtoId });
+                }
+
+                if (quantidade > produto.Estoque)
+                {
+                    var mensagemEstoque = $"Quantidade indisponível. Estoque atual: {produto.EstoqueDescricao}.";
+
+                    if (IsAjax()) return Json(new { ok = false, error = mensagemEstoque });
+
+                    TempData["Erro"] = mensagemEstoque;
+                    return RedirectToAction("Detalhes", "Produto", new { id = produtoId });
                 }
 
                 produto.DeserializarSaboresQuantidades();
@@ -396,6 +423,7 @@ namespace WebApplicationPods.Controllers
                 if (!ValidarEstoqueAoAdicionar(produto, quantidade, sabor ?? string.Empty, out var mensagemErro))
                 {
                     if (IsAjax()) return Json(new { ok = false, error = mensagemErro });
+
                     TempData["Erro"] = mensagemErro;
                     return RedirectToAction("Detalhes", "Produto", new { id = produtoId });
                 }
@@ -405,7 +433,8 @@ namespace WebApplicationPods.Controllers
                 var carrinho = _carrinhoRepository.ObterCarrinho();
                 var count = carrinho?.Itens?.Sum(i => i.Quantidade) ?? 0;
 
-                var total = carrinho.Total.ToString("C", CultureInfo.GetCultureInfo("pt-BR"));
+                var total = carrinho?.Total.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))
+                            ?? 0m.ToString("C", CultureInfo.GetCultureInfo("pt-BR"));
 
                 var itemResumo = produto.EhEmbalagemComposta
                     ? $"{quantidade} {(quantidade == 1 ? produto.EmbalagemVendaSingular : produto.EmbalagemVendaPlural)} × {produto.UnidadesFisicasPorEmbalagem} unidades"
@@ -425,10 +454,12 @@ namespace WebApplicationPods.Controllers
                     buyNow,
                     total,
                     itemResumo,
-                    subtotalItem
+                    subtotalItem,
+                    estoqueAtual = produto.EstoqueDescricao
                 });
 
                 TempData["Sucesso"] = "Adicionado ao carrinho!";
+
                 return buyNow
                     ? RedirectToAction("Resumo", "Carrinho")
                     : RedirectToAction("Index", "Home");
@@ -436,6 +467,7 @@ namespace WebApplicationPods.Controllers
             catch (Exception ex)
             {
                 if (IsAjax()) return Json(new { ok = false, error = $"Erro ao adicionar ao carrinho: {ex.Message}" });
+
                 TempData["Erro"] = "Ocorreu um erro ao adicionar o produto ao carrinho.";
                 return RedirectToAction("Index", "Home");
             }

@@ -8,6 +8,44 @@
     var pedidos = Model?.OrderByDescending(x => x.DataPedido) ?? Enumerable.Empty<PedidoModel>();
 }
 
+<style>
+    .pedido-itens-resumo {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 0.82rem;
+        color: #6b7280;
+    }
+
+    .pedido-item-linha {
+        line-height: 1.35;
+    }
+
+    .pedido-item-linha strong {
+        color: #111827;
+        font-weight: 700;
+    }
+
+    .pedido-item-linha small {
+        color: #6b7280;
+    }
+
+    [data-theme="dark"] .pedido-itens-resumo,
+    body.dark .pedido-itens-resumo {
+        color: #cbd5e1;
+    }
+
+    [data-theme="dark"] .pedido-item-linha strong,
+    body.dark .pedido-item-linha strong {
+        color: #ffffff;
+    }
+
+    [data-theme="dark"] .pedido-item-linha small,
+    body.dark .pedido-item-linha small {
+        color: #94a3b8;
+    }
+</style>
+
 @foreach (var p in pedidos)
 {
     var statusAtual = p.Status ?? string.Empty;
@@ -61,7 +99,32 @@
         <td data-th="Cliente">
             <div class="cell-primary">
                 <div class="title">@((p.Cliente?.Nome) ?? "—")</div>
-                <div class="sub">@($"#{p.Id} • {p.PedidoItens?.Count ?? 0} itens")</div>
+                <div class="sub">
+                    @($"#{p.Id} • {p.PedidoItens?.Count ?? 0} itens")
+                </div>
+
+                @if (p.PedidoItens != null && p.PedidoItens.Any())
+                {
+                    <div class="pedido-itens-resumo mt-2">
+                        @foreach (var item in p.PedidoItens)
+                        {
+                            <div class="pedido-item-linha">
+                                <strong>@item.NomeExibicao</strong>
+                                <span>— @item.ResumoQuantidadeExibicao</span>
+
+                                @if (!string.IsNullOrWhiteSpace(item.Sabor))
+                                {
+                                    <small> • Sabor: @item.Sabor</small>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(item.Observacoes))
+                                {
+                                    <small> • Obs: @item.Observacoes</small>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
             </div>
         </td>
 

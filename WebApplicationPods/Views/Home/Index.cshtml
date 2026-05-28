@@ -156,6 +156,10 @@
                     && produto.PrecoPromocional.Value < produto.Preco;
 
                     var precoAtual = promoOk ? produto.PrecoPromocional!.Value : produto.Preco;
+                    var estaEsgotado = produto.EstaEsgotado;
+                    var estoqueBaixo = produto.EstaComEstoqueBaixo;
+                    var statusEstoqueTexto = produto.StatusEstoqueTexto;
+                    var statusEstoqueCss = produto.StatusEstoqueCss;
 
                     var exigeSelecaoDeSabor =
                     produto.SaboresQuantidadesList != null &&
@@ -180,13 +184,17 @@
                                     </div>
                                 }
 
-                                @if (produto.Estoque <= 0)
+                                @if (estaEsgotado)
                                 {
-                                    <span class="badge badge-top-right bg-danger">ESGOTADO</span>
+                                    <span class="badge badge-top-right badge-stock-out">ESGOTADO</span>
+                                }
+                                else if (estoqueBaixo)
+                                {
+                                    <span class="badge badge-top-right badge-stock-low">BAIXO</span>
                                 }
                                 else if (promoOk)
                                 {
-                                    <span class="badge badge-top-right bg-success">PROMOÇÃO</span>
+                                    <span class="badge badge-top-right badge-promo">PROMOÇÃO</span>
                                 }
                             </div>
                         </a>
@@ -275,49 +283,59 @@
                                     }
                                 </div>
                             }
-                            else if (pareceBebida)
-                            {
-                                <div class="specs small text-muted">
-                                    @if (volumeOk)
-                                    {
-                                        <span><i class="fa-solid fa-glass-water"></i>@produto.BebidaVolumeMl ml</span>
-                                    }
-
-                                    @if (volumeOk && teorOk)
-                                    {
-                                        <span>•</span>
-                                    }
-
-                                    @if (teorOk)
-                                    {
-                                        <span><i class="fa-solid fa-percent"></i>@teorTxt</span>
-                                    }
-
-                                    @if ((volumeOk || teorOk) && !string.IsNullOrWhiteSpace(embalagemResumo))
-                                    {
-                                        <span>•</span>
-                                    }
-
-                                    @if (!string.IsNullOrWhiteSpace(embalagemResumo))
-                                    {
-                                        <span><i class="fa-solid fa-box"></i>@embalagemResumo</span>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="specs small text-muted"></div>
-                            }
-
-                            <div class="price-line">
-                                @if (promoOk)
+                                else if (pareceBebida)
                                 {
-                                    <span class="old">@produto.Preco.ToString("C")</span>
+                                    <div class="specs specs-inline small text-muted">
+                                        @if (volumeOk)
+                                        {
+                                            <span class="spec-item">
+                                                <i class="fa-solid fa-glass-water"></i>
+                                                @produto.BebidaVolumeMl ml
+                                            </span>
+                                        }
+
+                                        @if (volumeOk && teorOk)
+                                        {
+                                            <span class="spec-separator">•</span>
+                                        }
+
+                                        @if (teorOk)
+                                        {
+                                            <span class="spec-item">
+                                                <i class="fa-solid fa-percent"></i>
+                                                @teorTxt
+                                            </span>
+                                        }
+
+                                        @if ((volumeOk || teorOk) && !string.IsNullOrWhiteSpace(embalagemResumo))
+                                        {
+                                            <span class="spec-separator">•</span>
+                                        }
+
+                                        @if (!string.IsNullOrWhiteSpace(embalagemResumo))
+                                        {
+                                            <span class="spec-item">
+                                                <i class="fa-solid fa-box"></i>
+                                                @embalagemResumo
+                                            </span>
+                                        }
+                                    </div>
                                 }
-                                <span class="current">@precoAtual.ToString("C")</span>
-                            </div>
+                                else
+                                {
+                                    <div class="specs specs-inline small text-muted"></div>
+                                }
+
+                                <div class="price-line">
+                                    @if (promoOk)
+                                    {
+                                        <span class="old">@produto.Preco.ToString("C")</span>
+                                    }
+                                    <span class="current">@precoAtual.ToString("C")</span>
+                                </div>
+
                             </a>
-                            @if (produto.Estoque > 0)
+                            @if (!estaEsgotado)
                             {
                                 if (exigeSelecaoDeSabor)
                                 {
@@ -364,7 +382,8 @@
                                     <button type="button"
                                             class="quick-add disabled"
                                             disabled
-                                            title="Produto esgotado">
+                                            title="Produto esgotado"
+                                            aria-label="@produto.Nome esgotado">
                                         <i class="fa-solid fa-ban" aria-hidden="true"></i>
                                     </button>
                                 </div>
@@ -529,9 +548,15 @@
                     if (data && typeof data.count !== 'undefined') {
                         updateCartCount(data.count);
                     }
-                } catch (e) {
+                    } catch (e) {
                     console.error(e);
                     setButtonState(button, 'default');
+
+                    if (e && e.message) {
+                        alert(e.message);
+                    } else {
+                            alert('Não foi possível adicionar o produto ao carrinho.');
+                           }
                 }
             }
 

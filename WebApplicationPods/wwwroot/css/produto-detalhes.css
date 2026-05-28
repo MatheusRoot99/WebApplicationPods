@@ -1553,3 +1553,58 @@ html[data-theme="dark"] .pdp-mobile-bar-inner {
     cursor: not-allowed;
     pointer-events: none;
 }
+.pdp-btn:disabled,
+.pdp-btn.is-disabled,
+.pdp-qty-btn:disabled,
+.pdp-qty-input:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+    filter: grayscale(1);
+}
+
+.pdp-stock-badge.ok,
+.pdp-related-status.ok {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.pdp-stock-badge.baixo,
+.pdp-related-status.baixo {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.pdp-stock-badge.esgotado,
+.pdp-related-status.esgotado {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.pdp-chip-low {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+[data-theme="dark"] .pdp-stock-badge.ok,
+body.dark .pdp-stock-badge.ok,
+[data-theme="dark"] .pdp-related-status.ok,
+body.dark .pdp-related-status.ok {
+    background: rgba(34, 197, 94, .16);
+    color: #86efac;
+}
+
+[data-theme="dark"] .pdp-stock-badge.baixo,
+body.dark .pdp-stock-badge.baixo,
+[data-theme="dark"] .pdp-related-status.baixo,
+body.dark .pdp-related-status.baixo {
+    background: rgba(245, 158, 11, .16);
+    color: #fbbf24;
+}
+
+[data-theme="dark"] .pdp-stock-badge.esgotado,
+body.dark .pdp-stock-badge.esgotado,
+[data-theme="dark"] .pdp-related-status.esgotado,
+body.dark .pdp-related-status.esgotado {
+    background: rgba(239, 68, 68, .16);
+    color: #fca5a5;
+}

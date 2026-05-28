@@ -104,7 +104,7 @@ public class EstoqueVM
     public IList<EstoqueItemVM> Itens { get; set; } = new List<EstoqueItemVM>();
 
     public int TotalSkus => Itens.Count;
-    public int QtdTotalEstoque => Itens.Sum(i => i.Estoque);
+    public int QtdTotalEstoque => Itens.Sum(i => i.EstoqueFisicoTotal);
     public decimal ValorVendaTotal => Itens.Sum(i => i.ValorVendaEmEstoque);
     public int BaixoEstoqueCount => Itens.Count(i => i.BaixoEstoque(Filtros.LimiteBaixoEstoque));
     public int EsgotadosCount => Itens.Count(i => i.Esgotado);

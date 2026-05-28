@@ -20,7 +20,6 @@
         && produto.PrecoPromocional.Value < produto.Preco;
 
     var precoAtual = temPromocao ? produto.PrecoPromocional!.Value : produto.Preco;
-    var precoPix = Math.Round(precoAtual * 0.95m, 2);
 
     var isPod = produto.TipoProduto == ProdutoTipo.PodVape;
     var isBebida = produto.TipoProduto == ProdutoTipo.BebidaAlcoolica;
@@ -30,10 +29,18 @@
     var totalSaboresComEstoque = Model?.SaboresDisponiveis?.Count(s => s.Quantidade > 0) ?? 0;
 
     string tipoLabel = isPod ? "Pod" : isBebida ? "Bebida alcoólica" : "Produto";
-    string disponibilidade = produto.Estoque > 0 ? "Em estoque" : "Esgotado";
+
+    var disponibilidade = produto.StatusEstoqueTexto;
+    var statusCss = produto.StatusEstoqueCss;
+
     var estoqueDescricao = produto.EstoqueDescricao;
     var unidadeVendaDescricao = produto.UnidadeVendaDescricao;
-    var desconto = temPromocao ? (int)Math.Round(100 - (precoAtual / produto.Preco * 100)) : 0;
+
+    var desconto = temPromocao
+        ? (int)Math.Round(100 - (precoAtual / produto.Preco * 100))
+        : 0;
+
+    var estaEsgotado = produto.EstaEsgotado;
 }
 
 @section Styles {
@@ -42,8 +49,9 @@
 
 <div id="product-data"
      data-stock="@produto.Estoque"
-     data-is-out-of-stock="@(produto.Estoque <= 0 ? "true" : "false")"
-     hidden></div>
+     data-is-out-of-stock="@(estaEsgotado ? "true" : "false")"
+     hidden>
+</div>
 
 <div class="pdp-page" itemscope itemtype="https://schema.org/Product">
 
@@ -64,12 +72,13 @@
                 </span>
             }
 
-            @if (produto.Estoque <= 0)
+            @if (estaEsgotado)
             {
                 <span class="pdp-chip pdp-chip-out">Esgotado</span>
             }
-            else if (temPromocao)
+            else if (produto.EstaComEstoqueBaixo)
             {
+               @*  <span class="pdp-chip pdp-chip-low">Estoque baixo</span> *@
             }
             else
             {
@@ -112,7 +121,7 @@
                     <span>Rápida</span>
                 </div>
 
-                @if (produto.Estoque > 0)
+                @if (!estaEsgotado)
                 {
                     <div class="pdp-trust-item">
                         <i class="fas fa-box-open"></i>
@@ -149,7 +158,7 @@
             <section class="pdp-price-box pdp-price-box--clean" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
                 <meta itemprop="priceCurrency" content="BRL" />
                 <meta itemprop="price" content="@precoAtual.ToString(CultureInfo.InvariantCulture)" />
-                <link itemprop="availability" href="https://schema.org/@(produto.Estoque > 0 ? "InStock" : "OutOfStock")" />
+                <link itemprop="availability" href="https://schema.org/@(!estaEsgotado ? "InStock" : "OutOfStock")" />
 
                 <div class="pdp-price-top">
                     <div class="pdp-price-main">
@@ -171,8 +180,8 @@
                         </div>
                     </div>
 
-                    <div class="pdp-stock-badge @(produto.Estoque > 0 ? "is-in" : "is-out")">
-                        <i class="fas @(produto.Estoque > 0 ? "fa-check-circle" : "fa-times-circle")"></i>
+                    <div class="pdp-stock-badge @statusCss">
+                        <i class="fas @(!estaEsgotado ? "fa-check-circle" : "fa-times-circle")"></i>
                         <span>@disponibilidade</span>
                     </div>
                 </div>
@@ -197,11 +206,11 @@
                     }
                     else if (isBebida)
                     {
-                        @if (produto.BebidaVolumeMl.HasValue)
+                        @if (produto.BebidaQtdPorEmbalagem.HasValue && produto.BebidaQtdPorEmbalagem.Value > 0)
                         {
                             <div class="pdp-info-card">
-                                <span>Volume</span>
-                                <strong>@produto.BebidaVolumeMl.Value ml</strong>
+                                <span>Embalagem</span>
+                                <strong>@unidadeVendaDescricao</strong>
                             </div>
                         }
 
@@ -221,18 +230,7 @@
                             </div>
                         }
 
-                        @if (produto.BebidaQtdPorEmbalagem.HasValue && produto.BebidaQtdPorEmbalagem.Value > 0)
-                        {
-                            <div class="pdp-info-card">
-                                <span>Embalagem</span>
-                                <strong>@unidadeVendaDescricao</strong>
-                            </div>
-                        }
-
-                        <div class="pdp-info-card">
-                            <span>Estoque</span>
-                            <strong>@estoqueDescricao</strong>
-                        </div>
+                     
                     }
                     else
                     {
@@ -268,7 +266,7 @@
                         <small>@totalSaboresComEstoque de @totalSabores disponível(is)</small>
                     </div>
 
-                    <fieldset class="pdp-flavors-fieldset">
+                    <fieldset class="pdp-flavors-fieldset" @(estaEsgotado ? "disabled" : null)>
                         <legend class="visually-hidden">Sabores disponíveis</legend>
 
                         <div class="pdp-flavors-grid">
@@ -279,7 +277,7 @@
                             @foreach (var sabor in Model.SaboresDisponiveis)
                             {
                                 var saborId = $"sabor-{idx++}";
-                                var disabled = sabor.Quantidade <= 0;
+                                var disabled = sabor.Quantidade <= 0 || estaEsgotado;
 
                                 <div class="pdp-flavor-item @(disabled ? "is-disabled" : "")">
                                     <input type="radio"
@@ -312,22 +310,33 @@
                     <small class="pdp-qty-helper">@unidadeVendaDescricao</small>
 
                     <div class="pdp-qty-control">
-                        <button type="button" class="pdp-qty-btn minus" aria-label="Diminuir">-</button>
+                        <button type="button"
+                                class="pdp-qty-btn minus"
+                                aria-label="Diminuir"
+                                @(estaEsgotado ? "disabled" : null)>
+                            -
+                        </button>
 
                         <input type="number"
                                id="quantity"
-                               name="quantity"
                                value="1"
                                min="1"
-                               max="@(produto.Estoque > 0 ? produto.Estoque : 1)"
-                               class="pdp-qty-input" />
+                               max="@(!estaEsgotado ? produto.Estoque : 1)"
+                               class="pdp-qty-input"
+                               @(estaEsgotado ? "disabled" : null) />
 
-                        <button type="button" class="pdp-qty-btn plus" aria-label="Aumentar">+</button>
+                        <button type="button"
+                                class="pdp-qty-btn plus"
+                                aria-label="Aumentar"
+                                @(estaEsgotado ? "disabled" : null)>
+                            +
+                        </button>
                     </div>
                 </div>
 
                 <form asp-controller="Carrinho" asp-action="AdicionarItem" method="post" id="addToCartForm" class="pdp-buy-form">
                     @Html.AntiForgeryToken()
+
                     <input type="hidden" name="produtoId" value="@produto.Id" />
                     <input type="hidden" name="quantidade" id="quantidadeHidden" value="1" />
                     <input type="hidden" name="sabor" id="saborSelecionado" value="" />
@@ -337,18 +346,18 @@
                     <div class="pdp-buy-actions">
                         <button type="submit"
                                 id="addToCartBtn"
-                                class="pdp-btn pdp-btn-primary"
-                                @(produto.Estoque <= 0 ? "disabled" : null)>
+                                class="pdp-btn pdp-btn-primary @(estaEsgotado ? "is-disabled" : "")"
+                                @(estaEsgotado ? "disabled" : null)>
                             <i class="fas fa-shopping-cart"></i>
-                            @(produto.Estoque <= 0 ? "Produto esgotado" : "Adicionar ao carrinho")
+                            @(estaEsgotado ? "Produto esgotado" : "Adicionar ao carrinho")
                         </button>
 
                         <button type="button"
                                 id="buyNowBtn"
-                                class="pdp-btn pdp-btn-secondary"
-                                @(produto.Estoque <= 0 ? "disabled" : null)>
+                                class="pdp-btn pdp-btn-secondary @(estaEsgotado ? "is-disabled" : "")"
+                                @(estaEsgotado ? "disabled" : null)>
                             <i class="fas fa-bolt"></i>
-                            Comprar agora
+                            @(estaEsgotado ? "Indisponível" : "Comprar agora")
                         </button>
                     </div>
                 </form>
@@ -375,16 +384,11 @@
                 <h3>Especificações técnicas</h3>
 
                 <div class="pdp-specs-grid">
-                    <div class="pdp-spec-item">
-                        <span>Nome</span>
-                        <strong>@produto.Nome</strong>
-                    </div>
-
                     @if (!string.IsNullOrWhiteSpace(produto.Marca))
                     {
                         <div class="pdp-spec-item">
                             <span>Marca</span>
-                            <strong>@produto.Marca</strong>
+                            <strong>@produto.Marca @produto.BebidaVolumeMl.Value ml</strong>
                         </div>
                     }
 
@@ -393,10 +397,10 @@
                         <strong>@precoAtual.ToString("C")</strong>
                     </div>
 
-                    <div class="pdp-spec-item">
+                   @*  <div class="pdp-spec-item">
                         <span>Estoque</span>
                         <strong>@estoqueDescricao</strong>
-                    </div>
+                    </div> *@
 
                     @if (isPod)
                     {
@@ -407,6 +411,7 @@
                                 <strong>@produto.Sabor</strong>
                             </div>
                         }
+
                         @if (produto.PodPuffs.HasValue)
                         {
                             <div class="pdp-spec-item">
@@ -414,6 +419,7 @@
                                 <strong>@produto.PodPuffs.Value</strong>
                             </div>
                         }
+
                         @if (!string.IsNullOrWhiteSpace(produto.PodCapacidadeBateria))
                         {
                             <div class="pdp-spec-item">
@@ -421,6 +427,7 @@
                                 <strong>@produto.PodCapacidadeBateria</strong>
                             </div>
                         }
+
                         @if (!string.IsNullOrWhiteSpace(produto.PodTipo))
                         {
                             <div class="pdp-spec-item">
@@ -434,11 +441,9 @@
                     {
                         @if (produto.BebidaVolumeMl.HasValue)
                         {
-                            <div class="pdp-spec-item">
-                                <span>Volume</span>
-                                <strong>@produto.BebidaVolumeMl.Value ml</strong>
-                            </div>
+                            
                         }
+
                         @if (!string.IsNullOrWhiteSpace(produto.BebidaTipo))
                         {
                             <div class="pdp-spec-item">
@@ -446,6 +451,7 @@
                                 <strong>@produto.BebidaTipo</strong>
                             </div>
                         }
+
                         @if (produto.BebidaEmbalagem.HasValue)
                         {
                             <div class="pdp-spec-item">
@@ -453,13 +459,12 @@
                                 <strong>@unidadeVendaDescricao</strong>
                             </div>
                         }
+
                         @if (produto.BebidaQtdPorEmbalagem.HasValue)
                         {
-                            <div class="pdp-spec-item">
-                                <span>Qtd. embalagem</span>
-                                <strong>@produto.BebidaQtdPorEmbalagem.Value</strong>
-                            </div>
+                            
                         }
+
                         @if (produto.BebidaTeorAlcoolico.HasValue)
                         {
                             <div class="pdp-spec-item">
@@ -478,6 +483,7 @@
                                 <strong>@produto.Sabor</strong>
                             </div>
                         }
+
                         @if (!string.IsNullOrWhiteSpace(produto.Cor))
                         {
                             <div class="pdp-spec-item">
@@ -528,7 +534,10 @@
             <div class="pdp-related-grid">
                 @foreach (var pr in Model.ProdutosRelacionados)
                 {
-                    var prTemPromo = pr.PrecoPromocional.HasValue && pr.PrecoPromocional.Value > 0 && pr.PrecoPromocional.Value < pr.Preco;
+                    var prTemPromo = pr.PrecoPromocional.HasValue
+                    && pr.PrecoPromocional.Value > 0
+                    && pr.PrecoPromocional.Value < pr.Preco;
+
                     var prPreco = prTemPromo ? pr.PrecoPromocional!.Value : pr.Preco;
 
                     <article class="pdp-related-card">
@@ -563,8 +572,8 @@
                                     <span class="new">@prPreco.ToString("C")</span>
                                 </div>
 
-                                <div class="pdp-related-status @(pr.Estoque > 0 ? "is-in" : "is-out")">
-                                    @(pr.Estoque > 0 ? "Em estoque" : "Esgotado")
+                                <div class="pdp-related-status @pr.StatusEstoqueCss">
+                                    @pr.StatusEstoqueTexto
                                 </div>
                             </div>
                         </a>
@@ -575,30 +584,49 @@
     }
 </div>
 
+
+
 @section Scripts {
     <script>
         (function () {
+            const productData = document.getElementById('product-data');
+            const isOutOfStock = productData?.dataset?.isOutOfStock === 'true';
+
             const qtd = document.getElementById('quantity');
             const qtdHidden = document.getElementById('quantidadeHidden');
             const minus = document.querySelector('.pdp-qty-btn.minus');
             const plus = document.querySelector('.pdp-qty-btn.plus');
-            const mobileAdd = document.getElementById('mobileAddToCartBtn');
+
             const form = document.getElementById('addToCartForm');
             const addToCartBtn = document.getElementById('addToCartBtn');
             const buyNowBtn = document.getElementById('buyNowBtn');
             const buyNowHidden = document.getElementById('buyNowHidden');
+
             const flavorRadios = document.querySelectorAll('.pdp-flavor-radio');
+            const saborSelecionado = document.getElementById('saborSelecionado');
+            const estoqueInfo = document.getElementById('estoque-info');
+            const estoqueQuantidade = document.getElementById('estoque-quantidade');
+
             const max = parseInt(qtd?.max || '1', 10);
 
             function normalizeQty() {
                 if (!qtd) return;
 
                 let value = parseInt(qtd.value || '1', 10);
-                if (isNaN(value) || value < 1) value = 1;
-                if (value > max) value = max;
+
+                if (isNaN(value) || value < 1) {
+                    value = 1;
+                }
+
+                if (value > max) {
+                    value = max;
+                }
 
                 qtd.value = value;
-                if (qtdHidden) qtdHidden.value = value;
+
+                if (qtdHidden) {
+                    qtdHidden.value = value;
+                }
             }
 
             function hasFlavorOptions() {
@@ -618,24 +646,26 @@
                 const missingFlavor = flavorIsRequiredAndMissing();
 
                 if (addToCartBtn) {
-                    addToCartBtn.disabled = missingFlavor;
+                    addToCartBtn.disabled = isOutOfStock || missingFlavor;
                     addToCartBtn.title = missingFlavor ? 'Selecione um sabor antes de continuar.' : '';
                 }
 
                 if (buyNowBtn) {
-                    buyNowBtn.disabled = missingFlavor;
+                    buyNowBtn.disabled = isOutOfStock || missingFlavor;
                     buyNowBtn.title = missingFlavor ? 'Selecione um sabor antes de continuar.' : '';
                 }
             }
 
             minus?.addEventListener('click', function () {
-                if (!qtd) return;
+                if (!qtd || isOutOfStock) return;
+
                 qtd.stepDown();
                 normalizeQty();
             });
 
             plus?.addEventListener('click', function () {
-                if (!qtd) return;
+                if (!qtd || isOutOfStock) return;
+
                 qtd.stepUp();
                 normalizeQty();
             });
@@ -643,22 +673,26 @@
             qtd?.addEventListener('input', normalizeQty);
             qtd?.addEventListener('change', normalizeQty);
 
-            mobileAdd?.addEventListener('click', function () {
-                if (!form) return;
+            flavorRadios.forEach(radio => {
+                radio.addEventListener('change', function (event) {
+                    const value = event.target.value;
+                    const estoque = event.target.getAttribute('data-estoque') || '0';
 
-                normalizeQty();
+                    if (saborSelecionado) {
+                        saborSelecionado.value = value;
+                    }
 
-                if (flavorIsRequiredAndMissing()) {
-                    alert('Selecione um sabor antes de continuar.');
-                    return;
-                }
+                    if (estoqueInfo && estoqueQuantidade) {
+                        estoqueQuantidade.textContent = estoque;
+                        estoqueInfo.hidden = false;
+                    }
 
-                if (buyNowHidden) buyNowHidden.value = 'false';
-                form.requestSubmit();
+                    updateButtonsState();
+                });
             });
 
             buyNowBtn?.addEventListener('click', function () {
-                if (!form) return;
+                if (!form || isOutOfStock) return;
 
                 normalizeQty();
 
@@ -667,52 +701,37 @@
                     return;
                 }
 
-                if (buyNowHidden) buyNowHidden.value = 'true';
+                if (buyNowHidden) {
+                    buyNowHidden.value = 'true';
+                }
+
                 form.requestSubmit();
+            });
+
+            addToCartBtn?.addEventListener('click', function () {
+                if (buyNowHidden) {
+                    buyNowHidden.value = 'false';
+                }
             });
 
             form?.addEventListener('submit', function (event) {
                 normalizeQty();
+
+                if (isOutOfStock) {
+                    event.preventDefault();
+                    alert('Produto esgotado.');
+                    return;
+                }
 
                 if (flavorIsRequiredAndMissing()) {
                     event.preventDefault();
                     alert('Selecione um sabor antes de continuar.');
                     return;
                 }
-
-                const active = document.activeElement;
-                if (!active || active.id !== 'buyNowBtn') {
-                    if (buyNowHidden) buyNowHidden.value = 'false';
-                }
-            });
-
-            flavorRadios.forEach(radio => {
-                radio.addEventListener('change', updateButtonsState);
             });
 
             normalizeQty();
             updateButtonsState();
-        })();
-
-        (function () {
-            const radios = document.querySelectorAll('.pdp-flavor-radio');
-            const hidden = document.getElementById('saborSelecionado');
-            const info = document.getElementById('estoque-info');
-            const span = document.getElementById('estoque-quantidade');
-
-            radios.forEach(r => {
-                r.addEventListener('change', function (e) {
-                    const value = e.target.value;
-                    const estoque = e.target.getAttribute('data-estoque') || '0';
-
-                    if (hidden) hidden.value = value;
-
-                    if (info && span) {
-                        span.textContent = estoque;
-                        info.hidden = false;
-                    }
-                });
-            });
         })();
 
         (function () {
@@ -731,35 +750,5 @@
                 });
             });
         })();
-    </script>
-
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const form = document.getElementById("addToCartForm");
-            const buyNowBtn = document.getElementById("buyNowBtn");
-            const addToCartBtn = document.getElementById("addToCartBtn");
-            const buyNowHidden = document.getElementById("buyNowHidden");
-
-            if (!form || !buyNowBtn || !buyNowHidden) return;
-
-            buyNowBtn.addEventListener("click", function () {
-                buyNowHidden.value = "true";
-                form.submit();
-            });
-
-            if (addToCartBtn) {
-                addToCartBtn.addEventListener("click", function () {
-                    buyNowHidden.value = "false";
-                });
-            }
-
-            form.addEventListener("submit", function () {
-                if (document.activeElement && document.activeElement.id !== "buyNowBtn") {
-                    if (buyNowHidden.value !== "true") {
-                        buyNowHidden.value = "false";
-                    }
-                }
-            });
-        });
     </script>
 }

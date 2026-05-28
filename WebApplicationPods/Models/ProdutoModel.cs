@@ -209,6 +209,69 @@ namespace WebApplicationPods.Models
             }
         }
 
+        [NotMapped]
+        public bool EstaEsgotado => Estoque <= 0;
+
+        [NotMapped]
+        public bool EstaComEstoqueBaixo
+        {
+            get
+            {
+                if (EstaEsgotado)
+                    return false;
+
+                if (EhEmbalagemComposta)
+                    return Estoque <= 3;
+
+                return Estoque <= 5;
+            }
+        }
+
+        [NotMapped]
+        public string StatusEstoqueTexto
+        {
+            get
+            {
+                if (EstaEsgotado)
+                    return "Esgotado";
+
+                if (EstaComEstoqueBaixo)
+                    return "Estoque baixo";
+
+                return "Em estoque";
+            }
+        }
+
+        [NotMapped]
+        public string StatusEstoqueCss
+        {
+            get
+            {
+                if (EstaEsgotado)
+                    return "esgotado";
+
+                if (EstaComEstoqueBaixo)
+                    return "baixo";
+
+                return "ok";
+            }
+        }
+
+        [NotMapped]
+        public string AvisoEstoqueLojista
+        {
+            get
+            {
+                if (EstaEsgotado)
+                    return $"O produto {Nome} está esgotado. Adicione estoque ou remova do catálogo.";
+
+                if (EstaComEstoqueBaixo)
+                    return $"O produto {Nome} está com estoque baixo: {EstoqueDescricao}.";
+
+                return string.Empty;
+            }
+        }
+
         public void SerializarSaboresQuantidades()
         {
             SaboresQuantidades = JsonConvert.SerializeObject(SaboresQuantidadesList ?? new List<SaborQuantidade>());
