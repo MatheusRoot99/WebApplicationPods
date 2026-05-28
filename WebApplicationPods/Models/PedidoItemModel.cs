@@ -66,29 +66,111 @@ namespace WebApplicationPods.Models
                 : Produto?.Nome ?? $"Produto #{ProdutoId}";
 
         [NotMapped]
-        public string UnidadeVendaExibicao =>
-            !string.IsNullOrWhiteSpace(UnidadeVendaDescricao)
-                ? UnidadeVendaDescricao
-                : "unidade";
+        public string EmbalagemExibicao
+        {
+            get
+            {
+                if (!string.IsNullOrWhiteSpace(EmbalagemNome))
+                    return EmbalagemNome;
+
+                if (Produto != null)
+                    return Produto.EmbalagemVendaSingular;
+
+                return "unidade";
+            }
+        }
+
+        [NotMapped]
+        public string UnidadeVendaExibicao
+        {
+            get
+            {
+                if (!string.IsNullOrWhiteSpace(UnidadeVendaDescricao))
+                    return UnidadeVendaDescricao;
+
+                if (Produto != null)
+                    return Produto.UnidadeVendaDescricao;
+
+                return EmbalagemExibicao;
+            }
+        }
+
+        [NotMapped]
+        public int UnidadesPorEmbalagemExibicao
+        {
+            get
+            {
+                if (UnidadesPorEmbalagem.HasValue && UnidadesPorEmbalagem.Value > 0)
+                    return UnidadesPorEmbalagem.Value;
+
+                if (Produto != null)
+                    return Math.Max(Produto.UnidadesFisicasPorEmbalagem, 1);
+
+                return 1;
+            }
+        }
 
         [NotMapped]
         public int TotalUnidadesFisicas =>
-            Quantidade * Math.Max(UnidadesPorEmbalagem ?? 1, 1);
+            Quantidade * Math.Max(UnidadesPorEmbalagemExibicao, 1);
+
+        [NotMapped]
+        public string TotalUnidadesFisicasExibicao
+        {
+            get
+            {
+                var unidadeTexto = TotalUnidadesFisicas == 1 ? "unidade" : "unidades";
+                return $"Total físico: {TotalUnidadesFisicas} {unidadeTexto}";
+            }
+        }
 
         [NotMapped]
         public string ResumoQuantidadeExibicao
         {
             get
             {
-                var unidades = Math.Max(UnidadesPorEmbalagem ?? 1, 1);
+                var unidades = Math.Max(UnidadesPorEmbalagemExibicao, 1);
 
                 if (unidades <= 1)
+                {
                     return Quantidade == 1
                         ? "1 unidade"
                         : $"{Quantidade} unidades";
+                }
 
-                return $"{Quantidade} × {UnidadeVendaExibicao} ({TotalUnidadesFisicas} unidades)";
+                var embalagem = EmbalagemExibicao;
+                var embalagemPlural = PluralizarEmbalagem(embalagem);
+
+                var embalagemTexto = Quantidade == 1
+                    ? embalagem
+                    : embalagemPlural;
+
+                var unidadeTexto = unidades == 1 ? "unidade" : "unidades";
+
+                return $"{Quantidade} {embalagemTexto} com {unidades} {unidadeTexto}";
             }
+        }
+
+        private static string PluralizarEmbalagem(string embalagem)
+        {
+            if (string.IsNullOrWhiteSpace(embalagem))
+                return "unidades";
+
+            var texto = embalagem.Trim();
+
+            return texto.ToLowerInvariant() switch
+            {
+                "pack" => "packs",
+                "fardo" => "fardos",
+                "caixa" => "caixas",
+                "lata" => "latas",
+                "garrafa" => "garrafas",
+                "long neck" => "long necks",
+                "unidade" => "unidades",
+                _ => texto.EndsWith("s", StringComparison.OrdinalIgnoreCase)
+                    ? texto
+                    : $"{texto}s"
+            };
         }
     }
 }

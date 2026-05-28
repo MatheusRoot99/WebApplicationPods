@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using WebApplicationPods.Constants;
 using WebApplicationPods.Data;
 using WebApplicationPods.DTO;
 using WebApplicationPods.Helper;
@@ -26,6 +27,7 @@ namespace WebApplicationPods.Controllers
         private readonly BancoContext _context;
         private readonly ICurrentLojaService _currentLoja;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IEstoqueService _estoqueService;
 
         public PedidosAdminController(
             IPedidoRepository pedidos,
@@ -34,7 +36,8 @@ namespace WebApplicationPods.Controllers
             IEntregaAppService entregaAppService,
             BancoContext context,
             ICurrentLojaService currentLoja,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            IEstoqueService estoqueService)
         {
             _pedidos = pedidos;
             _hub = hub;
@@ -43,6 +46,16 @@ namespace WebApplicationPods.Controllers
             _context = context;
             _currentLoja = currentLoja;
             _userManager = userManager;
+            _estoqueService = estoqueService;
+        }
+
+        private async Task BaixarEstoqueSeNecessarioAsync(int pedidoId)
+        {
+            var existeItemSemBaixa = await _context.PedidoItens
+                .AnyAsync(i => i.PedidoId == pedidoId && !i.EstoqueBaixado);
+
+            if (existeItemSemBaixa)
+                await _estoqueService.BaixarEstoquePedidoAsync(pedidoId);
         }
 
         private int? ObterLojaAtual()
@@ -267,6 +280,7 @@ namespace WebApplicationPods.Controllers
                 return Forbid();
 
             var atual = pedido.Status ?? string.Empty;
+            status = status?.Trim() ?? string.Empty;
 
             if (!PedidoStatusRules.PodeTransicionar(atual, status))
             {
@@ -287,8 +301,28 @@ namespace WebApplicationPods.Controllers
                 observacao: null,
                 origem: "PainelLojista");
 
+            if (string.Equals(status, PedidoStatus.Pago, StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    await BaixarEstoqueSeNecessarioAsync(id);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                        return BadRequest(new { ok = false, error = ex.Message });
+
+                    TempData["Erro"] = ex.Message;
+                    return RedirectToAction(nameof(Index));
+                }
+            }
+
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 return Json(new { ok = true });
+
+            TempData["Sucesso"] = string.Equals(status, PedidoStatus.Pago, StringComparison.OrdinalIgnoreCase)
+                ? "Pedido aprovado e estoque atualizado."
+                : "Status atualizado.";
 
             return RedirectToAction(nameof(Index));
         }

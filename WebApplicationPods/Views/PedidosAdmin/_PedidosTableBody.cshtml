@@ -12,21 +12,46 @@
     .pedido-itens-resumo {
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: 8px;
         font-size: 0.82rem;
         color: #6b7280;
     }
 
     .pedido-item-linha {
         line-height: 1.35;
+        padding: 8px 10px;
+        border-radius: 12px;
+        background: rgba(15, 23, 42, .035);
+        border: 1px solid rgba(15, 23, 42, .06);
     }
 
-    .pedido-item-linha strong {
-        color: #111827;
+        .pedido-item-linha strong {
+            display: block;
+            color: #111827;
+            font-weight: 800;
+            margin-bottom: 2px;
+        }
+
+    .pedido-item-info {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 8px;
+    }
+
+    .pedido-item-qtd {
+        color: #2563eb;
         font-weight: 700;
     }
 
-    .pedido-item-linha small {
+    .pedido-item-fisico {
+        color: #059669;
+        font-weight: 700;
+    }
+
+    .pedido-item-extra {
+        display: block;
+        margin-top: 2px;
         color: #6b7280;
     }
 
@@ -35,14 +60,30 @@
         color: #cbd5e1;
     }
 
-    [data-theme="dark"] .pedido-item-linha strong,
-    body.dark .pedido-item-linha strong {
-        color: #ffffff;
+    [data-theme="dark"] .pedido-item-linha,
+    body.dark .pedido-item-linha {
+        background: rgba(255, 255, 255, .045);
+        border-color: rgba(255, 255, 255, .08);
     }
 
-    [data-theme="dark"] .pedido-item-linha small,
-    body.dark .pedido-item-linha small {
+        [data-theme="dark"] .pedido-item-linha strong,
+        body.dark .pedido-item-linha strong {
+            color: #ffffff;
+        }
+
+    [data-theme="dark"] .pedido-item-extra,
+    body.dark .pedido-item-extra {
         color: #94a3b8;
+    }
+
+    [data-theme="dark"] .pedido-item-qtd,
+    body.dark .pedido-item-qtd {
+        color: #93c5fd;
+    }
+
+    [data-theme="dark"] .pedido-item-fisico,
+    body.dark .pedido-item-fisico {
+        color: #86efac;
     }
 </style>
 
@@ -110,16 +151,32 @@
                         {
                             <div class="pedido-item-linha">
                                 <strong>@item.NomeExibicao</strong>
-                                <span>— @item.ResumoQuantidadeExibicao</span>
+
+                                <div class="pedido-item-info">
+                                    <span class="pedido-item-qtd">
+                                        @item.ResumoQuantidadeExibicao
+                                    </span>
+
+                                    @if (item.TotalUnidadesFisicas > item.Quantidade)
+                                    {
+                                        <span class="pedido-item-fisico">
+                                            @item.TotalUnidadesFisicasExibicao
+                                        </span>
+                                    }
+                                </div>
 
                                 @if (!string.IsNullOrWhiteSpace(item.Sabor))
                                 {
-                                    <small> • Sabor: @item.Sabor</small>
+                                    <small class="pedido-item-extra">
+                                        <strong>Sabor:</strong> @item.Sabor
+                                    </small>
                                 }
 
                                 @if (!string.IsNullOrWhiteSpace(item.Observacoes))
                                 {
-                                    <small> • Obs: @item.Observacoes</small>
+                                    <small class="pedido-item-extra">
+                                        <strong>Obs:</strong> @item.Observacoes
+                                    </small>
                                 }
                             </div>
                         }
@@ -158,6 +215,11 @@
                     <div class="btn-group btn-group-sm actions-group" role="group" aria-label="Ações do pedido">
                         @foreach (var prox in proximas)
                         {
+                            if (podeAprovarNaEntrega &&
+                            string.Equals(prox, PedidoStatus.Pago, StringComparison.OrdinalIgnoreCase))
+                            {
+                                continue;
+                            }
                             var lowered = (prox ?? string.Empty).ToLowerInvariant();
                             var label = prox;
                             var css = "btn btn-outline-secondary btn-sm";

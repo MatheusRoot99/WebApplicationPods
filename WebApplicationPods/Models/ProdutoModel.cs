@@ -147,12 +147,11 @@ namespace WebApplicationPods.Models
 
         [NotMapped]
         public bool EhEmbalagemComposta =>
-            TipoProduto == ProdutoTipo.BebidaAlcoolica
-            && BebidaQtdPorEmbalagem.HasValue
-            && BebidaQtdPorEmbalagem.Value > 1
-            && BebidaEmbalagem is BebidaEmbalagemTipo.Pack
-                or BebidaEmbalagemTipo.Fardo
-                or BebidaEmbalagemTipo.Caixa;
+        BebidaQtdPorEmbalagem.HasValue
+        && BebidaQtdPorEmbalagem.Value > 1
+        && BebidaEmbalagem is BebidaEmbalagemTipo.Pack
+        or BebidaEmbalagemTipo.Fardo
+        or BebidaEmbalagemTipo.Caixa;
 
         [NotMapped]
         public int UnidadesFisicasPorEmbalagem => EhEmbalagemComposta

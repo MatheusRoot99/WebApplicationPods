@@ -45,10 +45,10 @@
                                     <div class="fw-semibold">@nome</div>
                                     <div class="text-muted small">@resumoQuantidade</div>
 
-                                    @if (!string.IsNullOrWhiteSpace(item.Observacoes))
+                                    @if (item.TotalUnidadesFisicas > item.Quantidade)
                                     {
                                         <div class="text-muted small">
-                                            <strong>Obs:</strong> @item.Observacoes
+                                            @item.TotalUnidadesFisicasExibicao
                                         </div>
                                     }
                                 </div>

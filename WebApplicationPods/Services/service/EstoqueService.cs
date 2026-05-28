@@ -25,41 +25,38 @@ namespace WebApplicationPods.Services.service
             if (pedido == null)
                 throw new InvalidOperationException("Pedido não encontrado.");
 
+            if (pedido.PedidoItens == null || !pedido.PedidoItens.Any())
+                throw new InvalidOperationException("Pedido não possui itens para baixa de estoque.");
+
             foreach (var item in pedido.PedidoItens.Where(i => !i.EstoqueBaixado))
             {
-                var prod = await _context.Produtos
+                if (item.Quantidade <= 0)
+                    throw new InvalidOperationException($"Quantidade inválida no item #{item.Id}.");
+
+                var produto = await _context.Produtos
                     .FirstOrDefaultAsync(p => p.Id == item.ProdutoId && p.LojaId == pedido.LojaId);
 
-                if (prod == null)
+                if (produto == null)
                     throw new InvalidOperationException($"Produto #{item.ProdutoId} não encontrado na loja do pedido.");
 
-                prod.DeserializarSaboresQuantidades();
+                produto.DeserializarSaboresQuantidades();
 
-                if (!string.IsNullOrWhiteSpace(item.Sabor) && prod.SaboresQuantidadesList?.Any() == true)
+                if (!string.IsNullOrWhiteSpace(item.Sabor) &&
+                    produto.SaboresQuantidadesList != null &&
+                    produto.SaboresQuantidadesList.Any())
                 {
-                    var sq = prod.SaboresQuantidadesList
-                        .FirstOrDefault(s => s.Sabor.Equals(item.Sabor, StringComparison.OrdinalIgnoreCase));
-
-                    if (sq == null)
-                        throw new InvalidOperationException($"Sabor '{item.Sabor}' não encontrado em {prod.Nome}.");
-
-                    if (sq.Quantidade < item.Quantidade)
-                        throw new InvalidOperationException($"Estoque insuficiente do sabor '{item.Sabor}'.");
-
-                    sq.Quantidade -= item.Quantidade;
+                    BaixarEstoquePorSabor(produto, item.Sabor, item.Quantidade);
                 }
                 else
                 {
-                    if (prod.Estoque < item.Quantidade)
-                        throw new InvalidOperationException($"Estoque insuficiente do produto '{prod.Nome}'.");
-
-                    prod.Estoque -= item.Quantidade;
+                    BaixarEstoqueProdutoPrincipal(produto, item.Quantidade);
                 }
 
-                if (prod.SaboresQuantidadesList?.Any() == true)
+                if (produto.SaboresQuantidadesList != null &&
+                    produto.SaboresQuantidadesList.Any())
                 {
-                    prod.Estoque = prod.SaboresQuantidadesList.Sum(s => s.Quantidade);
-                    prod.SerializarSaboresQuantidades();
+                    produto.Estoque = produto.SaboresQuantidadesList.Sum(s => Math.Max(0, s.Quantidade));
+                    produto.SerializarSaboresQuantidades();
                 }
 
                 item.EstoqueBaixado = true;
@@ -68,6 +65,42 @@ namespace WebApplicationPods.Services.service
 
             await _context.SaveChangesAsync();
             await tx.CommitAsync();
+        }
+
+        private static void BaixarEstoqueProdutoPrincipal(Models.ProdutoModel produto, int quantidadeVendida)
+        {
+            if (produto.Estoque < quantidadeVendida)
+            {
+                throw new InvalidOperationException(
+                    $"Estoque insuficiente do produto '{produto.Nome}'. " +
+                    $"Disponível: {produto.Estoque}. Solicitado: {quantidadeVendida}."
+                );
+            }
+
+            produto.Estoque -= quantidadeVendida;
+        }
+
+        private static void BaixarEstoquePorSabor(Models.ProdutoModel produto, string sabor, int quantidadeVendida)
+        {
+            var saborEstoque = produto.SaboresQuantidadesList
+                .FirstOrDefault(s => string.Equals(s.Sabor, sabor, StringComparison.OrdinalIgnoreCase));
+
+            if (saborEstoque == null)
+            {
+                throw new InvalidOperationException(
+                    $"Sabor '{sabor}' não encontrado no produto '{produto.Nome}'."
+                );
+            }
+
+            if (saborEstoque.Quantidade < quantidadeVendida)
+            {
+                throw new InvalidOperationException(
+                    $"Estoque insuficiente do sabor '{sabor}' do produto '{produto.Nome}'. " +
+                    $"Disponível: {saborEstoque.Quantidade}. Solicitado: {quantidadeVendida}."
+                );
+            }
+
+            saborEstoque.Quantidade -= quantidadeVendida;
         }
     }
 }

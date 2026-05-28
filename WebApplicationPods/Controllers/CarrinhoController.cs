@@ -664,6 +664,8 @@ namespace WebApplicationPods.Controllers
             }
 
             bool houveAjuste = false;
+            var produtosAtualizados = new Dictionary<int, ProdutoModel>();
+
             foreach (var i in carrinho.Itens.ToList())
             {
                 var produto = _produtoRepository.ObterPorId(i.Produto.Id);
@@ -675,6 +677,7 @@ namespace WebApplicationPods.Controllers
                 }
 
                 produto.DeserializarSaboresQuantidades();
+
                 var disponivel = ObterEstoqueDisponivel(produto, i.Sabor ?? string.Empty);
 
                 if (disponivel <= 0)
@@ -689,6 +692,8 @@ namespace WebApplicationPods.Controllers
                     i.Quantidade = disponivel;
                     houveAjuste = true;
                 }
+
+                produtosAtualizados[produto.Id] = produto;
             }
             _carrinhoRepository.SalvarCarrinho(carrinho);
 
@@ -748,27 +753,36 @@ namespace WebApplicationPods.Controllers
                 Observacoes = model.Observacoes,
                 RetiradaNoLocal = model.RetiradaNoLocal,
                 CodigoTransacao = Guid.NewGuid().ToString(),
-                PedidoItens = carrinho.Itens.Select(i => new PedidoItemModel
+                PedidoItens = carrinho.Itens.Select(i =>
                 {
-                    ProdutoId = i.Produto.Id,
-                    Quantidade = i.Quantidade,
+                    var produto = produtosAtualizados.TryGetValue(i.Produto.Id, out var produtoAtualizado)
+                        ? produtoAtualizado
+                        : i.Produto;
 
-                    PrecoOriginal = i.Produto.Preco,
-                    PrecoUnitario = i.Produto.EstaEmPromocao() && i.Produto.PrecoPromocional.HasValue
-                    ? i.Produto.PrecoPromocional.Value
-                    : i.Produto.Preco,
+                    var precoUnitario = produto.EstaEmPromocao() && produto.PrecoPromocional.HasValue
+                        ? produto.PrecoPromocional.Value
+                        : produto.Preco;
 
-                    Observacoes = i.Observacoes,
-                    Sabor = i.Sabor,
+                    return new PedidoItemModel
+                    {
+                        ProdutoId = produto.Id,
+                        Quantidade = i.Quantidade,
 
-                    ProdutoNomeSnapshot = i.Produto.Nome,
-                    TipoProdutoSnapshot = i.Produto.TipoProduto.ToString(),
-                    EmbalagemNome = i.Produto.EmbalagemVendaSingular,
-                    UnidadesPorEmbalagem = i.Produto.UnidadesFisicasPorEmbalagem,
-                    UnidadeVendaDescricao = i.Produto.UnidadeVendaDescricao,
+                        PrecoOriginal = produto.Preco,
+                        PrecoUnitario = precoUnitario,
 
-                    EstoqueBaixado = false,
-                    EstoqueBaixadoEm = null
+                        Observacoes = i.Observacoes,
+                        Sabor = i.Sabor,
+
+                        ProdutoNomeSnapshot = MontarProdutoNomeSnapshot(produto),
+                        TipoProdutoSnapshot = produto.TipoProduto.ToString(),
+                        EmbalagemNome = produto.EmbalagemVendaSingular,
+                        UnidadesPorEmbalagem = produto.UnidadesFisicasPorEmbalagem,
+                        UnidadeVendaDescricao = produto.UnidadeVendaDescricao,
+
+                        EstoqueBaixado = false,
+                        EstoqueBaixadoEm = null
+                    };
                 }).ToList()
             };
 
@@ -932,6 +946,37 @@ namespace WebApplicationPods.Controllers
             }
 
             return RedirectToAction(nameof(Resumo));
+        }
+
+        private static string MontarProdutoNomeSnapshot(ProdutoModel produto)
+        {
+            var nome = (produto.Nome ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(nome))
+                nome = $"Produto #{produto.Id}";
+
+            var partes = new List<string> { nome };
+
+            if (produto.BebidaVolumeMl.HasValue && produto.BebidaVolumeMl.Value > 0)
+            {
+                var volumeTexto = $"{produto.BebidaVolumeMl.Value}ml";
+
+                if (!nome.Contains(volumeTexto, StringComparison.OrdinalIgnoreCase))
+                    partes.Add(volumeTexto);
+            }
+
+            if (produto.EhEmbalagemComposta)
+            {
+                var embalagem = produto.EmbalagemVendaSingular;
+
+                if (!string.IsNullOrWhiteSpace(embalagem) &&
+                    !nome.Contains(embalagem, StringComparison.OrdinalIgnoreCase))
+                {
+                    partes.Add(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(embalagem));
+                }
+            }
+
+            return string.Join(" ", partes);
         }
     }
 }
