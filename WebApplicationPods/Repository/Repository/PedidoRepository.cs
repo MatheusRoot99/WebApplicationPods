@@ -313,7 +313,7 @@ namespace WebApplicationPods.Repository.Repository
                             && p.DataPedido >= hoje && p.DataPedido < amanha
                             && p.Status != PedidoStatus.Cancelado
                             && p.Status != PedidoStatus.PagamentoFalhou)
-                .Sum(p => (decimal?)p.ValorTotal) ?? 0m;
+                .Sum(p => (decimal?)(p.ValorTotal + p.TaxaEntrega)) ?? 0m;
         }
 
         public IEnumerable<PedidoModel> ObterAbertos()
@@ -356,7 +356,7 @@ namespace WebApplicationPods.Repository.Repository
 
             var recebidos = q.Count();
             var pagos = q.Where(PagoExpr).Count();
-            var totalVendido = q.Where(PagoExpr).Sum(p => (decimal?)p.ValorTotal) ?? 0m;
+            var totalVendido = q.Where(PagoExpr).Sum(p => (decimal?)(p.ValorTotal + p.TaxaEntrega)) ?? 0m;
 
             return new ResumoVendas
             {
@@ -378,7 +378,7 @@ namespace WebApplicationPods.Repository.Repository
                     Total = g.Sum(p =>
                         (p.Status != null && p.Status != PedidoStatus.Cancelado
                                           && p.Status != PedidoStatus.PagamentoFalhou)
-                            ? (decimal?)p.ValorTotal
+                            ? (decimal?)(p.ValorTotal + p.TaxaEntrega)
                             : 0m
                     ) ?? 0m
                 })
@@ -399,7 +399,7 @@ namespace WebApplicationPods.Repository.Repository
                     Total = g.Sum(p =>
                         (p.Status != null && p.Status != PedidoStatus.Cancelado
                                           && p.Status != PedidoStatus.PagamentoFalhou)
-                            ? (decimal?)p.ValorTotal
+                            ? (decimal?)(p.ValorTotal + p.TaxaEntrega)
                             : 0m
                     ) ?? 0m
                 })
@@ -422,7 +422,7 @@ namespace WebApplicationPods.Repository.Repository
                     Total = g.Sum(p =>
                         (p.Status != null && p.Status != PedidoStatus.Cancelado
                                           && p.Status != PedidoStatus.PagamentoFalhou)
-                            ? (decimal?)p.ValorTotal
+                            ? (decimal?)(p.ValorTotal + p.TaxaEntrega)
                             : 0m
                     ) ?? 0m
                 })

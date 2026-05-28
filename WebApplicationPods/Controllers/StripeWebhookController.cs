@@ -63,7 +63,8 @@ namespace WebApplicationPods.Controllers
                 stripeEvent = EventUtility.ConstructEvent(
                     json,
                     signatureHeader,
-                    webhookSecret
+                    webhookSecret,
+                    throwOnApiVersionMismatch: false
                 );
             }
             catch (StripeException)
@@ -120,7 +121,7 @@ namespace WebApplicationPods.Controllers
             return null;
         }
 
-        private async Task<string?> ObterWebhookSecretAsync(string? providerPaymentId)
+        internal async Task<string?> ObterWebhookSecretAsync(string? providerPaymentId)
         {
             if (!string.IsNullOrWhiteSpace(providerPaymentId))
             {
@@ -149,13 +150,21 @@ namespace WebApplicationPods.Controllers
             if (intent == null || string.IsNullOrWhiteSpace(intent.Id))
                 return;
 
+            await AplicarPaymentIntentSucceededAsync(intent.Id, intent.LatestChargeId);
+        }
+
+        internal async Task AplicarPaymentIntentSucceededAsync(string intentId, string? latestChargeId)
+        {
+            if (string.IsNullOrWhiteSpace(intentId))
+                return;
+
             var payment = await _db.Pagamentos
                 .IgnoreQueryFilters()
                 .Include(x => x.Pedido)
                 .ThenInclude(p => p!.Cliente)
                 .FirstOrDefaultAsync(x =>
                     x.Provider == "Stripe" &&
-                    x.ProviderPaymentId == intent.Id);
+                    x.ProviderPaymentId == intentId);
 
             if (payment == null)
                 return;
@@ -166,9 +175,9 @@ namespace WebApplicationPods.Controllers
             payment.Status = PaymentStatus.Paid;
             payment.PaidAt = DateTime.UtcNow;
 
-            if (!string.IsNullOrWhiteSpace(intent.LatestChargeId))
+            if (!string.IsNullOrWhiteSpace(latestChargeId))
             {
-                payment.ProviderOrderId = intent.LatestChargeId;
+                payment.ProviderOrderId = latestChargeId;
             }
 
             await _db.SaveChangesAsync();
@@ -257,7 +266,7 @@ namespace WebApplicationPods.Controllers
             {
                 id = pedido.Id,
                 cliente = pedido.Cliente?.Nome ?? $"Cliente #{pedido.ClienteId}",
-                valor = pedido.ValorTotal,
+                valor = pedido.ValorTotalComEntrega,
                 quando = pedido.DataPedido.ToString("o"),
                 metodo = pedido.MetodoPagamento,
                 status = "Pago",

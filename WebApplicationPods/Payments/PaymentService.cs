@@ -229,9 +229,12 @@ namespace WebApplicationPods.Payments
                 return;
 
             var payment = await _db.Set<PaymentModel>()
+                .IgnoreQueryFilters()
                 .Include(p => p.Pedido)
                 .ThenInclude(p => p!.Cliente)
-                .FirstOrDefaultAsync(p => p.ProviderPaymentId == parsed.providerPaymentId);
+                .FirstOrDefaultAsync(p =>
+                    p.Provider == "MercadoPago" &&
+                    p.ProviderPaymentId == parsed.providerPaymentId);
 
             if (payment == null)
                 return;
@@ -267,7 +270,7 @@ namespace WebApplicationPods.Payments
                     {
                         id = payment.Pedido.Id,
                         cliente = payment.Pedido.Cliente?.Nome ?? $"Cliente #{payment.Pedido.ClienteId}",
-                        valor = payment.Pedido.ValorTotal,
+                        valor = payment.Pedido.ValorTotalComEntrega,
                         quando = payment.Pedido.DataPedido.ToString("o"),
                         metodo = payment.Pedido.MetodoPagamento,
                         status = "Pago",

@@ -35,7 +35,7 @@ namespace WebApplicationPods.Services.service
             {
                 id = pedidoCriado.Id,
                 status = pedidoCriado.Status,
-                total = pedidoCriado.ValorTotal,
+                total = pedidoCriado.ValorTotalComEntrega,
                 metodo = pedidoCriado.MetodoPagamento,
                 data = pedidoCriado.DataPedido,
                 cliente = new

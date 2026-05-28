@@ -28,6 +28,9 @@ namespace WebApplicationPods.Models
         [Range(0, double.MaxValue)]
         public decimal TaxaEntrega { get; set; } = 0;
 
+        [NotMapped]
+        public decimal ValorTotalComEntrega => ValorTotal + TaxaEntrega;
+
         [Required]
         [StringLength(32)]
         public string MetodoPagamento { get; set; } = string.Empty;

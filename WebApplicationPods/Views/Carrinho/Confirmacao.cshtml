@@ -5,6 +5,9 @@
 
     var pedidoId = Model?.Id;
     var token = Model?.RastreioToken ?? ViewBag.RastreioToken as string;
+    var subtotal = Model?.ValorTotal ?? 0m;
+    var taxaEntrega = Model?.TaxaEntrega ?? 0m;
+    var total = Model?.ValorTotalComEntrega ?? 0m;
 }
 
 @section Styles {
@@ -16,6 +19,27 @@
         <h4 class="mb-1">Pedido #@pedidoId confirmado!</h4>
         <div>Obrigado! Você pode acompanhar o andamento em tempo real.</div>
     </div>
+
+    @if (Model != null)
+    {
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Subtotal</span>
+                    <strong>@subtotal.ToString("C")</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Taxa de entrega</span>
+                    <strong>@taxaEntrega.ToString("C")</strong>
+                </div>
+                <hr />
+                <div class="d-flex justify-content-between fs-5">
+                    <span>Total</span>
+                    <strong>@total.ToString("C")</strong>
+                </div>
+            </div>
+        </div>
+    }
 
     <div class="d-none d-md-flex gap-2">
         <a class="btn btn-primary"

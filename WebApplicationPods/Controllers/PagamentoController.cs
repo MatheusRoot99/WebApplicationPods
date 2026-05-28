@@ -418,7 +418,7 @@ namespace WebApplicationPods.Controllers
             {
                 id = pedido.Id,
                 cliente = pedido.Cliente?.Nome ?? $"Cliente #{pedido.ClienteId}",
-                valor = pedido.ValorTotal,
+                valor = pedido.ValorTotalComEntrega,
                 quando = pedido.DataPedido.ToString("o"),
                 metodo = pedido.MetodoPagamento,
                 status = "Pago",

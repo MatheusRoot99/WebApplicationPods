@@ -188,7 +188,7 @@ namespace WebApplicationPods.Controllers
                 PedidoId = pedido.Id,
                 ClienteNome = pedido.Cliente?.Nome ?? "-",
                 StatusAtual = pedido.Status ?? "-",
-                ValorTotal = pedido.ValorTotal,
+                ValorTotal = pedido.ValorTotalComEntrega,
                 EntregadorId = pedido.EntregadorId,
                 Entregadores = await CarregarEntregadoresAsync(pedido.LojaId)
             };
@@ -220,7 +220,7 @@ namespace WebApplicationPods.Controllers
 
             vm.ClienteNome = pedidoReload.Cliente?.Nome ?? "-";
             vm.StatusAtual = pedidoReload.Status ?? "-";
-            vm.ValorTotal = pedidoReload.ValorTotal;
+            vm.ValorTotal = pedidoReload.ValorTotalComEntrega;
             vm.Entregadores = await CarregarEntregadoresAsync(pedidoReload.LojaId);
 
             if (!vm.Entregadores.Any())

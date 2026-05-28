@@ -90,7 +90,7 @@ namespace WebApplicationPods.Services.service
                 {
                     pedidoId = pedido.Id,
                     cliente = pedido.Cliente?.Nome,
-                    total = pedido.ValorTotal,
+                    total = pedido.ValorTotalComEntrega,
                     status = EntregaStatusConst.Atribuida
                 });
             }
