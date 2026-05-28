@@ -31,6 +31,8 @@
 
     string tipoLabel = isPod ? "Pod" : isBebida ? "Bebida alcoólica" : "Produto";
     string disponibilidade = produto.Estoque > 0 ? "Em estoque" : "Esgotado";
+    var estoqueDescricao = produto.EstoqueDescricao;
+    var unidadeVendaDescricao = produto.UnidadeVendaDescricao;
     var desconto = temPromocao ? (int)Math.Round(100 - (precoAtual / produto.Preco * 100)) : 0;
 }
 
@@ -187,6 +189,11 @@
                                 <strong>@produto.PodTipo</strong>
                             </div>
                         }
+
+                        <div class="pdp-info-card">
+                            <span>Estoque</span>
+                            <strong>@estoqueDescricao</strong>
+                        </div>
                     }
                     else if (isBebida)
                     {
@@ -218,9 +225,14 @@
                         {
                             <div class="pdp-info-card">
                                 <span>Embalagem</span>
-                                <strong>@produto.BebidaQtdPorEmbalagem.Value un.</strong>
+                                <strong>@unidadeVendaDescricao</strong>
                             </div>
                         }
+
+                        <div class="pdp-info-card">
+                            <span>Estoque</span>
+                            <strong>@estoqueDescricao</strong>
+                        </div>
                     }
                     else
                     {
@@ -242,7 +254,7 @@
 
                         <div class="pdp-info-card">
                             <span>Estoque</span>
-                            <strong>@produto.Estoque unidade(s)</strong>
+                            <strong>@estoqueDescricao</strong>
                         </div>
                     }
                 </div>
@@ -297,6 +309,7 @@
             <section class="pdp-buy-box">
                 <div class="pdp-qty-wrap">
                     <label for="quantity" class="pdp-qty-label">Quantidade</label>
+                    <small class="pdp-qty-helper">@unidadeVendaDescricao</small>
 
                     <div class="pdp-qty-control">
                         <button type="button" class="pdp-qty-btn minus" aria-label="Diminuir">-</button>
@@ -382,7 +395,7 @@
 
                     <div class="pdp-spec-item">
                         <span>Estoque</span>
-                        <strong>@produto.Estoque unidade(s)</strong>
+                        <strong>@estoqueDescricao</strong>
                     </div>
 
                     @if (isPod)
@@ -437,7 +450,7 @@
                         {
                             <div class="pdp-spec-item">
                                 <span>Embalagem</span>
-                                <strong>@produto.BebidaEmbalagem.Value</strong>
+                                <strong>@unidadeVendaDescricao</strong>
                             </div>
                         }
                         @if (produto.BebidaQtdPorEmbalagem.HasValue)

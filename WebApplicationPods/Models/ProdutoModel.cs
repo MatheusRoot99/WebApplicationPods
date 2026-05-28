@@ -145,6 +145,70 @@ namespace WebApplicationPods.Models
         // ======= Métodos Auxiliares =======
         public bool EstaEmPromocao() => EmPromocao && PrecoPromocional.HasValue && PrecoPromocional < Preco;
 
+        [NotMapped]
+        public bool EhEmbalagemComposta =>
+            TipoProduto == ProdutoTipo.BebidaAlcoolica
+            && BebidaQtdPorEmbalagem.HasValue
+            && BebidaQtdPorEmbalagem.Value > 1
+            && BebidaEmbalagem is BebidaEmbalagemTipo.Pack
+                or BebidaEmbalagemTipo.Fardo
+                or BebidaEmbalagemTipo.Caixa;
+
+        [NotMapped]
+        public int UnidadesFisicasPorEmbalagem => EhEmbalagemComposta
+            ? BebidaQtdPorEmbalagem!.Value
+            : 1;
+
+        [NotMapped]
+        public int EstoqueFisicoTotal => Math.Max(0, Estoque) * UnidadesFisicasPorEmbalagem;
+
+        [NotMapped]
+        public string EmbalagemVendaSingular => BebidaEmbalagem switch
+        {
+            BebidaEmbalagemTipo.Pack => "pack",
+            BebidaEmbalagemTipo.Fardo => "fardo",
+            BebidaEmbalagemTipo.Caixa => "caixa",
+            BebidaEmbalagemTipo.Lata => "lata",
+            BebidaEmbalagemTipo.LongNeck => "long neck",
+            BebidaEmbalagemTipo.Garrafa => "garrafa",
+            _ => "unidade"
+        };
+
+        [NotMapped]
+        public string EmbalagemVendaPlural => BebidaEmbalagem switch
+        {
+            BebidaEmbalagemTipo.Pack => "packs",
+            BebidaEmbalagemTipo.Fardo => "fardos",
+            BebidaEmbalagemTipo.Caixa => "caixas",
+            BebidaEmbalagemTipo.Lata => "latas",
+            BebidaEmbalagemTipo.LongNeck => "long necks",
+            BebidaEmbalagemTipo.Garrafa => "garrafas",
+            _ => "unidades"
+        };
+
+        [NotMapped]
+        public string UnidadeVendaDescricao => EhEmbalagemComposta
+            ? $"{EmbalagemVendaSingular} com {UnidadesFisicasPorEmbalagem} unidades"
+            : EmbalagemVendaSingular;
+
+        [NotMapped]
+        public string EstoqueDescricao
+        {
+            get
+            {
+                var quantidade = Math.Max(0, Estoque);
+                if (!EhEmbalagemComposta)
+                {
+                    var unidade = quantidade == 1 ? EmbalagemVendaSingular : EmbalagemVendaPlural;
+                    return $"{quantidade} {unidade}";
+                }
+
+                var embalagem = quantidade == 1 ? EmbalagemVendaSingular : EmbalagemVendaPlural;
+                var unidadeFisica = EstoqueFisicoTotal == 1 ? "unidade física" : "unidades físicas";
+                return $"{quantidade} {embalagem} ({EstoqueFisicoTotal} {unidadeFisica})";
+            }
+        }
+
         public void SerializarSaboresQuantidades()
         {
             SaboresQuantidades = JsonConvert.SerializeObject(SaboresQuantidadesList ?? new List<SaborQuantidade>());

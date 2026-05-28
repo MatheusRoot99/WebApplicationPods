@@ -100,7 +100,8 @@
     let podSaborBox, saborSelectEl, saborOutroEl, saborHiddenEl;
     let saborSimplesBox, podDetailsBox, bebidaDetailsBox;
 
-    let bebidaTipoEl, bebidaVolumeEl, bebidaEmbalagemEl, bebidaNomeSugestaoEl;
+    let bebidaTipoEl, bebidaVolumeEl, bebidaEmbalagemEl, bebidaQtdPorEmbalagemEl, bebidaNomeSugestaoEl;
+    let estoqueEl, estoqueLabelEl, estoqueHintEl, bebidaEstoqueResumoEl;
 
     function getEnumVals() {
         const cfg = document.getElementById("psEnums");
@@ -246,6 +247,7 @@
         syncMaioridadeUI();
         syncNomePlaceholder();
         updateBebidaNomeSugestao();
+        updateEstoqueResumo();
     }
 
     function previewImagem() {
@@ -324,6 +326,54 @@
         bebidaNomeSugestaoEl.value = partes.join(" ").replace(/\s+/g, " ").trim();
     }
 
+    function embalagemLabel(value, plural) {
+        const labels = {
+            "5": ["fardo", "fardos"],
+            "6": ["caixa", "caixas"],
+            "7": ["pack", "packs"]
+        };
+
+        const found = labels[String(value || "")];
+        if (!found) return plural ? "unidades" : "unidade";
+        return plural ? found[1] : found[0];
+    }
+
+    function updateEstoqueResumo() {
+        const bebida = isTipoBebida();
+
+        if (estoqueLabelEl) {
+            estoqueLabelEl.innerHTML = `${bebida ? "Estoque para venda" : "Estoque"} <span class="ps-req">*</span>`;
+        }
+
+        if (estoqueHintEl) {
+            estoqueHintEl.textContent = bebida
+                ? "Informe quantas embalagens voce tem para vender. Ex.: 6 packs."
+                : "Informe quantas unidades estao disponiveis para venda.";
+        }
+
+        if (!bebidaEstoqueResumoEl) return;
+
+        if (!bebida) {
+            bebidaEstoqueResumoEl.textContent = "Este produto sera vendido por unidade.";
+            return;
+        }
+
+        const estoque = Math.max(parseInt(estoqueEl?.value || "0", 10) || 0, 0);
+        const qtdPorEmbalagem = Math.max(parseInt(bebidaQtdPorEmbalagemEl?.value || "0", 10) || 0, 0);
+        const embalagemValue = bebidaEmbalagemEl?.value || "";
+        const embalagemSingular = embalagemLabel(embalagemValue, false);
+        const embalagemPlural = embalagemLabel(embalagemValue, true);
+        const embalagem = estoque === 1 ? embalagemSingular : embalagemPlural;
+
+        if (estoque <= 0 || qtdPorEmbalagem <= 0 || embalagemSingular === "unidade") {
+            bebidaEstoqueResumoEl.textContent = "Informe embalagem, quantidade por embalagem e estoque.";
+            return;
+        }
+
+        const totalFisico = estoque * qtdPorEmbalagem;
+        bebidaEstoqueResumoEl.textContent = `${estoque} ${embalagem} para venda = ${totalFisico} unidades fisicas no total.`;
+    }
+
     function beforeSubmitNormalizeMoney() {
         if (precoEl) precoEl.value = normalizeMoneyToInvariant(precoEl.value);
         if (promoEl) promoEl.value = normalizeMoneyToInvariant(promoEl.value);
@@ -360,6 +410,9 @@
         tipoEl = document.getElementById("TipoProduto") || qs('select[name="TipoProduto"]');
         maioridadeEl = document.getElementById("RequerMaioridade") || qs('input[name="RequerMaioridade"]');
         nomeEl = qs('input[name="Nome"]');
+        estoqueEl = qs('input[name="Estoque"]');
+        estoqueLabelEl = document.getElementById("EstoqueLabel");
+        estoqueHintEl = document.getElementById("estoqueHint");
 
         imgEl = qs('input[type="file"][name="ImagemUpload"]');
         imgPreviewEl = document.getElementById("imgPreview");
@@ -380,17 +433,21 @@
         bebidaTipoEl = qs('input[name="BebidaTipo"]');
         bebidaVolumeEl = qs('input[name="BebidaVolumeMl"]');
         bebidaEmbalagemEl = document.getElementById("BebidaEmbalagem") || qs('select[name="BebidaEmbalagem"]');
+        bebidaQtdPorEmbalagemEl = qs('input[name="BebidaQtdPorEmbalagem"]');
         bebidaNomeSugestaoEl = document.getElementById("BebidaNomeSugestao");
+        bebidaEstoqueResumoEl = document.getElementById("BebidaEstoqueResumo");
 
         initMoneyFields();
         initAlcoolField();
         previewImagem();
         initSaborPod();
 
-        [nomeEl, bebidaTipoEl, bebidaVolumeEl, bebidaEmbalagemEl].forEach(function (el) {
+        [nomeEl, bebidaTipoEl, bebidaVolumeEl, bebidaEmbalagemEl, bebidaQtdPorEmbalagemEl, estoqueEl].forEach(function (el) {
             if (!el) return;
             el.addEventListener("input", updateBebidaNomeSugestao);
             el.addEventListener("change", updateBebidaNomeSugestao);
+            el.addEventListener("input", updateEstoqueResumo);
+            el.addEventListener("change", updateEstoqueResumo);
         });
 
         if (tipoEl) {

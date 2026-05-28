@@ -80,6 +80,25 @@
             </div>
         </div>
 
+        @if (Model.EsgotadosCount > 0 || Model.BaixoEstoqueCount > 0)
+        {
+            <div class="alert alert-warning d-flex align-items-start gap-2">
+                <i class="fas fa-triangle-exclamation mt-1"></i>
+                <div>
+                    <strong>Atenção ao estoque:</strong>
+                    @if (Model.EsgotadosCount > 0)
+                    {
+                        <span>@Model.EsgotadosCount produto(s) esgotado(s).</span>
+                    }
+                    @if (Model.BaixoEstoqueCount > 0)
+                    {
+                        <span>@Model.BaixoEstoqueCount produto(s) com estoque baixo.</span>
+                    }
+                    <span>Atualize o estoque ou pause o produto para evitar venda indevida.</span>
+                </div>
+            </div>
+        }
+
         <!-- Filtros -->
         <div class="card mb-3">
             <div class="card-body">
@@ -167,7 +186,13 @@
                                     </div>
                                 </td>
                                 <td>@i.Categoria</td>
-                                <td class="text-end">@i.Estoque</td>
+                                <td class="text-end">
+                                    <div class="fw-semibold">@i.EstoqueDescricao</div>
+                                    @if (i.EhEmbalagemComposta)
+                                    {
+                                        <div class="small text-muted">Venda limitada a @i.Estoque @(i.Estoque == 1 ? "embalagem" : "embalagens")</div>
+                                    }
+                                </td>
                                 <td class="text-end">
                                     @precoBase.ToString("C", pt)
                                     @if (i.EmPromocao)
@@ -231,7 +256,7 @@
 
                             <div class="ec-row">
                                 <div class="ec-label">Estoque</div>
-                                <div class="ec-value ec-num">@i.Estoque</div>
+                                <div class="ec-value ec-num">@i.EstoqueDescricao</div>
                             </div>
 
                             <div class="ec-row">

@@ -41,6 +41,9 @@
                 var temPromo = item.Produto.EstaEmPromocao();
                 var precoNormal = item.Produto.Preco;
                 decimal? precoPromo = temPromo ? item.Produto.PrecoPromocional : null;
+                string quantidadeVendaResumo = item.Produto.EhEmbalagemComposta
+                    ? $"{item.Quantidade} {(item.Quantidade == 1 ? item.Produto.EmbalagemVendaSingular : item.Produto.EmbalagemVendaPlural)} com {item.Produto.UnidadesFisicasPorEmbalagem} unidades"
+                    : (item.Quantidade == 1 ? "1 unidade" : $"{item.Quantidade} unidades");
 
                 <tr class="linha-item"
                     data-produto-id="@item.Produto.Id"
@@ -61,7 +64,8 @@
                                     </div>
                                 }
                             <div class="produto-estoque">
-                                <small>Estoque disponível: <strong>@maxPermitido</strong></small>
+                                <small>@quantidadeVendaResumo</small><br />
+                                <small>Estoque disponível: <strong>@item.Produto.EstoqueDescricao</strong></small>
                             </div>
                         </div>
                     </div>

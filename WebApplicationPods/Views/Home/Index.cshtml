@@ -247,7 +247,7 @@
                                     emb == WebApplicationPods.Enum.BebidaEmbalagemTipo.Pack;
 
                                     if (embMultipla && qtdEmbOk)
-                                        embalagemResumo = $"{embalagemTxt} {produto.BebidaQtdPorEmbalagem}un";
+                                        embalagemResumo = produto.UnidadeVendaDescricao;
                                     else
                                         embalagemResumo = embalagemTxt;
                                 }

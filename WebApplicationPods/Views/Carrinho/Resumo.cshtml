@@ -78,7 +78,17 @@
         if (qtd <= 0) qtd = 1;
 
         var produto = item?.Produto;
+        if (produto is ProdutoModel produtoModel && produtoModel.EhEmbalagemComposta)
+        {
+            var embalagem = qtd == 1
+                ? produtoModel.EmbalagemVendaSingular
+                : produtoModel.EmbalagemVendaPlural;
+
+            return $"{qtd} {embalagem} com {produtoModel.UnidadesFisicasPorEmbalagem} unidades";
+        }
+
         var unidadesPack = TentarObterInt(produto,
+            "UnidadesFisicasPorEmbalagem",
             "UnidadesPorPack",
             "QuantidadePorPack",
             "QtdPorPack",
@@ -455,7 +465,7 @@
                                             }
 
                                             <span class="compact-dot">•</span>
-                                            <span>@precoUnit.ToString("C")/un.</span>
+                                            <span>@precoUnit.ToString("C")/@(item.Produto?.EhEmbalagemComposta == true ? item.Produto.EmbalagemVendaSingular : "un.")</span>
                                         </div>
                                     </div>
                                 </div>

@@ -121,7 +121,7 @@
                                     emb == WebApplicationPods.Enum.BebidaEmbalagemTipo.Pack;
 
                                     if (embMultipla && qtdEmbOk)
-                                        embalagemResumo = $"{embalagemTxt} {item.Produto.BebidaQtdPorEmbalagem}un";
+                                        embalagemResumo = item.Produto.UnidadeVendaDescricao;
                                     else
                                         embalagemResumo = embalagemTxt;
                                 }
@@ -157,6 +157,10 @@
                                 ? item.Produto.Descricao
                                 : "Produto selecionado");
 
+                                string quantidadeVendaResumo = item.Produto?.EhEmbalagemComposta == true
+                                ? $"{item.Quantidade} {(item.Quantidade == 1 ? item.Produto.EmbalagemVendaSingular : item.Produto.EmbalagemVendaPlural)} com {item.Produto.UnidadesFisicasPorEmbalagem} unidades"
+                                : (item.Quantidade == 1 ? "1 unidade" : $"{item.Quantidade} unidades");
+
                                 <tr class="linha-item">
                                     <td data-label="Produto" class="cell-produto">
                                         <div class="produto-info">
@@ -169,6 +173,10 @@
 
                                                 <div class="produto-descricao">
                                                     @descricaoResumo
+                                                </div>
+
+                                                <div class="produto-descricao">
+                                                    @quantidadeVendaResumo
                                                 </div>
 
                                                 @if (!string.IsNullOrEmpty(item.Observacoes))

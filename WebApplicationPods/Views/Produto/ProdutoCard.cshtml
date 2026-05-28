@@ -41,6 +41,7 @@
 
             <!-- Especificações -->
             <div class="small text-muted mb-2">
+                <div><i class="fas fa-box me-1"></i> @Model.EstoqueDescricao</div>
                 @if (Model.Puffs > 0)
                 {
                     <div><i class="fas fa-smoking me-1"></i> @Model.Puffs puffs</div>
@@ -70,6 +71,7 @@
                     <input type="hidden" name="produtoId" value="@Model.Id" />
                     <div class="d-flex gap-2">
                         <input type="number" name="quantidade" value="1" min="1"
+                               max="@(Model.Estoque > 0 ? Model.Estoque : 1)"
                                class="form-control" style="width: 60px;"
                                @(Model.Estoque <= 0 ? "disabled" : "")>
                         <button type="submit" class="btn btn-outline-primary flex-grow-1"

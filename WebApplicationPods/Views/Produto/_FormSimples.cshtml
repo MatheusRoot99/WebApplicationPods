@@ -130,8 +130,13 @@
                     </div>
 
                     <div class="ps-field">
-                        <label class="ps-label">Estoque <span class="ps-req">*</span></label>
+                        <label class="ps-label" id="EstoqueLabel">
+                            @(isBebida ? "Estoque para venda" : "Estoque") <span class="ps-req">*</span>
+                        </label>
                         <input asp-for="Estoque" class="ps-input" type="number" min="0" />
+                        <small id="estoqueHint" class="ps-hint">
+                            @(isBebida ? "Informe quantas embalagens voce tem para vender. Ex.: 6 packs." : "Informe quantas unidades estao disponiveis para venda.")
+                        </small>
                         <span asp-validation-for="Estoque" class="text-danger small"></span>
                     </div>
                 </div>
@@ -250,8 +255,16 @@
                                     <label class="ps-label">Qtd. por Embalagem</label>
                                     <input asp-for="BebidaQtdPorEmbalagem" class="ps-input" type="number" min="1" placeholder="Ex: 6, 12, 24" />
                                     <span asp-validation-for="BebidaQtdPorEmbalagem" class="text-danger small"></span>
-                                    <small class="ps-hint">Use para fardo/caixa/pack. Ex.: caixa com 12 unidades.</small>
+                                    <small class="ps-hint">Use para fardo/caixa/pack. Ex.: pack com 6 unidades.</small>
                                 </div>
+                            </div>
+
+                            <div class="ps-field">
+                                <label class="ps-label">Resumo do estoque</label>
+                                <div class="ps-input" id="BebidaEstoqueResumo" aria-live="polite">
+                                    Informe embalagem, quantidade por embalagem e estoque.
+                                </div>
+                                <small class="ps-hint">O estoque limita quantos packs/fardos/caixas o cliente pode comprar.</small>
                             </div>
 
                             <div class="ps-grid ps-grid-2">
