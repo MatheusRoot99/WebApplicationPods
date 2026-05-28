@@ -1,8 +1,9 @@
 ﻿// =========================================================
-// Produto Simples - JS (separado)
+// Produto Simples - JS
+// Cadastro simples de produto / bebida / pod
 // =========================================================
 
-// ==== jQuery Validate: aceitar 1.234,56 como number (pt-BR) ====
+// jQuery Validate: aceitar 1.234,56 como number pt-BR
 (function () {
     function initValidation() {
         if (!window.jQuery || !jQuery.validator) {
@@ -14,20 +15,28 @@
             if (this.optional(element)) return true;
 
             value = (value || "").toString().trim().replace(/\s/g, "");
-            if (value.indexOf(",") > -1) value = value.replace(/\./g, "").replace(",", ".");
+
+            if (value.indexOf(",") > -1) {
+                value = value.replace(/\./g, "").replace(",", ".");
+            }
+
             return /^-?\d+(\.\d+)?$/.test(value);
         };
 
         if (jQuery.validator.methods.range) {
-            var originalRange = jQuery.validator.methods.range;
+            const originalRange = jQuery.validator.methods.range;
+
             jQuery.validator.methods.range = function (value, element, param) {
                 value = (value || "").toString().trim().replace(/\s/g, "");
+
                 if (value.indexOf(",") > -1) {
                     if (value.indexOf(".") > -1 && value.indexOf(",") > value.indexOf(".")) {
                         value = value.replace(/\./g, "");
                     }
+
                     value = value.replace(",", ".");
                 }
+
                 return originalRange.call(this, value, element, param);
             };
         }
@@ -37,35 +46,91 @@
 })();
 
 (function () {
-    function qs(sel) { return document.querySelector(sel); }
-    function qsa(sel) { return Array.from(document.querySelectorAll(sel)); }
+    function qs(sel) {
+        return document.querySelector(sel);
+    }
 
-    function onlyDigits(s) { return (s || "").replace(/\D+/g, ""); }
+    function qsa(sel) {
+        return Array.from(document.querySelectorAll(sel));
+    }
+
+    function onlyDigits(value) {
+        return (value || "").replace(/\D+/g, "");
+    }
 
     function formatMoneyBRFromDigits(digits) {
         digits = (digits || "").replace(/^0+/, "") || "0";
+
         if (digits.length === 1) digits = "0" + digits;
         if (digits.length === 2) digits = "0" + digits;
 
         const cents = digits.slice(-2);
         let intPart = digits.slice(0, -2);
+
         intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
         return intPart + "," + cents;
     }
 
     function normalizeMoneyToInvariant(value) {
         if (!value) return "";
+
         let s = String(value).trim();
         s = s.replace(/[^\d,.\-]/g, "");
-        if (s.includes(",") && s.includes(".")) s = s.replace(/\./g, "").replace(",", ".");
-        else s = s.replace(",", ".");
+
+        if (s.includes(",") && s.includes(".")) {
+            s = s.replace(/\./g, "").replace(",", ".");
+        } else {
+            s = s.replace(",", ".");
+        }
+
         return s;
     }
 
     function toNumberInvariant(value) {
-        const inv = normalizeMoneyToInvariant(value);
-        const n = parseFloat(inv);
-        return isNaN(n) ? 0 : n;
+        const normalized = normalizeMoneyToInvariant(value);
+        const number = parseFloat(normalized);
+
+        return isNaN(number) ? 0 : number;
+    }
+
+    function setInvalid(el, invalid) {
+        if (!el) return;
+        el.classList.toggle("ps-invalid", !!invalid);
+    }
+
+    function show(el, visible) {
+        if (!el) return;
+        el.style.display = visible ? "" : "none";
+    }
+
+    function getEnumConfig() {
+        const cfg = document.getElementById("psEnums");
+
+        return {
+            PADRAO: cfg?.getAttribute("data-padrao") || "",
+            POD: cfg?.getAttribute("data-pod") || "",
+            BEBIDA: cfg?.getAttribute("data-bebida") || ""
+        };
+    }
+
+    function getCurrentTipo() {
+        return String(tipoEl?.value || "");
+    }
+
+    function isTipoPadrao() {
+        const { PADRAO } = getEnumConfig();
+        return getCurrentTipo() === String(PADRAO);
+    }
+
+    function isTipoPod() {
+        const { POD } = getEnumConfig();
+        return getCurrentTipo() === String(POD);
+    }
+
+    function isTipoBebida() {
+        const { BEBIDA } = getEnumConfig();
+        return getCurrentTipo() === String(BEBIDA);
     }
 
     function attachMoneyMask(input, onChange) {
@@ -73,51 +138,15 @@
 
         function apply() {
             const digits = onlyDigits(input.value);
+
             input.value = formatMoneyBRFromDigits(digits);
             input.dataset.rawDigits = digits;
+
             if (onChange) onChange();
         }
 
         input.addEventListener("input", apply);
         input.addEventListener("blur", apply);
-    }
-
-    function setInvalid(el, on) {
-        if (!el) return;
-        el.classList.toggle("ps-invalid", !!on);
-    }
-
-    // elements
-    let formEl;
-    let precoEl, promoEl, promoHintEl;
-
-    let tipoEl, maioridadeEl;
-    let nomeEl;
-
-    let imgEl, imgPreviewEl, imgPreviewEmptyEl;
-
-    let saborFieldWrap, corFieldWrap;
-    let podSaborBox, saborSelectEl, saborOutroEl, saborHiddenEl;
-    let saborSimplesBox, podDetailsBox, bebidaDetailsBox;
-
-    let bebidaTipoEl, bebidaVolumeEl, bebidaEmbalagemEl, bebidaQtdPorEmbalagemEl, bebidaNomeSugestaoEl;
-    let estoqueEl, estoqueLabelEl, estoqueHintEl, bebidaEstoqueResumoEl;
-
-    function getEnumVals() {
-        const cfg = document.getElementById("psEnums");
-        const POD = cfg ? cfg.getAttribute("data-pod") : null;
-        const BEBIDA = cfg ? cfg.getAttribute("data-bebida") : null;
-        return { POD, BEBIDA };
-    }
-
-    function isTipoPod() {
-        const { POD } = getEnumVals();
-        return !!tipoEl && POD !== null && String(tipoEl.value || "") === String(POD);
-    }
-
-    function isTipoBebida() {
-        const { BEBIDA } = getEnumVals();
-        return !!tipoEl && BEBIDA !== null && String(tipoEl.value || "") === String(BEBIDA);
     }
 
     function validatePromo() {
@@ -128,141 +157,31 @@
 
         if (!promoEl.value || promo <= 0) {
             setInvalid(promoEl, false);
-            if (promoHintEl) promoHintEl.textContent = "";
+
+            if (promoHintEl) {
+                promoHintEl.textContent = "";
+            }
+
             return true;
         }
 
-        if (promo >= preco) {
+        if (preco <= 0 || promo >= preco) {
             setInvalid(promoEl, true);
-            if (promoHintEl) promoHintEl.textContent = "Promo deve ser menor que o preço.";
+
+            if (promoHintEl) {
+                promoHintEl.textContent = "Promo deve ser menor que o preço.";
+            }
+
             return false;
         }
 
         setInvalid(promoEl, false);
-        if (promoHintEl) promoHintEl.textContent = "Promo válida ✅";
+
+        if (promoHintEl) {
+            promoHintEl.textContent = "Promo válida.";
+        }
+
         return true;
-    }
-
-    function syncSaborHidden() {
-        if (!saborHiddenEl) return;
-
-        // Se for bebida, não usa sabor
-        if (isTipoBebida()) {
-            saborHiddenEl.value = "";
-            return;
-        }
-
-        const outro = (saborOutroEl?.value || "").trim();
-        const sel = (saborSelectEl?.value || "").trim();
-        const simples = qs('input[name="Sabor"]:not([type="hidden"])');
-
-        if (isTipoPod()) {
-            saborHiddenEl.value = outro.length > 0 ? outro : sel;
-        } else {
-            // Padrão -> campo simples
-            if (simples) saborHiddenEl.value = (simples.value || "").trim();
-        }
-    }
-
-    function initSaborPod() {
-        if (saborSelectEl) saborSelectEl.addEventListener("change", syncSaborHidden);
-        if (saborOutroEl) saborOutroEl.addEventListener("input", syncSaborHidden);
-
-        const saborSimplesInput = qs('#saborSimplesBox input[name="Sabor"]');
-        if (saborSimplesInput) saborSimplesInput.addEventListener("input", syncSaborHidden);
-
-        // em edição: tenta preencher combo ou "outro" (quando for pod)
-        const current = (saborHiddenEl?.value || "").trim();
-        if (current && saborSelectEl) {
-            const opt = Array.from(saborSelectEl.options)
-                .find(o => (o.value || "").trim().toLowerCase() === current.toLowerCase());
-
-            if (opt) saborSelectEl.value = opt.value;
-            else if (saborOutroEl) saborOutroEl.value = current;
-        }
-
-        syncSaborHidden();
-    }
-
-    function syncNomePlaceholder() {
-        if (!tipoEl || !nomeEl) return;
-
-        if (isTipoPod()) {
-            nomeEl.placeholder = "Ex: Ignite Sex Addict 28000 puffs";
-            return;
-        }
-
-        if (isTipoBebida()) {
-            nomeEl.placeholder = "Ex: Heineken 330ml (Unidade)";
-            return;
-        }
-
-        nomeEl.placeholder = "Ex: Chocolate Lacta 90g";
-    }
-
-    function syncMaioridadeUI() {
-        if (!maioridadeEl) return;
-
-        const pod = isTipoPod();
-        const bebida = isTipoBebida();
-
-        if (pod || bebida) {
-            maioridadeEl.checked = true;
-            maioridadeEl.disabled = true;
-        } else {
-            maioridadeEl.disabled = false;
-        }
-    }
-
-    function syncTypeBlocks() {
-        const pod = isTipoPod();
-        const bebida = isTipoBebida();
-
-        // wrappers gerais
-        if (saborFieldWrap) saborFieldWrap.style.display = bebida ? "none" : "";
-        if (corFieldWrap) corFieldWrap.style.display = bebida ? "none" : "";
-
-        // dentro do sabor
-        if (podSaborBox) podSaborBox.style.display = pod ? "block" : "none";
-        if (saborSimplesBox) saborSimplesBox.style.display = (!pod && !bebida) ? "block" : "none";
-
-        // cards detalhes
-        if (podDetailsBox) podDetailsBox.style.display = pod ? "block" : "none";
-        if (bebidaDetailsBox) bebidaDetailsBox.style.display = bebida ? "block" : "none";
-
-        // bebida não usa sabor/cor
-        if (bebida) {
-            if (saborHiddenEl) saborHiddenEl.value = "";
-            const saborSimplesInput = qs('#saborSimplesBox input[name="Sabor"]');
-            if (saborSimplesInput) saborSimplesInput.value = "";
-
-            if (saborSelectEl) saborSelectEl.value = "";
-            if (saborOutroEl) saborOutroEl.value = "";
-
-            const corInput = qs('input[name="Cor"]');
-            if (corInput) corInput.value = "";
-        }
-
-        syncSaborHidden();
-        syncMaioridadeUI();
-        syncNomePlaceholder();
-        updateBebidaNomeSugestao();
-        updateEstoqueResumo();
-    }
-
-    function previewImagem() {
-        if (!imgEl || !imgPreviewEl || !imgPreviewEmptyEl) return;
-
-        imgEl.addEventListener("change", function () {
-            const file = imgEl.files && imgEl.files[0];
-            if (!file) return;
-            if (!file.type || !file.type.startsWith("image/")) return;
-
-            const url = URL.createObjectURL(file);
-            imgPreviewEl.src = url;
-            imgPreviewEl.classList.remove("d-none");
-            imgPreviewEmptyEl.classList.add("d-none");
-        });
     }
 
     function initMoneyFields() {
@@ -270,8 +189,9 @@
             attachMoneyMask(el, validatePromo);
 
             if (el.value) {
-                const inv = normalizeMoneyToInvariant(el.value);
-                const digits = onlyDigits(inv.replace(".", ""));
+                const normalized = normalizeMoneyToInvariant(el.value);
+                const digits = onlyDigits(normalized.replace(".", ""));
+
                 el.value = formatMoneyBRFromDigits(digits);
                 el.dataset.rawDigits = digits;
             }
@@ -280,108 +200,231 @@
         validatePromo();
     }
 
-    function initAlcoolField() {
-        const alcoolEl = qs(".js-alcool");
-        if (!alcoolEl) return;
+    function syncSaborHidden() {
+        if (!saborHiddenEl) return;
 
-        alcoolEl.addEventListener("input", function () {
-            let v = alcoolEl.value || "";
-            v = v.replace(/[^\d,.\-]/g, "");
-
-            // normaliza para vírgula visual
-            if (v.includes(".") && !v.includes(",")) v = v.replace(".", ",");
-
-            // mantém apenas a primeira vírgula
-            const firstComma = v.indexOf(",");
-            if (firstComma >= 0) {
-                v = v.slice(0, firstComma + 1) + v.slice(firstComma + 1).replace(/,/g, "");
-            }
-
-            alcoolEl.value = v;
-        });
-    }
-
-    function updateBebidaNomeSugestao() {
-        if (!bebidaNomeSugestaoEl) return;
-
-        if (!isTipoBebida()) {
-            bebidaNomeSugestaoEl.value = "";
+        if (!isTipoPod()) {
+            saborHiddenEl.value = "";
             return;
         }
 
-        const nome = (nomeEl?.value || "").trim();
-        const volume = (bebidaVolumeEl?.value || "").trim();
-        const embalagemTxt = bebidaEmbalagemEl
-            ? (bebidaEmbalagemEl.options[bebidaEmbalagemEl.selectedIndex]?.text || "").trim()
-            : "";
+        const outro = (saborOutroEl?.value || "").trim();
+        const selected = (saborSelectEl?.value || "").trim();
 
-        let partes = [];
-        if (nome) partes.push(nome);
-        if (volume) partes.push(`${volume}ml`);
+        saborHiddenEl.value = outro.length > 0 ? outro : selected;
+    }
 
-        if (embalagemTxt && embalagemTxt.toLowerCase() !== "não informado") {
-            partes.push(embalagemTxt);
+    function initSaborPod() {
+        if (saborSelectEl) {
+            saborSelectEl.addEventListener("change", syncSaborHidden);
         }
 
-        bebidaNomeSugestaoEl.value = partes.join(" ").replace(/\s+/g, " ").trim();
+        if (saborOutroEl) {
+            saborOutroEl.addEventListener("input", syncSaborHidden);
+        }
+
+        const current = (saborHiddenEl?.value || "").trim();
+
+        if (current && saborSelectEl) {
+            const option = Array.from(saborSelectEl.options)
+                .find(o => (o.value || "").trim().toLowerCase() === current.toLowerCase());
+
+            if (option) {
+                saborSelectEl.value = option.value;
+            } else if (saborOutroEl) {
+                saborOutroEl.value = current;
+            }
+        }
+
+        syncSaborHidden();
     }
 
-    function embalagemLabel(value, plural) {
-        const labels = {
-            "5": ["fardo", "fardos"],
-            "6": ["caixa", "caixas"],
-            "7": ["pack", "packs"]
-        };
+    function syncNomePlaceholder() {
+        if (!nomeEl) return;
 
-        const found = labels[String(value || "")];
-        if (!found) return plural ? "unidades" : "unidade";
-        return plural ? found[1] : found[0];
+        if (isTipoPod()) {
+            nomeEl.placeholder = "Ex: Ignite 28000 Puffs Banana Ice";
+            return;
+        }
+
+        if (isTipoBebida()) {
+            nomeEl.placeholder = "Ex: Heineken 330ml Pack";
+            return;
+        }
+
+        nomeEl.placeholder = "Ex: Chocolate Lacta 90g";
     }
 
-    function updateEstoqueResumo() {
+    function clearPodFieldsWhenNeeded() {
+        if (isTipoPod()) return;
+
+        if (saborSelectEl) saborSelectEl.value = "";
+        if (saborOutroEl) saborOutroEl.value = "";
+        if (saborHiddenEl) saborHiddenEl.value = "";
+
+        const podPuffsEl = qs('input[name="PodPuffs"]');
+        const podBateriaEl = qs('input[name="PodCapacidadeBateria"]');
+        const podTipoEl = qs('input[name="PodTipo"]');
+
+        if (podPuffsEl) podPuffsEl.value = "";
+        if (podBateriaEl) podBateriaEl.value = "";
+        if (podTipoEl) podTipoEl.value = "";
+    }
+
+    function clearBebidaFieldsWhenNeeded() {
+        if (isTipoBebida()) return;
+
+        const bebidaTipoEl = qs('input[name="BebidaTipo"]');
+        const bebidaVolumeEl = qs('input[name="BebidaVolumeMl"]');
+
+        if (bebidaTipoEl) bebidaTipoEl.value = "";
+        if (bebidaVolumeEl) bebidaVolumeEl.value = "";
+
+        if (bebidaEmbalagemEl) bebidaEmbalagemEl.value = bebidaEmbalagemEl.querySelector("option")?.value || "";
+        if (bebidaQtdPorEmbalagemEl) bebidaQtdPorEmbalagemEl.value = "";
+    }
+
+    function syncTypeBlocks() {
+        const pod = isTipoPod();
         const bebida = isTipoBebida();
 
-        if (estoqueLabelEl) {
-            estoqueLabelEl.innerHTML = `${bebida ? "Estoque para venda" : "Estoque"} <span class="ps-req">*</span>`;
-        }
+        show(saborFieldWrap, pod);
+        show(podDetailsBox, pod);
+        show(bebidaDetailsBox, bebida);
 
         if (estoqueHintEl) {
             estoqueHintEl.textContent = bebida
-                ? "Informe quantas embalagens voce tem para vender. Ex.: 6 packs."
-                : "Informe quantas unidades estao disponiveis para venda.";
+                ? "Informe quantas embalagens você tem para vender. Ex.: 6 packs."
+                : "Informe quantas unidades estão disponíveis.";
         }
 
+        clearPodFieldsWhenNeeded();
+        clearBebidaFieldsWhenNeeded();
+
+        syncSaborHidden();
+        syncNomePlaceholder();
+        updateEstoqueResumo();
+    }
+
+    function previewImagem() {
+        if (!imgEl || !imgPreviewEl || !imgPreviewEmptyEl) return;
+
+        imgEl.addEventListener("change", function () {
+            const file = imgEl.files && imgEl.files[0];
+
+            if (!file) return;
+
+            if (!file.type || !file.type.startsWith("image/")) {
+                imgEl.value = "";
+                return;
+            }
+
+            const url = URL.createObjectURL(file);
+
+            imgPreviewEl.src = url;
+            imgPreviewEl.classList.remove("d-none");
+            imgPreviewEmptyEl.classList.add("d-none");
+        });
+    }
+
+    function getSelectedEmbalagemText() {
+        if (!bebidaEmbalagemEl) return "";
+
+        const selectedOption = bebidaEmbalagemEl.options[bebidaEmbalagemEl.selectedIndex];
+
+        return (selectedOption?.text || "").trim();
+    }
+
+    function isEmbalagemCompostaByText(text) {
+        const normalized = (text || "").trim().toLowerCase();
+
+        return normalized === "pack" ||
+            normalized === "fardo" ||
+            normalized === "caixa";
+    }
+
+    function pluralizarEmbalagem(text) {
+        const normalized = (text || "").trim().toLowerCase();
+
+        switch (normalized) {
+            case "pack":
+                return "packs";
+            case "fardo":
+                return "fardos";
+            case "caixa":
+                return "caixas";
+            case "lata":
+                return "latas";
+            case "garrafa":
+                return "garrafas";
+            case "long neck":
+                return "long necks";
+            case "unidade":
+                return "unidades";
+            default:
+                return normalized.endsWith("s") ? text : `${text}s`;
+        }
+    }
+
+    function updateEstoqueResumo() {
         if (!bebidaEstoqueResumoEl) return;
 
-        if (!bebida) {
-            bebidaEstoqueResumoEl.textContent = "Este produto sera vendido por unidade.";
+        if (!isTipoBebida()) {
+            bebidaEstoqueResumoEl.textContent = "Este produto será vendido por unidade.";
             return;
         }
 
         const estoque = Math.max(parseInt(estoqueEl?.value || "0", 10) || 0, 0);
         const qtdPorEmbalagem = Math.max(parseInt(bebidaQtdPorEmbalagemEl?.value || "0", 10) || 0, 0);
-        const embalagemValue = bebidaEmbalagemEl?.value || "";
-        const embalagemSingular = embalagemLabel(embalagemValue, false);
-        const embalagemPlural = embalagemLabel(embalagemValue, true);
-        const embalagem = estoque === 1 ? embalagemSingular : embalagemPlural;
+        const embalagemText = getSelectedEmbalagemText();
+        const embalagemNormalizada = embalagemText.toLowerCase();
 
-        if (estoque <= 0 || qtdPorEmbalagem <= 0 || embalagemSingular === "unidade") {
-            bebidaEstoqueResumoEl.textContent = "Informe embalagem, quantidade por embalagem e estoque.";
+        if (!embalagemText || embalagemNormalizada === "não informado") {
+            bebidaEstoqueResumoEl.textContent = "Selecione a embalagem para calcular o estoque físico.";
             return;
         }
 
+        if (!isEmbalagemCompostaByText(embalagemText)) {
+            const unidadeTexto = estoque === 1 ? "unidade" : "unidades";
+            bebidaEstoqueResumoEl.textContent = `${estoque} ${unidadeTexto} para venda.`;
+            return;
+        }
+
+        if (qtdPorEmbalagem <= 1) {
+            bebidaEstoqueResumoEl.textContent = "Informe quantas unidades vêm em cada embalagem.";
+            return;
+        }
+
+        const embalagemVenda = estoque === 1
+            ? embalagemText.toLowerCase()
+            : pluralizarEmbalagem(embalagemText);
+
         const totalFisico = estoque * qtdPorEmbalagem;
-        bebidaEstoqueResumoEl.textContent = `${estoque} ${embalagem} para venda = ${totalFisico} unidades fisicas no total.`;
+        const unidadeFisicaTexto = totalFisico === 1 ? "unidade física" : "unidades físicas";
+
+        bebidaEstoqueResumoEl.textContent =
+            `${estoque} ${embalagemVenda} com ${qtdPorEmbalagem} unidades cada = ${totalFisico} ${unidadeFisicaTexto}.`;
+    }
+
+    function initDescricaoCounter() {
+        if (!descricaoEl || !descricaoCounterEl) return;
+
+        function update() {
+            const total = (descricaoEl.value || "").length;
+            descricaoCounterEl.textContent = `${total}/1000 caracteres`;
+        }
+
+        descricaoEl.addEventListener("input", update);
+        update();
     }
 
     function beforeSubmitNormalizeMoney() {
-        if (precoEl) precoEl.value = normalizeMoneyToInvariant(precoEl.value);
-        if (promoEl) promoEl.value = normalizeMoneyToInvariant(promoEl.value);
+        if (precoEl) {
+            precoEl.value = normalizeMoneyToInvariant(precoEl.value);
+        }
 
-        // teor alcoólico -> normaliza vírgula para ponto
-        const alcoolEl = qs(".js-alcool");
-        if (alcoolEl && alcoolEl.value) {
-            alcoolEl.value = normalizeMoneyToInvariant(alcoolEl.value);
+        if (promoEl) {
+            promoEl.value = normalizeMoneyToInvariant(promoEl.value);
         }
 
         syncSaborHidden();
@@ -390,86 +433,152 @@
     function validatePodRequired() {
         if (!isTipoPod()) return true;
 
+        syncSaborHidden();
+
         const sabor = (saborHiddenEl?.value || "").trim();
+
         if (!sabor) {
-            const foco = saborSelectEl || saborOutroEl;
-            if (foco) foco.focus();
+            setInvalid(saborSelectEl, true);
+            setInvalid(saborOutroEl, true);
+
+            if (saborSelectEl) saborSelectEl.focus();
+
             return false;
         }
+
+        setInvalid(saborSelectEl, false);
+        setInvalid(saborOutroEl, false);
 
         return true;
     }
 
+    function validateBebidaResumo() {
+        if (!isTipoBebida()) return true;
+
+        const embalagemText = getSelectedEmbalagemText();
+
+        if (!isEmbalagemCompostaByText(embalagemText)) {
+            return true;
+        }
+
+        const qtdPorEmbalagem = Math.max(parseInt(bebidaQtdPorEmbalagemEl?.value || "0", 10) || 0, 0);
+
+        if (qtdPorEmbalagem <= 1) {
+            setInvalid(bebidaQtdPorEmbalagemEl, true);
+
+            if (bebidaQtdPorEmbalagemEl) {
+                bebidaQtdPorEmbalagemEl.focus();
+            }
+
+            return false;
+        }
+
+        setInvalid(bebidaQtdPorEmbalagemEl, false);
+
+        return true;
+    }
+
+    let formEl;
+
+    let precoEl;
+    let promoEl;
+    let promoHintEl;
+
+    let tipoEl;
+    let nomeEl;
+    let descricaoEl;
+    let descricaoCounterEl;
+
+    let estoqueEl;
+    let estoqueHintEl;
+
+    let imgEl;
+    let imgPreviewEl;
+    let imgPreviewEmptyEl;
+
+    let saborFieldWrap;
+    let podDetailsBox;
+    let bebidaDetailsBox;
+
+    let saborSelectEl;
+    let saborOutroEl;
+    let saborHiddenEl;
+
+    let bebidaEmbalagemEl;
+    let bebidaQtdPorEmbalagemEl;
+    let bebidaEstoqueResumoEl;
+
     document.addEventListener("DOMContentLoaded", function () {
-        formEl = qs("form");
+        formEl = document.getElementById("produtoSimplesForm") || qs("form.ps-form");
 
         precoEl = qs('input[name="Preco"].js-money');
         promoEl = qs('input[name="PrecoPromocional"].js-money');
         promoHintEl = document.getElementById("promoHint");
 
         tipoEl = document.getElementById("TipoProduto") || qs('select[name="TipoProduto"]');
-        maioridadeEl = document.getElementById("RequerMaioridade") || qs('input[name="RequerMaioridade"]');
         nomeEl = qs('input[name="Nome"]');
-        estoqueEl = qs('input[name="Estoque"]');
-        estoqueLabelEl = document.getElementById("EstoqueLabel");
+
+        descricaoEl = document.getElementById("Descricao") || qs('textarea[name="Descricao"]');
+        descricaoCounterEl = document.getElementById("descricaoCounter");
+
+        estoqueEl = document.getElementById("Estoque") || qs('input[name="Estoque"]');
         estoqueHintEl = document.getElementById("estoqueHint");
 
-        imgEl = qs('input[type="file"][name="ImagemUpload"]');
+        imgEl = document.getElementById("ImagemUpload") || qs('input[type="file"][name="ImagemUpload"]');
         imgPreviewEl = document.getElementById("imgPreview");
         imgPreviewEmptyEl = document.getElementById("imgPreviewEmpty");
 
         saborFieldWrap = document.getElementById("saborFieldWrap");
-        corFieldWrap = document.getElementById("corFieldWrap");
+        podDetailsBox = document.getElementById("podDetailsBox");
+        bebidaDetailsBox = document.getElementById("bebidaDetailsBox");
 
-        podSaborBox = document.getElementById("podSaborBox");
         saborSelectEl = document.getElementById("SaborSelect");
         saborOutroEl = document.getElementById("SaborOutro");
         saborHiddenEl = document.getElementById("Sabor");
 
-        saborSimplesBox = document.getElementById("saborSimplesBox");
-        podDetailsBox = document.getElementById("podDetailsBox");
-        bebidaDetailsBox = document.getElementById("bebidaDetailsBox");
-
-        bebidaTipoEl = qs('input[name="BebidaTipo"]');
-        bebidaVolumeEl = qs('input[name="BebidaVolumeMl"]');
         bebidaEmbalagemEl = document.getElementById("BebidaEmbalagem") || qs('select[name="BebidaEmbalagem"]');
-        bebidaQtdPorEmbalagemEl = qs('input[name="BebidaQtdPorEmbalagem"]');
-        bebidaNomeSugestaoEl = document.getElementById("BebidaNomeSugestao");
+        bebidaQtdPorEmbalagemEl = document.getElementById("BebidaQtdPorEmbalagem") || qs('input[name="BebidaQtdPorEmbalagem"]');
         bebidaEstoqueResumoEl = document.getElementById("BebidaEstoqueResumo");
 
         initMoneyFields();
-        initAlcoolField();
-        previewImagem();
         initSaborPod();
+        previewImagem();
+        initDescricaoCounter();
 
-        [nomeEl, bebidaTipoEl, bebidaVolumeEl, bebidaEmbalagemEl, bebidaQtdPorEmbalagemEl, estoqueEl].forEach(function (el) {
+        if (tipoEl) {
+            tipoEl.addEventListener("change", syncTypeBlocks);
+        }
+
+        [
+            estoqueEl,
+            bebidaEmbalagemEl,
+            bebidaQtdPorEmbalagemEl
+        ].forEach(function (el) {
             if (!el) return;
-            el.addEventListener("input", updateBebidaNomeSugestao);
-            el.addEventListener("change", updateBebidaNomeSugestao);
+
             el.addEventListener("input", updateEstoqueResumo);
             el.addEventListener("change", updateEstoqueResumo);
         });
 
-        if (tipoEl) {
-            tipoEl.addEventListener("change", function () {
-                syncTypeBlocks();
-            });
+        if (precoEl) {
+            precoEl.addEventListener("input", validatePromo);
+            precoEl.addEventListener("change", validatePromo);
         }
 
-        // estado inicial
+        if (promoEl) {
+            promoEl.addEventListener("input", validatePromo);
+            promoEl.addEventListener("change", validatePromo);
+        }
+
         syncTypeBlocks();
 
         if (formEl) {
             formEl.addEventListener("submit", function (e) {
                 const okPromo = validatePromo();
-                if (!okPromo) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (promoEl) promoEl.focus();
-                    return false;
-                }
+                const okPod = validatePodRequired();
+                const okBebida = validateBebidaResumo();
 
-                if (!validatePodRequired()) {
+                if (!okPromo || !okPod || !okBebida) {
                     e.preventDefault();
                     e.stopPropagation();
                     return false;

@@ -14,35 +14,35 @@
     ViewData["StoreHeader"] = headerVM;
 
     var mobileBrand = headerVM?.Nome ?? "Conveniência";
+    var pageTitle = ViewData["Title"]?.ToString() ?? "Conveniência";
 }
 
 <!DOCTYPE html>
 <html lang="pt-br" data-theme="light">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>@ViewData["Title"] - Conveniência</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>@pageTitle - Conveniência</title>
 
-    <!-- THEME: aplica antes de pintar a tela -->
     <script>
         (function () {
             try {
                 var saved = localStorage.getItem('theme');
+
                 if (!saved) {
-                    saved = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+                    saved = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+                        ? 'dark'
+                        : 'light';
                 }
+
                 document.documentElement.setAttribute('data-theme', saved);
             } catch { }
         })();
     </script>
 
-    <!-- Bootstrap -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
-    <!-- Global -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/panel.css" asp-append-version="true" />
 
@@ -53,8 +53,23 @@
             --kb-shift: 0px;
         }
 
-        html, body {
+        html,
+        body {
             height: 100%;
+        }
+
+        .layout-user-name {
+            display: inline-block;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+
+        .mobile-brand {
+            min-width: 0;
+            max-width: 48vw;
         }
 
         #rt-audio-banner {
@@ -77,11 +92,20 @@
             #rt-audio-banner i {
                 opacity: .9;
             }
+
+        #rt-audio-never {
+            margin-left: .5rem;
+            background: transparent;
+            border: 0;
+            color: #fff;
+            opacity: .8;
+        }
     </style>
 </head>
 
 <body class="@bodyClass">
-    <input type="hidden" id="__RequestVerificationToken"
+    <input type="hidden"
+           id="__RequestVerificationToken"
            name="__RequestVerificationToken"
            value="@antiforgery.GetAndStoreTokens(Context).RequestToken" />
 
@@ -97,11 +121,8 @@
             @await Html.PartialAsync("_Sidebar")
 
             <div id="page-content-wrapper">
-                <!-- Topbar -->
                 <nav class="navbar navbar-dark border-bottom">
                     <div class="container-fluid">
-
-                        <!-- ===== MOBILE TOOLBAR (até lg) ===== -->
                         <div class="mobile-toolbar d-lg-none w-100">
                             <button class="icon-btn"
                                     type="button"
@@ -115,14 +136,12 @@
                             <div class="mobile-brand text-truncate">@mobileBrand</div>
 
                             <div class="toolbar-actions">
-                                <!-- THEME toggle (mobile) -->
-                                <button type="button" class="theme-toggle" id="btnThemeMobile" title="Alternar tema">
-                                    <i class="fas fa-moon"></i>
-                                </button>
-
                                 @if (!User.IsInRole("Admin") && !User.IsInRole("Lojista"))
                                 {
-                                    <a class="icon-btn position-relative" asp-controller="Carrinho" asp-action="Index" aria-label="Carrinho">
+                                    <a class="icon-btn position-relative"
+                                       asp-controller="Carrinho"
+                                       asp-action="Index"
+                                       aria-label="Carrinho">
                                         <i class="fas fa-shopping-cart"></i>
                                         <span id="cart-badge-mobile-top"
                                               class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle visually-hidden js-cart-badge">
@@ -135,7 +154,10 @@
                                 @if (User.Identity?.IsAuthenticated == true)
                                 {
                                     <div class="dropdown">
-                                        <button class="icon-btn position-relative" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notificações">
+                                        <button class="icon-btn position-relative"
+                                                data-bs-toggle="dropdown"
+                                                aria-expanded="false"
+                                                aria-label="Notificações">
                                             <i class="fas fa-bell"></i>
                                             <span id="notif-badge" class="badge bg-danger ms-1 visually-hidden">0</span>
                                         </button>
@@ -144,21 +166,42 @@
                                 }
 
                                 <div class="dropdown">
-                                    <button class="icon-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Conta">
+                                    <button class="icon-btn"
+                                            data-bs-toggle="dropdown"
+                                            aria-expanded="false"
+                                            aria-label="Conta">
                                         <i class="fas fa-user-circle"></i>
                                     </button>
+
                                     <ul class="dropdown-menu dropdown-menu-end">
                                         @if (User.Identity?.IsAuthenticated != true)
                                         {
-                                            <li><a class="dropdown-item" asp-controller="Conta" asp-action="Login"><i class="fas fa-sign-in-alt me-2"></i>Login</a></li>
+                                            <li>
+                                                <a class="dropdown-item" asp-controller="Conta" asp-action="Login">
+                                                    <i class="fas fa-sign-in-alt me-2"></i>Login
+                                                </a>
+                                            </li>
                                         }
                                         else
                                         {
-                                            <li><a class="dropdown-item" asp-controller="Cliente" asp-action="Perfil"><i class="fas fa-user me-2"></i>Perfil</a></li>
+                                            <li>
+                                                <a class="dropdown-item" asp-controller="Cliente" asp-action="Perfil">
+                                                    <i class="fas fa-user me-2"></i>Perfil
+                                                </a>
+                                            </li>
+
+                                            <li>
+                                                <a class="dropdown-item" asp-controller="Configuracoes" asp-action="Index">
+                                                    <i class="fas fa-gear me-2"></i>Configurações
+                                                </a>
+                                            </li>
+
                                             <li>
                                                 <form asp-controller="Conta" asp-action="Logout" method="post" class="px-3">
                                                     @Html.AntiForgeryToken()
-                                                    <button type="submit" class="btn btn-link p-0"><i class="fas fa-sign-out-alt me-2"></i>Sair</button>
+                                                    <button type="submit" class="btn btn-link p-0">
+                                                        <i class="fas fa-sign-out-alt me-2"></i>Sair
+                                                    </button>
                                                 </form>
                                             </li>
                                         }
@@ -167,7 +210,6 @@
                             </div>
                         </div>
 
-                        <!-- ===== DESKTOP NAV (lg+) ===== -->
                         <div class="d-none d-lg-flex align-items-center w-100">
                             <div class="d-flex align-items-center">
                                 <nav aria-label="breadcrumb" class="ms-1">
@@ -177,10 +219,13 @@
                                                 <i class="fas fa-home text-white"></i>
                                             </a>
                                         </li>
+
                                         @if (!string.Equals(ViewContext.RouteData.Values["controller"]?.ToString(), "Home", StringComparison.OrdinalIgnoreCase))
                                         {
                                             <li class="breadcrumb-item">
-                                                <a asp-controller="@ViewContext.RouteData.Values["controller"]" asp-action="Index" class="text-decoration-none text-white-50">
+                                                <a asp-controller="@ViewContext.RouteData.Values["controller"]"
+                                                   asp-action="Index"
+                                                   class="text-decoration-none text-white-50">
                                                     @ViewContext.RouteData.Values["controller"]
                                                 </a>
                                             </li>
@@ -190,12 +235,6 @@
                             </div>
 
                             <div class="ms-auto d-flex align-items-center gap-2">
-                                <!-- THEME toggle (desktop) -->
-                                <button type="button" class="theme-toggle" id="btnTheme" title="Alternar tema">
-                                    <i class="fas fa-moon"></i>
-                                    <span class="d-none d-xl-inline">Tema</span>
-                                </button>
-
                                 @if (!User.IsInRole("Admin") && !User.IsInRole("Lojista"))
                                 {
                                     <a class="nav-link cart-link text-white" asp-controller="Carrinho" asp-action="Index">
@@ -221,22 +260,44 @@
                                 }
 
                                 <div class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle text-white d-flex align-items-center" href="#" data-bs-toggle="dropdown">
+                                    <a class="nav-link dropdown-toggle text-white d-flex align-items-center"
+                                       href="#"
+                                       data-bs-toggle="dropdown">
                                         <i class="fas fa-user-circle me-1"></i>
-                                        <span>@(User.Identity?.IsAuthenticated == true ? User.Identity!.Name : "Conta")</span>
+                                        <span class="layout-user-name">
+                                            @(User.Identity?.IsAuthenticated == true ? User.Identity!.Name : "Conta")
+                                        </span>
                                     </a>
+
                                     <ul class="dropdown-menu dropdown-menu-end">
                                         @if (User.Identity?.IsAuthenticated != true)
                                         {
-                                            <li><a class="dropdown-item" asp-controller="Conta" asp-action="Login"><i class="fas fa-sign-in-alt me-2"></i>Login</a></li>
+                                            <li>
+                                                <a class="dropdown-item" asp-controller="Conta" asp-action="Login">
+                                                    <i class="fas fa-sign-in-alt me-2"></i>Login
+                                                </a>
+                                            </li>
                                         }
                                         else
                                         {
-                                            <li><a class="dropdown-item" asp-controller="Cliente" asp-action="Perfil"><i class="fas fa-user me-2"></i>Perfil</a></li>
+                                            <li>
+                                                <a class="dropdown-item" asp-controller="Cliente" asp-action="Perfil">
+                                                    <i class="fas fa-user me-2"></i>Perfil
+                                                </a>
+                                            </li>
+
+                                            <li>
+                                                <a class="dropdown-item" asp-controller="Configuracoes" asp-action="Index">
+                                                    <i class="fas fa-gear me-2"></i>Configurações
+                                                </a>
+                                            </li>
+
                                             <li>
                                                 <form asp-controller="Conta" asp-action="Logout" method="post" class="px-3">
                                                     @Html.AntiForgeryToken()
-                                                    <button type="submit" class="btn btn-link p-0"><i class="fas fa-sign-out-alt me-2"></i>Sair</button>
+                                                    <button type="submit" class="btn btn-link p-0">
+                                                        <i class="fas fa-sign-out-alt me-2"></i>Sair
+                                                    </button>
                                                 </form>
                                             </li>
                                         }
@@ -244,7 +305,6 @@
                                 </div>
                             </div>
                         </div>
-
                     </div>
                 </nav>
 
@@ -267,7 +327,6 @@
         @await Html.PartialAsync("_BottomNav")
     }
 
-    <!-- Toast -->
     <div class="position-fixed top-0 end-0 p-3" style="z-index:1080">
         <div id="appToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
@@ -277,17 +336,12 @@
         </div>
     </div>
 
-    <!-- Banner para liberar áudio -->
     <div id="rt-audio-banner" title="Clique para habilitar som">
         <i class="fa fa-volume-up"></i>
         <span>Ativar som das notificações</span>
-        <button id="rt-audio-never" type="button"
-                style="margin-left:.5rem;background:transparent;border:0;color:#fff;opacity:.8">
-            ×
-        </button>
+        <button id="rt-audio-never" type="button">×</button>
     </div>
 
-    <!-- Scripts base -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="~/js/jquery.mask.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -295,124 +349,131 @@
     <script src="~/js/sidebar.js" asp-append-version="true"></script>
     <script src="~/js/sabores.js" asp-append-version="true"></script>
 
-    <!-- THEME toggle + ícone -->
-    <script>
-        (function(){
-          function currentTheme(){ return document.documentElement.getAttribute('data-theme') || 'light'; }
-          function setIcon(){
-            var t = currentTheme();
-            var iconClass = (t === 'dark') ? 'fa-sun' : 'fa-moon';
-            ['btnTheme','btnThemeMobile'].forEach(function(id){
-              var btn = document.getElementById(id);
-              if (!btn) return;
-              var i = btn.querySelector('i');
-              if (i) i.className = 'fas ' + iconClass;
-            });
-          }
-          function toggleTheme(){
-            var t = currentTheme();
-            var next = (t === 'dark') ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', next);
-            try { localStorage.setItem('theme', next); } catch {}
-            setIcon();
-          }
-          document.getElementById('btnTheme')?.addEventListener('click', toggleTheme);
-          document.getElementById('btnThemeMobile')?.addEventListener('click', toggleTheme);
-          setIcon();
-        })();
-    </script>
-
-    <!-- ====== JS global: badges / toast / csrf / sync ====== -->
     <script>
         (function () {
-          const KEY_COUNT  = 'cart_count';
+            const KEY_COUNT = 'cart_count';
 
-          function setBadgeCount(n) {
-            const num = Math.max(0, parseInt(n || 0, 10) || 0);
-            document.querySelectorAll('.js-cart-badge').forEach(el => {
-              if (num > 0) {
-                el.textContent = String(num);
-                el.classList.remove('visually-hidden');
-                el.classList.remove('mbn-badge-bump'); void el.offsetWidth;
-                el.classList.add('mbn-badge-bump');
-                setTimeout(() => el.classList.remove('mbn-badge-bump'), 400);
-              } else {
-                el.textContent = '0';
-                el.classList.add('visually-hidden');
-              }
-            });
-          }
+            function setBadgeCount(n) {
+                const num = Math.max(0, parseInt(n || 0, 10) || 0);
 
-          (function restoreFromStorage() {
-            let n = 0;
-            try { n = parseInt(localStorage.getItem(KEY_COUNT) || '0', 10) || 0; } catch {}
-            setBadgeCount(n);
-          })();
+                document.querySelectorAll('.js-cart-badge').forEach(el => {
+                    if (num > 0) {
+                        el.textContent = String(num);
+                        el.classList.remove('visually-hidden');
+                        el.classList.remove('mbn-badge-bump');
+                        void el.offsetWidth;
+                        el.classList.add('mbn-badge-bump');
 
-          window.addEventListener('storage', (e) => {
-            if (e.key === KEY_COUNT) setBadgeCount(parseInt(e.newValue || '0', 10) || 0);
-          });
-
-          window.showToast = function(message, ok = true) {
-            const toastEl = document.getElementById('appToast');
-            const bodyEl  = document.getElementById('appToastBody');
-            if (!toastEl || !bodyEl) return;
-            bodyEl.textContent = message;
-            toastEl.classList.remove('bg-success','bg-danger');
-            toastEl.classList.add(ok ? 'bg-success' : 'bg-danger');
-            new bootstrap.Toast(toastEl, { delay: 2400 }).show();
-          };
-
-          window.updateCartBadges = function(count){
-            const n = Math.max(0, parseInt(count || 0, 10) || 0);
-            try { localStorage.setItem(KEY_COUNT, String(n)); } catch {}
-            setBadgeCount(n);
-          };
-
-          window.getAntiForgeryToken = function () {
-            return document.querySelector('input[name="__RequestVerificationToken"]')?.value
-                   || document.getElementById('__RequestVerificationToken')?.value
-                   || '';
-          };
-
-          (async function syncCountOnLoad(){
-            try {
-              const r = await fetch('/Carrinho/Count', { cache: 'no-store', credentials: 'same-origin' });
-              if (!r.ok) return;
-              const data = await r.json();
-              if (typeof data.count !== 'undefined') window.updateCartBadges(data.count);
-            } catch {}
-          })();
-        })();
-    </script>
-
-    <!-- Compensação do teclado -->
-    <script>
-        (function(){
-          function applyKbShift(){
-            var shift = 0;
-            if (window.visualViewport){
-              var vv = visualViewport;
-              shift = Math.max(0, (window.innerHeight - vv.height - vv.offsetTop));
+                        setTimeout(() => el.classList.remove('mbn-badge-bump'), 400);
+                    } else {
+                        el.textContent = '0';
+                        el.classList.add('visually-hidden');
+                    }
+                });
             }
-            document.documentElement.style.setProperty('--kb-shift', shift + 'px');
-          }
-          applyKbShift();
-          window.addEventListener('resize', applyKbShift);
-          if (window.visualViewport){
-            visualViewport.addEventListener('resize', applyKbShift);
-            visualViewport.addEventListener('scroll', applyKbShift);
-          }
-          document.addEventListener('focusin', function(e){
-            if (e.target.matches('input,textarea,select')) setTimeout(applyKbShift, 50);
-          });
+
+            (function restoreFromStorage() {
+                let n = 0;
+
+                try {
+                    n = parseInt(localStorage.getItem(KEY_COUNT) || '0', 10) || 0;
+                } catch { }
+
+                setBadgeCount(n);
+            })();
+
+            window.addEventListener('storage', e => {
+                if (e.key === KEY_COUNT) {
+                    setBadgeCount(parseInt(e.newValue || '0', 10) || 0);
+                }
+            });
+
+            window.showToast = function (message, ok = true) {
+                const toastEl = document.getElementById('appToast');
+                const bodyEl = document.getElementById('appToastBody');
+
+                if (!toastEl || !bodyEl || !window.bootstrap) return;
+
+                bodyEl.textContent = message;
+
+                toastEl.classList.remove('bg-success', 'bg-danger');
+                toastEl.classList.add(ok ? 'bg-success' : 'bg-danger');
+
+                new bootstrap.Toast(toastEl, { delay: 2400 }).show();
+            };
+
+            window.updateCartBadges = function (count) {
+                const n = Math.max(0, parseInt(count || 0, 10) || 0);
+
+                try {
+                    localStorage.setItem(KEY_COUNT, String(n));
+                } catch { }
+
+                setBadgeCount(n);
+            };
+
+            window.getAntiForgeryToken = function () {
+                return document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                    || document.getElementById('__RequestVerificationToken')?.value
+                    || '';
+            };
+
+            (async function syncCountOnLoad() {
+                try {
+                    const response = await fetch('/Carrinho/Count', {
+                        cache: 'no-store',
+                        credentials: 'same-origin'
+                    });
+
+                    if (!response.ok) return;
+
+                    const data = await response.json();
+
+                    if (typeof data.count !== 'undefined') {
+                        window.updateCartBadges(data.count);
+                    }
+                } catch { }
+            })();
         })();
     </script>
 
     <script>
-        (function(){
-          if (document.querySelector('.mobile-bottom-nav')) document.body.classList.add('has-bottom-nav');
-          else document.body.classList.remove('has-bottom-nav');
+        (function () {
+            function applyKbShift() {
+                var shift = 0;
+
+                if (window.visualViewport) {
+                    var vv = visualViewport;
+                    shift = Math.max(0, (window.innerHeight - vv.height - vv.offsetTop));
+                }
+
+                document.documentElement.style.setProperty('--kb-shift', shift + 'px');
+            }
+
+            applyKbShift();
+
+            window.addEventListener('resize', applyKbShift);
+
+            if (window.visualViewport) {
+                visualViewport.addEventListener('resize', applyKbShift);
+                visualViewport.addEventListener('scroll', applyKbShift);
+            }
+
+            document.addEventListener('focusin', function (e) {
+                if (e.target.matches('input,textarea,select')) {
+                    setTimeout(applyKbShift, 50);
+                }
+            });
+        })();
+    </script>
+
+    <script>
+        (function () {
+            if (document.querySelector('.mobile-bottom-nav')) {
+                document.body.classList.add('has-bottom-nav');
+            } else {
+                document.body.classList.remove('has-bottom-nav');
+            }
         })();
     </script>
 

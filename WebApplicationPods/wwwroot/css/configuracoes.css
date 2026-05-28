@@ -1,0 +1,308 @@
+﻿.cfg-page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 16px 4px 42px;
+}
+
+.cfg-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+    .cfg-header h1 {
+        margin: 0;
+        font-weight: 900;
+        color: #111827;
+    }
+
+    .cfg-header p {
+        margin: 4px 0 0;
+        color: #6b7280;
+    }
+
+.cfg-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.cfg-card {
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, .08);
+    border-radius: 22px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, .07);
+    padding: 18px;
+}
+
+.cfg-card-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+    .cfg-card-head h2 {
+        margin: 0;
+        font-size: 1.1rem;
+        color: #111827;
+        font-weight: 900;
+    }
+
+    .cfg-card-head p {
+        margin: 4px 0 0;
+        color: #6b7280;
+        font-size: .9rem;
+    }
+
+    .cfg-card-head i {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #6d28d9, #2563eb);
+        color: #fff;
+    }
+
+.cfg-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.cfg-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+    .cfg-field label {
+        font-weight: 800;
+        color: #374151;
+        font-size: .9rem;
+    }
+
+.cfg-input {
+    min-height: 46px;
+    border: 1px solid #dbe3ef;
+    border-radius: 14px;
+    padding: 0 14px;
+    outline: none;
+    font-size: 16px;
+    background: #fff;
+    color: #111827;
+}
+
+    .cfg-input:focus {
+        border-color: #6d28d9;
+        box-shadow: 0 0 0 3px rgba(109, 40, 217, .12);
+    }
+
+    .cfg-input:disabled {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+
+.cfg-btn {
+    min-height: 42px;
+    border: 0;
+    border-radius: 14px;
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 900;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.cfg-btn-primary {
+    background: linear-gradient(135deg, #6d28d9, #2563eb);
+    color: #fff;
+}
+
+.cfg-btn-light {
+    background: #fff;
+    border: 1px solid #dbe3ef;
+    color: #374151;
+}
+
+    .cfg-btn-light:hover {
+        color: #111827;
+    }
+
+.cfg-theme-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.cfg-theme-option {
+    border: 1px solid #dbe3ef;
+    background: #fff;
+    border-radius: 18px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: left;
+    cursor: pointer;
+    transition: .18s ease;
+}
+
+    .cfg-theme-option:hover {
+        transform: translateY(-1px);
+        border-color: #6d28d9;
+    }
+
+    .cfg-theme-option.is-active {
+        border-color: #6d28d9;
+        box-shadow: 0 0 0 3px rgba(109, 40, 217, .12);
+    }
+
+.cfg-theme-preview {
+    width: 100%;
+    height: 58px;
+    border-radius: 14px;
+    border: 1px solid #dbe3ef;
+}
+
+.cfg-theme-preview-light {
+    background: linear-gradient(135deg, #ffffff, #edf2f7);
+}
+
+.cfg-theme-preview-dark {
+    background: linear-gradient(135deg, #111827, #334155);
+}
+
+.cfg-theme-option strong {
+    color: #111827;
+}
+
+.cfg-theme-option small {
+    color: #6b7280;
+}
+
+.cfg-store-box {
+    border: 1px solid #dbe3ef;
+    border-radius: 18px;
+    padding: 16px;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+    .cfg-store-box span {
+        color: #6b7280;
+        font-size: .82rem;
+        font-weight: 700;
+    }
+
+    .cfg-store-box strong {
+        color: #111827;
+        font-size: 1.1rem;
+        font-weight: 900;
+    }
+
+    .cfg-store-box small {
+        color: #6b7280;
+    }
+
+.cfg-alert {
+    border-radius: 16px;
+    padding: 12px 14px;
+    font-weight: 800;
+    margin-bottom: 14px;
+}
+
+.cfg-alert-success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.cfg-alert-danger {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+[data-theme="dark"] .cfg-header h1,
+body.dark .cfg-header h1,
+[data-theme="dark"] .cfg-card-head h2,
+body.dark .cfg-card-head h2,
+[data-theme="dark"] .cfg-theme-option strong,
+body.dark .cfg-theme-option strong,
+[data-theme="dark"] .cfg-store-box strong,
+body.dark .cfg-store-box strong {
+    color: #fff;
+}
+
+[data-theme="dark"] .cfg-card,
+body.dark .cfg-card {
+    background: #111827;
+    border-color: rgba(255, 255, 255, .08);
+}
+
+[data-theme="dark"] .cfg-header p,
+body.dark .cfg-header p,
+[data-theme="dark"] .cfg-card-head p,
+body.dark .cfg-card-head p,
+[data-theme="dark"] .cfg-theme-option small,
+body.dark .cfg-theme-option small,
+[data-theme="dark"] .cfg-store-box small,
+body.dark .cfg-store-box small {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .cfg-field label,
+body.dark .cfg-field label {
+    color: #e5e7eb;
+}
+
+[data-theme="dark"] .cfg-input,
+body.dark .cfg-input,
+[data-theme="dark"] .cfg-theme-option,
+body.dark .cfg-theme-option {
+    background: #0f172a;
+    color: #fff;
+    border-color: rgba(255, 255, 255, .12);
+}
+
+    [data-theme="dark"] .cfg-input:disabled,
+    body.dark .cfg-input:disabled,
+    [data-theme="dark"] .cfg-store-box,
+    body.dark .cfg-store-box {
+        background: #0b1220;
+        color: #94a3b8;
+        border-color: rgba(255, 255, 255, .12);
+    }
+
+[data-theme="dark"] .cfg-btn-light,
+body.dark .cfg-btn-light {
+    background: #0f172a;
+    color: #fff;
+    border-color: rgba(255, 255, 255, .12);
+}
+
+@media (max-width: 767.98px) {
+    .cfg-header {
+        flex-direction: column;
+    }
+
+    .cfg-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .cfg-theme-options {
+        grid-template-columns: 1fr;
+    }
+
+    .cfg-btn-light {
+        width: 100%;
+    }
+}

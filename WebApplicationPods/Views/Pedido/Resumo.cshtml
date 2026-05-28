@@ -24,9 +24,18 @@
                             ? produto.ImagemUrl
                             : null;
 
-                            var resumoQuantidade = produto?.EhEmbalagemComposta == true
-                            ? $"{item.Quantidade} {(item.Quantidade == 1 ? produto.EmbalagemVendaSingular : produto.EmbalagemVendaPlural)} com {produto.UnidadesFisicasPorEmbalagem} unidades ({item.Quantidade * produto.UnidadesFisicasPorEmbalagem} unidades físicas)"
-                            : (item.Quantidade == 1 ? "1 unidade" : $"{item.Quantidade} unidades");
+                            var quantidade = item.Quantidade;
+                            var ehEmbalagemComposta = produto?.EhEmbalagemComposta == true;
+                            var unidadesPorEmbalagem = produto?.UnidadesFisicasPorEmbalagem ?? 1;
+                            var totalFisico = quantidade * unidadesPorEmbalagem;
+
+                            var resumoQuantidade = ehEmbalagemComposta
+                            ? $"{quantidade} {(quantidade == 1 ? produto!.EmbalagemVendaSingular : produto!.EmbalagemVendaPlural)} com {unidadesPorEmbalagem} unidades"
+                            : quantidade == 1 ? "1 unidade" : $"{quantidade} unidades";
+
+                            var totalFisicoTexto = ehEmbalagemComposta
+                            ? $"Total físico: {totalFisico} {(totalFisico == 1 ? "unidade" : "unidades")}"
+                            : "";
 
                             <div class="resumo-item">
                                 <div class="resumo-item-img">
@@ -42,7 +51,17 @@
 
                                 <div class="resumo-item-info">
                                     <h5>@nome</h5>
-                                    <div class="resumo-item-qtd">@resumoQuantidade</div>
+
+                                    <div class="resumo-item-qtd">
+                                        @resumoQuantidade
+                                    </div>
+
+                                    @if (!string.IsNullOrWhiteSpace(totalFisicoTexto))
+                                    {
+                                        <div class="resumo-item-fisico">
+                                            @totalFisicoTexto
+                                        </div>
+                                    }
 
                                     @if (!string.IsNullOrWhiteSpace(item.Sabor))
                                     {
@@ -186,6 +205,13 @@
         font-weight: 700;
     }
 
+    .resumo-item-fisico {
+        font-size: .82rem;
+        color: #059669;
+        font-weight: 700;
+        margin-top: 2px;
+    }
+
     .resumo-item-extra {
         font-size: .82rem;
         color: #6b7280;
@@ -271,6 +297,11 @@
     body.dark .resumo-radio {
         border-color: #263244;
         background: #0f172a;
+    }
+
+    [data-theme="dark"] .resumo-item-fisico,
+    body.dark .resumo-item-fisico {
+        color: #86efac;
     }
 
     @@media (max-width: 576px) {

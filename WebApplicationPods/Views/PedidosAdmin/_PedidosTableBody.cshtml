@@ -25,18 +25,17 @@
         border: 1px solid rgba(15, 23, 42, .06);
     }
 
-        .pedido-item-linha strong {
-            display: block;
-            color: #111827;
-            font-weight: 800;
-            margin-bottom: 2px;
-        }
+    .pedido-item-nome {
+        display: block;
+        color: #111827;
+        font-weight: 800;
+        margin-bottom: 2px;
+    }
 
     .pedido-item-info {
         display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 4px 8px;
+        flex-direction: column;
+        gap: 2px;
     }
 
     .pedido-item-qtd {
@@ -66,10 +65,10 @@
         border-color: rgba(255, 255, 255, .08);
     }
 
-        [data-theme="dark"] .pedido-item-linha strong,
-        body.dark .pedido-item-linha strong {
-            color: #ffffff;
-        }
+    [data-theme="dark"] .pedido-item-nome,
+    body.dark .pedido-item-nome {
+        color: #ffffff;
+    }
 
     [data-theme="dark"] .pedido-item-extra,
     body.dark .pedido-item-extra {
@@ -114,6 +113,7 @@
 
     var metodo = (p.MetodoPagamento ?? string.Empty).ToLowerInvariant();
     var isDinheiroOuDebito = metodo == "dinheiro" || metodo == "cartão de débito" || metodo == "cartao de debito";
+
     var podeAprovarNaEntrega =
         isDinheiroOuDebito &&
         string.Equals(p.Status, "Aguardando Pagamento (Entrega)", StringComparison.OrdinalIgnoreCase);
@@ -136,12 +136,15 @@
     if (mostrarMotivoEntrega)
         motivoEntrega = p.Entrega!.Observacao!;
 
+    var totalItens = p.PedidoItens?.Count ?? 0;
+    var textoItens = totalItens == 1 ? "1 item" : $"{totalItens} itens";
+
     <tr data-id="@p.Id" data-order-id="@p.Id">
         <td data-th="Cliente">
             <div class="cell-primary">
                 <div class="title">@((p.Cliente?.Nome) ?? "—")</div>
                 <div class="sub">
-                    @($"#{p.Id} • {p.PedidoItens?.Count ?? 0} itens")
+                    @($"#{p.Id} • {textoItens}")
                 </div>
 
                 @if (p.PedidoItens != null && p.PedidoItens.Any())
@@ -150,7 +153,7 @@
                         @foreach (var item in p.PedidoItens)
                         {
                             <div class="pedido-item-linha">
-                                <strong>@item.NomeExibicao</strong>
+                                <span class="pedido-item-nome">@item.NomeExibicao</span>
 
                                 <div class="pedido-item-info">
                                     <span class="pedido-item-qtd">
@@ -220,6 +223,7 @@
                             {
                                 continue;
                             }
+
                             var lowered = (prox ?? string.Empty).ToLowerInvariant();
                             var label = prox;
                             var css = "btn btn-outline-secondary btn-sm";
@@ -271,7 +275,7 @@
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="pedidoId" value="@p.Id" />
                         <button type="submit" class="btn btn-success btn-sm">
-                            Aprovar na entrega
+                            Aprovar pagamento
                         </button>
                     </form>
                 }

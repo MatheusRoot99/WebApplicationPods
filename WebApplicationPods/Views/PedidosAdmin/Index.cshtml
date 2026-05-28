@@ -5,24 +5,25 @@
 @model IEnumerable<PedidoModel>
 
 @{
-    // Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Pedidos";
 
     var filtro = (string)(ViewBag.Filtro ?? "abertos");
     var tableUrl = Url.Action("Table", "PedidosAdmin", new { filtro });
     var afToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+
+    var alertasEstoque = ViewBag.AlertasEstoque as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var totalEsgotados = ViewBag.TotalEsgotados as int? ?? 0;
+    var totalBaixoEstoque = ViewBag.TotalBaixoEstoque as int? ?? 0;
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/orders-admin.css" asp-append-version="true" />
 }
 
-<!-- Token anti-CSRF para o fetch -->
 <meta name="request-verification-token" content="@afToken" />
 
 <div class="container mt-4 orders-admin" id="ordersRoot" data-table-url="@tableUrl">
 
-    <!-- Topbar / Filtros / Busca -->
     <div class="orders-topbar header-row d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
         <div class="d-flex align-items-center gap-2">
             <h2 class="m-0">Pedidos (@(filtro == "dia" ? "de hoje" : "abertos"))</h2>
@@ -32,40 +33,53 @@
         <div class="d-flex flex-wrap align-items-center gap-2">
             <div class="btn-group" role="group" aria-label="Filtros">
                 <a class="btn btn-outline-secondary @(filtro == "abertos" ? "active" : "")"
-                   asp-action="Index" asp-route-filtro="abertos">Abertos</a>
+                   asp-action="Index"
+                   asp-route-filtro="abertos">
+                    Abertos
+                </a>
+
                 <a class="btn btn-outline-secondary @(filtro == "dia" ? "active" : "")"
-                   asp-action="Index" asp-route-filtro="dia">Hoje</a>
+                   asp-action="Index"
+                   asp-route-filtro="dia">
+                    Hoje
+                </a>
             </div>
 
             <div class="vr d-none d-md-block"></div>
 
             <div class="input-group input-group-sm quick-search">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input id="qPedidos" type="search" class="form-control"
-                       placeholder="Buscar por cliente, método, status..." autocomplete="off" />
+                <input id="qPedidos"
+                       type="search"
+                       class="form-control"
+                       placeholder="Buscar por cliente, método, status..."
+                       autocomplete="off" />
             </div>
 
-            <!-- Relatórios -->
             @if (filtro == "dia")
             {
                 <a class="btn btn-brand btn-sm"
-                   asp-controller="PedidosAdmin" asp-action="Relatorio"
-                   asp-route-modo="dia" asp-route-data="@DateTime.Today.ToString("yyyy-MM-dd")">
-                    Relatório (hoje)
+                   asp-controller="PedidosAdmin"
+                   asp-action="Relatorio"
+                   asp-route-modo="dia"
+                   asp-route-data="@DateTime.Today.ToString("yyyy-MM-dd")">
+                    Relatório hoje
                 </a>
             }
             else
             {
                 <a class="btn btn-outline-brand btn-sm"
-                   asp-controller="PedidosAdmin" asp-action="Relatorio"
-                   asp-route-modo="mes" asp-route-ano="@DateTime.Today.Year" asp-route-mes="@DateTime.Today.Month">
-                    Relatório (mês atual)
+                   asp-controller="PedidosAdmin"
+                   asp-action="Relatorio"
+                   asp-route-modo="mes"
+                   asp-route-ano="@DateTime.Today.Year"
+                   asp-route-mes="@DateTime.Today.Month">
+                    Relatório mês
                 </a>
             }
         </div>
     </div>
 
-    <!-- Legenda de status -->
     <div class="status-legend mb-3">
         <span class="legend-item"><i class="dot dot-info"></i> Aguardando</span>
         <span class="legend-item"><i class="dot dot-primary"></i> Em Preparo</span>
@@ -75,7 +89,55 @@
         <span class="legend-item"><i class="dot dot-danger"></i> Cancelado</span>
     </div>
 
-    <!-- Tabela -->
+    @if (alertasEstoque.Any())
+    {
+        <div class="stock-alert-panel mb-3">
+            <div class="stock-alert-head">
+                <div>
+                    <strong>
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        Atenção ao estoque
+                    </strong>
+
+                    <span>
+                        @if (totalEsgotados > 0)
+                        {
+                            <span>@totalEsgotados esgotado(s)</span>
+                        }
+
+                        @if (totalBaixoEstoque > 0)
+                        {
+                            <span>@(totalEsgotados > 0 ? " • " : "")@totalBaixoEstoque com estoque baixo</span>
+                        }
+                    </span>
+                </div>
+
+                <a asp-controller="Estoque"
+                   asp-action="Index"
+                   class="btn btn-sm btn-outline-warning">
+                    Ver estoque
+                </a>
+            </div>
+
+            <div class="stock-alert-list">
+                @foreach (var item in alertasEstoque)
+                {
+                    var isEsgotado = item.Esgotado == true;
+
+                    <a asp-controller="Produto"
+                       asp-action="Editar"
+                       asp-route-id="@item.ProdutoId"
+                       class="stock-alert-item @(isEsgotado ? "is-out" : "is-low")">
+                        <span class="stock-alert-name">@item.Nome</span>
+                        <span class="stock-alert-status">
+                            @item.StatusTexto • @item.EstoqueTexto
+                        </span>
+                    </a>
+                }
+            </div>
+        </div>
+    }
+
     <div class="table-container">
         <table class="table table-striped align-middle mb-0 responsive-table" id="ordersTable">
             <thead>
@@ -88,13 +150,13 @@
                     <th class="text-end">Ações</th>
                 </tr>
             </thead>
+
             <tbody id="tbodyPedidos">
                 @await Html.PartialAsync("~/Views/PedidosAdmin/_PedidosTableBody.cshtml", Model)
             </tbody>
         </table>
     </div>
 
-    <!-- Skeleton -->
     <template id="row-skeleton">
         <tr class="row-skeleton">
             <td colspan="6">
@@ -107,13 +169,13 @@
         </tr>
     </template>
 
-    <!-- Toasts -->
     <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100"></div>
 </div>
 
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"
-            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"></script>
 
     <script src="~/js/orders-admin.js" asp-append-version="true"></script>
 

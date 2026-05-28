@@ -22,13 +22,18 @@
     var precoAtual = temPromocao ? produto.PrecoPromocional!.Value : produto.Preco;
 
     var isPod = produto.TipoProduto == ProdutoTipo.PodVape;
-    var isBebida = produto.TipoProduto == ProdutoTipo.BebidaAlcoolica;
+    var isBebida = produto.TipoProduto == ProdutoTipo.BebidaAlcoolica
+        || produto.BebidaVolumeMl.HasValue
+        || produto.BebidaEmbalagem.HasValue
+        || produto.BebidaQtdPorEmbalagem.HasValue
+        || !string.IsNullOrWhiteSpace(produto.BebidaTipo);
+
     var isPadrao = !isPod && !isBebida;
 
     var totalSabores = Model?.SaboresDisponiveis?.Count ?? 0;
     var totalSaboresComEstoque = Model?.SaboresDisponiveis?.Count(s => s.Quantidade > 0) ?? 0;
 
-    string tipoLabel = isPod ? "Pod" : isBebida ? "Bebida alcoólica" : "Produto";
+    string tipoLabel = isPod ? "Pod" : isBebida ? "Bebida" : "Produto";
 
     var disponibilidade = produto.StatusEstoqueTexto;
     var statusCss = produto.StatusEstoqueCss;
@@ -41,6 +46,25 @@
         : 0;
 
     var estaEsgotado = produto.EstaEsgotado;
+
+    var temVolume = produto.BebidaVolumeMl.HasValue && produto.BebidaVolumeMl.Value > 0;
+    var volumeTexto = temVolume ? $"{produto.BebidaVolumeMl.Value} ml" : "";
+
+    var temEmbalagem = !string.IsNullOrWhiteSpace(unidadeVendaDescricao);
+    var temTipoBebida = !string.IsNullOrWhiteSpace(produto.BebidaTipo);
+
+    var temPuffs = produto.PodPuffs.HasValue && produto.PodPuffs.Value > 0;
+    var temBateria = !string.IsNullOrWhiteSpace(produto.PodCapacidadeBateria);
+    var temTipoPod = !string.IsNullOrWhiteSpace(produto.PodTipo);
+    var temSaborPod = !string.IsNullOrWhiteSpace(produto.Sabor);
+
+    var mostrarEstoqueFisico = isBebida
+        && produto.BebidaQtdPorEmbalagem.HasValue
+        && produto.BebidaQtdPorEmbalagem.Value > 1;
+
+    var estoqueFisicoTotal = mostrarEstoqueFisico
+        ? produto.Estoque * produto.BebidaQtdPorEmbalagem.Value
+        : produto.Estoque;
 }
 
 @section Styles {
@@ -78,7 +102,7 @@
             }
             else if (produto.EstaComEstoqueBaixo)
             {
-               @*  <span class="pdp-chip pdp-chip-low">Estoque baixo</span> *@
+                <span class="pdp-chip pdp-chip-low">Estoque baixo</span>
             }
             else
             {
@@ -113,19 +137,19 @@
             <div class="pdp-trust-list">
                 <div class="pdp-trust-item">
                     <i class="fas fa-shield-alt"></i>
-                    <span>Segura</span>
+                    <span>Compra segura</span>
                 </div>
 
                 <div class="pdp-trust-item">
                     <i class="fas fa-bolt"></i>
-                    <span>Rápida</span>
+                    <span>Pedido rápido</span>
                 </div>
 
                 @if (!estaEsgotado)
                 {
                     <div class="pdp-trust-item">
                         <i class="fas fa-box-open"></i>
-                        <span>Entrega</span>
+                        <span>Em estoque</span>
                     </div>
                 }
             </div>
@@ -136,22 +160,12 @@
                 <div class="pdp-header-main">
                     <h1 class="pdp-title" itemprop="name">@produto.Nome</h1>
 
-                    <div class="pdp-subline">
-                        @if (!string.IsNullOrWhiteSpace(produto.Marca))
-                        {
+                    @if (!string.IsNullOrWhiteSpace(produto.Marca))
+                    {
+                        <div class="pdp-subline">
                             <span class="pdp-brand">@produto.Marca</span>
-                        }
-
-                        @if (!string.IsNullOrWhiteSpace(produto.SKU))
-                        {
-                            <span class="pdp-meta">SKU: @produto.SKU</span>
-                        }
-
-                        @if (!string.IsNullOrWhiteSpace(produto.CodigoBarras))
-                        {
-                            <span class="pdp-meta">Cód. barras: @produto.CodigoBarras</span>
-                        }
-                    </div>
+                        </div>
+                    }
                 </div>
             </header>
 
@@ -191,9 +205,33 @@
                 <div class="pdp-highlight-grid">
                     @if (isPod)
                     {
-                        @if (!string.IsNullOrWhiteSpace(produto.PodTipo))
+                        @if (temSaborPod)
                         {
                             <div class="pdp-info-card is-wide">
+                                <span>Sabor</span>
+                                <strong>@produto.Sabor</strong>
+                            </div>
+                        }
+
+                        @if (temPuffs)
+                        {
+                            <div class="pdp-info-card">
+                                <span>Puffs</span>
+                                <strong>@produto.PodPuffs.Value</strong>
+                            </div>
+                        }
+
+                        @if (temBateria)
+                        {
+                            <div class="pdp-info-card">
+                                <span>Bateria</span>
+                                <strong>@produto.PodCapacidadeBateria</strong>
+                            </div>
+                        }
+
+                        @if (temTipoPod)
+                        {
+                            <div class="pdp-info-card">
                                 <span>Tipo</span>
                                 <strong>@produto.PodTipo</strong>
                             </div>
@@ -206,15 +244,23 @@
                     }
                     else if (isBebida)
                     {
-                        @if (produto.BebidaQtdPorEmbalagem.HasValue && produto.BebidaQtdPorEmbalagem.Value > 0)
+                        @if (temVolume)
                         {
                             <div class="pdp-info-card">
-                                <span>Embalagem</span>
+                                <span>Volume</span>
+                                <strong>@volumeTexto</strong>
+                            </div>
+                        }
+
+                        @if (temEmbalagem)
+                        {
+                            <div class="pdp-info-card">
+                                <span>Venda</span>
                                 <strong>@unidadeVendaDescricao</strong>
                             </div>
                         }
 
-                        @if (!string.IsNullOrWhiteSpace(produto.BebidaTipo))
+                        @if (temTipoBebida)
                         {
                             <div class="pdp-info-card">
                                 <span>Tipo</span>
@@ -222,34 +268,21 @@
                             </div>
                         }
 
-                        @if (produto.BebidaTeorAlcoolico.HasValue)
+                        <div class="pdp-info-card">
+                            <span>Estoque</span>
+                            <strong>@estoqueDescricao</strong>
+                        </div>
+
+                        @if (mostrarEstoqueFisico)
                         {
                             <div class="pdp-info-card">
-                                <span>Teor</span>
-                                <strong>@produto.BebidaTeorAlcoolico.Value.ToString("0.##")%</strong>
+                                <span>Total físico</span>
+                                <strong>@estoqueFisicoTotal unidades</strong>
                             </div>
                         }
-
-                     
                     }
                     else
                     {
-                        @if (!string.IsNullOrWhiteSpace(produto.Sabor))
-                        {
-                            <div class="pdp-info-card is-wide">
-                                <span>Sabor</span>
-                                <strong>@produto.Sabor</strong>
-                            </div>
-                        }
-
-                        @if (!string.IsNullOrWhiteSpace(produto.Cor))
-                        {
-                            <div class="pdp-info-card">
-                                <span>Cor</span>
-                                <strong>@produto.Cor</strong>
-                            </div>
-                        }
-
                         <div class="pdp-info-card">
                             <span>Estoque</span>
                             <strong>@estoqueDescricao</strong>
@@ -339,7 +372,7 @@
 
                     <input type="hidden" name="produtoId" value="@produto.Id" />
                     <input type="hidden" name="quantidade" id="quantidadeHidden" value="1" />
-                    <input type="hidden" name="sabor" id="saborSelecionado" value="" />
+                    <input type="hidden" name="sabor" id="saborSelecionado" value="@(isPod && !string.IsNullOrWhiteSpace(produto.Sabor) ? produto.Sabor : "")" />
                     <input type="hidden" name="observacoes" id="observacoesProduto" value="" />
                     <input type="hidden" name="buyNow" id="buyNowHidden" value="false" />
 
@@ -381,14 +414,14 @@
 
         <div class="pdp-tab-pane" data-pane="especificacoes">
             <div class="pdp-content-card">
-                <h3>Especificações técnicas</h3>
+                <h3>Especificações</h3>
 
                 <div class="pdp-specs-grid">
                     @if (!string.IsNullOrWhiteSpace(produto.Marca))
                     {
                         <div class="pdp-spec-item">
                             <span>Marca</span>
-                            <strong>@produto.Marca @produto.BebidaVolumeMl.Value ml</strong>
+                            <strong>@produto.Marca</strong>
                         </div>
                     }
 
@@ -397,14 +430,14 @@
                         <strong>@precoAtual.ToString("C")</strong>
                     </div>
 
-                   @*  <div class="pdp-spec-item">
+                    <div class="pdp-spec-item">
                         <span>Estoque</span>
                         <strong>@estoqueDescricao</strong>
-                    </div> *@
+                    </div>
 
                     @if (isPod)
                     {
-                        @if (!string.IsNullOrWhiteSpace(produto.Sabor))
+                        @if (temSaborPod)
                         {
                             <div class="pdp-spec-item">
                                 <span>Sabor</span>
@@ -412,7 +445,7 @@
                             </div>
                         }
 
-                        @if (produto.PodPuffs.HasValue)
+                        @if (temPuffs)
                         {
                             <div class="pdp-spec-item">
                                 <span>Puffs</span>
@@ -420,7 +453,7 @@
                             </div>
                         }
 
-                        @if (!string.IsNullOrWhiteSpace(produto.PodCapacidadeBateria))
+                        @if (temBateria)
                         {
                             <div class="pdp-spec-item">
                                 <span>Bateria</span>
@@ -428,7 +461,7 @@
                             </div>
                         }
 
-                        @if (!string.IsNullOrWhiteSpace(produto.PodTipo))
+                        @if (temTipoPod)
                         {
                             <div class="pdp-spec-item">
                                 <span>Tipo do pod</span>
@@ -439,12 +472,15 @@
 
                     @if (isBebida)
                     {
-                        @if (produto.BebidaVolumeMl.HasValue)
+                        @if (temVolume)
                         {
-                            
+                            <div class="pdp-spec-item">
+                                <span>Volume</span>
+                                <strong>@volumeTexto</strong>
+                            </div>
                         }
 
-                        @if (!string.IsNullOrWhiteSpace(produto.BebidaTipo))
+                        @if (temTipoBebida)
                         {
                             <div class="pdp-spec-item">
                                 <span>Tipo</span>
@@ -452,43 +488,19 @@
                             </div>
                         }
 
-                        @if (produto.BebidaEmbalagem.HasValue)
+                        @if (temEmbalagem)
                         {
                             <div class="pdp-spec-item">
-                                <span>Embalagem</span>
+                                <span>Venda</span>
                                 <strong>@unidadeVendaDescricao</strong>
                             </div>
                         }
 
-                        @if (produto.BebidaQtdPorEmbalagem.HasValue)
-                        {
-                            
-                        }
-
-                        @if (produto.BebidaTeorAlcoolico.HasValue)
+                        @if (mostrarEstoqueFisico)
                         {
                             <div class="pdp-spec-item">
-                                <span>Teor alcoólico</span>
-                                <strong>@produto.BebidaTeorAlcoolico.Value.ToString("0.##")%</strong>
-                            </div>
-                        }
-                    }
-
-                    @if (isPadrao)
-                    {
-                        @if (!string.IsNullOrWhiteSpace(produto.Sabor))
-                        {
-                            <div class="pdp-spec-item">
-                                <span>Sabor</span>
-                                <strong>@produto.Sabor</strong>
-                            </div>
-                        }
-
-                        @if (!string.IsNullOrWhiteSpace(produto.Cor))
-                        {
-                            <div class="pdp-spec-item">
-                                <span>Cor</span>
-                                <strong>@produto.Cor</strong>
+                                <span>Total físico em estoque</span>
+                                <strong>@estoqueFisicoTotal unidades</strong>
                             </div>
                         }
                     }
@@ -516,7 +528,7 @@
 
                     @if (isBebida)
                     {
-                        <li>Confira volume, embalagem e teor alcoólico antes da compra.</li>
+                        <li>Confira volume e embalagem antes da compra.</li>
                     }
                 </ul>
             </div>
@@ -583,8 +595,6 @@
         </section>
     }
 </div>
-
-
 
 @section Scripts {
     <script>
