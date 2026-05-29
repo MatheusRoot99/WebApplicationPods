@@ -22,154 +22,154 @@
 
 <meta name="request-verification-token" content="@afToken" />
 
-<div class="container mt-4 orders-admin" id="ordersRoot" data-table-url="@tableUrl">
+@{
+    var pedidosLista = Model?.ToList() ?? new List<PedidoModel>();
 
-    <div class="orders-topbar header-row d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-        <div class="d-flex align-items-center gap-2">
-            <h2 class="m-0">Pedidos (@(filtro == "dia" ? "de hoje" : "abertos"))</h2>
-            <span class="pill-badge d-none d-md-inline">Live</span>
-        </div>
+    var totalAbertos = pedidosLista.Count;
 
-        <div class="d-flex flex-wrap align-items-center gap-2">
-            <div class="btn-group" role="group" aria-label="Filtros">
-                <a class="btn btn-outline-secondary @(filtro == "abertos" ? "active" : "")"
-                   asp-action="Index"
-                   asp-route-filtro="abertos">
-                    Abertos
-                </a>
+    var totalPreparo = pedidosLista.Count(p =>
+        string.Equals(p.Status, "Em Preparo", StringComparison.OrdinalIgnoreCase));
 
-                <a class="btn btn-outline-secondary @(filtro == "dia" ? "active" : "")"
-                   asp-action="Index"
-                   asp-route-filtro="dia">
-                    Hoje
-                </a>
-            </div>
+    var totalProntos = pedidosLista.Count(p =>
+        string.Equals(p.Status, "Pronto", StringComparison.OrdinalIgnoreCase));
 
-            <div class="vr d-none d-md-block"></div>
+    var totalEntrega = pedidosLista.Count(p =>
+        string.Equals(p.Status, "Saiu para Entrega", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(p.Status, "Saiu p/ Entrega", StringComparison.OrdinalIgnoreCase));
 
-            <div class="input-group input-group-sm quick-search">
-                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input id="qPedidos"
-                       type="search"
-                       class="form-control"
-                       placeholder="Buscar por cliente, método, status..."
-                       autocomplete="off" />
-            </div>
+    var totalAtrasados = pedidosLista.Count(p =>
+        !string.Equals(p.Status, "Cancelado", StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(p.Status, "Entregue", StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(p.Status, "Concluido", StringComparison.OrdinalIgnoreCase) &&
+        p.DataPedido <= DateTime.Now.AddMinutes(-45));
 
-            @if (filtro == "dia")
-            {
-                <a class="btn btn-brand btn-sm"
-                   asp-controller="PedidosAdmin"
-                   asp-action="Relatorio"
-                   asp-route-modo="dia"
-                   asp-route-data="@DateTime.Today.ToString("yyyy-MM-dd")">
-                    Relatório hoje
-                </a>
-            }
-            else
-            {
-                <a class="btn btn-outline-brand btn-sm"
-                   asp-controller="PedidosAdmin"
-                   asp-action="Relatorio"
-                   asp-route-modo="mes"
-                   asp-route-ano="@DateTime.Today.Year"
-                   asp-route-mes="@DateTime.Today.Month">
-                    Relatório mês
-                </a>
-            }
-        </div>
+    var valorAberto = pedidosLista.Sum(p => p.ValorTotalComEntrega);
+}
+
+<header class="orders-page-header">
+    <div>
+        <h1>Pedidos</h1>
+        <p>Gerencie e acompanhe todos os pedidos da sua loja</p>
     </div>
 
-    <div class="status-legend mb-3">
-        <span class="legend-item"><i class="dot dot-info"></i> Aguardando</span>
-        <span class="legend-item"><i class="dot dot-primary"></i> Em Preparo</span>
-        <span class="legend-item"><i class="dot dot-warning"></i> Pronto</span>
-        <span class="legend-item"><i class="dot dot-secondary"></i> Saiu p/ Entrega</span>
-        <span class="legend-item"><i class="dot dot-dark"></i> Entregue</span>
-        <span class="legend-item"><i class="dot dot-danger"></i> Cancelado</span>
+    <div class="orders-header-actions">
+        <button type="button" class="orders-icon-button" title="Notificações">
+            <i class="bi bi-bell"></i>
+            @if (totalAbertos > 0)
+            {
+                <span>@totalAbertos</span>
+            }
+        </button>
+
+        <button type="button" class="orders-filter-button">
+            <i class="bi bi-funnel"></i>
+            Filtros avançados
+        </button>
+    </div>
+</header>
+
+<div class="orders-filter-row">
+    <div class="orders-tabs">
+        <a class="orders-tab @(filtro == "abertos" ? "active" : "")"
+           asp-action="Index"
+           asp-route-filtro="abertos">
+            Abertos
+            <span>@totalAbertos</span>
+        </a>
+
+        <a class="orders-tab @(filtro == "dia" ? "active" : "")"
+           asp-action="Index"
+           asp-route-filtro="dia">
+            Hoje
+            <span>@pedidosLista.Count</span>
+        </a>
     </div>
 
-    @if (alertasEstoque.Any())
+    <div class="orders-search">
+        <i class="bi bi-search"></i>
+        <input id="qPedidos"
+               type="search"
+               placeholder="Buscar por cliente, método, status..."
+               autocomplete="off" />
+    </div>
+
+    @if (filtro == "dia")
     {
-        <div class="stock-alert-panel mb-3">
-            <div class="stock-alert-head">
-                <div>
-                    <strong>
-                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                        Atenção ao estoque
-                    </strong>
-
-                    <span>
-                        @if (totalEsgotados > 0)
-                        {
-                            <span>@totalEsgotados esgotado(s)</span>
-                        }
-
-                        @if (totalBaixoEstoque > 0)
-                        {
-                            <span>@(totalEsgotados > 0 ? " • " : "")@totalBaixoEstoque com estoque baixo</span>
-                        }
-                    </span>
-                </div>
-
-                <a asp-controller="Estoque"
-                   asp-action="Index"
-                   class="btn btn-sm btn-outline-warning">
-                    Ver estoque
-                </a>
-            </div>
-
-            <div class="stock-alert-list">
-                @foreach (var item in alertasEstoque)
-                {
-                    var isEsgotado = item.Esgotado == true;
-
-                    <a asp-controller="Produto"
-                       asp-action="Editar"
-                       asp-route-id="@item.ProdutoId"
-                       class="stock-alert-item @(isEsgotado ? "is-out" : "is-low")">
-                        <span class="stock-alert-name">@item.Nome</span>
-                        <span class="stock-alert-status">
-                            @item.StatusTexto • @item.EstoqueTexto
-                        </span>
-                    </a>
-                }
-            </div>
-        </div>
+        <a class="orders-report-button"
+           asp-controller="PedidosAdmin"
+           asp-action="Relatorio"
+           asp-route-modo="dia"
+           asp-route-data="@DateTime.Today.ToString("yyyy-MM-dd")">
+            Relatório hoje
+        </a>
     }
+    else
+    {
+        <a class="orders-report-button"
+           asp-controller="PedidosAdmin"
+           asp-action="Relatorio"
+           asp-route-modo="mes"
+           asp-route-ano="@DateTime.Today.Year"
+           asp-route-mes="@DateTime.Today.Month">
+            Relatório mês
+        </a>
+    }
+</div>
 
-    <div class="table-container">
-        <table class="table table-striped align-middle mb-0 responsive-table" id="ordersTable">
-            <thead>
-                <tr>
-                    <th>Cliente</th>
-                    <th>Data</th>
-                    <th>Total</th>
-                    <th>Pagamento</th>
-                    <th>Status</th>
-                    <th class="text-end">Ações</th>
-                </tr>
-            </thead>
-
-            <tbody id="tbodyPedidos">
-                @await Html.PartialAsync("~/Views/PedidosAdmin/_PedidosTableBody.cshtml", Model)
-            </tbody>
-        </table>
+<div class="orders-kpis">
+    <div class="orders-kpi">
+        <strong>@totalAbertos</strong>
+        <div>
+            <span>Pedidos abertos</span>
+            <small>@valorAberto.ToString("C")</small>
+        </div>
+        <i class="bi bi-receipt orders-kpi-icon is-blue"></i>
     </div>
 
-    <template id="row-skeleton">
-        <tr class="row-skeleton">
-            <td colspan="6">
-                <div class="sk-wrap">
-                    <div class="sk-line w-25"></div>
-                    <div class="sk-line w-50"></div>
-                    <div class="sk-line w-75"></div>
-                </div>
-            </td>
-        </tr>
-    </template>
+    <div class="orders-kpi">
+        <strong>@totalPreparo</strong>
+        <div>
+            <span>Em preparo</span>
+            <small>Acompanhar cozinha</small>
+        </div>
+        <i class="bi bi-clipboard-check orders-kpi-icon is-amber"></i>
+    </div>
 
-    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100"></div>
+    <div class="orders-kpi">
+        <strong>@totalProntos</strong>
+        <div>
+            <span>Prontos</span>
+            <small>Aguardando entrega</small>
+        </div>
+        <i class="bi bi-check-circle orders-kpi-icon is-green"></i>
+    </div>
+
+    <div class="orders-kpi">
+        <strong>@totalEntrega</strong>
+        <div>
+            <span>A caminho</span>
+            <small>Em rota</small>
+        </div>
+        <i class="bi bi-bicycle orders-kpi-icon is-purple"></i>
+    </div>
+
+    <div class="orders-kpi">
+        <strong>@totalAtrasados</strong>
+        <div>
+            <span>Atrasados</span>
+            <small>Mais de 45 min</small>
+        </div>
+        <i class="bi bi-clock orders-kpi-icon is-red"></i>
+    </div>
+</div>
+
+<div class="status-legend mb-3">
+    <span class="legend-item"><i class="dot dot-info"></i> Aguardando</span>
+    <span class="legend-item"><i class="dot dot-primary"></i> Em preparo</span>
+    <span class="legend-item"><i class="dot dot-warning"></i> Pronto</span>
+    <span class="legend-item"><i class="dot dot-secondary"></i> Saiu p/ entrega</span>
+    <span class="legend-item"><i class="dot dot-dark"></i> Entregue</span>
+    <span class="legend-item"><i class="dot dot-danger"></i> Cancelado</span>
 </div>
 
 @section Scripts {

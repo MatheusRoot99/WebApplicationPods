@@ -140,64 +140,74 @@
     var textoItens = totalItens == 1 ? "1 item" : $"{totalItens} itens";
 
     <tr data-id="@p.Id" data-order-id="@p.Id">
+        <td data-th="Pedido">
+            <div class="cell-primary">
+                <div class="title">#@p.Id</div>
+                <div class="sub">@p.DataPedido.ToString("dd/MM HH:mm")</div>
+            </div>
+        </td>
+
         <td data-th="Cliente">
             <div class="cell-primary">
                 <div class="title">@((p.Cliente?.Nome) ?? "—")</div>
                 <div class="sub">
-                    @($"#{p.Id} • {textoItens}")
+                    @(p.Cliente?.Telefone ?? "Sem telefone")
                 </div>
+            </div>
+        </td>
 
-                @if (p.PedidoItens != null && p.PedidoItens.Any())
+        <td data-th="Pagamento">
+            <div class="cell-primary">
+                <div class="title">@((p.MetodoPagamento ?? "—"))</div>
+                <div class="sub">
+                    @if (pagamentoPixManualPendente != null)
+                    {
+                        <span>PIX pendente</span>
+                    }
+                    else
+                    {
+                        <span>@(p.Status?.Contains("Pagamento", StringComparison.OrdinalIgnoreCase) == true ? p.Status : "Pagamento registrado")</span>
+                    }
+                </div>
+            </div>
+        </td>
+
+        <td data-th="Itens do pedido">
+            <div class="order-items-summary">
+                @{
+                    var itensPedido = p.PedidoItens?.Take(3).ToList() ?? new List<PedidoItemModel>();
+                    var restante = Math.Max((p.PedidoItens?.Count ?? 0) - itensPedido.Count, 0);
+                }
+
+                @if (itensPedido.Any())
                 {
-                    <div class="pedido-itens-resumo mt-2">
-                        @foreach (var item in p.PedidoItens)
-                        {
-                            <div class="pedido-item-linha">
-                                <span class="pedido-item-nome">@item.NomeExibicao</span>
+                    foreach (var item in itensPedido)
+                    {
+                        <div class="order-item-line">
+                            <strong>@item.NomeExibicao</strong>
+                            <span>@item.ResumoQuantidadeExibicao</span>
+                        </div>
+                    }
 
-                                <div class="pedido-item-info">
-                                    <span class="pedido-item-qtd">
-                                        @item.ResumoQuantidadeExibicao
-                                    </span>
-
-                                    @if (item.TotalUnidadesFisicas > item.Quantidade)
-                                    {
-                                        <span class="pedido-item-fisico">
-                                            @item.TotalUnidadesFisicasExibicao
-                                        </span>
-                                    }
-                                </div>
-
-                                @if (!string.IsNullOrWhiteSpace(item.Sabor))
-                                {
-                                    <small class="pedido-item-extra">
-                                        <strong>Sabor:</strong> @item.Sabor
-                                    </small>
-                                }
-
-                                @if (!string.IsNullOrWhiteSpace(item.Observacoes))
-                                {
-                                    <small class="pedido-item-extra">
-                                        <strong>Obs:</strong> @item.Observacoes
-                                    </small>
-                                }
-                            </div>
-                        }
-                    </div>
+                    if (restante > 0)
+                    {
+                        <div class="order-item-more">
+                            + @restante item(ns)
+                        </div>
+                    }
+                }
+                else
+                {
+                    <span class="text-muted">Sem itens</span>
                 }
             </div>
         </td>
 
-        <td data-th="Data">
-            @p.DataPedido.ToString("dd/MM HH:mm")
-        </td>
-
         <td data-th="Total" class="text-end">
-            @p.ValorTotalComEntrega.ToString("C")
-        </td>
-
-        <td data-th="Pagamento">
-            @((p.MetodoPagamento ?? "—"))
+            <div class="cell-primary text-end">
+                <div class="title">@p.ValorTotalComEntrega.ToString("C")</div>
+                <div class="sub">Total do pedido</div>
+            </div>
         </td>
 
         <td data-th="Status">

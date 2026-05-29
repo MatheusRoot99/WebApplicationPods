@@ -1,0 +1,203 @@
+﻿/* =========================================================
+   WebApplicationPods Redesign V1
+   Base visual nova sem quebrar as telas antigas
+   ========================================================= */
+
+:root {
+    --wp-bg: #f4f7fb;
+    --wp-surface: #ffffff;
+    --wp-surface-2: #eef3f8;
+    --wp-text: #111827;
+    --wp-muted: #667085;
+    --wp-border: #d9e2ec;
+    --wp-primary: #2563eb;
+    --wp-primary-hover: #1d4ed8;
+    --wp-success: #16a34a;
+    --wp-warning: #f59e0b;
+    --wp-danger: #dc2626;
+    --wp-info: #0891b2;
+    --wp-sidebar: #101828;
+    --wp-sidebar-soft: #182230;
+    --wp-sidebar-text: #f9fafb;
+    --wp-sidebar-muted: #98a2b3;
+    --wp-radius: 8px;
+    --wp-radius-lg: 12px;
+    --wp-shadow: 0 10px 30px rgba(15, 23, 42, .08);
+}
+
+html[data-theme="dark"] {
+    --wp-bg: #0b1220;
+    --wp-surface: #111827;
+    --wp-surface-2: #182230;
+    --wp-text: #f9fafb;
+    --wp-muted: #98a2b3;
+    --wp-border: rgba(255,255,255,.10);
+    --wp-sidebar: #070b12;
+    --wp-sidebar-soft: #111827;
+}
+
+/* Base geral */
+body {
+    background: var(--wp-bg) !important;
+    color: var(--wp-text) !important;
+}
+
+#page-content-wrapper {
+    background: var(--wp-bg);
+    min-height: 100vh;
+}
+
+.page-content {
+    padding: 24px !important;
+}
+
+.page-hero {
+    background: transparent !important;
+    border-radius: 0 !important;
+}
+
+.app-shell {
+    width: 100%;
+    max-width: none;
+}
+
+/* Topbar */
+.navbar.navbar-dark {
+    background: var(--wp-surface) !important;
+    color: var(--wp-text) !important;
+    border-bottom: 1px solid var(--wp-border) !important;
+    box-shadow: none !important;
+}
+
+    .navbar.navbar-dark a,
+    .navbar.navbar-dark .nav-link,
+    .navbar.navbar-dark .breadcrumb a,
+    .navbar.navbar-dark i {
+        color: var(--wp-text) !important;
+    }
+
+/* Cards / painéis */
+.card,
+.kpi,
+.table-container,
+.total-card,
+.ps-card,
+.pdp-summary-card,
+.pdp-gallery-card,
+.pdp-content-card,
+.ec-card {
+    background: var(--wp-surface) !important;
+    border: 1px solid var(--wp-border) !important;
+    border-radius: var(--wp-radius-lg) !important;
+    box-shadow: var(--wp-shadow) !important;
+}
+
+/* Botões */
+.btn-primary,
+.ps-btn-blue,
+.pdp-btn-primary {
+    background: var(--wp-primary) !important;
+    border-color: var(--wp-primary) !important;
+    color: #fff !important;
+    border-radius: var(--wp-radius) !important;
+}
+
+    .btn-primary:hover,
+    .ps-btn-blue:hover,
+    .pdp-btn-primary:hover {
+        background: var(--wp-primary-hover) !important;
+        border-color: var(--wp-primary-hover) !important;
+    }
+
+.btn-outline-primary,
+.ps-btn-ghost {
+    color: var(--wp-primary) !important;
+    border-color: var(--wp-border) !important;
+    background: var(--wp-surface) !important;
+    border-radius: var(--wp-radius) !important;
+}
+
+/* Inputs */
+.form-control,
+.form-select,
+.ps-input,
+.pdp-qty-input {
+    background: var(--wp-surface) !important;
+    color: var(--wp-text) !important;
+    border: 1px solid var(--wp-border) !important;
+    border-radius: var(--wp-radius) !important;
+    box-shadow: none !important;
+}
+
+    .form-control:focus,
+    .form-select:focus,
+    .ps-input:focus {
+        border-color: var(--wp-primary) !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, .16) !important;
+    }
+
+/* Badges de operação */
+.badge,
+.pdp-chip,
+.pdp-stock-badge,
+.status-dot {
+    border-radius: 999px !important;
+}
+
+.bg-success,
+.badge-success,
+.is-in {
+    background-color: rgba(22, 163, 74, .12) !important;
+    color: var(--wp-success) !important;
+}
+
+.bg-warning,
+.badge-warning {
+    background-color: rgba(245, 158, 11, .16) !important;
+    color: #92400e !important;
+}
+
+.bg-danger,
+.badge-danger,
+.is-out {
+    background-color: rgba(220, 38, 38, .12) !important;
+    color: var(--wp-danger) !important;
+}
+
+/* Tabelas */
+.table {
+    color: var(--wp-text) !important;
+}
+
+    .table thead th,
+    .carrinho-table thead th,
+    .estoque-table thead th {
+        background: var(--wp-surface-2) !important;
+        color: var(--wp-text) !important;
+        border-bottom: 1px solid var(--wp-border) !important;
+    }
+
+    .table tbody td,
+    .carrinho-table tbody td,
+    .estoque-table tbody td {
+        border-color: var(--wp-border) !important;
+    }
+
+/* Mobile */
+@media (max-width: 768px) {
+    .page-content {
+        padding: 12px !important;
+        padding-bottom: 88px !important;
+    }
+
+    .app-shell {
+        padding: 0 !important;
+    }
+
+    .card,
+    .ps-card,
+    .pdp-summary-card,
+    .pdp-gallery-card {
+        border-radius: 12px !important;
+    }
+}

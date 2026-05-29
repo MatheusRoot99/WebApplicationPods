@@ -369,6 +369,10 @@
     function updateEstoqueResumo() {
         if (!bebidaEstoqueResumoEl) return;
 
+        if (bebidaUnidadeBadgeEl) {
+            bebidaUnidadeBadgeEl.textContent = "Configure a embalagem";
+        }
+
         if (!isTipoBebida()) {
             bebidaEstoqueResumoEl.textContent = "Este produto será vendido por unidade.";
             return;
@@ -393,6 +397,10 @@
         if (qtdPorEmbalagem <= 1) {
             bebidaEstoqueResumoEl.textContent = "Informe quantas unidades vêm em cada embalagem.";
             return;
+        }
+
+        if (bebidaUnidadeBadgeEl) {
+            bebidaUnidadeBadgeEl.textContent = `${qtdPorEmbalagem} unidades por ${embalagemText.toLowerCase()}`;
         }
 
         const embalagemVenda = estoque === 1
@@ -507,6 +515,7 @@
     let bebidaEmbalagemEl;
     let bebidaQtdPorEmbalagemEl;
     let bebidaEstoqueResumoEl;
+    let bebidaUnidadeBadgeEl;
 
     document.addEventListener("DOMContentLoaded", function () {
         formEl = document.getElementById("produtoSimplesForm") || qs("form.ps-form");
@@ -539,7 +548,7 @@
         bebidaEmbalagemEl = document.getElementById("BebidaEmbalagem") || qs('select[name="BebidaEmbalagem"]');
         bebidaQtdPorEmbalagemEl = document.getElementById("BebidaQtdPorEmbalagem") || qs('input[name="BebidaQtdPorEmbalagem"]');
         bebidaEstoqueResumoEl = document.getElementById("BebidaEstoqueResumo");
-
+        bebidaUnidadeBadgeEl = document.getElementById("BebidaUnidadeBadge");
         initMoneyFields();
         initSaborPod();
         previewImagem();
