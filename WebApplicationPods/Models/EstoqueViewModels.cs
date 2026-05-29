@@ -109,3 +109,18 @@ public class EstoqueVM
     public int EsgotadosCount => Itens.Count(i => i.Esgotado);
     public decimal? ValorCustoTotal => null;
 }
+
+public class EstoqueAlertaVM
+{
+    public int ProdutoId { get; set; }
+
+    public string Nome { get; set; } = string.Empty;
+
+    public bool Esgotado { get; set; }
+
+    public bool BaixoEstoque { get; set; }
+
+    public string StatusTexto { get; set; } = string.Empty;
+
+    public string EstoqueTexto { get; set; } = string.Empty;
+}

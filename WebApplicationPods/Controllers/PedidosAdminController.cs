@@ -151,7 +151,7 @@ namespace WebApplicationPods.Controllers
         }
 
         [HttpGet]
-        public IActionResult Index(string? filtro = "abertos")
+        public async Task<IActionResult> Index(string? filtro = "abertos")
         {
             var lista = string.Equals(filtro, "dia", StringComparison.OrdinalIgnoreCase)
                 ? _pedidos.ObterDoDia()
@@ -159,6 +159,8 @@ namespace WebApplicationPods.Controllers
 
             ViewBag.Filtro = filtro;
             ViewBag.Allowed = PedidoStatusRules.AllowedTransitions;
+
+            await CarregarAlertasEstoqueAsync();
 
             return View("~/Views/PedidosAdmin/Index.cshtml", lista);
         }
@@ -405,6 +407,55 @@ namespace WebApplicationPods.Controllers
 
             TempData["Sucesso"] = "Pedido excluído.";
             return RedirectToAction(nameof(Index));
+        }
+
+        private async Task CarregarAlertasEstoqueAsync()
+        {
+            var lojaAtual = await ObterLojaAtualAsync();
+
+            var query = _context.Produtos
+                .AsNoTracking()
+                .Where(p => p.Ativo);
+
+            if (!User.IsInRole("Admin"))
+            {
+                if (!lojaAtual.HasValue || lojaAtual.Value <= 0)
+                {
+                    ViewBag.AlertasEstoque = new List<EstoqueAlertaVM>();
+                    ViewBag.TotalEsgotados = 0;
+                    ViewBag.TotalBaixoEstoque = 0;
+                    return;
+                }
+
+                query = query.Where(p => p.LojaId == lojaAtual.Value);
+            }
+            else if (lojaAtual.HasValue && lojaAtual.Value > 0)
+            {
+                query = query.Where(p => p.LojaId == lojaAtual.Value);
+            }
+
+            var produtos = await query
+                .OrderBy(p => p.Estoque)
+                .ThenBy(p => p.Nome)
+                .ToListAsync();
+
+            var alertas = produtos
+                .Where(p => p.EstaEsgotado || p.EstaComEstoqueBaixo)
+                .Take(8)
+                .Select(p => new EstoqueAlertaVM
+                {
+                    ProdutoId = p.Id,
+                    Nome = p.Nome,
+                    Esgotado = p.EstaEsgotado,
+                    BaixoEstoque = p.EstaComEstoqueBaixo,
+                    StatusTexto = p.StatusEstoqueTexto,
+                    EstoqueTexto = p.EstoqueDescricao
+                })
+                .ToList();
+
+            ViewBag.AlertasEstoque = alertas;
+            ViewBag.TotalEsgotados = produtos.Count(p => p.EstaEsgotado);
+            ViewBag.TotalBaixoEstoque = produtos.Count(p => p.EstaComEstoqueBaixo);
         }
     }
 }

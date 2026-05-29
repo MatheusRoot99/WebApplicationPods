@@ -1,4 +1,5 @@
 ﻿@using WebApplicationPods.Models
+@using WebApplicationPods.Constants
 @using System.Linq
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 
@@ -11,9 +12,29 @@
     var tableUrl = Url.Action("Table", "PedidosAdmin", new { filtro });
     var afToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
 
-    var alertasEstoque = ViewBag.AlertasEstoque as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
-    var totalEsgotados = ViewBag.TotalEsgotados as int? ?? 0;
-    var totalBaixoEstoque = ViewBag.TotalBaixoEstoque as int? ?? 0;
+    var pedidosLista = Model?.ToList() ?? new List<PedidoModel>();
+
+    var totalAbertos = pedidosLista.Count;
+
+    var totalPreparo = pedidosLista.Count(p =>
+        string.Equals(p.Status, "Em Preparo", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(p.Status, "Em Preparação", StringComparison.OrdinalIgnoreCase));
+
+    var totalProntos = pedidosLista.Count(p =>
+        string.Equals(p.Status, PedidoStatus.Pronto, StringComparison.OrdinalIgnoreCase));
+
+    var totalEntrega = pedidosLista.Count(p =>
+        string.Equals(p.Status, "Saiu para Entrega", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(p.Status, PedidoStatus.SaiuParaEntrega, StringComparison.OrdinalIgnoreCase));
+
+    var totalAtrasados = pedidosLista.Count(p =>
+        !string.Equals(p.Status, PedidoStatus.Cancelado, StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(p.Status, PedidoStatus.Concluido, StringComparison.OrdinalIgnoreCase) &&
+        p.DataPedido <= DateTime.Now.AddMinutes(-45));
+
+    var valorAberto = pedidosLista.Sum(p => p.ValorTotalComEntrega);
+
+    var pedidosHoje = pedidosLista.Count(p => p.DataPedido.Date == DateTime.Today);
 }
 
 @section Styles {
@@ -22,154 +43,180 @@
 
 <meta name="request-verification-token" content="@afToken" />
 
-@{
-    var pedidosLista = Model?.ToList() ?? new List<PedidoModel>();
+<div class="orders-admin orders-admin-redesign" id="ordersRoot" data-table-url="@tableUrl">
 
-    var totalAbertos = pedidosLista.Count;
+    <header class="orders-page-header">
+        <div>
+            <h1>Pedidos</h1>
+            <p>Gerencie e acompanhe todos os pedidos da sua loja</p>
+        </div>
 
-    var totalPreparo = pedidosLista.Count(p =>
-        string.Equals(p.Status, "Em Preparo", StringComparison.OrdinalIgnoreCase));
+        <div class="orders-header-actions">
+            <button type="button" class="orders-icon-button" title="Notificações">
+                <i class="fa-regular fa-bell"></i>
 
-    var totalProntos = pedidosLista.Count(p =>
-        string.Equals(p.Status, "Pronto", StringComparison.OrdinalIgnoreCase));
+                @if (totalAbertos > 0)
+                {
+                    <span>@totalAbertos</span>
+                }
+            </button>
 
-    var totalEntrega = pedidosLista.Count(p =>
-        string.Equals(p.Status, "Saiu para Entrega", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(p.Status, "Saiu p/ Entrega", StringComparison.OrdinalIgnoreCase));
+            <button type="button" class="orders-filter-button">
+                <i class="fa-solid fa-filter"></i>
+                Filtros avançados
+            </button>
+        </div>
+    </header>
 
-    var totalAtrasados = pedidosLista.Count(p =>
-        !string.Equals(p.Status, "Cancelado", StringComparison.OrdinalIgnoreCase) &&
-        !string.Equals(p.Status, "Entregue", StringComparison.OrdinalIgnoreCase) &&
-        !string.Equals(p.Status, "Concluido", StringComparison.OrdinalIgnoreCase) &&
-        p.DataPedido <= DateTime.Now.AddMinutes(-45));
-
-    var valorAberto = pedidosLista.Sum(p => p.ValorTotalComEntrega);
-}
-
-<header class="orders-page-header">
-    <div>
-        <h1>Pedidos</h1>
-        <p>Gerencie e acompanhe todos os pedidos da sua loja</p>
-    </div>
-
-    <div class="orders-header-actions">
-        <button type="button" class="orders-icon-button" title="Notificações">
-            <i class="bi bi-bell"></i>
-            @if (totalAbertos > 0)
-            {
+    <div class="orders-filter-row">
+        <div class="orders-tabs">
+            <a class="orders-tab @(filtro == "abertos" ? "active" : "")"
+               asp-action="Index"
+               asp-route-filtro="abertos">
+                Abertos
                 <span>@totalAbertos</span>
-            }
-        </button>
+            </a>
 
-        <button type="button" class="orders-filter-button">
-            <i class="bi bi-funnel"></i>
-            Filtros avançados
-        </button>
-    </div>
-</header>
-
-<div class="orders-filter-row">
-    <div class="orders-tabs">
-        <a class="orders-tab @(filtro == "abertos" ? "active" : "")"
-           asp-action="Index"
-           asp-route-filtro="abertos">
-            Abertos
-            <span>@totalAbertos</span>
-        </a>
-
-        <a class="orders-tab @(filtro == "dia" ? "active" : "")"
-           asp-action="Index"
-           asp-route-filtro="dia">
-            Hoje
-            <span>@pedidosLista.Count</span>
-        </a>
-    </div>
-
-    <div class="orders-search">
-        <i class="bi bi-search"></i>
-        <input id="qPedidos"
-               type="search"
-               placeholder="Buscar por cliente, método, status..."
-               autocomplete="off" />
-    </div>
-
-    @if (filtro == "dia")
-    {
-        <a class="orders-report-button"
-           asp-controller="PedidosAdmin"
-           asp-action="Relatorio"
-           asp-route-modo="dia"
-           asp-route-data="@DateTime.Today.ToString("yyyy-MM-dd")">
-            Relatório hoje
-        </a>
-    }
-    else
-    {
-        <a class="orders-report-button"
-           asp-controller="PedidosAdmin"
-           asp-action="Relatorio"
-           asp-route-modo="mes"
-           asp-route-ano="@DateTime.Today.Year"
-           asp-route-mes="@DateTime.Today.Month">
-            Relatório mês
-        </a>
-    }
-</div>
-
-<div class="orders-kpis">
-    <div class="orders-kpi">
-        <strong>@totalAbertos</strong>
-        <div>
-            <span>Pedidos abertos</span>
-            <small>@valorAberto.ToString("C")</small>
+            <a class="orders-tab @(filtro == "dia" ? "active" : "")"
+               asp-action="Index"
+               asp-route-filtro="dia">
+                Hoje
+                <span>@pedidosHoje</span>
+            </a>
         </div>
-        <i class="bi bi-receipt orders-kpi-icon is-blue"></i>
-    </div>
 
-    <div class="orders-kpi">
-        <strong>@totalPreparo</strong>
-        <div>
-            <span>Em preparo</span>
-            <small>Acompanhar cozinha</small>
+        <div class="orders-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input id="qPedidos"
+                   type="search"
+                   placeholder="Buscar por cliente, método, status..."
+                   autocomplete="off" />
         </div>
-        <i class="bi bi-clipboard-check orders-kpi-icon is-amber"></i>
+
+        @if (filtro == "dia")
+        {
+            <a class="orders-report-button"
+               asp-controller="PedidosAdmin"
+               asp-action="Relatorio"
+               asp-route-modo="dia"
+               asp-route-data="@DateTime.Today.ToString("yyyy-MM-dd")">
+                Relatório hoje
+            </a>
+        }
+        else
+        {
+            <a class="orders-report-button"
+               asp-controller="PedidosAdmin"
+               asp-action="Relatorio"
+               asp-route-modo="mes"
+               asp-route-ano="@DateTime.Today.Year"
+               asp-route-mes="@DateTime.Today.Month">
+                Relatório mês
+            </a>
+        }
     </div>
 
-    <div class="orders-kpi">
-        <strong>@totalProntos</strong>
-        <div>
-            <span>Prontos</span>
-            <small>Aguardando entrega</small>
+    <div class="orders-kpis">
+        <div class="orders-kpi">
+            <strong>@totalAbertos</strong>
+
+            <div>
+                <span>Pedidos abertos</span>
+                <small>@valorAberto.ToString("C")</small>
+            </div>
+
+            <span class="orders-kpi-icon is-blue">
+                <i class="fa-regular fa-clipboard"></i>
+            </span>
         </div>
-        <i class="bi bi-check-circle orders-kpi-icon is-green"></i>
-    </div>
 
-    <div class="orders-kpi">
-        <strong>@totalEntrega</strong>
-        <div>
-            <span>A caminho</span>
-            <small>Em rota</small>
+        <div class="orders-kpi">
+            <strong>@totalPreparo</strong>
+
+            <div>
+                <span>Em preparo</span>
+                <small>Acompanhar cozinha</small>
+            </div>
+
+            <span class="orders-kpi-icon is-amber">
+                <i class="fa-regular fa-clipboard"></i>
+            </span>
         </div>
-        <i class="bi bi-bicycle orders-kpi-icon is-purple"></i>
-    </div>
 
-    <div class="orders-kpi">
-        <strong>@totalAtrasados</strong>
-        <div>
-            <span>Atrasados</span>
-            <small>Mais de 45 min</small>
+        <div class="orders-kpi">
+            <strong>@totalProntos</strong>
+
+            <div>
+                <span>Prontos</span>
+                <small>Aguardando entrega</small>
+            </div>
+
+            <span class="orders-kpi-icon is-green">
+                <i class="fa-regular fa-circle-check"></i>
+            </span>
         </div>
-        <i class="bi bi-clock orders-kpi-icon is-red"></i>
-    </div>
-</div>
 
-<div class="status-legend mb-3">
-    <span class="legend-item"><i class="dot dot-info"></i> Aguardando</span>
-    <span class="legend-item"><i class="dot dot-primary"></i> Em preparo</span>
-    <span class="legend-item"><i class="dot dot-warning"></i> Pronto</span>
-    <span class="legend-item"><i class="dot dot-secondary"></i> Saiu p/ entrega</span>
-    <span class="legend-item"><i class="dot dot-dark"></i> Entregue</span>
-    <span class="legend-item"><i class="dot dot-danger"></i> Cancelado</span>
+        <div class="orders-kpi">
+            <strong>@totalEntrega</strong>
+
+            <div>
+                <span>A caminho</span>
+                <small>Em rota</small>
+            </div>
+
+            <span class="orders-kpi-icon is-purple">
+                <i class="fa-solid fa-motorcycle"></i>
+            </span>
+        </div>
+
+        <div class="orders-kpi">
+            <strong>@totalAtrasados</strong>
+
+            <div>
+                <span>Atrasados</span>
+                <small>Mais de 45 min</small>
+            </div>
+
+            <span class="orders-kpi-icon is-red">
+                <i class="fa-regular fa-clock"></i>
+            </span>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="table align-middle mb-0 responsive-table" id="ordersTable">
+            <thead>
+                <tr>
+                    <th>Pedido</th>
+                    <th>Cliente</th>
+                    <th>Pagamento</th>
+                    <th>Itens do pedido</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Entregador</th>
+                    <th class="text-end">Ações</th>
+                </tr>
+            </thead>
+
+            <tbody id="tbodyPedidos">
+                @await Html.PartialAsync("~/Views/PedidosAdmin/_PedidosTableBody.cshtml", Model)
+            </tbody>
+        </table>
+    </div>
+
+    <template id="row-skeleton">
+        <tr class="row-skeleton">
+            <td colspan="8">
+                <div class="sk-wrap">
+                    <div class="sk-line w-25"></div>
+                    <div class="sk-line w-50"></div>
+                    <div class="sk-line w-75"></div>
+                </div>
+            </td>
+        </tr>
+    </template>
+
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100"></div>
 </div>
 
 @section Scripts {
