@@ -309,7 +309,11 @@
                     </div>
                 </nav>
 
-                @if (headerVM != null)
+                @{
+                    var hideStoreHeader = (ViewData["HideStoreHeader"] as bool?) ?? false;
+                }
+
+                @if (headerVM != null && !hideStoreHeader)
                 {
                     @await Html.PartialAsync("_StoreHeader", headerVM)
                 }

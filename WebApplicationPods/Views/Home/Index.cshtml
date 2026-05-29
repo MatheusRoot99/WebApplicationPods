@@ -4,6 +4,22 @@
 
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = Model.Loja?.Nome ?? "Loja";
+    ViewData["HideStoreHeader"] = true;
+    ViewData["BodyClass"] = "storefront-full";
+
+    var lojaNome = Model.Loja?.Nome ?? "Conveniência X";
+    var produtos = Model.Produtos ?? Enumerable.Empty<WebApplicationPods.Models.ProdutoModel>();
+    var categorias = Model.Filtros.CategoriasDisponiveis ?? Enumerable.Empty<string>();
+    var categoriaAtual = Model.Filtros.Categoria ?? "";
+    var termoAtual = Model.Filtros.Termo ?? "";
+
+    var produtosNoCarrinho = Model.ProdutosNoCarrinho ?? new List<int>();
+    var carrinhoCountInicial = produtosNoCarrinho.Count;
+
+    var produtosNoCarrinhoJson = JsonSerializer.Serialize(
+        produtosNoCarrinho.Select(x => x.ToString())
+    );
 }
 
 @section Styles {
@@ -11,161 +27,211 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 }
 
-<div class="home-index">
+<div class="storefront-page">
 
-    <div class="topbar container-fluid">
-        <div class="topbar-inner container px-0">
-            <button class="topbar-btn" type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#filtersCollapse"
-                    aria-expanded="false"
-                    aria-controls="filtersCollapse">
-                <i class="fa-solid fa-sliders"></i>
-                <span>Filtrar</span>
-            </button>
+    <header class="storefront-header">
+        <div class="storefront-store">
+            <div class="storefront-logo">
+                <i class="fa-solid fa-store"></i>
+            </div>
 
-            <div class="topbar-select">
-                <label for="Filtros_OrdenarPor" class="form-label m-0">Ordenar por</label>
-                <select id="Filtros_OrdenarPor" name="OrdenarPor" class="form-select form-select-sm">
-                    @foreach (var kv in Model.Filtros.OpcoesOrdenacao)
-                    {
-                        if (Model.Filtros.OrdenarPor == kv.Key)
-                        {
-                            <option value="@kv.Key" selected="selected">@kv.Value</option>
-                        }
-                        else
-                        {
-                            <option value="@kv.Key">@kv.Value</option>
-                        }
-                    }
-                </select>
+            <div>
+                <h1>@lojaNome</h1>
+
+                <div class="storefront-status">
+                    <span class="status-dot"></span>
+                    <strong>Aberto</strong>
+                    <span>Até 23h59</span>
+                </div>
             </div>
         </div>
-    </div>
 
-    <section class="hero-section text-center text-white mb-3">
-        <div class="container">
-            <h1 class="display-6 fw-bold mb-1">
-                Bem-vindo à @(Model.Loja?.Nome ?? "nossa loja")
-            </h1>
-            <p class="lead fs-6 mb-0">Os melhores produtos do mercado!</p>
-        </div>
+        @* <div class="storefront-actions">
+            <button type="button"
+                    class="storefront-icon-btn"
+                    aria-label="Buscar"
+                    onclick="document.getElementById('storeSearchInput')?.focus()">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </button>
+
+            <a asp-controller="Auth"
+               asp-action="Perfil"
+               class="storefront-icon-btn"
+               aria-label="Conta">
+                <i class="fa-regular fa-user"></i>
+            </a>
+        </div> *@
+    </header>
+
+    <section class="store-search-section">
+        <form asp-area=""
+              asp-controller="Home"
+              asp-action="Index"
+              method="get"
+              class="store-search-form"
+              id="storeSearchForm">
+
+            <input type="hidden" name="Categoria" value="@categoriaAtual" />
+            <input type="hidden" name="OrdenarPor" value="@Model.Filtros.OrdenarPor" />
+
+            <i class="fa-solid fa-magnifying-glass"></i>
+
+            <input id="storeSearchInput"
+                   name="Termo"
+                   value="@termoAtual"
+                   type="search"
+                   placeholder="Buscar produtos..."
+                   autocomplete="off" />
+        </form>
+
+        @* <button type="button"
+                class="store-scan-btn"
+                aria-label="Scanner">
+            <i class="fa-solid fa-barcode"></i>
+        </button> *@
     </section>
 
-    <div class="container mb-3">
-        <div class="collapse d-lg-block" id="filtersCollapse">
-            <form asp-area=""
-                  asp-action="Index"
-                  method="get"
-                  class="filters-card card border-0 p-3 mb-3"
-                  id="filtersForm">
+    <section class="store-category-strip" aria-label="Categorias">
+        <a class="store-category-chip @(string.IsNullOrWhiteSpace(categoriaAtual) ? "active" : "")"
+           href="@Url.Action("Index", "Home", new { Termo = termoAtual, OrdenarPor = Model.Filtros.OrdenarPor })">
+            Todas
+        </a>
 
-                <div class="row g-3 align-items-end">
-
-                    <div class="col-12 col-lg-4">
-                        <label class="form-label">Buscar</label>
-                        <input name="Termo"
-                               value="@(Model.Filtros.Termo ?? "")"
-                               class="form-control"
-                               placeholder="Ex: Heineken, Pod, Whisky..." />
-                    </div>
-
-                    <div class="col-12 col-md-6 col-lg-3">
-                        <label class="form-label">Categoria</label>
-                        <select name="Categoria"
-                                class="form-select"
-                                asp-items="@(new SelectList(Model.Filtros.CategoriasDisponiveis, Model.Filtros.Categoria))">
-                            <option value="" selected="@(string.IsNullOrWhiteSpace(Model.Filtros.Categoria))">
-                                Todas Categorias
-                            </option>
-                        </select>
-                    </div>
-
-                    <div class="col-6 col-lg-2">
-                        <label class="form-label">Preço mín</label>
-                        <input name="PrecoMin"
-                               value="@(Model.Filtros.PrecoMin?.ToString() ?? "")"
-                               type="number"
-                               step="0.01"
-                               min="0"
-                               class="form-control"
-                               placeholder="R$" />
-                    </div>
-
-                    <div class="col-6 col-lg-2">
-                        <label class="form-label">Preço máx</label>
-                        <input name="PrecoMax"
-                               value="@(Model.Filtros.PrecoMax?.ToString() ?? "")"
-                               type="number"
-                               step="0.01"
-                               min="0"
-                               class="form-control"
-                               placeholder="R$" />
-                    </div>
-
-                    <div class="col-12 col-lg-1 d-none d-lg-block">
-                        <label class="form-label">Ord.</label>
-                        <select name="OrdenarPor" class="form-select" id="OrdenarPorForm">
-                            @foreach (var kv in Model.Filtros.OpcoesOrdenacao)
-                            {
-                                if (Model.Filtros.OrdenarPor == kv.Key)
-                                {
-                                    <option value="@kv.Key" selected="selected">@kv.Value</option>
-                                }
-                                else
-                                {
-                                    <option value="@kv.Key">@kv.Value</option>
-                                }
-                            }
-                        </select>
-                    </div>
-
-                    <div class="col-12">
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                            <div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input"
-                                           type="checkbox"
-                                           name="ApenasPromocoes"
-                                           value="true"
-                                           @(Model.Filtros.ApenasPromocoes ? "checked" : "")
-                                           id="ckPromo" />
-                                    <label class="form-check-label" for="ckPromo">Promoções</label>
-                                </div>
-
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input"
-                                           type="checkbox"
-                                           name="ApenasEstoque"
-                                           value="true"
-                                           @(Model.Filtros.ApenasEstoque ? "checked" : "")
-                                           id="ckEstoque" />
-                                    <label class="form-check-label" for="ckEstoque">Em estoque</label>
-                                </div>
-                            </div>
-
-                            <div class="d-flex gap-2">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-filter me-1"></i> Filtrar
-                                </button>
-
-                                <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
-                                    <i class="fas fa-times me-1"></i> Limpar
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div class="container mb-4">
-        @if (Model.Produtos != null && Model.Produtos.Any())
+        @foreach (var categoria in categorias)
         {
-            <div class="product-grid">
-                @foreach (var produto in Model.Produtos)
+            <a class="store-category-chip @(string.Equals(categoriaAtual, categoria, StringComparison.OrdinalIgnoreCase) ? "active" : "")"
+               href="@Url.Action("Index", "Home", new { Termo = termoAtual, Categoria = categoria, OrdenarPor = Model.Filtros.OrdenarPor })">
+                @categoria
+            </a>
+        }
+    </section>
+
+    <section class="store-advanced-row">
+        <button type="button"
+                class="store-filter-toggle"
+                id="advancedFiltersToggle">
+            <i class="fa-solid fa-sliders"></i>
+            Filtros
+        </button>
+
+        <form asp-area=""
+              asp-controller="Home"
+              asp-action="Index"
+              method="get"
+              class="store-sort-form">
+            <input type="hidden" name="Termo" value="@termoAtual" />
+            <input type="hidden" name="Categoria" value="@categoriaAtual" />
+
+            <label for="OrdenarPor">Ordenar</label>
+
+            <select id="OrdenarPor" name="OrdenarPor" onchange="this.form.submit()">
+                @foreach (var kv in Model.Filtros.OpcoesOrdenacao)
+                {
+                    if (Model.Filtros.OrdenarPor == kv.Key)
+                    {
+                        <option value="@kv.Key" selected="selected">@kv.Value</option>
+                    }
+                    else
+                    {
+                        <option value="@kv.Key">@kv.Value</option>
+                    }
+                }
+            </select>
+        </form>
+    </section>
+
+    <section class="store-advanced-panel" id="advancedFiltersPanel" hidden>
+        <form asp-area=""
+              asp-controller="Home"
+              asp-action="Index"
+              method="get"
+              class="store-filter-form">
+
+            <input type="hidden" name="OrdenarPor" value="@Model.Filtros.OrdenarPor" />
+
+            <div class="store-filter-grid">
+                <div class="store-field">
+                    <label>Buscar</label>
+                    <input name="Termo"
+                           value="@termoAtual"
+                           placeholder="Ex: Heineken, Coca-Cola, Pod..." />
+                </div>
+
+                <div class="store-field">
+                    <label>Categoria</label>
+                    <select name="Categoria">
+                        <option value="">Todas categorias</option>
+
+                        @foreach (var categoria in categorias)
+                        {
+                            if (string.Equals(categoriaAtual, categoria, StringComparison.OrdinalIgnoreCase))
+                            {
+                                <option value="@categoria" selected="selected">@categoria</option>
+                            }
+                            else
+                            {
+                                <option value="@categoria">@categoria</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div class="store-field">
+                    <label>Preço mín</label>
+                    <input name="PrecoMin"
+                           value="@(Model.Filtros.PrecoMin?.ToString() ?? "")"
+                           type="number"
+                           step="0.01"
+                           min="0"
+                           placeholder="R$" />
+                </div>
+
+                <div class="store-field">
+                    <label>Preço máx</label>
+                    <input name="PrecoMax"
+                           value="@(Model.Filtros.PrecoMax?.ToString() ?? "")"
+                           type="number"
+                           step="0.01"
+                           min="0"
+                           placeholder="R$" />
+                </div>
+            </div>
+
+            <div class="store-filter-options">
+                <label>
+                    <input type="checkbox"
+                           name="ApenasPromocoes"
+                           value="true"
+                           @(Model.Filtros.ApenasPromocoes ? "checked" : "") />
+                    Promoções
+                </label>
+
+                <label>
+                    <input type="checkbox"
+                           name="ApenasEstoque"
+                           value="true"
+                           @(Model.Filtros.ApenasEstoque ? "checked" : "") />
+                    Em estoque
+                </label>
+            </div>
+
+            <div class="store-filter-actions">
+                <a href="@Url.Action("Index", "Home")" class="store-btn store-btn-light">
+                    Limpar
+                </a>
+
+                <button type="submit" class="store-btn store-btn-primary">
+                    Aplicar filtros
+                </button>
+            </div>
+        </form>
+    </section>
+
+    <main class="store-products-section">
+        @if (produtos.Any())
+        {
+            <div class="store-product-grid">
+                @foreach (var produto in produtos)
                 {
                     var promoOk = produto.EmPromocao
                     && produto.PrecoPromocional.HasValue
@@ -176,8 +242,6 @@
 
                     var estaEsgotado = produto.EstaEsgotado;
                     var estoqueBaixo = produto.EstaComEstoqueBaixo;
-                    var statusEstoqueTexto = produto.StatusEstoqueTexto;
-                    var statusEstoqueCss = produto.StatusEstoqueCss;
 
                     var isPod = produto.TipoProduto == ProdutoTipo.PodVape;
                     var isBebida = produto.TipoProduto == ProdutoTipo.BebidaAlcoolica
@@ -192,223 +256,177 @@
                     produto.SaboresQuantidadesList.Any(s => s.Quantidade > 0)
                     );
 
+                    var categoriaLabel = produto.Categoria?.Nome
+                    ?? (isPod ? "Pod" : isBebida ? "Bebida" : "Produto");
+
+                    var embalagemTexto = produto.UnidadeVendaDescricao;
+
                     var temVolume = produto.BebidaVolumeMl.HasValue && produto.BebidaVolumeMl.Value > 0;
-                    var embalagemResumo = "";
+                    var descricaoCurta = "";
 
                     if (isBebida)
                     {
-                        if (!string.IsNullOrWhiteSpace(produto.UnidadeVendaDescricao))
-                        {
-                            embalagemResumo = produto.UnidadeVendaDescricao;
-                        }
-                        else if (produto.BebidaEmbalagem.HasValue &&
-                        produto.BebidaEmbalagem.Value != BebidaEmbalagemTipo.NaoInformado)
-                        {
-                            embalagemResumo = produto.BebidaEmbalagem.Value switch
-                            {
-                                BebidaEmbalagemTipo.Unidade => "unidade",
-                                BebidaEmbalagemTipo.Lata => "lata",
-                                BebidaEmbalagemTipo.LongNeck => "long neck",
-                                BebidaEmbalagemTipo.Garrafa => "garrafa",
-                                BebidaEmbalagemTipo.Pack => "pack",
-                                BebidaEmbalagemTipo.Fardo => "fardo",
-                                BebidaEmbalagemTipo.Caixa => "caixa",
-                                _ => ""
-                            };
-                        }
+                        var volume = temVolume ? $"{produto.BebidaVolumeMl.Value}ml" : "";
+                        descricaoCurta = string.Join(" • ", new[] { embalagemTexto, volume }.Where(x => !string.IsNullOrWhiteSpace(x)));
+                    }
+                    else if (isPod)
+                    {
+                        var puffs = produto.PodPuffs.HasValue && produto.PodPuffs.Value > 0
+                        ? $"{produto.PodPuffs.Value} puffs"
+                        : "";
+
+                        descricaoCurta = string.Join(" • ", new[] { produto.Sabor, puffs }.Where(x => !string.IsNullOrWhiteSpace(x)));
+                    }
+                    else
+                    {
+                        descricaoCurta = embalagemTexto;
                     }
 
-                    var temSpecsBebida = temVolume || !string.IsNullOrWhiteSpace(embalagemResumo);
+                    if (string.IsNullOrWhiteSpace(descricaoCurta))
+                    {
+                        descricaoCurta = produto.Descricao ?? "";
+                    }
 
-                    var temPuffs = produto.PodPuffs > 0;
-                    var bateriaTexto = (produto.PodCapacidadeBateria ?? "").Trim();
-                    var temBateria = !string.IsNullOrWhiteSpace(bateriaTexto);
-                    var temSaborPod = !string.IsNullOrWhiteSpace(produto.Sabor);
-
-                    <article class="produto-card h-100">
+                    <article class="store-product-card @(estaEsgotado ? "is-sold-out" : "")">
                         <a asp-area=""
                            asp-controller="Produto"
                            asp-action="Detalhes"
                            asp-route-id="@produto.Id"
-                           class="thumb-link"
+                           class="store-product-image-link"
                            aria-label="@produto.Nome">
 
-                            <div class="product-thumb">
-                                @if (!string.IsNullOrEmpty(produto.ImagemUrl))
+                            <div class="store-product-image">
+                                @if (!string.IsNullOrWhiteSpace(produto.ImagemUrl))
                                 {
-                                    <img src="@Url.Content(produto.ImagemUrl)" alt="@produto.Nome" />
+                                    <img src="@Url.Content(produto.ImagemUrl)"
+                                         alt="@produto.Nome"
+                                         loading="lazy"
+                                         decoding="async" />
                                 }
                                 else
                                 {
-                                    <div class="no-image">
-                                        <i class="fas fa-image"></i>
+                                    <div class="store-product-placeholder">
+                                        <i class="fa-regular fa-image"></i>
                                     </div>
                                 }
 
                                 @if (estaEsgotado)
                                 {
-                                    <span class="badge badge-top-right badge-stock-out">ESGOTADO</span>
+                                    <span class="store-product-badge is-out">Esgotado</span>
                                 }
                                 else if (estoqueBaixo)
                                 {
-                                    <span class="badge badge-top-right badge-stock-low">ULTIMAS UNIDADES</span>
+                                    <span class="store-product-badge is-low">Últimas</span>
                                 }
                                 else if (promoOk)
                                 {
-                                    <span class="badge badge-top-right badge-promo">PROMOÇÃO</span>
+                                    <span class="store-product-badge is-promo">Promo</span>
                                 }
                             </div>
                         </a>
 
-                        <div class="card-body">
+                        <div class="store-product-body">
                             <a asp-area=""
                                asp-controller="Produto"
                                asp-action="Detalhes"
                                asp-route-id="@produto.Id"
-                               class="text-decoration-none">
+                               class="store-product-info-link">
 
-                                <h6 class="title text-truncate-2">@produto.Nome</h6>
+                                <span class="store-product-category">@categoriaLabel</span>
 
-                                @if (isPod)
+                                <h2>@produto.Nome</h2>
+
+                                @if (!string.IsNullOrWhiteSpace(descricaoCurta))
                                 {
-                                    <div class="specs specs-inline small text-muted">
-                                        @if (temPuffs)
-                                        {
-                                            <span class="spec-item">
-                                                <i class="fa-solid fa-smoking"></i>
-                                                @produto.PodPuffs puffs
-                                            </span>
-                                        }
-
-                                        @if (temPuffs && temBateria)
-                                        {
-                                            <span class="spec-separator">•</span>
-                                        }
-
-                                        @if (temBateria)
-                                        {
-                                            <span class="spec-item">
-                                                <i class="fa-solid fa-battery-three-quarters"></i>
-                                                @bateriaTexto
-                                            </span>
-                                        }
-
-                                        @if ((temPuffs || temBateria) && temSaborPod)
-                                        {
-                                            <span class="spec-separator">•</span>
-                                        }
-
-                                        @if (temSaborPod)
-                                        {
-                                            <span class="spec-item">
-                                                <i class="fa-solid fa-leaf"></i>
-                                                @produto.Sabor
-                                            </span>
-                                        }
-                                    </div>
+                                    <p>@descricaoCurta</p>
                                 }
-                                else if (temSpecsBebida)
+
+                                @if (!estaEsgotado)
                                 {
-                                    <div class="specs specs-inline small text-muted">
-                                        @if (temVolume)
-                                        {
-                                            <span class="spec-item">
-                                                <i class="fa-solid fa-glass-water"></i>
-                                                @produto.BebidaVolumeMl ml
-                                            </span>
-                                        }
-
-                                        @if (temVolume && !string.IsNullOrWhiteSpace(embalagemResumo))
-                                        {
-                                            <span class="spec-separator">•</span>
-                                        }
-
-                                        @if (!string.IsNullOrWhiteSpace(embalagemResumo))
-                                        {
-                                            <span class="spec-item">
-                                                <i class="fa-solid fa-box"></i>
-                                                @embalagemResumo
-                                            </span>
-                                        }
+                                    <div class="store-stock-pill is-ok">
+                                        <i class="fa-solid fa-circle-check"></i>
+                                        <span>Em estoque</span>
                                     </div>
                                 }
                                 else
                                 {
-                                    <div class="specs specs-inline small text-muted"></div>
+                                    <div class="store-stock-pill is-out">
+                                        <i class="fa-solid fa-circle-xmark"></i>
+                                        <span>Esgotado</span>
+                                    </div>
                                 }
 
-                                <div class="price-line">
+                                @if (!estaEsgotado)
+                                {
+                                    <div class="store-stock-summary">
+                                        <i class="fa-solid fa-cube"></i>
+                                        <span>Estoque: @produto.EstoqueDescricao</span>
+                                    </div>
+                                }
+                            </a>
+
+                            <div class="store-product-footer">
+                                <div class="store-price">
                                     @if (promoOk)
                                     {
                                         <span class="old">@produto.Preco.ToString("C")</span>
                                     }
 
-                                    <span class="current">@precoAtual.ToString("C")</span>
+                                    <strong>@precoAtual.ToString("C")</strong>
                                 </div>
 
-                                @if (!string.IsNullOrWhiteSpace(statusEstoqueTexto))
+                                @if (!estaEsgotado)
                                 {
-                                    @* <div class="stock-status-line @statusEstoqueCss">
-                                        @statusEstoqueTexto
-                                    </div> *@
-                                }
-                            </a>
-
-                            @if (!estaEsgotado)
-                            {
-                                if (exigeSelecaoDeSabor)
-                                {
-                                    <div class="quick-add-form">
+                                    if (exigeSelecaoDeSabor)
+                                    {
                                         <a asp-area=""
                                            asp-controller="Produto"
                                            asp-action="Detalhes"
                                            asp-route-id="@produto.Id"
-                                           class="quick-add text-decoration-none"
+                                           class="store-add-btn"
                                            title="Escolher opções"
                                            aria-label="Escolher opções de @produto.Nome">
-                                            <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+                                            <i class="fa-solid fa-list-check"></i>
                                         </a>
-                                    </div>
+                                    }
+                                    else
+                                    {
+                                        <form asp-controller="Carrinho"
+                                              asp-action="AdicionarItem"
+                                              method="post"
+                                              class="quick-add-form store-quick-add-form">
+
+                                            @Html.AntiForgeryToken()
+
+                                            <input type="hidden" name="produtoId" value="@produto.Id" />
+                                            <input type="hidden" name="quantidade" value="1" />
+                                            <input type="hidden" name="sabor" value="" />
+                                            <input type="hidden" name="observacoes" value="" />
+                                            <input type="hidden" name="buyNow" value="false" />
+
+                                            <button type="submit"
+                                                    class="store-add-btn quick-add"
+                                                    data-product-id="@produto.Id"
+                                                    title="Adicionar ao carrinho"
+                                                    aria-label="Adicionar @produto.Nome ao carrinho">
+                                                <i class="fa-solid fa-plus qa-icon" aria-hidden="true"></i>
+                                                <i class="fa-solid fa-spinner fa-spin qa-spin" aria-hidden="true"></i>
+                                                <i class="fa-solid fa-check qa-done" aria-hidden="true"></i>
+                                            </button>
+                                        </form>
+                                    }
                                 }
                                 else
                                 {
-                                    <form asp-controller="Carrinho"
-                                          asp-action="AdicionarItem"
-                                          method="post"
-                                          class="quick-add-form">
-
-                                        @Html.AntiForgeryToken()
-
-                                        <input type="hidden" name="produtoId" value="@produto.Id" />
-                                        <input type="hidden" name="quantidade" value="1" />
-                                        <input type="hidden" name="sabor" value="" />
-                                        <input type="hidden" name="observacoes" value="" />
-                                        <input type="hidden" name="buyNow" value="false" />
-
-                                        <button type="submit"
-                                                class="quick-add"
-                                                data-product-id="@produto.Id"
-                                                title="Adicionar ao carrinho"
-                                                aria-label="Adicionar @produto.Nome ao carrinho">
-                                            <i class="fa-solid fa-cart-plus qa-icon" aria-hidden="true"></i>
-                                            <i class="fa-solid fa-spinner fa-spin qa-spin" aria-hidden="true"></i>
-                                            <i class="fa-solid fa-check qa-done" aria-hidden="true"></i>
-                                        </button>
-                                    </form>
-                                }
-                            }
-                            else
-                            {
-                                <div class="quick-add-form">
                                     <button type="button"
-                                            class="quick-add disabled"
+                                            class="store-add-btn disabled"
                                             disabled
                                             title="Produto esgotado"
                                             aria-label="@produto.Nome esgotado">
-                                        <i class="fa-solid fa-ban" aria-hidden="true"></i>
+                                        <i class="fa-solid fa-ban"></i>
                                     </button>
-                                </div>
-                            }
+                                }
+                            </div>
                         </div>
                     </article>
                 }
@@ -416,12 +434,33 @@
         }
         else
         {
-            <div class="alert alert-info text-center">
-                <i class="fas fa-box-open"></i>
-                Nenhum produto encontrado. Tente ajustar os filtros para encontrar o que procura.
+            <div class="store-empty-state">
+                <i class="fa-solid fa-box-open"></i>
+                <strong>Nenhum produto encontrado</strong>
+                <span>Tente ajustar os filtros para encontrar o que procura.</span>
             </div>
         }
-    </div>
+    </main>
+
+    <aside class="store-cart-dock @(carrinhoCountInicial > 0 ? "is-visible" : "")" id="storeCartDock">
+        <div class="store-cart-info">
+            <div class="store-cart-icon">
+                <i class="fa-solid fa-cart-shopping"></i>
+                <span id="storeCartDockCount">@carrinhoCountInicial</span>
+            </div>
+
+            <div>
+                <strong><span id="storeCartDockText">@carrinhoCountInicial</span> item(ns) no carrinho</strong>
+                <small>Continue pelo carrinho</small>
+            </div>
+        </div>
+
+        <a asp-controller="Carrinho"
+           asp-action="Index"
+           class="store-cart-button">
+            Ver carrinho
+        </a>
+    </aside>
 </div>
 
 @section Scripts {
@@ -429,25 +468,25 @@
         (function () {
             const STORAGE_KEY = 'produtos_adicionados_carrinho';
 
-            const produtosNoCarrinhoServidor = @Html.Raw(JsonSerializer.Serialize(
-                            (Model.ProdutosNoCarrinho ?? new List<int>()).Select(x => x.ToString())
-                    ));
+            const produtosNoCarrinhoServidor = @Html.Raw(produtosNoCarrinhoJson);
 
-        const topbarOrder = document.getElementById('Filtros_OrdenarPor');
-        const formOrder = document.getElementById('OrdenarPorForm');
-        const filtersForm = document.getElementById('filtersForm');
+            const filtersToggle = document.getElementById('advancedFiltersToggle');
+            const filtersPanel = document.getElementById('advancedFiltersPanel');
 
-            if (topbarOrder) {
-                topbarOrder.addEventListener('change', function () {
-                    if (formOrder) {
-                        formOrder.value = topbarOrder.value;
-                    }
+            filtersToggle?.addEventListener('click', function () {
+                if (!filtersPanel) return;
 
-                    if (filtersForm) {
-                        filtersForm.submit();
-                    }
-                });
-            }
+                const isHidden = filtersPanel.hasAttribute('hidden');
+
+                if (isHidden) {
+                    filtersPanel.removeAttribute('hidden');
+                    filtersToggle.classList.add('active');
+                    return;
+                }
+
+                filtersPanel.setAttribute('hidden', 'hidden');
+                filtersToggle.classList.remove('active');
+            });
 
             function getStorage() {
                 try {
@@ -480,14 +519,6 @@
                 }
             }
 
-            function removeStorage(id) {
-                id = String(id || '');
-                if (!id) return;
-
-                const ids = getStorage().filter(x => x !== id);
-                saveStorage(ids);
-            }
-
             function setButtonState(button, state) {
                 if (!button) return;
 
@@ -516,6 +547,24 @@
                 if (cart) cart.style.display = 'inline-block';
             }
 
+            function updateCartCount(count) {
+                const normalized = Number(count || 0);
+
+                const els = document.querySelectorAll('[data-cart-count], .cart-count, #cartCount');
+                els.forEach(el => el.textContent = normalized);
+
+                const dock = document.getElementById('storeCartDock');
+                const dockCount = document.getElementById('storeCartDockCount');
+                const dockText = document.getElementById('storeCartDockText');
+
+                if (dockCount) dockCount.textContent = normalized;
+                if (dockText) dockText.textContent = normalized;
+
+                if (dock) {
+                    dock.classList.toggle('is-visible', normalized > 0);
+                }
+            }
+
             function sincronizarStorageComServidor() {
                 const idsServidor = Array.isArray(produtosNoCarrinhoServidor)
                     ? produtosNoCarrinhoServidor.map(String)
@@ -537,11 +586,8 @@
                         setButtonState(button, 'default');
                     }
                 });
-            }
 
-            function updateCartCount(count) {
-                const els = document.querySelectorAll('[data-cart-count], .cart-count, #cartCount');
-                els.forEach(el => el.textContent = count);
+                updateCartCount(ids.length);
             }
 
             async function submitQuickAdd(form) {
@@ -584,9 +630,8 @@
                     addStorage(productId);
                     setButtonState(button, 'success');
 
-                    if (data && typeof data.count !== 'undefined') {
-                        updateCartCount(data.count);
-                    }
+                    const ids = getStorage();
+                    updateCartCount(data && typeof data.count !== 'undefined' ? data.count : ids.length);
                 } catch (e) {
                     console.error(e);
                     setButtonState(button, 'default');
@@ -608,13 +653,8 @@
                 submitQuickAdd(form);
             });
 
-            document.addEventListener('DOMContentLoaded', function () {
-                restoreButtons();
-            });
-
-            window.addEventListener('pageshow', function () {
-                restoreButtons();
-            });
+            document.addEventListener('DOMContentLoaded', restoreButtons);
+            window.addEventListener('pageshow', restoreButtons);
 
             window.produtosCarrinho = {
                 listar: () => getStorage(),
@@ -622,12 +662,7 @@
                     localStorage.removeItem(STORAGE_KEY);
                     restoreButtons();
                 },
-                remover: (productId) => {
-                    removeStorage(productId);
-                },
-                sincronizar: () => {
-                    restoreButtons();
-                }
+                sincronizar: restoreButtons
             };
         })();
     </script>
