@@ -312,15 +312,17 @@
 
                                 @if (estaEsgotado)
                                 {
-                                    <span class="store-product-badge is-out">Esgotado</span>
+                                    <div class="store-stock-pill is-out">
+                                        <i class="fa-solid fa-circle-xmark"></i>
+                                        <span>Esgotado</span>
+                                    </div>
                                 }
                                 else if (estoqueBaixo)
                                 {
-                                    <span class="store-product-badge is-low">Últimas</span>
-                                }
-                                else if (promoOk)
-                                {
-                                    <span class="store-product-badge is-promo">Promo</span>
+                                    <div class="store-stock-pill is-low">
+                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                        <span>Últimas unidades</span>
+                                    </div>
                                 }
                             </div>
                         </a>
