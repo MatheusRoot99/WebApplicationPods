@@ -5,6 +5,7 @@
 @{
     Layout = "_Layout";
     ViewData["Title"] = Model?.Produto?.Nome ?? "Produto";
+    ViewData["HideStoreHeader"] = true;
 
     var produto = Model?.Produto;
     if (produto == null)
@@ -539,8 +540,16 @@
     {
         <section class="pdp-related-section">
             <div class="pdp-related-head">
-                <h2>Produtos relacionados</h2>
-                <p>Outras opções que podem combinar com esta compra.</p>
+                <div>
+                    <h2>Você também pode gostar</h2>
+                    <p>Outras opções disponíveis na loja.</p>
+                </div>
+
+                <a asp-controller="Home"
+                   asp-action="Index"
+                   class="pdp-related-see-all">
+                    Ver todos
+                </a>
             </div>
 
             <div class="pdp-related-grid">
@@ -551,13 +560,60 @@
                     && pr.PrecoPromocional.Value < pr.Preco;
 
                     var prPreco = prTemPromo ? pr.PrecoPromocional!.Value : pr.Preco;
+                    var prEsgotado = pr.EstaEsgotado;
+                    var prEstoqueBaixo = pr.EstaComEstoqueBaixo;
 
-                    <article class="pdp-related-card">
-                        <a asp-controller="Produto" asp-action="Detalhes" asp-route-id="@pr.Id" class="pdp-related-link">
+                    var prCategoria = pr.Categoria?.Nome ?? "Produto";
+
+                    var prIsPod = pr.TipoProduto == ProdutoTipo.PodVape;
+                    var prIsBebida = pr.TipoProduto == ProdutoTipo.BebidaAlcoolica
+                    || pr.BebidaVolumeMl.HasValue
+                    || pr.BebidaEmbalagem.HasValue
+                    || pr.BebidaQtdPorEmbalagem.HasValue
+                    || !string.IsNullOrWhiteSpace(pr.BebidaTipo);
+
+                    var prDescricaoCurta = "";
+
+                    if (prIsBebida)
+                    {
+                        var volume = pr.BebidaVolumeMl.HasValue && pr.BebidaVolumeMl.Value > 0
+                        ? $"{pr.BebidaVolumeMl.Value}ml"
+                        : "";
+
+                        prDescricaoCurta = string.Join(" • ", new[] { pr.UnidadeVendaDescricao, volume }.Where(x => !string.IsNullOrWhiteSpace(x)));
+                    }
+                    else if (prIsPod)
+                    {
+                        var puffs = pr.PodPuffs.HasValue && pr.PodPuffs.Value > 0
+                        ? $"{pr.PodPuffs.Value} puffs"
+                        : "";
+
+                        prDescricaoCurta = string.Join(" • ", new[] { pr.Sabor, puffs }.Where(x => !string.IsNullOrWhiteSpace(x)));
+                    }
+                    else
+                    {
+                        prDescricaoCurta = pr.UnidadeVendaDescricao;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(prDescricaoCurta))
+                    {
+                        prDescricaoCurta = pr.Descricao ?? "";
+                    }
+
+                    <article class="pdp-related-card @(prEsgotado ? "is-sold-out" : "")">
+                        <a asp-controller="Produto"
+                           asp-action="Detalhes"
+                           asp-route-id="@pr.Id"
+                           class="pdp-related-link"
+                           aria-label="@pr.Nome">
+
                             <div class="pdp-related-image">
                                 @if (!string.IsNullOrWhiteSpace(pr.ImagemUrl))
                                 {
-                                    <img src="@Url.Content(pr.ImagemUrl)" alt="@pr.Nome" loading="lazy" decoding="async" />
+                                    <img src="@Url.Content(pr.ImagemUrl)"
+                                         alt="@pr.Nome"
+                                         loading="lazy"
+                                         decoding="async" />
                                 }
                                 else
                                 {
@@ -566,26 +622,49 @@
                                     </div>
                                 }
 
-                                @if (prTemPromo)
+                                @if (prEsgotado)
                                 {
-                                    <span class="pdp-related-ribbon">Promo</span>
+                                    <span class="pdp-related-ribbon is-out">
+                                        Esgotado
+                                    </span>
+                                }
+                                else if (prEstoqueBaixo)
+                                {
+                                    <span class="pdp-related-ribbon is-low">
+                                        Últimas
+                                    </span>
+                                }
+                                else if (prTemPromo)
+                                {
+                                    <span class="pdp-related-ribbon is-promo">
+                                        Promo
+                                    </span>
                                 }
                             </div>
 
                             <div class="pdp-related-body">
+                                <span class="pdp-related-category">@prCategoria</span>
+
                                 <h3>@pr.Nome</h3>
 
-                                <div class="pdp-related-price">
-                                    @if (prTemPromo)
-                                    {
-                                        <span class="old">@pr.Preco.ToString("C")</span>
-                                    }
+                                @if (!string.IsNullOrWhiteSpace(prDescricaoCurta))
+                                {
+                                    <p>@prDescricaoCurta</p>
+                                }
 
-                                    <span class="new">@prPreco.ToString("C")</span>
-                                </div>
+                                <div class="pdp-related-footer">
+                                    <div class="pdp-related-price">
+                                        @if (prTemPromo)
+                                        {
+                                            <span class="old">@pr.Preco.ToString("C")</span>
+                                        }
 
-                                <div class="pdp-related-status @pr.StatusEstoqueCss">
-                                    @pr.StatusEstoqueTexto
+                                        <span class="new">@prPreco.ToString("C")</span>
+                                    </div>
+
+                                    <span class="pdp-related-add @(prEsgotado ? "disabled" : "")">
+                                        <i class="fas @(prEsgotado ? "fa-ban" : "fa-plus")"></i>
+                                    </span>
                                 </div>
                             </div>
                         </a>

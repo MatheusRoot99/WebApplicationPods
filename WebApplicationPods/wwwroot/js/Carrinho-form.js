@@ -3,29 +3,29 @@
 
     const STORAGE_KEY = "produtos_adicionados_carrinho";
 
+    const qs = (selector, root = document) => root.querySelector(selector);
+    const qsa = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+
     document.addEventListener("DOMContentLoaded", () => {
         initCartUI();
-
-        setTimeout(() => {
-            document.querySelectorAll("#carrinho-alerts .alert").forEach((alert) => {
-                alert.style.transition = "opacity 0.5s";
-                alert.style.opacity = "0";
-                setTimeout(() => alert.remove(), 500);
-            });
-        }, 5000);
+        autoHideAlerts();
     });
 
-    const qs = (s, r = document) => r.querySelector(s);
-    const qsa = (s, r = document) => Array.from(r.querySelectorAll(s));
+    const parseCurrency = (value) => {
+        if (!value) return 0;
 
-    const parseCurrency = (str) => {
-        if (!str) return 0;
-        return parseFloat(String(str).replace(/[^\d,]/g, "").replace(",", ".")) || 0;
+        return parseFloat(
+            String(value)
+                .replace(/[^\d,.-]/g, "")
+                .replace(/\./g, "")
+                .replace(",", ".")
+        ) || 0;
     };
 
     const clampByMinMax = (input, value) => {
-        const min = parseInt(input.getAttribute("min")) || 1;
-        const max = parseInt(input.getAttribute("max")) || 999;
+        const min = parseInt(input.getAttribute("min"), 10) || 1;
+        const max = parseInt(input.getAttribute("max"), 10) || 999;
+
         return Math.min(Math.max(value, min), max);
     };
 
@@ -39,6 +39,7 @@
         try {
             const data = localStorage.getItem(STORAGE_KEY);
             if (!data) return [];
+
             const parsed = JSON.parse(data);
             return Array.isArray(parsed) ? parsed.map(String) : [];
         } catch {
@@ -48,166 +49,253 @@
 
     const saveStorage = (ids) => {
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify([...new Set(ids.map(String))]));
-        } catch { }
+            localStorage.setItem(
+                STORAGE_KEY,
+                JSON.stringify([...new Set((ids || []).map(String))])
+            );
+        } catch {
+            // localStorage pode falhar em alguns navegadores/modos privados.
+        }
     };
 
     const removeFromStorage = (produtoId) => {
         if (!produtoId) return;
-        const ids = getStorage().filter(x => x !== String(produtoId));
+
+        const ids = getStorage().filter(id => id !== String(produtoId));
         saveStorage(ids);
     };
 
+    const autoHideAlerts = () => {
+        setTimeout(() => {
+            qsa("#carrinho-alerts .alert").forEach((alert) => {
+                alert.style.transition = "opacity .45s ease";
+                alert.style.opacity = "0";
+
+                setTimeout(() => alert.remove(), 450);
+            });
+        }, 4500);
+    };
+
     const setTotalAnimated = (newTotalString) => {
-        const totalEl = qs(".total-valor");
+        const totalEl =
+            qs(".total-valor") ||
+            qs("[data-cart-total]") ||
+            qs("#totalCarrinho");
+
         if (!totalEl || !newTotalString) return;
 
-        const oldVal = parseCurrency(totalEl.textContent);
-        const newVal = parseCurrency(newTotalString);
+        const oldValue = parseCurrency(totalEl.textContent);
+        const newValue = parseCurrency(newTotalString);
 
         totalEl.textContent = newTotalString;
 
-        if (newVal > oldVal) {
+        totalEl.classList.remove("highlight-update", "highlight-remove");
+
+        if (newValue > oldValue) {
             totalEl.classList.add("highlight-update");
-            totalEl.classList.remove("highlight-remove");
-        } else if (newVal < oldVal) {
+        } else if (newValue < oldValue) {
             totalEl.classList.add("highlight-remove");
-            totalEl.classList.remove("highlight-update");
-        } else {
-            totalEl.classList.remove("highlight-update", "highlight-remove");
         }
 
         setTimeout(() => {
             totalEl.classList.remove("highlight-update", "highlight-remove");
-        }, 1000);
+        }, 900);
     };
 
     const updateBadges = (count) => {
+        const normalized = Number(count || 0);
+
         if (typeof window.updateCartBadges === "function") {
-            window.updateCartBadges(count);
+            window.updateCartBadges(normalized);
         }
+
+        qsa("[data-cart-count], .cart-count, #cartCount").forEach((el) => {
+            el.textContent = normalized;
+        });
     };
 
     const showAlert = (type, message) => {
         const alerts = qs("#carrinho-alerts");
-        if (!alerts) return;
+        if (!alerts || !message) return;
 
-        qsa(`.alert-${type}`, alerts).forEach((a) => a.remove());
+        const cssType = type === "success" ? "success" : "danger";
+        qsa(`.alert-${cssType}`, alerts).forEach((alert) => alert.remove());
 
         const div = document.createElement("div");
-        div.className = `alert alert-${type === "success" ? "success" : "danger"} alert-dismissible fade show`;
+        div.className = `alert alert-${cssType} alert-dismissible fade show`;
         div.innerHTML = `
-            <i class="fas ${type === "success" ? "fa-check-circle" : "fa-exclamation-circle"} me-1"></i>
-            ${message}
+            <i class="fas ${cssType === "success" ? "fa-check-circle" : "fa-exclamation-circle"} me-1"></i>
+            ${escapeHtml(message)}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
         `;
+
         alerts.appendChild(div);
 
-        if (window.bootstrap?.Alert) new bootstrap.Alert(div);
+        if (window.bootstrap?.Alert) {
+            new bootstrap.Alert(div);
+        }
 
         setTimeout(() => {
-            if (div.parentNode) {
-                const bs = window.bootstrap?.Alert?.getOrCreateInstance(div);
-                bs ? bs.close() : div.remove();
-            }
-        }, 5000);
+            if (!div.parentNode) return;
+
+            const bs = window.bootstrap?.Alert?.getOrCreateInstance(div);
+            bs ? bs.close() : div.remove();
+        }, 4200);
     };
 
-    const toggleEmptyStateIfNeeded = (isEmptyHint = null) => {
-        const noItems =
-            typeof isEmptyHint === "boolean"
-                ? isEmptyHint
-                : qsa(".linha-item").length === 0;
+    const escapeHtml = (value) => {
+        return String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    };
 
-        const resumo = qs("#resumo-card");
-        const empty = qs("#empty-state");
-        const pop = qs("#populares-wrapper");
+    const mustReload = (response) => {
+        const contentType = response.headers.get("content-type") || "";
+        return !contentType.includes("application/json");
+    };
 
-        if (noItems) {
-            resumo?.classList.add("d-none");
-            empty?.classList.remove("d-none");
-            pop?.classList.remove("d-none");
-        } else {
-            resumo?.classList.remove("d-none");
-            empty?.classList.add("d-none");
-            pop?.classList.add("d-none");
+    const reloadIfEmpty = (result) => {
+        if (result?.isEmpty === true || Number(result?.count ?? 1) <= 0) {
+            window.location.reload();
+            return true;
+        }
+
+        return false;
+    };
+
+    const getQtyInput = (form) =>
+        form?.querySelector(".cart-qty-input") ||
+        form?.querySelector(".quantidade-input");
+
+    const getItemCard = (element) =>
+        element?.closest(".cart-item-card") ||
+        element?.closest(".linha-item");
+
+    const setButtonLoading = (button, loading) => {
+        if (!button) return;
+
+        if (loading) {
+            if (!button.dataset.originalHtml) {
+                button.dataset.originalHtml = button.innerHTML;
+            }
+
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            return;
+        }
+
+        button.disabled = false;
+
+        if (button.dataset.originalHtml) {
+            button.innerHTML = button.dataset.originalHtml;
         }
     };
 
-    const mustReload = (resp) => {
-        const ct = resp.headers.get("content-type");
-        return !ct || !ct.includes("application/json");
+    const pulseCard = (form) => {
+        const card = getItemCard(form);
+        if (!card) return;
+
+        card.classList.remove("is-updated");
+        void card.offsetWidth;
+        card.classList.add("is-updated");
+
+        setTimeout(() => {
+            card.classList.remove("is-updated");
+        }, 650);
     };
 
-    const handleQuantityUpdate = async (form, newValue) => {
+    const handleQuantityUpdate = async (form, newValue, button = null) => {
         const formData = new FormData(form);
         formData.set("quantidade", newValue);
 
+        setButtonLoading(button, true);
+
         try {
-            const resp = await fetch(form.action, {
+            const response = await fetch(form.action, {
                 method: "POST",
                 body: formData,
                 headers: {
                     "X-Requested-With": "XMLHttpRequest",
-                    "RequestVerificationToken": getAFToken(form),
+                    "RequestVerificationToken": getAFToken(form)
                 },
                 credentials: "same-origin"
             });
 
-            if (mustReload(resp)) {
+            if (mustReload(response)) {
                 window.location.reload();
                 return;
             }
 
-            const result = await resp.json();
+            const result = await response.json();
 
             if (result.ok) {
                 updateBadges(result.count);
-                if (result.total) setTotalAnimated(result.total);
-                toggleEmptyStateIfNeeded(result.isEmpty);
-                showAlert("success", result.message || "Quantidade atualizada com sucesso");
-            } else {
-                if ((result.error || "").toLowerCase().includes("não encontrado")) {
-                    window.location.reload();
+
+                if (result.total) {
+                    setTotalAnimated(result.total);
+                }
+
+                pulseCard(form);
+
+                if (reloadIfEmpty(result)) {
                     return;
                 }
 
-                showAlert("danger", result.error || "Erro ao atualizar quantidade");
-
-                const input = form.querySelector(".quantidade-input");
-                if (input) input.value = input.getAttribute("data-old-value") || input.value;
+                return;
             }
-        } catch (err) {
-            console.error("Erro ao atualizar quantidade:", err);
-            showAlert("danger", "Erro de conexão ao atualizar quantidade");
 
-            const input = form.querySelector(".quantidade-input");
-            if (input) input.value = input.getAttribute("data-old-value") || input.value;
+            const error = result.error || "Erro ao atualizar quantidade";
+
+            if (error.toLowerCase().includes("não encontrado")) {
+                window.location.reload();
+                return;
+            }
+
+            showAlert("danger", error);
+            restoreOldQuantity(form);
+        } catch (error) {
+            console.error("Erro ao atualizar quantidade:", error);
+            showAlert("danger", "Erro de conexão ao atualizar quantidade");
+            restoreOldQuantity(form);
+        } finally {
+            setButtonLoading(button, false);
         }
     };
 
-    const handleRemove = async (form) => {
+    const restoreOldQuantity = (form) => {
+        const input = getQtyInput(form);
+        if (!input) return;
+
+        input.value = input.getAttribute("data-old-value") || input.value;
+    };
+
+    const handleRemove = async (form, button = null) => {
         const formData = new FormData(form);
+        const produtoIdFallback = form.querySelector('input[name="produtoId"]')?.value;
+
+        setButtonLoading(button, true);
 
         try {
-            const resp = await fetch(form.action, {
+            const response = await fetch(form.action, {
                 method: "POST",
                 body: formData,
                 headers: {
                     "X-Requested-With": "XMLHttpRequest",
-                    "RequestVerificationToken": getAFToken(form),
+                    "RequestVerificationToken": getAFToken(form)
                 },
                 credentials: "same-origin"
             });
 
-            if (mustReload(resp)) {
-                const produtoIdFallback = form.querySelector('input[name="produtoId"]')?.value;
+            if (mustReload(response)) {
                 removeFromStorage(produtoIdFallback);
                 window.location.reload();
                 return;
             }
 
-            const result = await resp.json();
+            const result = await response.json();
 
             if (result.ok) {
                 const produtoId = form.querySelector('input[name="produtoId"]')?.value;
@@ -215,85 +303,97 @@
 
                 updateBadges(result.count);
 
-                const row = form.closest(".linha-item");
-                if (row) {
-                    row.style.transition = "opacity .3s, transform .3s";
-                    row.style.opacity = "0";
-                    row.style.transform = "translateX(-100px)";
+                const card = getItemCard(form);
+
+                if (card) {
+                    card.style.transition = "opacity .25s ease, transform .25s ease";
+                    card.style.opacity = "0";
+                    card.style.transform = "translateX(-24px)";
 
                     setTimeout(() => {
-                        row.remove();
-                        if (result.total) setTotalAnimated(result.total);
-                        toggleEmptyStateIfNeeded(result.isEmpty);
-                    }, 300);
+                        card.remove();
+
+                        if (result.total) {
+                            setTotalAnimated(result.total);
+                        }
+
+                        reloadIfEmpty(result);
+                    }, 250);
                 } else {
-                    if (result.total) setTotalAnimated(result.total);
-                    toggleEmptyStateIfNeeded(result.isEmpty);
+                    if (result.total) {
+                        setTotalAnimated(result.total);
+                    }
+
+                    reloadIfEmpty(result);
                 }
 
-                showAlert("success", result.message || "Item removido com sucesso");
-            } else {
-                if ((result.error || "").toLowerCase().includes("não encontrado")) {
-                    window.location.reload();
-                    return;
-                }
-
-                showAlert("danger", result.error || "Erro ao remover item");
+                showAlert("success", result.message || "Item removido do carrinho");
+                return;
             }
-        } catch (err) {
-            console.error("Erro ao remover item:", err);
+
+            const error = result.error || "Erro ao remover item";
+
+            if (error.toLowerCase().includes("não encontrado")) {
+                window.location.reload();
+                return;
+            }
+
+            showAlert("danger", error);
+        } catch (error) {
+            console.error("Erro ao remover item:", error);
             showAlert("danger", "Erro de conexão ao remover item");
-            setTimeout(() => window.location.reload(), 1000);
+
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } finally {
+            setButtonLoading(button, false);
         }
     };
 
     function initCartUI() {
-        document.addEventListener("click", (e) => {
-            const btn = e.target.closest(".quantidade-form .btn-outline");
-            if (!btn) return;
+        document.addEventListener("click", (event) => {
+            const button = event.target.closest(".cart-qty-form .cart-qty-btn, .quantidade-form .btn-outline");
+            if (!button) return;
 
-            e.preventDefault();
+            event.preventDefault();
 
-            const form = btn.closest("form");
-            const input = form?.querySelector(".quantidade-input");
+            const form = button.closest("form");
+            const input = getQtyInput(form);
+
             if (!form || !input) return;
 
-            const currentValue = parseInt(input.value) || 0;
+            const currentValue = parseInt(input.value, 10) || 1;
             let newValue = currentValue;
 
-            if (btn.querySelector(".fa-plus")) newValue = currentValue + 1;
-            if (btn.querySelector(".fa-minus")) newValue = currentValue - 1;
+            const op = button.getAttribute("value") || button.value || "";
+
+            if (op === "inc" || button.querySelector(".fa-plus")) {
+                newValue = currentValue + 1;
+            }
+
+            if (op === "dec" || button.querySelector(".fa-minus")) {
+                newValue = currentValue - 1;
+            }
 
             newValue = clampByMinMax(input, newValue);
 
-            if (newValue !== currentValue) {
-                input.setAttribute("data-old-value", input.value);
-                input.value = newValue;
-                handleQuantityUpdate(form, newValue);
-            }
-        });
+            if (newValue === currentValue) return;
 
-        document.addEventListener("click", (e) => {
-            const btn = e.target.closest(".quantidade-form .btn-primary");
-            if (!btn) return;
-
-            e.preventDefault();
-
-            const form = btn.closest("form");
-            const input = form?.querySelector(".quantidade-input");
-            if (!form || !input) return;
-
-            const value = parseInt(input.value) || 1;
             input.setAttribute("data-old-value", input.value);
-            handleQuantityUpdate(form, value);
+            input.value = newValue;
+
+            handleQuantityUpdate(form, newValue, button);
         });
 
-        document.addEventListener("change", (e) => {
-            const input = e.target.closest(".quantidade-input");
+        document.addEventListener("change", (event) => {
+            const input = event.target.closest(".cart-qty-input, .quantidade-input");
             if (!input) return;
 
             const form = input.closest("form");
-            let value = parseInt(input.value) || 1;
+            if (!form) return;
+
+            let value = parseInt(input.value, 10) || 1;
             value = clampByMinMax(input, value);
 
             input.setAttribute("data-old-value", input.value);
@@ -302,31 +402,54 @@
             handleQuantityUpdate(form, value);
         });
 
-        document.addEventListener("keydown", (e) => {
-            const input = e.target.closest(".quantidade-input");
+        document.addEventListener("keydown", (event) => {
+            const input = event.target.closest(".cart-qty-input, .quantidade-input");
             if (!input) return;
 
-            if (e.key === "Enter") {
-                e.preventDefault();
+            if (event.key === "Enter") {
+                event.preventDefault();
                 input.setAttribute("data-old-value", input.value);
-                input.dispatchEvent(new Event("change"));
+                input.dispatchEvent(new Event("change", { bubbles: true }));
             }
         });
 
-        document.addEventListener("focusin", (e) => {
-            const input = e.target.closest(".quantidade-input");
-            if (input) input.setAttribute("data-old-value", input.value);
+        document.addEventListener("focusin", (event) => {
+            const input = event.target.closest(".cart-qty-input, .quantidade-input");
+            if (!input) return;
+
+            input.setAttribute("data-old-value", input.value);
         });
 
-        document.addEventListener("submit", (e) => {
-            const form = e.target.closest(".remove-form");
-            if (!form) return;
+        document.addEventListener("submit", (event) => {
+            const qtyForm = event.target.closest(".cart-qty-form, .quantidade-form");
 
-            e.preventDefault();
+            if (qtyForm) {
+                event.preventDefault();
 
-            if (!confirm("Tem certeza que deseja remover este item do carrinho?")) return;
+                const input = getQtyInput(qtyForm);
+                if (!input) return;
 
-            handleRemove(form);
+                let value = parseInt(input.value, 10) || 1;
+                value = clampByMinMax(input, value);
+
+                input.setAttribute("data-old-value", input.value);
+                input.value = value;
+
+                handleQuantityUpdate(qtyForm, value);
+                return;
+            }
+
+            const removeForm = event.target.closest(".cart-remove-form, .remove-form");
+            if (!removeForm) return;
+
+            event.preventDefault();
+
+            if (!confirm("Remover este item do carrinho?")) {
+                return;
+            }
+
+            const button = removeForm.querySelector("button[type='submit']");
+            handleRemove(removeForm, button);
         });
     }
 })();

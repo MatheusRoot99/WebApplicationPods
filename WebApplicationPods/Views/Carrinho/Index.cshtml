@@ -4,8 +4,13 @@
 
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
-    var ptBR = CultureInfo.GetCultureInfo("pt-BR");
     ViewData["Title"] = "Seu carrinho";
+    ViewData["HideStoreHeader"] = true;
+
+    var ptBR = CultureInfo.GetCultureInfo("pt-BR");
+    var itens = Model?.Carrinho?.Itens ?? new List<WebApplicationPods.Models.CarrinhoItemViewModel>();
+    var temItens = itens.Any();
+    var total = Model?.Carrinho?.Total ?? 0m;
 }
 
 @section Styles {
@@ -13,8 +18,25 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 }
 
-<div class="carrinho-container">
-    <div id="carrinho-alerts">
+<div class="cart-page">
+    <header class="cart-header">
+        <div>
+            <a asp-controller="Home" asp-action="Index" class="cart-back" aria-label="Voltar">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+        </div>
+
+        <div class="cart-header-title">
+            <h1>Seu carrinho</h1>
+            <p>@(temItens ? $"{itens.Count} item(ns) selecionado(s)" : "Carrinho vazio")</p>
+        </div>
+
+        <a asp-controller="Home" asp-action="Index" class="cart-icon-link" aria-label="Loja">
+            <i class="fas fa-store"></i>
+        </a>
+    </header>
+
+    <div id="carrinho-alerts" class="cart-alerts">
         @if (TempData["Sucesso"] is string ok && !string.IsNullOrWhiteSpace(ok))
         {
             <div class="alert alert-success">
@@ -30,237 +52,185 @@
         }
     </div>
 
-    <h2 class="carrinho-title">@ViewData["Title"]</h2>
-
-    @if (Model?.Carrinho?.Itens?.Any() == true)
+    @if (temItens)
     {
-        <div class="cart-grid">
-            <div>
-                <div class="table-responsive">
-                    <table class="carrinho-table">
-                        <thead>
-                            <tr>
-                                <th>Produto</th>
-                                <th style="width:260px;">Quantidade</th>
-                                <th>Preço</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var item in Model.Carrinho.Itens)
+        <div class="cart-layout">
+            <main class="cart-items">
+                @foreach (var item in itens)
+                {
+                    item.Produto?.DeserializarSaboresQuantidades();
+
+                    var produto = item.Produto;
+                    var chaveSabor = item.Sabor ?? string.Empty;
+
+                    int maxPermitido;
+                    if (!string.IsNullOrWhiteSpace(chaveSabor) &&
+                    produto?.SaboresQuantidadesList?.Any() == true)
+                    {
+                        var sq = produto.SaboresQuantidadesList
+                        .FirstOrDefault(s => string.Equals(s.Sabor, chaveSabor, StringComparison.OrdinalIgnoreCase));
+
+                        maxPermitido = sq?.Quantidade ?? produto.Estoque;
+                    }
+                    else
+                    {
+                        maxPermitido = produto?.Estoque ?? 1;
+                    }
+
+                    if (maxPermitido < 1)
+                    {
+                        maxPermitido = 1;
+                    }
+
+                    var temPromo = produto?.EstaEmPromocao() == true;
+                    var precoNormal = produto?.Preco ?? 0m;
+                    var precoFinal = temPromo ? (produto?.PrecoPromocional ?? precoNormal) : precoNormal;
+                    var subtotal = item.Quantidade * precoFinal;
+
+                    var partesDescricao = new List<string>();
+
+                    if (!string.IsNullOrWhiteSpace(item.Sabor))
+                    {
+                        partesDescricao.Add(item.Sabor);
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(produto?.UnidadeVendaDescricao))
+                    {
+                        partesDescricao.Add(produto.UnidadeVendaDescricao);
+                    }
+
+                    if (produto?.BebidaVolumeMl.HasValue == true && produto.BebidaVolumeMl.Value > 0)
+                    {
+                        partesDescricao.Add($"{produto.BebidaVolumeMl.Value} ml");
+                    }
+
+                    if (produto?.PodPuffs.HasValue == true && produto.PodPuffs.Value > 0)
+                    {
+                        partesDescricao.Add($"{produto.PodPuffs.Value} puffs");
+                    }
+
+                    var descricaoResumo = partesDescricao.Any()
+                    ? string.Join(" • ", partesDescricao)
+                    : (!string.IsNullOrWhiteSpace(produto?.Descricao) ? produto.Descricao : "Produto selecionado");
+
+                    var quantidadeVendaResumo = produto?.EhEmbalagemComposta == true
+                    ? $"{item.Quantidade} {(item.Quantidade == 1 ? produto.EmbalagemVendaSingular : produto.EmbalagemVendaPlural)} com {produto.UnidadesFisicasPorEmbalagem} unidades"
+                    : (item.Quantidade == 1 ? "1 unidade" : $"{item.Quantidade} unidades");
+
+                    <article class="cart-item-card">
+                        <div class="cart-item-image">
+                            @if (!string.IsNullOrWhiteSpace(produto?.ImagemUrl))
                             {
-                                item.Produto?.DeserializarSaboresQuantidades();
-                                var chaveSabor = item.Sabor ?? string.Empty;
-
-                                int maxPermitido;
-                                if (!string.IsNullOrWhiteSpace(chaveSabor) &&
-                                item.Produto?.SaboresQuantidadesList?.Any() == true)
-                                {
-                                    var sq = item.Produto.SaboresQuantidadesList
-                                    .FirstOrDefault(s => string.Equals(s.Sabor, chaveSabor, StringComparison.OrdinalIgnoreCase));
-                                    maxPermitido = sq?.Quantidade ?? item.Produto!.Estoque;
-                                }
-                                else
-                                {
-                                    maxPermitido = item.Produto?.Estoque ?? 1;
-                                }
-
-                                if (maxPermitido < 1) maxPermitido = 1;
-
-                                var temPromo = item.Produto?.EstaEmPromocao() == true;
-                                var precoNormal = item.Produto?.Preco ?? 0m;
-                                var precoFinal = temPromo
-                                ? (item.Produto?.PrecoPromocional ?? precoNormal)
-                                : precoNormal;
-
-                                bool puffOk = item.Produto?.PodPuffs > 0;
-                                bool batOk = int.TryParse(item.Produto?.PodCapacidadeBateria, out var bat) && bat > 0;
-                                bool temSpecsPod = puffOk || batOk;
-
-                                bool volumeOk = item.Produto?.BebidaVolumeMl.HasValue == true &&
-                                item.Produto.BebidaVolumeMl.Value > 0;
-
-                                bool teorOk = false;
-                                string teorTxt = "";
-                                if (item.Produto?.BebidaTeorAlcoolico.HasValue == true &&
-                                item.Produto.BebidaTeorAlcoolico.Value > 0)
-                                {
-                                    teorOk = true;
-                                    teorTxt = item.Produto.BebidaTeorAlcoolico.Value.ToString("0.##") + "%";
-                                }
-
-                                bool embalagemOk = item.Produto?.BebidaEmbalagem.HasValue == true &&
-                                item.Produto.BebidaEmbalagem.Value != WebApplicationPods.Enum.BebidaEmbalagemTipo.NaoInformado;
-
-                                bool qtdEmbOk = item.Produto?.BebidaQtdPorEmbalagem.HasValue == true &&
-                                item.Produto.BebidaQtdPorEmbalagem.Value > 0;
-
-                                string embalagemTxt = "";
-                                if (embalagemOk)
-                                {
-                                    embalagemTxt = item.Produto!.BebidaEmbalagem!.Value switch
-                                    {
-                                        WebApplicationPods.Enum.BebidaEmbalagemTipo.Unidade => "Unidade",
-                                        WebApplicationPods.Enum.BebidaEmbalagemTipo.Lata => "Lata",
-                                        WebApplicationPods.Enum.BebidaEmbalagemTipo.LongNeck => "Long Neck",
-                                        WebApplicationPods.Enum.BebidaEmbalagemTipo.Garrafa => "Garrafa",
-                                        WebApplicationPods.Enum.BebidaEmbalagemTipo.Fardo => "Fardo",
-                                        WebApplicationPods.Enum.BebidaEmbalagemTipo.Caixa => "Caixa",
-                                        WebApplicationPods.Enum.BebidaEmbalagemTipo.Pack => "Pack",
-                                        _ => ""
-                                    };
-                                }
-
-                                string embalagemResumo = "";
-                                if (embalagemOk)
-                                {
-                                    var emb = item.Produto!.BebidaEmbalagem!.Value;
-                                    bool embMultipla =
-                                    emb == WebApplicationPods.Enum.BebidaEmbalagemTipo.Fardo ||
-                                    emb == WebApplicationPods.Enum.BebidaEmbalagemTipo.Caixa ||
-                                    emb == WebApplicationPods.Enum.BebidaEmbalagemTipo.Pack;
-
-                                    if (embMultipla && qtdEmbOk)
-                                        embalagemResumo = item.Produto.UnidadeVendaDescricao;
-                                    else
-                                        embalagemResumo = embalagemTxt;
-                                }
-
-                                bool temSpecsBebida = volumeOk || teorOk || !string.IsNullOrWhiteSpace(embalagemResumo);
-                                bool pareceBebida = temSpecsBebida || !string.IsNullOrWhiteSpace(item.Produto?.BebidaTipo);
-
-                                var partesDescricao = new List<string>();
-
-                                if (temSpecsPod)
-                                {
-                                    if (puffOk)
-                                        partesDescricao.Add($"{item.Produto!.PodPuffs} puffs");
-
-                                    if (batOk)
-                                        partesDescricao.Add($"{bat} mAh");
-                                }
-                                else if (pareceBebida)
-                                {
-                                    if (volumeOk)
-                                        partesDescricao.Add($"{item.Produto!.BebidaVolumeMl} ml");
-
-                                    if (teorOk)
-                                        partesDescricao.Add(teorTxt);
-
-                                    if (!string.IsNullOrWhiteSpace(embalagemResumo))
-                                        partesDescricao.Add(embalagemResumo);
-                                }
-
-                                string descricaoResumo = partesDescricao.Any()
-                                ? string.Join(" • ", partesDescricao)
-                                : (!string.IsNullOrWhiteSpace(item.Produto?.Descricao)
-                                ? item.Produto.Descricao
-                                : "Produto selecionado");
-
-                                string quantidadeVendaResumo = item.Produto?.EhEmbalagemComposta == true
-                                ? $"{item.Quantidade} {(item.Quantidade == 1 ? item.Produto.EmbalagemVendaSingular : item.Produto.EmbalagemVendaPlural)} com {item.Produto.UnidadesFisicasPorEmbalagem} unidades"
-                                : (item.Quantidade == 1 ? "1 unidade" : $"{item.Quantidade} unidades");
-
-                                <tr class="linha-item">
-                                    <td data-label="Produto" class="cell-produto">
-                                        <div class="produto-info">
-                                            <img src="@(item.Produto?.ImagemUrl ?? "https://via.placeholder.com/120x120?text=%20")"
-                                                 alt="@(item.Produto?.Nome ?? "Produto")"
-                                                 class="produto-imagem" />
-
-                                            <div class="produto-meta">
-                                                <h5 class="produto-nome">@item.Produto?.Nome</h5>
-
-                                                <div class="produto-descricao">
-                                                    @descricaoResumo
-                                                </div>
-
-                                                <div class="produto-descricao">
-                                                    @quantidadeVendaResumo
-                                                </div>
-
-                                                @if (!string.IsNullOrEmpty(item.Observacoes))
-                                                {
-                                                    <div class="produto-observacoes">
-                                                        <strong>Obs:</strong> @item.Observacoes
-                                                    </div>
-                                                }
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <td data-label="Quantidade" class="cell-quantidade">
-                                        <form asp-action="AtualizarItem" method="post" class="quantidade-form">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="produtoId" value="@item.Produto!.Id" />
-                                            <input type="hidden" name="sabor" value="@item.Sabor" />
-
-                                            <div class="input-group">
-                                                <button type="submit"
-                                                        name="op"
-                                                        value="dec"
-                                                        class="btn btn-outline btn-outline-secondary qty-btn"
-                                                        aria-label="Diminuir">
-                                                    <i class="fas fa-minus"></i>
-                                                </button>
-
-                                                <input type="number"
-                                                       name="quantidade"
-                                                       value="@item.Quantidade"
-                                                       min="1"
-                                                       max="@maxPermitido"
-                                                       class="form-control text-center quantidade-input"
-                                                       inputmode="numeric" />
-
-                                                <button type="submit"
-                                                        name="op"
-                                                        value="inc"
-                                                        class="btn btn-outline btn-outline-secondary qty-btn"
-                                                        aria-label="Aumentar">
-                                                    <i class="fas fa-plus"></i>
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </td>
-
-                                    <td data-label="Preço" class="cell-preco preco-final">
-                                        @precoFinal.ToString("C", ptBR)
-                                    </td>
-
-                                    <td data-label="Ações" class="cell-acoes">
-                                        <form asp-action="RemoverItem" method="post" class="remove-form">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="produtoId" value="@item.Produto!.Id" />
-                                            <input type="hidden" name="sabor" value="@item.Sabor" />
-
-                                            <button type="submit"
-                                                    class="btn btn-danger btn-remover-icon"
-                                                    aria-label="Remover item">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
+                                <img src="@Url.Content(produto.ImagemUrl)"
+                                     alt="@(produto?.Nome ?? "Produto")"
+                                     loading="lazy"
+                                     decoding="async" />
                             }
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                            else
+                            {
+                                <div class="cart-item-placeholder">
+                                    <i class="fas fa-image"></i>
+                                </div>
+                            }
+                        </div>
 
-            <aside>
-                <div id="resumo-card" class="total-card">
-                    <div class="total-label">Total:</div>
-                    <div class="total-valor">
-                        @Model.Carrinho.Total.ToString("C", ptBR)
+                        <div class="cart-item-content">
+                            <div class="cart-item-top">
+                                <div class="cart-item-main">
+                                    <h2>@(produto?.Nome ?? "Produto")</h2>
+                                    <p>@descricaoResumo</p>
+                                    <span>@quantidadeVendaResumo</span>
+
+                                    @if (!string.IsNullOrWhiteSpace(item.Observacoes))
+                                    {
+                                        <small><strong>Obs:</strong> @item.Observacoes</small>
+                                    }
+                                </div>
+
+                                <form asp-action="RemoverItem" method="post" class="cart-remove-form">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="produtoId" value="@produto!.Id" />
+                                    <input type="hidden" name="sabor" value="@item.Sabor" />
+
+                                    <button type="submit" class="cart-remove-btn" aria-label="Remover item">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+
+                            <div class="cart-item-bottom">
+                                <div class="cart-price">
+                                    @if (temPromo)
+                                    {
+                                        <span class="old">@precoNormal.ToString("C", ptBR)</span>
+                                    }
+
+                                    <strong>@precoFinal.ToString("C", ptBR)</strong>
+                                    <small>Subtotal: @subtotal.ToString("C", ptBR)</small>
+                                </div>
+
+                                <form asp-action="AtualizarItem" method="post" class="cart-qty-form">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="produtoId" value="@produto!.Id" />
+                                    <input type="hidden" name="sabor" value="@item.Sabor" />
+
+                                    <div class="cart-qty-control">
+                                        <button type="submit" name="op" value="dec" class="cart-qty-btn" aria-label="Diminuir">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+
+                                        <input type="number"
+                                               name="quantidade"
+                                               value="@item.Quantidade"
+                                               min="1"
+                                               max="@maxPermitido"
+                                               class="cart-qty-input"
+                                               inputmode="numeric" />
+
+                                        <button type="submit" name="op" value="inc" class="cart-qty-btn" aria-label="Aumentar">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </article>
+                }
+            </main>
+
+            <aside class="cart-summary">
+                <div id="resumo-card" class="cart-summary-card">
+                    <div class="cart-summary-head">
+                        <h2>Resumo do pedido</h2>
+                        <span>@itens.Count item(ns)</span>
                     </div>
 
-                    <div class="carrinho-actions">
-                        <a asp-controller="Home" asp-action="Index" class="btn btn-outline block-mobile">
-                            ← Continuar comprando
+                    <div class="cart-summary-lines">
+                        @* <div>
+                            <span>Subtotal</span>
+                            <strong>@total.ToString("C", ptBR)</strong>
+                        </div> *@
+
+                        <div>
+                            <span>Entrega</span>
+                            <strong>Calculada no pedido</strong>
+                        </div>
+                    </div>
+
+                    <div class="cart-summary-total">
+                        <span>Total</span>
+                        <strong class="total-valor">@total.ToString("C", ptBR)</strong>
+                    </div>
+
+                    <div class="cart-actions">
+                        <a asp-controller="Home" asp-action="Index" class="cart-btn cart-btn-light">
+                            <i class="fas fa-arrow-left"></i>
+                            Continuar comprando
                         </a>
 
-                        <a asp-action="Resumo" class="btn btn-primary block-mobile">
-                            Finalizar pedido →
+                        <a asp-action="Resumo" class="cart-btn cart-btn-primary">
+                            Finalizar pedido
+                            <i class="fas fa-arrow-right"></i>
                         </a>
                     </div>
                 </div>
@@ -269,68 +239,85 @@
     }
     else
     {
-        <div id="empty-state" class="carrinho-vazio">
-            <h4>Seu carrinho está vazio</h4>
+        <section id="empty-state" class="cart-empty">
+            <div class="cart-empty-icon">
+                <i class="fas fa-cart-shopping"></i>
+            </div>
+
+            <h2>Seu carrinho está vazio</h2>
             <p>Adicione produtos ao seu carrinho para continuar.</p>
-            <a asp-controller="Home" asp-action="Index" class="btn btn-primary">
-                <i class="fas fa-store me-1"></i> Ver produtos
+
+            <a asp-controller="Home" asp-action="Index" class="cart-btn cart-btn-primary">
+                <i class="fas fa-store"></i>
+                Ver produtos
             </a>
-        </div>
+        </section>
 
-        <section id="populares-wrapper" class="populares">
-            <h5 class="pop-title">Mais populares</h5>
+        @if (Model?.Populares?.Any() == true)
+        {
+            <section id="populares-wrapper" class="cart-popular">
+                <div class="cart-popular-head">
+                    <h2>Mais populares</h2>
+                    <a asp-controller="Home" asp-action="Index">Ver todos</a>
+                </div>
 
-            <div class="pop-grid">
-                @foreach (var p in Model?.Populares ?? Enumerable.Empty<WebApplicationPods.Models.ProdutoResumoVM>())
-                {
-                    <article class="pop-card">
-                        <div class="pop-img">
-                            <img src="@p.ImagemUrl" alt="@p.Nome" loading="lazy" />
-                        </div>
+                <div class="cart-popular-grid">
+                    @foreach (var p in Model.Populares)
+                    {
+                        <article class="cart-pop-card">
+                            <a asp-controller="Produto"
+                               asp-action="Detalhes"
+                               asp-route-id="@p.Id"
+                               class="cart-pop-link"
+                               aria-label="Ver detalhes de @p.Nome">
 
-                        <div class="pop-body">
-                            <div class="pop-name">@p.Nome</div>
+                                <div class="cart-pop-image">
+                                    @if (!string.IsNullOrWhiteSpace(p.ImagemUrl))
+                                    {
+                                        <img src="@Url.Content(p.ImagemUrl)" alt="@p.Nome" loading="lazy" decoding="async" />
+                                    }
+                                    else
+                                    {
+                                        <div class="cart-item-placeholder">
+                                            <i class="fas fa-image"></i>
+                                        </div>
+                                    }
+                                </div>
 
-                            <div class="pop-price">
-                                @if (p.EmPromocao)
-                                {
-                                    <span class="old">@p.Preco.ToString("C", ptBR)</span>
-                                    <span class="now">@((p.PrecoPromocional ?? p.Preco).ToString("C", ptBR))</span>
-                                }
-                                else
-                                {
-                                    <span class="now">@p.Preco.ToString("C", ptBR)</span>
-                                }
-                            </div>
+                                <div class="cart-pop-body">
+                                    <h3>@p.Nome</h3>
 
-                            <form asp-action="AdicionarItem" method="post" class="pop-add-form">
+                                    <div class="cart-pop-price">
+                                        @if (p.EmPromocao)
+                                        {
+                                            <span class="old">@p.Preco.ToString("C", ptBR)</span>
+                                            <strong>@((p.PrecoPromocional ?? p.Preco).ToString("C", ptBR))</strong>
+                                        }
+                                        else
+                                        {
+                                            <strong>@p.Preco.ToString("C", ptBR)</strong>
+                                        }
+                                    </div>
+                                </div>
+                            </a>
+
+                            <form asp-action="AdicionarItem" method="post" class="cart-pop-add-form">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="produtoId" value="@p.Id" />
                                 <input type="hidden" name="quantidade" value="1" />
-                                <button type="submit" class="btn btn-primary btn-sm w-100">
-                                    Adicionar
+
+                                <button type="submit" class="cart-pop-add">
+                                    <i class="fas fa-plus"></i>
                                 </button>
                             </form>
-                        </div>
-
-                        <a class="stretched-link"
-                           asp-controller="Produto"
-                           asp-action="DetalhesProdutos"
-                           asp-route-id="@p.Id"
-                           aria-label="Ver detalhes de @p.Nome"></a>
-                    </article>
-                }
-            </div>
-
-            <div class="text-center mt-3">
-                <a asp-controller="Home" asp-action="Index" class="btn btn-outline">
-                    Ver cardápio
-                </a>
-            </div>
-        </section>
+                        </article>
+                    }
+                </div>
+            </section>
+        }
     }
 </div>
 
 @section Scripts {
     <script src="~/js/Carrinho-form.js" asp-append-version="true"></script>
-}
+}r
