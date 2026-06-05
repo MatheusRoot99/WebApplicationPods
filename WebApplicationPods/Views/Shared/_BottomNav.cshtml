@@ -1,125 +1,146 @@
 ﻿@using WebApplicationPods.Infra
-@* Bottom Navigation (mobile-only) *@
-<link rel="stylesheet" href="~/css/_BottomNav.css" asp-append-version="true" />
 
 @{
-    var c = ViewContext.RouteData.Values["controller"]?.ToString();
-    var a = ViewContext.RouteData.Values["action"]?.ToString();
-    var area = ViewContext.RouteData.Values["area"]?.ToString();
-
-    Func<string, string, string?, string> IsActive = (ctrl, act, ar) =>
-        (string.Equals(c, ctrl, StringComparison.OrdinalIgnoreCase) &&
-         (act == null || string.Equals(a, act, StringComparison.OrdinalIgnoreCase)) &&
-         (string.Equals(area ?? "", ar ?? "", StringComparison.OrdinalIgnoreCase)))
-        ? "active" : "";
-
-    var isAuth = User.Identity?.IsAuthenticated == true;
+    var isAuth = User?.Identity?.IsAuthenticated ?? false;
     var isAdmin = User.IsInRole("Admin");
     var isLojista = User.IsInRole("Lojista");
+    var isEntregador = User.IsInRole("Entregador");
+
+    var areaAtual = (ViewContext.RouteData.Values["area"]?.ToString() ?? "");
+    var controllerAtual = (ViewContext.RouteData.Values["controller"]?.ToString() ?? "");
+
+    string Active(string area, string controller)
+    {
+        var areaOk = string.Equals(areaAtual, area ?? "", StringComparison.OrdinalIgnoreCase);
+        var controllerOk = string.Equals(controllerAtual, controller ?? "", StringComparison.OrdinalIgnoreCase);
+
+        return areaOk && controllerOk ? "active" : "";
+    }
 }
 
-<nav class="mobile-bottom-nav d-lg-none" aria-label="Navegação inferior">
-    <!-- Início -->
-    <a class="mbn-item @IsActive("Home", "Index", null)"
-       asp-controller="Home"
-       asp-action="Index"
-       aria-label="Início">
-        <span class="mbn-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none">
-                <path d="M3 10.5L12 3l9 7.5" />
-                <path d="M5.5 9.5V20h5.5v-5h2v5H18.5V9.5" />
-            </svg>
-        </span>
-        <span class="mbn-label">Início</span>
-    </a>
-
-    <!-- Pedidos -->
-    @if (isLojista)
+<nav class="mobile-bottom-nav" aria-label="Navegação inferior">
+    @if (isAdmin)
     {
-        <a class="mbn-item @IsActive("PedidosAdmin", "Index", AppAreas.Lojista)"
-           asp-area="@AppAreas.Lojista"
-           asp-controller="PedidosAdmin"
-           asp-action="Index"
-           aria-label="Pedidos">
-            <span class="mbn-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none">
-                    <path d="M8 6.5h12" />
-                    <path d="M8 12h12" />
-                    <path d="M8 17.5h12" />
-                    <path d="M4 6.5h.01" />
-                    <path d="M4 12h.01" />
-                    <path d="M4 17.5h.01" />
-                </svg>
-            </span>
-            <span class="mbn-label">Pedidos</span>
+        <a class="bottom-nav-item @Active(AppAreas.Admin, "Dashboard")"
+           asp-area="@AppAreas.Admin"
+           asp-controller="Dashboard"
+           asp-action="Index">
+            <i class="fa-solid fa-house"></i>
+            <span>Início</span>
         </a>
-    }
-    else
-    {
-        <a class="mbn-item @IsActive("Pedido", "Ultimo", null)"
-           asp-controller="Pedido"
-           asp-action="Ultimo"
-           aria-label="Pedidos">
-            <span class="mbn-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none">
-                    <path d="M8 6.5h12" />
-                    <path d="M8 12h12" />
-                    <path d="M8 17.5h12" />
-                    <path d="M4 6.5h.01" />
-                    <path d="M4 12h.01" />
-                    <path d="M4 17.5h.01" />
-                </svg>
-            </span>
-            <span class="mbn-label">Pedidos</span>
-        </a>
-    }
 
-    <!-- Carrinho -->
-    <a class="mbn-item @IsActive("Carrinho", "Index", null)"
-       asp-controller="Carrinho"
-       asp-action="Index"
-       aria-label="Carrinho">
-        <span class="mbn-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none">
-                <path d="M3.5 5H5.2c.6 0 .9.2 1.1.9l.5 2.1m0 0L8 14.5c.1.7.5 1 1.2 1h8.7c.7 0 1.1-.3 1.3-.9L21 8H6.8Z" />
-                <path d="M10 19.5a1 1 0 1 1 0 .01" />
-                <path d="M17.5 19.5a1 1 0 1 1 0 .01" />
-            </svg>
-        </span>
-        <span id="cart-badge-mobile-bottom" class="mbn-badge js-cart-badge">0</span>
-        <span id="cart-new-dot" class="mbn-dot visually-hidden"></span>
-        <span class="mbn-label">Carrinho</span>
-    </a>
-
-    <!-- Perfil/Entrar -->
-    @if (isAuth && !isAdmin && !isLojista)
-    {
-        <a class="mbn-item mbn-item--auth @IsActive("Cliente", "Perfil", null)"
-           asp-controller="Cliente"
-           asp-action="Perfil"
-           aria-label="Perfil">
-            <span class="mbn-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none">
-                    <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
-                    <path d="M4.5 20a7.5 7.5 0 0 1 15 0" />
-                </svg>
-            </span>
-            <span class="mbn-label">Perfil</span>
+        <a class="bottom-nav-item @Active(AppAreas.Admin, "Lojas")"
+           asp-area="@AppAreas.Admin"
+           asp-controller="Lojas"
+           asp-action="Index">
+            <i class="fa-solid fa-store"></i>
+            <span>Lojas</span>
         </a>
-    }
-    else
-    {
-        <a class="mbn-item mbn-item--auth @IsActive("Conta", "Login", null)"
+
+        <a class="bottom-nav-item @Active(AppAreas.Admin, "Lojistas")"
+           asp-area="@AppAreas.Admin"
+           asp-controller="Lojistas"
+           asp-action="Index">
+            <i class="fa-solid fa-users"></i>
+            <span>Usuários</span>
+        </a>
+
+        <a class="bottom-nav-item @Active("", "Conta")"
+           asp-area=""
            asp-controller="Conta"
-           asp-action="Login"
-           aria-label="Entrar">
-            <span class="mbn-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none">
-                    <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
-                    <path d="M4.5 20a7.5 7.5 0 0 1 15 0" />
-                </svg>
+           asp-action="Perfil">
+            <i class="fa-regular fa-user"></i>
+            <span>Perfil</span>
+        </a>
+    }
+    else if (isLojista)
+    {
+        <a class="bottom-nav-item @Active("", "PainelLojista")"
+           asp-area=""
+           asp-controller="PainelLojista"
+           asp-action="Index">
+            <i class="fa-solid fa-house"></i>
+            <span>Início</span>
+        </a>
+
+        <a class="bottom-nav-item @Active("", "PedidosAdmin")"
+           asp-area=""
+           asp-controller="PedidosAdmin"
+           asp-action="Index">
+            <i class="fa-regular fa-clipboard"></i>
+            <span>Pedidos</span>
+        </a>
+
+        <a class="bottom-nav-item @Active("", "Estoque")"
+           asp-area=""
+           asp-controller="Estoque"
+           asp-action="Index">
+            <i class="fa-solid fa-cube"></i>
+            <span>Estoque</span>
+        </a>
+
+        <a class="bottom-nav-item @Active("", "Conta")"
+           asp-area=""
+           asp-controller="Conta"
+           asp-action="Perfil">
+            <i class="fa-regular fa-user"></i>
+            <span>Perfil</span>
+        </a>
+    }
+    else if (isEntregador)
+    {
+        <a class="bottom-nav-item @Active("", "Entregador")"
+           asp-area=""
+           asp-controller="Entregador"
+           asp-action="Index">
+            <i class="fa-solid fa-route"></i>
+            <span>Entregas</span>
+        </a>
+
+        <a class="bottom-nav-item @Active("", "Conta")"
+           asp-area=""
+           asp-controller="Conta"
+           asp-action="Perfil">
+            <i class="fa-regular fa-user"></i>
+            <span>Perfil</span>
+        </a>
+    }
+    else
+    {
+        <a class="bottom-nav-item @Active("", "Home")"
+           asp-area=""
+           asp-controller="Home"
+           asp-action="Index">
+            <i class="fa-solid fa-house"></i>
+            <span>Início</span>
+        </a>
+
+        <a class="bottom-nav-item @Active("", "Pedido")"
+           asp-area=""
+           asp-controller="Pedido"
+           asp-action="Ultimo">
+            <i class="fa-regular fa-clipboard"></i>
+            <span>Pedidos</span>
+        </a>
+
+        <a class="bottom-nav-item bottom-cart @Active("", "Carrinho")"
+           asp-area=""
+           asp-controller="Carrinho"
+           asp-action="Index">
+            <span class="bottom-nav-icon-wrap">
+                <i class="fa-solid fa-cart-shopping"></i>
+                <span id="cart-badge-mobile-bottom" class="bottom-nav-badge js-cart-badge">0</span>
+                <span id="cart-new-dot" class="bottom-nav-dot"></span>
             </span>
-            <span class="mbn-label">Entrar</span>
+            <span>Carrinho</span>
+        </a>
+
+        <a class="bottom-nav-item @Active("", "Conta")"
+           asp-area=""
+           asp-controller="Conta"
+           asp-action="Perfil">
+            <i class="fa-regular fa-user"></i>
+            <span>Perfil</span>
         </a>
     }
 </nav>

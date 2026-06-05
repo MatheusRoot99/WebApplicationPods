@@ -1,324 +1,107 @@
-﻿@using System.Text.Json
-@using WebApplicationPods.Models
-@using WebApplicationPods.Services
-@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery
-@inject ILojaConfigService LojaSvc
+﻿@using WebApplicationPods.Infra
 
 @{
-    var hideChrome = (ViewData["HideChrome"] as bool?) ?? false;
-    var bodyClass = (ViewData["BodyClass"] as string) ?? "";
+    var title = ViewData["Title"]?.ToString() ?? "Conveniência";
+    var hideChrome = ViewData["HideChrome"] as bool? == true;
+    var hideStoreHeader = ViewData["HideStoreHeader"] as bool? == true;
+    var bodyClass = ViewData["BodyClass"]?.ToString() ?? "";
 
-    var cfg = await LojaSvc.GetAsync();
-    var baseUrl = $"{Context.Request?.Scheme}://{Context.Request?.Host}";
-    var headerVM = LojaSvc.BuildHeader(cfg, baseUrl, Url.Action("Perfil", "Loja"));
-    ViewData["StoreHeader"] = headerVM;
+    var isAuth = User?.Identity?.IsAuthenticated ?? false;
+    var isAdmin = User.IsInRole("Admin");
+    var isLojista = User.IsInRole("Lojista");
+    var isEntregador = User.IsInRole("Entregador");
 
-    var mobileBrand = headerVM?.Nome ?? "Conveniência";
-    var pageTitle = ViewData["Title"]?.ToString() ?? "Conveniência";
+    var controllerAtual = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var actionAtual = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    var areaAtual = ViewContext.RouteData.Values["area"]?.ToString() ?? "";
+
+    var isPainel = isAdmin || isLojista || isEntregador;
+    var nomeUsuario = User?.Identity?.Name ?? "Usuário";
+    var perfilUsuario = isAdmin ? "Admin" : isLojista ? "Lojista" : isEntregador ? "Entregador" : "Cliente";
 }
 
 <!DOCTYPE html>
 <html lang="pt-br" data-theme="light">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-    <title>@pageTitle - Conveniência</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>@title - Conveniência</title>
 
-    <script>
-        (function () {
-            try {
-                var saved = localStorage.getItem('theme');
-
-                if (!saved) {
-                    saved = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
-                        ? 'dark'
-                        : 'light';
-                }
-
-                document.documentElement.setAttribute('data-theme', saved);
-            } catch { }
-        })();
-    </script>
-
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/panel.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/sidebar.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/_BottomNav.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/app-redesign.css" asp-append-version="true" />
 
     @await RenderSectionAsync("Styles", required: false)
-
-    <style>
-        :root {
-            --kb-shift: 0px;
-        }
-
-        html,
-        body {
-            height: 100%;
-        }
-
-        .layout-user-name {
-            display: inline-block;
-            max-width: 180px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            vertical-align: middle;
-        }
-
-        .mobile-brand {
-            min-width: 0;
-            max-width: 48vw;
-        }
-
-        #rt-audio-banner {
-            position: fixed;
-            right: 16px;
-            bottom: calc(16px + env(safe-area-inset-bottom));
-            z-index: 2000;
-            background: #111;
-            color: #fff;
-            border-radius: 999px;
-            display: none;
-            align-items: center;
-            gap: .5rem;
-            padding: .55rem .9rem;
-            box-shadow: 0 8px 24px rgba(0,0,0,.2);
-            cursor: pointer;
-            font-weight: 700;
-        }
-
-            #rt-audio-banner i {
-                opacity: .9;
-            }
-
-        #rt-audio-never {
-            margin-left: .5rem;
-            background: transparent;
-            border: 0;
-            color: #fff;
-            opacity: .8;
-        }
-    </style>
 </head>
-
-<body class="@bodyClass">
-    <input type="hidden"
-           id="__RequestVerificationToken"
-           name="__RequestVerificationToken"
-           value="@antiforgery.GetAndStoreTokens(Context).RequestToken" />
-
+<body class="@bodyClass @(isPainel ? "panel-shell-page" : "storefront-shell-page")">
     @if (hideChrome)
     {
-        <main class="container py-4">
+        <main class="auth-main">
             @RenderBody()
         </main>
     }
     else
     {
         <div class="d-flex" id="wrapper">
-            @await Html.PartialAsync("_Sidebar")
+            @if (isPainel)
+            {
+                <partial name="_Sidebar" />
+            }
 
             <div id="page-content-wrapper">
-                <nav class="navbar navbar-dark border-bottom">
-                    <div class="container-fluid">
-                        <div class="mobile-toolbar d-lg-none w-100">
-                            <button class="icon-btn"
-                                    type="button"
-                                    data-bs-toggle="offcanvas"
-                                    data-bs-target="#mobileMenu"
-                                    aria-controls="mobileMenu"
-                                    aria-label="Abrir menu">
-                                <i class="fas fa-bars"></i>
+                @if (isPainel)
+                {
+                    <header class="panel-topbar">
+                        <div class="panel-topbar-left">
+                            <button class="panel-icon-button d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileMenu" aria-controls="mobileMenu">
+                                <i class="fa-solid fa-bars"></i>
                             </button>
 
-                            <div class="mobile-brand text-truncate">@mobileBrand</div>
+                            <button class="panel-icon-button d-none d-lg-inline-flex" type="button" id="desktopSidebarToggle">
+                                <i class="fa-solid fa-bars"></i>
+                            </button>
 
-                            <div class="toolbar-actions">
-                                @if (!User.IsInRole("Admin") && !User.IsInRole("Lojista"))
-                                {
-                                    <a class="icon-btn position-relative"
-                                       asp-controller="Carrinho"
-                                       asp-action="Index"
-                                       aria-label="Carrinho">
-                                        <i class="fas fa-shopping-cart"></i>
-                                        <span id="cart-badge-mobile-top"
-                                              class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle visually-hidden js-cart-badge">
-                                            @await Component.InvokeAsync("CarrinhoResumo")
-                                            <span class="visually-hidden">itens no carrinho</span>
-                                        </span>
-                                    </a>
-                                }
-
-                                @if (User.Identity?.IsAuthenticated == true)
-                                {
-                                    <div class="dropdown">
-                                        <button class="icon-btn position-relative"
-                                                data-bs-toggle="dropdown"
-                                                aria-expanded="false"
-                                                aria-label="Notificações">
-                                            <i class="fas fa-bell"></i>
-                                            <span id="notif-badge" class="badge bg-danger ms-1 visually-hidden">0</span>
-                                        </button>
-                                        @await Component.InvokeAsync("Notifications")
-                                    </div>
-                                }
-
-                                <div class="dropdown">
-                                    <button class="icon-btn"
-                                            data-bs-toggle="dropdown"
-                                            aria-expanded="false"
-                                            aria-label="Conta">
-                                        <i class="fas fa-user-circle"></i>
-                                    </button>
-
-                                    <ul class="dropdown-menu dropdown-menu-end">
-                                        @if (User.Identity?.IsAuthenticated != true)
-                                        {
-                                            <li>
-                                                <a class="dropdown-item" asp-controller="Conta" asp-action="Login">
-                                                    <i class="fas fa-sign-in-alt me-2"></i>Login
-                                                </a>
-                                            </li>
-                                        }
-                                        else
-                                        {
-                                            <li>
-                                                <a class="dropdown-item" asp-controller="Cliente" asp-action="Perfil">
-                                                    <i class="fas fa-user me-2"></i>Perfil
-                                                </a>
-                                            </li>
-
-                                            <li>
-                                                <a class="dropdown-item" asp-controller="Configuracoes" asp-action="Index">
-                                                    <i class="fas fa-gear me-2"></i>Configurações
-                                                </a>
-                                            </li>
-
-                                            <li>
-                                                <form asp-controller="Conta" asp-action="Logout" method="post" class="px-3">
-                                                    @Html.AntiForgeryToken()
-                                                    <button type="submit" class="btn btn-link p-0">
-                                                        <i class="fas fa-sign-out-alt me-2"></i>Sair
-                                                    </button>
-                                                </form>
-                                            </li>
-                                        }
-                                    </ul>
-                                </div>
-                            </div>
+                            <nav class="panel-breadcrumb d-none d-md-flex" aria-label="breadcrumb">
+                                <a asp-area="" asp-controller="Home" asp-action="Index">Painel</a>
+                                <i class="fa-solid fa-chevron-right"></i>
+                                <span>@title</span>
+                            </nav>
                         </div>
 
-                        <div class="d-none d-lg-flex align-items-center w-100">
-                            <div class="d-flex align-items-center">
-                                <nav aria-label="breadcrumb" class="ms-1">
-                                    <ol class="breadcrumb mb-0">
-                                        <li class="breadcrumb-item">
-                                            <a asp-controller="Home" asp-action="Index" class="text-decoration-none">
-                                                <i class="fas fa-home text-white"></i>
-                                            </a>
-                                        </li>
+                        <form class="panel-search d-none d-md-flex" asp-area="" asp-controller="Home" asp-action="Index" method="get">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="search" name="q" placeholder="Buscar pedido, produto..." autocomplete="off" />
+                        </form>
 
-                                        @if (!string.Equals(ViewContext.RouteData.Values["controller"]?.ToString(), "Home", StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            <li class="breadcrumb-item">
-                                                <a asp-controller="@ViewContext.RouteData.Values["controller"]"
-                                                   asp-action="Index"
-                                                   class="text-decoration-none text-white-50">
-                                                    @ViewContext.RouteData.Values["controller"]
-                                                </a>
-                                            </li>
-                                        }
-                                    </ol>
-                                </nav>
-                            </div>
+                        <div class="panel-topbar-actions">
+                            <button class="panel-notification-button" type="button" aria-label="Notificações">
+                                <i class="fa-regular fa-bell"></i>
+                                <span id="notif-badge">3</span>
+                            </button>
 
-                            <div class="ms-auto d-flex align-items-center gap-2">
-                                @if (!User.IsInRole("Admin") && !User.IsInRole("Lojista"))
-                                {
-                                    <a class="nav-link cart-link text-white" asp-controller="Carrinho" asp-action="Index">
-                                        <span class="position-relative d-inline-flex align-items-center">
-                                            <i class="fas fa-shopping-cart fs-5"></i>
-                                            <span id="cart-badge"
-                                                  class="badge rounded-pill bg-danger position-absolute translate-middle visually-hidden js-cart-badge"
-                                                  style="top:-10%; left:90%;">
-                                                @await Component.InvokeAsync("CarrinhoResumo")
-                                            </span>
-                                        </span>
-                                    </a>
-                                }
-
-                                @if (User.Identity?.IsAuthenticated == true)
-                                {
-                                    <div class="nav-item dropdown">
-                                        <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="dropdown">
-                                            <i class="fas fa-bell"></i>
-                                        </a>
-                                        @await Component.InvokeAsync("Notifications")
-                                    </div>
-                                }
-
-                                <div class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle text-white d-flex align-items-center"
-                                       href="#"
-                                       data-bs-toggle="dropdown">
-                                        <i class="fas fa-user-circle me-1"></i>
-                                        <span class="layout-user-name">
-                                            @(User.Identity?.IsAuthenticated == true ? User.Identity!.Name : "Conta")
-                                        </span>
-                                    </a>
-
-                                    <ul class="dropdown-menu dropdown-menu-end">
-                                        @if (User.Identity?.IsAuthenticated != true)
-                                        {
-                                            <li>
-                                                <a class="dropdown-item" asp-controller="Conta" asp-action="Login">
-                                                    <i class="fas fa-sign-in-alt me-2"></i>Login
-                                                </a>
-                                            </li>
-                                        }
-                                        else
-                                        {
-                                            <li>
-                                                <a class="dropdown-item" asp-controller="Cliente" asp-action="Perfil">
-                                                    <i class="fas fa-user me-2"></i>Perfil
-                                                </a>
-                                            </li>
-
-                                            <li>
-                                                <a class="dropdown-item" asp-controller="Configuracoes" asp-action="Index">
-                                                    <i class="fas fa-gear me-2"></i>Configurações
-                                                </a>
-                                            </li>
-
-                                            <li>
-                                                <form asp-controller="Conta" asp-action="Logout" method="post" class="px-3">
-                                                    @Html.AntiForgeryToken()
-                                                    <button type="submit" class="btn btn-link p-0">
-                                                        <i class="fas fa-sign-out-alt me-2"></i>Sair
-                                                    </button>
-                                                </form>
-                                            </li>
-                                        }
-                                    </ul>
-                                </div>
-                            </div>
+                            <a class="panel-user-link" asp-area="" asp-controller="Conta" asp-action="Perfil">
+                                <span class="panel-user-avatar">
+                                    <i class="fa-regular fa-user"></i>
+                                </span>
+                                <span class="panel-user-text d-none d-sm-flex">
+                                    <strong>@nomeUsuario</strong>
+                                    <small>@perfilUsuario</small>
+                                </span>
+                                <i class="fa-solid fa-chevron-down d-none d-sm-inline"></i>
+                            </a>
                         </div>
-                    </div>
-                </nav>
-
-                @{
-                    var hideStoreHeader = (ViewData["HideStoreHeader"] as bool?) ?? false;
+                    </header>
                 }
-
-                @if (headerVM != null && !hideStoreHeader)
+                else if (!hideStoreHeader)
                 {
-                    @await Html.PartialAsync("_StoreHeader", headerVM)
+                    <partial name="_StoreHeader" />
                 }
 
-                <main id="page-content" class="page-content container-fluid pt-3">
+                <main id="page-content" class="page-content container-fluid">
                     <div class="page-hero">
                         <div class="app-shell">
                             @RenderBody()
@@ -328,158 +111,51 @@
             </div>
         </div>
 
-        @await Html.PartialAsync("_OffcanvasMenu")
-        @await Html.PartialAsync("_BottomNav")
+        <partial name="_OffcanvasMenu" />
+        <partial name="_BottomNav" />
     }
 
-    <div class="position-fixed top-0 end-0 p-3" style="z-index:1080">
-        <div id="appToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body" id="appToastBody"></div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fechar"></button>
-            </div>
-        </div>
-    </div>
-
-    <div id="rt-audio-banner" title="Clique para habilitar som">
-        <i class="fa fa-volume-up"></i>
-        <span>Ativar som das notificações</span>
-        <button id="rt-audio-never" type="button">×</button>
-    </div>
-
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="~/js/jquery.mask.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
-    <script src="~/js/sidebar.js" asp-append-version="true"></script>
-    <script src="~/js/sabores.js" asp-append-version="true"></script>
 
     <script>
-        (function () {
-            const KEY_COUNT = 'cart_count';
-
-            function setBadgeCount(n) {
-                const num = Math.max(0, parseInt(n || 0, 10) || 0);
-
-                document.querySelectorAll('.js-cart-badge').forEach(el => {
-                    if (num > 0) {
-                        el.textContent = String(num);
-                        el.classList.remove('visually-hidden');
-                        el.classList.remove('mbn-badge-bump');
-                        void el.offsetWidth;
-                        el.classList.add('mbn-badge-bump');
-
-                        setTimeout(() => el.classList.remove('mbn-badge-bump'), 400);
-                    } else {
-                        el.textContent = '0';
-                        el.classList.add('visually-hidden');
-                    }
-                });
-            }
-
-            (function restoreFromStorage() {
-                let n = 0;
-
-                try {
-                    n = parseInt(localStorage.getItem(KEY_COUNT) || '0', 10) || 0;
-                } catch { }
-
-                setBadgeCount(n);
-            })();
-
-            window.addEventListener('storage', e => {
-                if (e.key === KEY_COUNT) {
-                    setBadgeCount(parseInt(e.newValue || '0', 10) || 0);
-                }
-            });
-
-            window.showToast = function (message, ok = true) {
-                const toastEl = document.getElementById('appToast');
-                const bodyEl = document.getElementById('appToastBody');
-
-                if (!toastEl || !bodyEl || !window.bootstrap) return;
-
-                bodyEl.textContent = message;
-
-                toastEl.classList.remove('bg-success', 'bg-danger');
-                toastEl.classList.add(ok ? 'bg-success' : 'bg-danger');
-
-                new bootstrap.Toast(toastEl, { delay: 2400 }).show();
-            };
-
-            window.updateCartBadges = function (count) {
-                const n = Math.max(0, parseInt(count || 0, 10) || 0);
-
-                try {
-                    localStorage.setItem(KEY_COUNT, String(n));
-                } catch { }
-
-                setBadgeCount(n);
-            };
-
-            window.getAntiForgeryToken = function () {
-                return document.querySelector('input[name="__RequestVerificationToken"]')?.value
-                    || document.getElementById('__RequestVerificationToken')?.value
-                    || '';
-            };
-
-            (async function syncCountOnLoad() {
-                try {
-                    const response = await fetch('/Carrinho/Count', {
-                        cache: 'no-store',
-                        credentials: 'same-origin'
-                    });
-
-                    if (!response.ok) return;
-
-                    const data = await response.json();
-
-                    if (typeof data.count !== 'undefined') {
-                        window.updateCartBadges(data.count);
-                    }
-                } catch { }
-            })();
-        })();
-    </script>
-
-    <script>
-        (function () {
-            function applyKbShift() {
-                var shift = 0;
-
-                if (window.visualViewport) {
-                    var vv = visualViewport;
-                    shift = Math.max(0, (window.innerHeight - vv.height - vv.offsetTop));
-                }
-
-                document.documentElement.style.setProperty('--kb-shift', shift + 'px');
-            }
-
-            applyKbShift();
-
-            window.addEventListener('resize', applyKbShift);
-
-            if (window.visualViewport) {
-                visualViewport.addEventListener('resize', applyKbShift);
-                visualViewport.addEventListener('scroll', applyKbShift);
-            }
-
-            document.addEventListener('focusin', function (e) {
-                if (e.target.matches('input,textarea,select')) {
-                    setTimeout(applyKbShift, 50);
-                }
-            });
-        })();
-    </script>
-
-    <script>
-        (function () {
+        document.addEventListener('DOMContentLoaded', function () {
             if (document.querySelector('.mobile-bottom-nav')) {
                 document.body.classList.add('has-bottom-nav');
-            } else {
-                document.body.classList.remove('has-bottom-nav');
             }
-        })();
+
+            const wrapper = document.getElementById('wrapper');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const desktopSidebarToggle = document.getElementById('desktopSidebarToggle');
+
+            function toggleSidebar() {
+                if (wrapper) {
+                    wrapper.classList.toggle('sidebar-collapsed');
+                }
+            }
+
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', toggleSidebar);
+            }
+
+            if (desktopSidebarToggle) {
+                desktopSidebarToggle.addEventListener('click', toggleSidebar);
+            }
+
+            const badges = document.querySelectorAll('.js-cart-badge');
+            const count = localStorage.getItem('cart_count') || '0';
+
+            badges.forEach(function (badge) {
+                badge.textContent = count;
+
+                if (parseInt(count, 10) > 0) {
+                    badge.classList.add('show');
+                } else {
+                    badge.classList.remove('show');
+                }
+            });
+        });
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)

@@ -1,180 +1,233 @@
 ﻿@using WebApplicationPods.Infra
 
 @{
-    var isAuth = User.Identity?.IsAuthenticated == true;
+    var isAuth = User?.Identity?.IsAuthenticated ?? false;
     var isAdmin = User.IsInRole("Admin");
     var isLojista = User.IsInRole("Lojista");
+    var isEntregador = User.IsInRole("Entregador");
 
-    var currentArea = ViewContext.RouteData.Values["area"]?.ToString() ?? "";
-    var currentCtrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var areaAtual = (ViewContext.RouteData.Values["area"]?.ToString() ?? "");
+    var controllerAtual = (ViewContext.RouteData.Values["controller"]?.ToString() ?? "");
+    var actionAtual = (ViewContext.RouteData.Values["action"]?.ToString() ?? "");
 
-    var isProdutoArea = string.Equals(currentArea, AppAreas.Lojista, StringComparison.OrdinalIgnoreCase);
-    var isProdutoCtrl = string.Equals(currentCtrl, "Produto", StringComparison.OrdinalIgnoreCase);
+    string Active(string area, string controller, string action = "")
+    {
+        var areaOk = string.Equals(areaAtual, area ?? "", StringComparison.OrdinalIgnoreCase);
+        var controllerOk = string.Equals(controllerAtual, controller ?? "", StringComparison.OrdinalIgnoreCase);
+        var actionOk = string.IsNullOrWhiteSpace(action) || string.Equals(actionAtual, action, StringComparison.OrdinalIgnoreCase);
 
-    var produtoMenuOpen = (isProdutoArea && isProdutoCtrl) ? "show" : "";
-    var produtoMenuExpanded = (isProdutoArea && isProdutoCtrl) ? "true" : "false";
+        return areaOk && controllerOk && actionOk ? "active" : "";
+    }
 }
 
-<div class="offcanvas offcanvas-start sidebar-offcanvas" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel">
-    <div class="offcanvas-header">
-        <h5 class="offcanvas-title" id="mobileMenuLabel">
-            <i class="fas fa-store me-2"></i><span class="fw-bold">Conveniência</span>
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Fechar"></button>
+<div class="offcanvas offcanvas-start mobile-menu" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel">
+    <div class="mobile-menu-header">
+        <a asp-area="" asp-controller="Home" asp-action="Index" class="mobile-menu-brand">
+            <span class="mobile-menu-brand-icon">
+                <i class="fa-solid fa-store"></i>
+            </span>
+            <span>
+                <strong id="mobileMenuLabel">Conveniência</strong>
+                <small><span></span> Aberto</small>
+            </span>
+        </a>
+
+        <button type="button" class="mobile-menu-close" data-bs-dismiss="offcanvas" aria-label="Fechar">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
     </div>
 
-    <div class="offcanvas-body">
-        <div class="list-group list-group-flush">
-            <div class="sidebar-section">
-                <div class="sidebar-section-title">Navegação</div>
-                <a asp-area="" asp-controller="Home" asp-action="Index"
-                   class="list-group-item list-group-item-action">
-                    <i class="fas fa-house"></i> Home
+    <div class="mobile-menu-body">
+        @if (isAdmin)
+        {
+            <div class="mobile-menu-section">
+                <span>Admin</span>
+
+                <a class="mobile-menu-link @Active(AppAreas.Admin, "Dashboard")"
+                   asp-area="@AppAreas.Admin"
+                   asp-controller="Dashboard"
+                   asp-action="Index">
+                    <i class="fa-solid fa-chart-line"></i>
+                    Dashboard
+                </a>
+
+                <a class="mobile-menu-link @Active(AppAreas.Admin, "Lojas")"
+                   asp-area="@AppAreas.Admin"
+                   asp-controller="Lojas"
+                   asp-action="Index">
+                    <i class="fa-solid fa-store"></i>
+                    Lojas
+                </a>
+
+                <a class="mobile-menu-link @Active(AppAreas.Admin, "Lojistas")"
+                   asp-area="@AppAreas.Admin"
+                   asp-controller="Lojistas"
+                   asp-action="Index">
+                    <i class="fa-solid fa-users-gear"></i>
+                    Usuários
+                </a>
+            </div>
+        }
+
+        @if (isLojista)
+        {
+            <div class="mobile-menu-section">
+                <span>Operação</span>
+
+                <a class="mobile-menu-link @Active("", "PainelLojista")"
+                   asp-area=""
+                   asp-controller="PainelLojista"
+                   asp-action="Index">
+                    <i class="fa-solid fa-house"></i>
+                    Dashboard
+                </a>
+
+                <a class="mobile-menu-link @Active("", "PedidosAdmin")"
+                   asp-area=""
+                   asp-controller="PedidosAdmin"
+                   asp-action="Index">
+                    <i class="fa-regular fa-clipboard"></i>
+                    Pedidos
+                </a>
+
+                <a class="mobile-menu-link @Active("", "Estoque")"
+                   asp-area=""
+                   asp-controller="Estoque"
+                   asp-action="Index">
+                    <i class="fa-solid fa-cube"></i>
+                    Estoque
+                </a>
+
+                <a class="mobile-menu-link @Active("", "PedidosAdmin", "Relatorio")"
+                   asp-area=""
+                   asp-controller="PedidosAdmin"
+                   asp-action="Relatorio">
+                    <i class="fa-solid fa-chart-column"></i>
+                    Relatórios
                 </a>
             </div>
 
-            @if (!isAdmin && !isLojista)
-            {
-                <div class="sidebar-section">
-                    <div class="sidebar-section-title">Cliente</div>
-                    <a asp-area="" asp-controller="Carrinho" asp-action="Index"
-                       class="list-group-item list-group-item-action">
-                        <i class="fas fa-shopping-cart"></i> Carrinho
-                    </a>
-                </div>
-            }
+            <div class="mobile-menu-section">
+                <span>Catálogo</span>
 
-            @if (isLojista)
-            {
-                <div class="sidebar-section">
-                    <div class="sidebar-section-title">Lojista</div>
+                <a class="mobile-menu-link @Active(AppAreas.Lojista, "Produto")"
+                   asp-area="@AppAreas.Lojista"
+                   asp-controller="Produto"
+                   asp-action="Index">
+                    <i class="fa-solid fa-box-open"></i>
+                    Produtos
+                </a>
 
-                    <a asp-area="PainelLojista" asp-controller="Dashboard" asp-action="Index"
-                       class="list-group-item list-group-item-action">
-                        <i class="fas fa-gauge"></i> Dashboard
-                    </a>
-
-                    <a asp-area="" asp-controller="PedidosAdmin" asp-action="Relatorio"
-                       class="list-group-item list-group-item-action">
-                        <i class="fas fa-chart-line"></i> Relatórios
-                    </a>
-
-                    <a asp-area="" asp-controller="Estoque" asp-action="Index"
-                       class="list-group-item list-group-item-action">
-                        <i class="fas fa-boxes"></i> Estoque
-                    </a>
-
-                    <a asp-area="" asp-controller="PedidosAdmin" asp-action="Index"
-                       class="list-group-item list-group-item-action">
-                        <i class="fas fa-clipboard-list"></i> Pedidos
-                    </a>
-
-                    <a asp-area="" asp-controller="Categoria" asp-action="Index"
-                       class="list-group-item list-group-item-action">
-                        <i class="fas fa-tags"></i> Categorias
-                    </a>
-
-                    <a class="list-group-item list-group-item-action nav-parent d-flex justify-content-between align-items-center"
-                       data-bs-toggle="collapse"
-                       href="#mobileProdutosMenu"
-                       role="button"
-                       aria-expanded="@produtoMenuExpanded"
-                       aria-controls="mobileProdutosMenu">
-                        <span><i class="fas fa-box-open me-2"></i> Produtos</span>
-                        <i class="fas fa-chevron-down small opacity-75"></i>
-                    </a>
-
-                    <div class="collapse @produtoMenuOpen" id="mobileProdutosMenu">
-                        <div class="nav-sub">
-                            <a asp-area="@AppAreas.Lojista" asp-controller="Produto" asp-action="Index"
-                               class="list-group-item list-group-item-action">
-                                <i class="fas fa-list"></i> Catálogo
-                            </a>
-
-                            <a asp-area="@AppAreas.Lojista" asp-controller="Produto" asp-action="CriarPadrao"
-                               class="list-group-item list-group-item-action">
-                                <i class="fas fa-plus"></i> Novo Padrão
-                            </a>
-
-                            <a asp-area="@AppAreas.Lojista" asp-controller="Produto" asp-action="CriarBebida"
-                               class="list-group-item list-group-item-action">
-                                <i class="fas fa-wine-bottle"></i> Nova Bebida
-                            </a>
-
-                            <a asp-area="@AppAreas.Lojista" asp-controller="Produto" asp-action="CriarPod"
-                               class="list-group-item list-group-item-action">
-                                <i class="fas fa-smoking"></i> Novo Pod
-                            </a>
-                        </div>
-                    </div>
-
-                    <a asp-area="" asp-controller="PaymentConfig" asp-action="Edit" asp-route-provider="Stripe"
-                       class="list-group-item list-group-item-action">
-                        <i class="fas fa-credit-card"></i> Pagamento
-                    </a>
-
-                    <a asp-area="" asp-controller="Configuracoes" asp-action="Index"
-                       class="nav-link">
-                        <i class="fas fa-gear"></i>
-                        <span>Configurações</span>
-                    </a>
-
-                    <a asp-area="@AppAreas.Lojista" asp-controller="Loja" asp-action="Editar"
-                       class="list-group-item list-group-item-action">
-                        <i class="fas fa-store"></i> Configurações da Loja
-                    </a>
-
-                </div>
-            }
-
-            @if (isAdmin)
-            {
-                <div class="sidebar-section">
-                    <div class="sidebar-section-title">Admin</div>
-
-                    <a asp-area="@AppAreas.Admin" asp-controller="Dashboard" asp-action="Index"
-                       class="list-group-item list-group-item-action">
-                        <i class="fas fa-gauge"></i> Dashboard
-                    </a>
-
-                    <a asp-area="@AppAreas.Admin" asp-controller="Lojas" asp-action="Index"
-                       class="list-group-item list-group-item-action">
-                        <i class="fas fa-store"></i> Lojas
-                    </a>
-
-                    <a asp-area="@AppAreas.Admin" asp-controller="Lojistas" asp-action="Index"
-                       class="list-group-item list-group-item-action">
-                        <i class="fas fa-users"></i> Usuários (Lojistas)
-                    </a>
-                </div>
-            }
-
-            <div class="sidebar-section">
-                <div class="sidebar-section-title">Usuário</div>
-
-                @if (isAuth)
-                {
-                    <a asp-area="" asp-controller="Cliente" asp-action="Perfil"
-                       class="list-group-item list-group-item-action">
-                        <i class="fas fa-user-circle"></i> Perfil
-                    </a>
-
-                    <form asp-area="" asp-controller="Conta" asp-action="Logout" method="post"
-                          class="list-group-item list-group-item-action">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="sidebar-btn">
-                            <i class="fas fa-sign-out-alt me-2"></i> Sair
-                        </button>
-                    </form>
-                }
-                else
-                {
-                    <a asp-area="" asp-controller="Conta" asp-action="Login"
-                       class="list-group-item list-group-item-action">
-                        <i class="fas fa-sign-in-alt"></i> Login
-                    </a>
-                }
+                <a class="mobile-menu-link @Active("", "Categorias")"
+                   asp-area=""
+                   asp-controller="Categorias"
+                   asp-action="Index">
+                    <i class="fa-regular fa-tag"></i>
+                    Categorias
+                </a>
             </div>
+
+            <div class="mobile-menu-section">
+                <span>Equipe</span>
+
+                <a class="mobile-menu-link @Active(AppAreas.Lojista, "Entregadores")"
+                   asp-area="@AppAreas.Lojista"
+                   asp-controller="Entregadores"
+                   asp-action="Index">
+                    <i class="fa-solid fa-truck-fast"></i>
+                    Entregadores
+                </a>
+            </div>
+        }
+
+        @if (isEntregador && !isLojista)
+        {
+            <div class="mobile-menu-section">
+                <span>Entrega</span>
+
+                <a class="mobile-menu-link @Active("", "Entregador")"
+                   asp-area=""
+                   asp-controller="Entregador"
+                   asp-action="Index">
+                    <i class="fa-solid fa-route"></i>
+                    Minhas entregas
+                </a>
+            </div>
+        }
+
+        @if (!isAdmin && !isLojista && !isEntregador)
+        {
+            <div class="mobile-menu-section">
+                <span>Loja</span>
+
+                <a class="mobile-menu-link @Active("", "Home")"
+                   asp-area=""
+                   asp-controller="Home"
+                   asp-action="Index">
+                    <i class="fa-solid fa-house"></i>
+                    Início
+                </a>
+
+                <a class="mobile-menu-link @Active("", "Pedido")"
+                   asp-area=""
+                   asp-controller="Pedido"
+                   asp-action="Ultimo">
+                    <i class="fa-regular fa-clipboard"></i>
+                    Pedidos
+                </a>
+
+                <a class="mobile-menu-link @Active("", "Carrinho")"
+                   asp-area=""
+                   asp-controller="Carrinho"
+                   asp-action="Index">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                    Carrinho
+                </a>
+            </div>
+        }
+
+        <div class="mobile-menu-section">
+            <span>Conta</span>
+
+            @if (isAuth)
+            {
+                <a class="mobile-menu-link @Active("", "Conta")"
+                   asp-area=""
+                   asp-controller="Conta"
+                   asp-action="Perfil">
+                    <i class="fa-regular fa-user"></i>
+                    Perfil
+                </a>
+
+                @if (isLojista)
+                {
+                    <a class="mobile-menu-link @Active(AppAreas.Lojista, "Loja")"
+                       asp-area="@AppAreas.Lojista"
+                       asp-controller="Loja"
+                       asp-action="Editar">
+                        <i class="fa-solid fa-gear"></i>
+                        Configurações
+                    </a>
+                }
+
+                <form asp-area="" asp-controller="Conta" asp-action="Logout" method="post" class="mobile-menu-logout">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="mobile-menu-link mobile-menu-button">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                        Sair
+                    </button>
+                </form>
+            }
+            else
+            {
+                <a class="mobile-menu-link @Active("", "Conta", "Login")"
+                   asp-area=""
+                   asp-controller="Conta"
+                   asp-action="Login">
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                    Entrar
+                </a>
+            }
         </div>
     </div>
 </div>

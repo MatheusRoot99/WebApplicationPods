@@ -1,461 +1,651 @@
 ﻿:root {
-    --brand-start: #6a11cb;
-    --brand-end: #2575fc;
-    --brand-end-25: rgba(37,117,252,.25);
-    --bg: #f5f5f7;
-    --text: #1f2937;
-    --border-radius: 12px;
-    --mbn-height: 68px;
+    --register-blue: #2563eb;
+    --register-blue-dark: #1d4ed8;
+    --register-blue-soft: #eff6ff;
+    --register-green: #16a34a;
+    --register-green-soft: #ecfdf3;
+    --register-red: #dc2626;
+    --register-bg: #f6f8fc;
+    --register-card: #ffffff;
+    --register-text: #101828;
+    --register-muted: #667085;
+    --register-border: #d9e2ec;
+    --register-border-soft: #e8eef6;
+    --register-shadow: 0 18px 45px rgba(16, 24, 40, .1);
+    --register-shadow-soft: 0 12px 28px rgba(37, 99, 235, .08);
 }
 
-/* anti-zoom iOS e base */
 html {
+    min-height: 100%;
     -webkit-text-size-adjust: 100%;
-    height: 100%;
 }
 
-body {
-    background: var(--bg);
-    min-height: 100vh;
-    height: 100%;
-    margin: 0;
-    color: var(--text);
-    font-family: 'Segoe UI',system-ui,sans-serif;
+body.customer-register-page {
+    min-height: 100vh !important;
+    margin: 0 !important;
+    background: var(--register-bg) !important;
+    color: var(--register-text) !important;
+    overflow-x: hidden;
 }
 
-/* ===== layout full viewport ===== */
-.cadastro-container {
-    min-height: 100vh; /* fallback */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
+html[data-theme="dark"] body.customer-register-page {
+    background: var(--register-bg) !important;
+    color: var(--register-text) !important;
 }
 
-@supports(height:100dvh) {
-    .cadastro-container {
-        min-height: 100dvh;
-    }
+body.customer-register-page > main.container {
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
-/* Card principal */
-.cadastro-card {
-    width: 100%;
-    max-width: 1000px;
-    background: #fff;
-    border-radius: var(--border-radius);
-    box-shadow: 0 10px 40px rgba(0,0,0,.10);
-    overflow: hidden;
-    margin: 20px auto;
-}
-
-    /* header */
-    .cadastro-card .card-header {
-        background: linear-gradient(135deg,var(--brand-start),var(--brand-end));
-        color: #fff;
-        padding: 1.5rem 2rem;
-    }
-
-.card-title {
-    font-size: 1.75rem;
-    font-weight: 700;
-    margin: 0 0 .5rem;
-    color: #fff;
-}
-
-.card-subtitle {
-    opacity: .9;
-    font-size: 1rem;
-    margin: 0;
-    color: #fff;
-}
-
-/* corpo */
-.card-body {
-    padding: 2rem;
-}
-
-/* seção */
-.form-section {
-    margin-bottom: 2.5rem;
-    border: 0;
-    padding: 0;
-}
-
-    .form-section .section-title {
-        color: #374151;
-        font-size: 1.25rem;
-        font-weight: 600;
-        margin-bottom: 1.5rem;
-        padding-bottom: .5rem;
-        border-bottom: 2px solid #eaeaea;
-    }
-
-/* grid 12 col */
-.form-row {
+.customer-register-shell {
+    min-height: var(--customer-register-vh, 100dvh);
+    padding: 24px;
     display: grid;
-    grid-template-columns: repeat(12,1fr);
-    gap: 1rem;
-    margin-bottom: 1rem;
+    place-items: center;
+    background: linear-gradient(180deg, rgba(239, 246, 255, .88), rgba(246, 248, 252, .98)), var(--register-bg);
 }
 
-.form-group {
+.customer-register-layout {
+    width: min(1180px, 100%);
+    display: grid;
+    grid-template-columns: minmax(320px, .82fr) minmax(0, 1.18fr);
+    gap: 20px;
+    align-items: stretch;
+}
+
+.customer-register-intro,
+.customer-register-card {
+    border: 1px solid var(--register-border-soft);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, .94);
+    box-shadow: var(--register-shadow);
+}
+
+.customer-register-intro {
+    min-height: 660px;
+    padding: 28px;
     display: flex;
     flex-direction: column;
+    gap: 24px;
+}
+
+.customer-register-back {
+    width: fit-content;
+    min-height: 38px;
+    padding: 0 13px;
+    border: 1px solid var(--register-border);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--register-text);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 850;
+}
+
+    .customer-register-back:hover {
+        border-color: rgba(37, 99, 235, .45);
+        background: var(--register-blue-soft);
+        color: var(--register-blue-dark);
+    }
+
+.customer-register-brand {
+    margin-top: auto;
+    display: grid;
+    gap: 12px;
+}
+
+    .customer-register-brand span {
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+        background: var(--register-blue);
+        color: #fff;
+        display: grid;
+        place-items: center;
+        box-shadow: 0 12px 24px rgba(37, 99, 235, .22);
+    }
+
+    .customer-register-brand strong {
+        color: var(--register-text);
+        font-size: 15px;
+        font-weight: 950;
+    }
+
+.customer-register-copy span,
+.customer-register-mobile-title span {
+    display: inline-flex;
+    width: fit-content;
+    margin-bottom: 10px;
+    padding: 7px 11px;
+    border-radius: 999px;
+    background: var(--register-blue-soft);
+    color: var(--register-blue-dark);
+    font-size: 12px;
+    font-weight: 950;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.customer-register-copy h1,
+.customer-register-mobile-title h1 {
+    margin: 0 0 10px;
+    color: var(--register-text);
+    font-size: clamp(34px, 4vw, 48px);
+    line-height: 1.05;
+    font-weight: 950;
+    letter-spacing: 0;
+}
+
+.customer-register-copy p,
+.customer-register-mobile-title p {
+    margin: 0;
+    color: var(--register-muted);
+    font-size: 15px;
+    line-height: 1.6;
+    font-weight: 650;
+}
+
+.customer-register-phone,
+.customer-register-confirmed {
+    padding: 15px;
+    border-radius: 16px;
+    border: 1px solid rgba(37, 99, 235, .16);
+    background: var(--register-blue-soft);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+    .customer-register-phone span,
+    .customer-register-confirmed span {
+        width: 38px;
+        height: 38px;
+        border-radius: 13px;
+        background: #fff;
+        color: var(--register-blue);
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+    }
+
+    .customer-register-phone small,
+    .customer-register-confirmed small {
+        display: block;
+        margin-bottom: 2px;
+        color: var(--register-muted);
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .customer-register-phone strong,
+    .customer-register-confirmed strong {
+        display: block;
+        color: var(--register-text);
+        font-size: 14px;
+        font-weight: 950;
+    }
+
+.customer-register-card {
+    overflow: hidden;
+}
+
+.customer-register-appbar {
+    display: none;
+}
+
+.customer-register-form {
+    padding: 24px;
+    display: grid;
+    gap: 16px;
+}
+
+.customer-register-mobile-title,
+.customer-register-confirmed {
+    display: none;
+}
+
+.customer-register-section {
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--register-border-soft);
+    border-radius: 18px;
+    background: #fff;
+    overflow: hidden;
+}
+
+    .customer-register-section legend {
+        width: 100%;
+        margin: 0;
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--register-border-soft);
+        color: var(--register-text);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 17px;
+        font-weight: 950;
+    }
+
+        .customer-register-section legend span {
+            width: 36px;
+            height: 36px;
+            border-radius: 13px;
+            background: var(--register-blue-soft);
+            color: var(--register-blue);
+            display: grid;
+            place-items: center;
+            flex: 0 0 auto;
+        }
+
+.customer-register-grid {
+    padding: 18px;
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.customer-register-field {
+    display: grid;
+    gap: 7px;
     min-width: 0;
 }
 
-/* helpers de coluna */
-.col-12 {
-    grid-column: span 12;
-}
-
-.col-8 {
-    grid-column: span 8;
-}
-
-.col-6 {
-    grid-column: span 6;
-}
-
-.col-5 {
-    grid-column: span 5;
-}
-
-.col-4 {
-    grid-column: span 4;
-}
-
-.col-3 {
-    grid-column: span 3;
-}
-
-.col-2 {
-    grid-column: span 2;
-}
-
-/* labels/inputs */
-.form-label {
-    font-weight: 600;
-    margin-bottom: .5rem;
-    color: #374151;
-}
-
-input, select, textarea {
-    font-size: 16px;
-}
-/* anti-zoom iOS */
-.form-control {
-    padding: .75rem 1rem;
-    border-radius: 8px;
-    border: 1px solid #d1d5db;
-    transition: .2s;
-}
-
-    .form-control:focus {
-        border-color: var(--brand-end);
-        box-shadow: 0 0 0 .2rem var(--brand-end-25);
+    .customer-register-field.span-12 {
+        grid-column: span 12;
     }
 
-/* CEP spinner */
+    .customer-register-field.span-8 {
+        grid-column: span 8;
+    }
+
+    .customer-register-field.span-6 {
+        grid-column: span 6;
+    }
+
+    .customer-register-field.span-5 {
+        grid-column: span 5;
+    }
+
+    .customer-register-field.span-4 {
+        grid-column: span 4;
+    }
+
+    .customer-register-field.span-2 {
+        grid-column: span 2;
+    }
+
+    .customer-register-field label {
+        color: var(--register-text);
+        font-size: 13px;
+        font-weight: 850;
+    }
+
+    .customer-register-field input,
+    .customer-register-field select,
+    .customer-register-field textarea {
+        width: 100%;
+        min-height: 50px;
+        padding: 0 14px;
+        border: 1px solid var(--register-border);
+        border-radius: 14px;
+        background: #fff;
+        color: var(--register-text);
+        outline: 0;
+        font-size: 16px;
+        font-weight: 750;
+        line-height: 1.25;
+        box-sizing: border-box;
+        transition: border-color .16s ease, box-shadow .16s ease;
+    }
+
+        .customer-register-field input::placeholder,
+        .customer-register-field textarea::placeholder {
+            color: #98a2b3;
+            font-weight: 650;
+        }
+
+        .customer-register-field input:focus,
+        .customer-register-field select:focus,
+        .customer-register-field textarea:focus {
+            border-color: rgba(37, 99, 235, .55);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, .11);
+        }
+
+    .customer-register-field small {
+        color: var(--register-muted);
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.4;
+    }
+
 .input-with-feedback {
     position: relative;
 }
 
+    .input-with-feedback input {
+        padding-right: 42px;
+    }
+
 .loading-spinner {
-    position: absolute;
-    right: 12px;
-    top: 42px;
-    width: 20px;
-    height: 20px;
-    border: 2px solid rgba(0,0,0,.1);
-    border-top-color: var(--brand-end) !important;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
-    animation: spin 1s linear infinite;
+    border: 2px solid #e5e7eb;
+    border-top-color: var(--register-blue);
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
     opacity: 0;
-    transition: opacity .2s;
+    transition: opacity .2s ease;
+    animation: registerSpin 1s linear infinite;
 }
 
     .loading-spinner.visible {
         opacity: 1;
     }
 
-@keyframes spin {
+@keyframes registerSpin {
+    to {
+        transform: translateY(-50%) rotate(360deg);
+    }
+}
+
+.validation-message {
+    min-height: 17px;
+    color: var(--register-red);
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.is-invalid {
+    border-color: var(--register-red) !important;
+}
+
+.customer-register-main-address {
+    margin: 0 18px 18px;
+    padding: 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(22, 163, 74, .18);
+    background: var(--register-green-soft);
+    display: grid;
+    grid-template-columns: 38px 1fr auto;
+    gap: 12px;
+    align-items: center;
+}
+
+    .customer-register-main-address > span {
+        width: 38px;
+        height: 38px;
+        border-radius: 13px;
+        background: #fff;
+        color: var(--register-green);
+        display: grid;
+        place-items: center;
+    }
+
+    .customer-register-main-address strong {
+        display: block;
+        margin-bottom: 2px;
+        color: var(--register-text);
+        font-size: 13px;
+        font-weight: 950;
+    }
+
+    .customer-register-main-address small {
+        display: block;
+        color: var(--register-muted);
+        font-size: 12px;
+        line-height: 1.4;
+        font-weight: 700;
+    }
+
+    .customer-register-main-address input {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--register-green);
+    }
+
+.customer-register-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin: 0 -24px -24px;
+    padding: 14px 24px calc(14px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--register-border-soft);
+    background: linear-gradient(180deg, rgba(255, 255, 255, .88), #fff 42%);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+}
+
+.customer-register-submit,
+.customer-register-cancel {
+    min-height: 52px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 950;
+}
+
+.customer-register-submit {
+    border: 0;
+    background: var(--register-blue);
+    color: #fff;
+    box-shadow: 0 14px 26px rgba(37, 99, 235, .24);
+    transition: background .16s ease, transform .16s ease, box-shadow .16s ease;
+}
+
+    .customer-register-submit:hover {
+        background: var(--register-blue-dark);
+        box-shadow: 0 16px 30px rgba(37, 99, 235, .3);
+    }
+
+    .customer-register-submit:active {
+        transform: translateY(1px);
+    }
+
+    .customer-register-submit:disabled {
+        opacity: .72;
+        cursor: not-allowed;
+        box-shadow: none;
+    }
+
+.customer-register-cancel {
+    min-width: 132px;
+    padding: 0 18px;
+    border: 1px solid var(--register-border);
+    background: #fff;
+    color: var(--register-text);
+}
+
+    .customer-register-cancel:hover {
+        border-color: rgba(37, 99, 235, .45);
+        background: var(--register-blue-soft);
+        color: var(--register-blue-dark);
+    }
+
+.customer-register-submit.is-loading .btn-text,
+.customer-register-submit.is-loading .btn-icon {
+    display: none;
+}
+
+.customer-register-submit.is-loading .btn-spinner {
+    display: inline-block;
+}
+
+.btn-spinner {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2.5px solid rgba(255, 255, 255, .55);
+    border-top-color: #fff;
+    animation: buttonSpin .85s linear infinite;
+    display: none;
+}
+
+@keyframes buttonSpin {
     to {
         transform: rotate(360deg);
     }
 }
 
-/* ajuda/checkbox */
-.form-hint {
-    font-size: .85rem;
-    color: #6b7280;
-    margin-top: .25rem;
-}
-
-.form-checkbox {
-    display: flex;
-    align-items: center;
-    margin-top: 1.5rem;
-}
-
-.form-check-input {
-    width: 18px;
-    height: 18px;
-    margin-right: .5rem;
-    accent-color: var(--brand-end);
-}
-
-.form-check-label {
-    margin: 0;
-}
-
-/* ações (footer) */
-.form-actions {
-    margin-top: 2rem;
-    text-align: center;
-    position: sticky;
-    bottom: 0; /* gruda no fim do card */
-    background: linear-gradient(180deg,rgba(255,255,255,.92),#fff 32%);
-    padding-top: .75rem;
-    padding-bottom: .75rem;
-}
-
-/* botões */
-.btn-primary {
-    background: linear-gradient(135deg,var(--brand-start),var(--brand-end));
-    border: 0;
-    color: #fff;
-    padding: .9rem 2.25rem;
-    font-size: 1.1rem;
-    font-weight: 600;
-    border-radius: 999px;
-    transition: .3s;
-    display: inline-flex;
-    align-items: center;
-    gap: .55rem;
-}
-
-    .btn-primary:hover {
-        filter: brightness(1.03);
-        transform: translateY(-2px);
-        box-shadow: 0 10px 20px var(--brand-end-25);
-    }
-
-.btn-outline-secondary {
-    width: 100%;
-    margin-top: 10px;
-    border-radius: 14px;
-    justify-content: center;
-    background: #fff;
-    color: #374151;
-    border: 1px solid #e5e7eb;
-    padding: .9rem 1rem;
-    font-weight: 600;
-    transition: .2s;
-}
-
-    .btn-outline-secondary:hover {
-        box-shadow: 0 10px 20px rgba(17,24,39,.08);
-    }
-
-/* estados do submit */
-.btn-primary.btn-submit.is-loading {
-    pointer-events: none;
-}
-
-    .btn-primary.btn-submit.is-loading .btn-text {
-        visibility: hidden;
-    }
-
-    .btn-primary.btn-submit.is-loading .btn-icon {
-        display: none;
-    }
-
-    .btn-primary.btn-submit.is-loading .btn-spinner {
-        display: inline-block;
-    }
-
-.btn-spinner {
-    width: 1.05em;
-    height: 1.05em;
-    border-radius: 50%;
-    border: 2.5px solid rgba(255,255,255,.55);
-    border-top-color: #fff;
-    animation: spin .85s linear infinite;
+.form-lock {
+    position: fixed;
+    inset: 0;
+    background: rgba(255, 255, 255, .35);
+    backdrop-filter: blur(1px);
+    pointer-events: auto;
+    z-index: 9999;
     display: none;
 }
 
-/* validação */
-.validation-message {
-    color: #dc3545;
-    font-size: .85rem;
-    margin-top: .25rem;
-}
-
-/* links dentro do card */
-.card-body a {
-    text-decoration: none;
-}
-
-    .card-body a:hover {
-        text-decoration: underline;
+    .form-lock.show {
+        display: block;
     }
 
-/* ===== Responsividade ===== */
-@media (max-width:992px) {
-    .cadastro-container {
-        align-items: flex-start;
-        padding-bottom: calc(var(--mbn-height) + 24px + env(safe-area-inset-bottom,0px));
+@media (max-width: 991.98px) {
+    .customer-register-shell {
+        padding: 14px;
+        place-items: start center;
     }
 
-    .cadastro-card {
-        margin-bottom: calc(var(--mbn-height) + 16px + env(safe-area-inset-bottom,0px));
-    }
-
-    .card-body {
-        padding: 1.5rem;
-    }
-
-    .form-row {
+    .customer-register-layout {
         grid-template-columns: 1fr;
-        gap: .75rem;
     }
 
-    .col-12, .col-8, .col-6, .col-5, .col-4, .col-3, .col-2 {
-        grid-column: span 1;
+    .customer-register-intro {
+        display: none;
+    }
+
+    .customer-register-card {
+        width: min(720px, 100%);
+        margin: 0 auto;
+    }
+
+    .customer-register-appbar {
+        min-height: 58px;
+        padding: 0 16px;
+        background: var(--register-blue);
+        color: #fff;
+        display: grid;
+        grid-template-columns: 42px 1fr 42px;
+        align-items: center;
+        box-shadow: 0 12px 24px rgba(37, 99, 235, .2);
+    }
+
+        .customer-register-appbar a {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            color: #fff;
+            display: grid;
+            place-items: center;
+            text-decoration: none;
+        }
+
+            .customer-register-appbar a:hover {
+                background: rgba(255, 255, 255, .16);
+                color: #fff;
+            }
+
+        .customer-register-appbar strong {
+            text-align: center;
+            font-size: 14px;
+            font-weight: 950;
+        }
+
+    .customer-register-mobile-title,
+    .customer-register-confirmed {
+        display: flex;
+    }
+
+    .customer-register-mobile-title {
+        display: block;
+    }
+
+        .customer-register-mobile-title h1 {
+            font-size: 28px;
+        }
+
+    .customer-register-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .customer-register-field.span-12,
+    .customer-register-field.span-8,
+    .customer-register-field.span-6,
+    .customer-register-field.span-5,
+    .customer-register-field.span-4,
+    .customer-register-field.span-2 {
+        grid-column: 1 / -1;
     }
 }
 
-@media (max-width:576px) {
-    .cadastro-container {
-        padding: 15px;
+@media (max-width: 575.98px) {
+    .customer-register-shell {
+        min-height: var(--customer-register-vh, 100dvh);
+        padding: 0;
+        display: block;
+        background: var(--register-bg);
     }
 
-    .card-header {
-        padding: 1.25rem;
+    .customer-register-card {
+        min-height: var(--customer-register-vh, 100dvh);
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        background: var(--register-bg);
     }
 
-    .card-body {
-        padding: 1.25rem;
+    .customer-register-form {
+        padding: 14px 12px 96px;
+        gap: 12px;
     }
 
-    .card-title {
-        font-size: 1.5rem;
+    .customer-register-section {
+        border-radius: 16px;
     }
 
-    .section-title {
-        font-size: 1.1rem;
+        .customer-register-section legend {
+            padding: 14px;
+            font-size: 15px;
+        }
+
+    .customer-register-grid {
+        padding: 14px;
+        gap: 12px;
     }
 
-    .form-control {
-        padding: .65rem .9rem;
+    .customer-register-main-address {
+        margin: 0 14px 14px;
+        align-items: start;
     }
 
-    .form-actions .btn-primary {
-        width: 100%;
-        border-radius: 14px;
-        justify-content: center;
+    .customer-register-actions {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        margin: 0;
+        padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+        grid-template-columns: 1fr;
+        background: rgba(255, 255, 255, .96);
+        box-shadow: 0 -12px 28px rgba(16, 24, 40, .08);
     }
-}
 
-
-/* === FULL-WIDTH FIELDS (override) === */
-.cadastro-card {
-    max-width: 760px;
-}
-/* desktop mais elegante/compacto */
-
-.form-row {
-    grid-template-columns: 1fr !important; /* uma coluna em TODAS as larguras */
-    gap: 0.9rem !important;
-}
-
-/* qualquer .col-* passa a ocupar a linha inteira */
-.col-12, .col-8, .col-6, .col-5, .col-4, .col-3, .col-2 {
-    grid-column: 1 / -1 !important;
-}
-
-/* inputs realmente 100% */
-.form-group > .form-control,
-.form-group > .input-with-feedback > .form-control {
-    width: 150%;
-}
-
-/* títulos/sessões com respiro melhor para 1 coluna */
-.form-section {
-    margin-bottom: 2rem;
-}
-
-    .form-section .section-title {
-        margin-bottom: 1rem;
+    .customer-register-cancel {
+        min-width: 0;
     }
-/* === Inputs = largura total do card === */
-.cadastro-card .card-body { /* garante que o conteúdo é a referência */
-    position: relative;
-}
-
-.cadastro-form .form-row,
-.cadastro-form .form-group,
-.cadastro-form .input-with-feedback {
-    width: 100%;
-    max-width: 100%;
-}
-
-.cadastro-form .form-control,
-.cadastro-form select.form-control,
-.cadastro-form textarea.form-control {
-    display: block; /* evita inline shrink */
-    width: 100% !important; /* força ocupar toda a coluna/card */
-    max-width: 100%;
-    box-sizing: border-box; /* inclui padding/borda no 100% */
-}
-
-/* se tiver input-group, também 100% */
-.cadastro-form .input-group {
-    width: 100%;
-}
-
-/* caso esteja usando col-*, faça tudo ocupar a linha inteira por padrão */
-.cadastro-form .col-12,
-.cadastro-form .col-8,
-.cadastro-form .col-6,
-.cadastro-form .col-5,
-.cadastro-form .col-4,
-.cadastro-form .col-3,
-.cadastro-form .col-2 {
-    grid-column: 1 / -1;
-}
-/* ===== Anti-zoom iOS/Chrome iOS para a tela de Cadastro ===== */
-
-/* iOS não deve auto-redimensionar texto */
-html {
-    -webkit-text-size-adjust: 100%;
-}
-
-/* Tudo que influencia o foco precisa ter >=16px */
-.cadastro-card,
-.cadastro-form input,
-.cadastro-form select,
-.cadastro-form textarea,
-.cadastro-form label,
-.cadastro-form .form-label,
-.cadastro-form .input-group-text,
-.cadastro-form .form-hint,
-.cadastro-form .validation-message,
-.cadastro-form .btn,
-.cadastro-form .btn * {
-    font-size: 16px !important;
-    line-height: 1.25;
-}
-
-/* Bootstrap costuma reduzir dentro do input-group: força 16px */
-.cadastro-form .input-group .form-control,
-.cadastro-form .input-group .input-group-text {
-    font-size: 16px !important;
-}
-
-/* (opcional) deixa o placeholder legível e evita “afinamento” */
-.cadastro-form ::placeholder {
-    opacity: .9;
 }

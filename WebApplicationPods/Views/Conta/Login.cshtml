@@ -24,7 +24,7 @@
                 <span class="auth-brand-icon">
                     <i class="fa-solid fa-store"></i>
                 </span>
-                <span>Pods</span>
+                @*<span>Pods</span>*@
             </a>
 
             <div class="auth-copy">
@@ -118,10 +118,10 @@
                     </label>
 
                     <a id="forgot-link"
-                       class="auth-muted-link disabled"
-                       href="#"
-                       aria-disabled="true"
-                       title="Digite uma credencial válida para habilitar">
+                       class="auth-muted-link"
+                       asp-controller="Conta"
+                       asp-action="ForgotPassword"
+                       title="Recuperar acesso">
                         Esqueci minha senha
                     </a>
                 </div>
@@ -150,22 +150,15 @@
             const checkUrl = '@Url.Action("CheckAccount", "Conta")';
             let timer;
 
-            function setForgot(enabled, email) {
+            function setForgot(email) {
                 if (!forgot) return;
 
-                if (enabled) {
-                    forgot.classList.remove('disabled');
-                    forgot.removeAttribute('aria-disabled');
-                    const param = email || input.value;
-                    forgot.href = baseUrl + '?email=' + encodeURIComponent(param);
-                    forgot.title = 'Recuperar acesso';
+                if (email) {
+                    forgot.href = baseUrl + '?email=' + encodeURIComponent(email);
                     return;
                 }
 
-                forgot.classList.add('disabled');
-                forgot.setAttribute('aria-disabled', 'true');
-                forgot.href = '#';
-                forgot.title = 'Digite uma credencial válida para habilitar';
+                forgot.href = baseUrl;
             }
 
             async function check() {
@@ -174,7 +167,7 @@
                 const val = (input.value || '').trim();
 
                 if (!val) {
-                    setForgot(false);
+                    setForgot(null);
                     return;
                 }
 
@@ -182,14 +175,14 @@
                     const response = await fetch(checkUrl + '?input=' + encodeURIComponent(val), { cache: 'no-store' });
 
                     if (!response.ok) {
-                        setForgot(false);
+                        setForgot(null);
                         return;
                     }
 
                     const data = await response.json();
-                    setForgot(!!data.exists, data.email);
+                    setForgot(data.email || null);
                 } catch {
-                    setForgot(false);
+                    setForgot(null);
                 }
             }
 
@@ -202,7 +195,7 @@
                 input.addEventListener('blur', check);
             }
 
-            setForgot(false);
+            setForgot(null);
         })();
     </script>
 }

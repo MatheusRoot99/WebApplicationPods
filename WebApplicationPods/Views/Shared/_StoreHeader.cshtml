@@ -1,303 +1,64 @@
-﻿@using WebApplicationPods.Models
-@{
-    var hdr = (StoreHeaderViewModel?)ViewData["StoreHeader"]
-              ?? (StoreHeaderViewModel?)ViewBag.StoreHeader;
-
-    var baseUrl = $"{Context.Request?.Scheme}://{Context.Request?.Host}";
-    var pathBase = (Context.Request?.PathBase.HasValue == true) ? Context.Request.PathBase.Value : "";
-    var defaultShareUrl = baseUrl + (string.IsNullOrWhiteSpace(pathBase) ? "/" : pathBase);
-
-    var nome = !string.IsNullOrWhiteSpace(hdr?.Nome) ? hdr!.Nome : "Pods Eletrônicos";
-    var logoUrl = string.IsNullOrWhiteSpace(hdr?.LogoUrl) ? null : hdr!.LogoUrl;
-    var abertoAgora = hdr?.AbertoAgora ?? false;
-
-    string textoHorario =
-        hdr?.FechaAs.HasValue == true
-            ? $"Até {hdr!.FechaAs!.Value.Hours:D2}h{hdr.FechaAs.Value.Minutes:D2}"
-            : (abertoAgora ? "Aberto agora" : "Fechado");
-
-    string urlCompartilhar = !string.IsNullOrWhiteSpace(hdr?.UrlParaCompartilhar)
-        ? hdr!.UrlParaCompartilhar!
-        : defaultShareUrl;
-
-    var mensagem = hdr?.MensagemStatus;
-    var perfilUrl = hdr?.PerfilDaLojaUrl;
+﻿@{
+    var isAuth = User?.Identity?.IsAuthenticated ?? false;
+    var nomeUsuario = User?.Identity?.Name ?? "Perfil";
 }
 
-<style>
-    /* StoreHeader v2 — inline, moderno, light/dark */
-    :root {
-        --sh-bg: rgba(255,255,255,.78);
-        --sh-bg2: rgba(255,255,255,.58);
-        --sh-text: #0F172A;
-        --sh-muted: #64748B;
-        --sh-border: rgba(15,23,42,.08);
-        --sh-shadow: 0 16px 40px rgba(15,23,42,.10);
-        --sh-brand1: #5B2BDE;
-        --sh-brand2: #2F6BFF;
-        --sh-ok: #22C55E;
-        --sh-bad: #EF4444;
-    }
+<header class="store-header">
+    <div class="store-header-top">
+        <button class="store-icon-button d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileMenu" aria-controls="mobileMenu">
+            <i class="fa-solid fa-bars"></i>
+        </button>
 
-    @@media (prefers-color-scheme: dark) {
-        : root
+        <a class="store-brand" asp-area="" asp-controller="Home" asp-action="Index">
+            <span class="store-brand-icon">
+                <i class="fa-solid fa-store"></i>
+            </span>
+            <span>
+                <strong>Conveniência</strong>
+                <small><span></span> Aberto até 23h59</small>
+            </span>
+        </a>
 
-    {
-        --sh-bg: rgba(12, 18, 34, .70);
-        --sh-bg2: rgba(12, 18, 34, .52);
-        --sh-text: rgba(234,240,255,.92);
-        --sh-muted: rgba(234,240,255,.68);
-        --sh-border: rgba(234,240,255,.10);
-        --sh-shadow: 0 18px 50px rgba(0,0,0,.45);
-    }
+        <form class="store-search d-none d-md-flex" asp-area="" asp-controller="Home" asp-action="Index" method="get">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="search" name="q" placeholder="Buscar produtos" autocomplete="off" />
+        </form>
 
-    }
+        <div class="store-actions">
+            <a class="store-icon-button store-cart-button" asp-area="" asp-controller="Carrinho" asp-action="Index" aria-label="Carrinho">
+                <i class="fa-solid fa-cart-shopping"></i>
+                <span class="js-cart-badge">0</span>
+            </a>
 
-    .storebar2 {
-        border-radius: 22px;
-        overflow: hidden;
-        border: 1px solid var(--sh-border);
-        box-shadow: var(--sh-shadow);
-        margin-bottom: 14px;
-        background: linear-gradient(180deg, var(--sh-bg), var(--sh-bg2));
-    }
-
-    .storebar2__top {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        padding: 12px 14px;
-        background: linear-gradient(90deg, var(--sh-brand1), var(--sh-brand2));
-        color: #fff;
-    }
-
-    .storebar2__brand {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        min-width: 0;
-    }
-
-    .storebar2__logo {
-        width: 44px;
-        height: 44px;
-        border-radius: 14px;
-        background: rgba(255,255,255,.14);
-        border: 1px solid rgba(255,255,255,.20);
-        display: grid;
-        place-items: center;
-        overflow: hidden;
-        flex: 0 0 auto;
-    }
-
-        .storebar2__logo img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .storebar2__logo i {
-            font-size: 1.05rem;
-            opacity: .95;
-        }
-
-    .storebar2__name {
-        font-weight: 900;
-        letter-spacing: -0.02em;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .storebar2__actions {
-        display: flex;
-        gap: 10px;
-    }
-
-    .storebar2__btn {
-        width: 40px;
-        height: 40px;
-        border-radius: 14px;
-        border: 1px solid rgba(255,255,255,.22);
-        background: rgba(255,255,255,.14);
-        color: #fff;
-        display: grid;
-        place-items: center;
-        cursor: pointer;
-        transition: transform .08s ease, filter .15s ease;
-    }
-
-        .storebar2__btn:hover {
-            filter: brightness(.98);
-        }
-
-        .storebar2__btn:active {
-            transform: scale(.98);
-        }
-
-    .storebar2__bottom {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        padding: 10px 14px;
-        color: var(--sh-text);
-    }
-
-    .storebar2__meta {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 8px;
-        min-width: 0;
-    }
-
-    .storebar2__badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 10px;
-        border-radius: 999px;
-        font-weight: 900;
-        font-size: .80rem;
-        background: rgba(34,197,94,.14);
-        color: var(--sh-text);
-        border: 1px solid rgba(34,197,94,.22);
-    }
-
-        .storebar2__badge.closed {
-            background: rgba(239,68,68,.12);
-            border-color: rgba(239,68,68,.22);
-        }
-
-    .storebar2__dot {
-        opacity: .55;
-    }
-
-    .storebar2__muted {
-        color: var(--sh-muted);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 52vw;
-    }
-
-    .storebar2__link {
-        font-weight: 900;
-        color: var(--sh-brand2);
-        text-decoration: none;
-        white-space: nowrap;
-    }
-
-        .storebar2__link:hover {
-            text-decoration: underline;
-        }
-
-    .storebar2__toast {
-        position: fixed;
-        right: 16px;
-        bottom: 16px;
-        z-index: 9999;
-        padding: 10px 12px;
-        border-radius: 14px;
-        background: rgba(15,23,42,.92);
-        color: #fff;
-        box-shadow: 0 18px 45px rgba(0,0,0,.35);
-        opacity: 0;
-        transform: translateY(10px);
-        transition: opacity .15s ease, transform .15s ease;
-    }
-
-        .storebar2__toast.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-</style>
-
-<div class="storebar2" id="storebar2">
-    <div class="storebar2__top">
-        <div class="storebar2__brand">
-            <div class="storebar2__logo">
-                @if (!string.IsNullOrWhiteSpace(logoUrl))
-                {
-                    <img src="@logoUrl" alt="Logo do estabelecimento" />
-                }
-                else
-                {
-                    <i class="fas fa-store" aria-hidden="true"></i>
-                }
-            </div>
-
-            <div class="storebar2__name" title="@nome">@nome</div>
-        </div>
-
-        <div class="storebar2__actions">
-            <button class="storebar2__btn" type="button"
-                    data-share-title="@nome"
-                    data-share-url="@urlCompartilhar"
-                    aria-label="Compartilhar">
-                <i class="fas fa-share-nodes" aria-hidden="true"></i>
-            </button>
+            @if (isAuth)
+            {
+                <a class="store-profile-link d-none d-sm-inline-flex" asp-area="" asp-controller="Conta" asp-action="Perfil">
+                    <i class="fa-regular fa-user"></i>
+                    <span>@nomeUsuario</span>
+                </a>
+            }
+            else
+            {
+                <a class="store-profile-link d-none d-sm-inline-flex" asp-area="" asp-controller="Conta" asp-action="Login">
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                    <span>Entrar</span>
+                </a>
+            }
         </div>
     </div>
 
-    <div class="storebar2__bottom">
-        <div class="storebar2__meta">
-            <span class="storebar2__badge @(abertoAgora ? "" : "closed")">
-                <span style="width:8px;height:8px;border-radius:99px;background:@(abertoAgora ? "var(--sh-ok)" : "var(--sh-bad)")"></span>
-                @(abertoAgora ? "Aberto" : "Fechado")
-            </span>
-
-            <span class="storebar2__muted">
-                <span class="storebar2__dot">•</span> @textoHorario
-                @if (!string.IsNullOrWhiteSpace(mensagem))
-                {
-                    <span class="storebar2__dot">•</span> 
-                    @mensagem
-                }
-            </span>
-        </div>
-
-        @if (!string.IsNullOrWhiteSpace(perfilUrl))
-        {
-            <a href="@perfilUrl" class="storebar2__link">Perfil da loja</a>
-        }
+    <div class="store-mobile-search d-md-none">
+        <form asp-area="" asp-controller="Home" asp-action="Index" method="get">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="search" name="q" placeholder="Buscar produtos" autocomplete="off" />
+        </form>
     </div>
-</div>
 
-<script>
-    (function () {
-      const root = document.getElementById('storebar2');
-      if (!root) return;
-
-      const btn = root.querySelector('button[data-share-url]');
-      if (!btn) return;
-
-      btn.addEventListener('click', async () => {
-        const title = btn.getAttribute('data-share-title') || document.title;
-        const url = btn.getAttribute('data-share-url') || window.location.href;
-
-        if (navigator.share) {
-          try { await navigator.share({ title, url }); } catch { }
-          return;
-        }
-
-        try {
-          await navigator.clipboard.writeText(url);
-          toast('Link copiado!');
-        } catch {
-          window.prompt('Copie o link:', url);
-        }
-      });
-
-      function toast(msg){
-        const el = document.createElement('div');
-        el.className = 'storebar2__toast';
-        el.textContent = msg;
-        document.body.appendChild(el);
-        requestAnimationFrame(() => el.classList.add('show'));
-        setTimeout(() => { el.classList.remove('show'); el.remove(); }, 2200);
-      }
-    })();
-</script>
+    <nav class="store-category-nav" aria-label="Categorias">
+        <a asp-area="" asp-controller="Home" asp-action="Index" class="active">Todos</a>
+        <a asp-area="" asp-controller="Home" asp-action="Index" asp-route-categoria="pods">Pods</a>
+        <a asp-area="" asp-controller="Home" asp-action="Index" asp-route-categoria="bebidas">Bebidas</a>
+        <a asp-area="" asp-controller="Home" asp-action="Index" asp-route-categoria="kits">Kits</a>
+        <a asp-area="" asp-controller="Home" asp-action="Index" asp-route-categoria="promocoes">Promoções</a>
+    </nav>
+</header>
