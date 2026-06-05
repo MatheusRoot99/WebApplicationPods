@@ -50,9 +50,7 @@ namespace WebApplicationPods.Controllers
                         await _signInManager.SignOutAsync();
                         HttpContext.Session.Clear();
 
-                        Response.Cookies.Delete("Pods.Auth");
-                        Response.Cookies.Delete("Pods.AntiForgery");
-                        Response.Cookies.Delete("SitePods.Session");
+                        LimparCookiesDeAutenticacao();
 
                         TempData["Erro"] = "Sua sessão anterior não tem permissão para este portal. Faça login novamente.";
                         ViewData["ReturnUrl"] = safeReturnUrl;
@@ -152,10 +150,10 @@ namespace WebApplicationPods.Controllers
 
                 // fallbacks corretos
                 if (isAdmin)
-                    return RedirectToAction("Index", "Lojistas", new { area = "Admin" });
+                    return RedirectToPortal("admin", "/Admin/Lojistas");
 
                 if (isLojista)
-                    return RedirectToAction("Index", "Dashboard", new { area = "PainelLojista" });
+                    return RedirectToPortal("painel", "/PainelLojista/Dashboard");
 
                 return RedirectToAction("Index", "Entregador");
             }
@@ -165,6 +163,33 @@ namespace WebApplicationPods.Controllers
                 ModelState.AddModelError(string.Empty, "Ocorreu um erro durante o login. Tente novamente.");
                 return View(vm);
             }
+        }
+
+        private IActionResult RedirectToPortal(string subdominio, string path)
+        {
+            var host = Request.Host.Host.ToLowerInvariant();
+            var port = Request.Host.Port;
+            var scheme = Request.Scheme;
+
+            if (host == "localhost" || host == "127.0.0.1" || host == "::1")
+            {
+                var localUrl = port.HasValue
+                    ? $"{scheme}://{subdominio}.lvh.me:{port.Value}{path}"
+                    : $"{scheme}://{subdominio}.lvh.me{path}";
+
+                return Redirect(localUrl);
+            }
+
+            if (host == "lvh.me" || host.EndsWith(".lvh.me"))
+            {
+                var url = port.HasValue
+                    ? $"{scheme}://{subdominio}.lvh.me:{port.Value}{path}"
+                    : $"{scheme}://{subdominio}.lvh.me{path}";
+
+                return Redirect(url);
+            }
+
+            return Redirect(path);
         }
 
         private static bool IsReturnUrlCompatibleWithRole(string returnUrl, bool isAdmin, bool isLojista, bool isEntregador)
@@ -205,6 +230,17 @@ namespace WebApplicationPods.Controllers
             return RedirectToAction("Index", "Home");
         }
 
+
+        private void LimparCookiesDeAutenticacao()
+        {
+            Response.Cookies.Delete("Pods.Auth");
+            Response.Cookies.Delete("Pods.AntiForgery");
+            Response.Cookies.Delete("SitePods.Session");
+
+            Response.Cookies.Delete("Pods.Auth", new CookieOptions { Domain = ".lvh.me", Path = "/" });
+            Response.Cookies.Delete("Pods.AntiForgery", new CookieOptions { Domain = ".lvh.me", Path = "/" });
+            Response.Cookies.Delete("SitePods.Session", new CookieOptions { Domain = ".lvh.me", Path = "/" });
+        }
         // =========================
         // LOGOUT
         // =========================
@@ -215,9 +251,7 @@ namespace WebApplicationPods.Controllers
             await _signInManager.SignOutAsync();
             HttpContext.Session.Clear();
 
-            Response.Cookies.Delete("Pods.Auth");
-            Response.Cookies.Delete("Pods.AntiForgery");
-            Response.Cookies.Delete("SitePods.Session");
+            LimparCookiesDeAutenticacao();
 
             return RedirectToAction("Login", "Conta");
         }

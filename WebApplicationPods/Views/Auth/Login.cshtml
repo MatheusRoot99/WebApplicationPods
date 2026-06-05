@@ -2,224 +2,152 @@
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Acesse sua conta";
+    ViewData["HideStoreHeader"] = true;
+    ViewData["BodyClass"] = "client-login-page";
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/login.css" asp-append-version="true" />
-    <style>
-        /* 1) trava a página inteira */
-        html, body {
-            height: 100%;
-            overflow: hidden; /* bloqueia scroll */
-            overscroll-behavior: none; /* sem bounce no mobile */
-            -webkit-text-size-adjust: 100%;
-        }
-
-        /* 2) usa a altura real do viewport (definida via JS em --vhpx) */
-        .auth-shell {
-            width: min(92vw, 760px);
-            height: var(--vhpx, 100dvh); /* sem scroll na página */
-            min-height: 0; /* cancela min-height anterior */
-            margin-inline: auto;
-            display: grid;
-            place-items: center;
-            
-            padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
-            background: #f5f6f8;
-            overflow: hidden; /* garante sem rolagem do wrapper */
-        }
-
-        /* 3) card ocupa a altura disponível SEM gerar overflow */
-        .auth-card {
-            width: 100%;
-            max-width: 640px;
-            height: calc(var(--vhpx, 100dvh) - 24px); /* 24px = padding shell */
-            max-height: calc(var(--vhpx, 100dvh) - 24px);
-            display: flex;
-            flex-direction: column;
-            background: #fff;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 8px 24px rgba(0,0,0,.08);
-            border: 1px solid #eaeaea;
-            transform: translateZ(0);
-        }
-
-        .auth-head {
-            flex: 0 0 auto;
-            background: linear-gradient(135deg,#6d28d9,#2563eb);
-            color: #fff;
-            padding: 12px 16px;
-            font-weight: 800;
-        }
-
-        .auth-body {
-            flex: 1 1 auto;
-            padding: 16px;
-            overflow: hidden; 
-        }
-
-        * campos e botões mais compactos para caber em telas pequenas 
-        .form-group {
-            margin-bottom: 14px;
-        }
-
-        .input-group-text {
-            background: #fff;
-            border-right: 0;
-        }
-
-        .form-control.border-start-0 {
-            border-left: 0;
-        }
-
-        input, select, textarea {
-            font-size: 16px;
-        }
-
-        .form-control:focus {
-            border-color: #2563eb;
-            box-shadow: 0 0 0 .2rem rgba(37,117,252,.25);
-        }
-
-        .btn-brand {
-            background: linear-gradient(135deg,#6d28d9,#2563eb);
-            border: 0;
-            color: #fff;
-            font-weight: 700;
-            padding: .6rem .9rem;
-        }
-
-            .btn-brand:hover {
-                filter: brightness(1.03);
-                box-shadow: 0 10px 20px rgba(37,117,252,.25);
-            }
-
-        /* se a altura ficar MUITO pequena (teclado etc.), encolhe margens/fontes para ainda evitar scroll */
-        @@media (max-height: 560px) {
-            .auth-head
-
-        {
-            padding: 10px 14px;
-        }
-
-        .auth-body {
-            padding: 12px;
-        }
-
-        .btn-brand, .btn {
-            padding: .55rem .85rem;
-        }
-
-        .form-text {
-            font-size: 13px;
-        }
-
-        }
-    </style>
-
 }
 
-<div class="auth-shell">
-    <div class="auth-card">
-        <div class="auth-head d-flex align-items-center gap-2">
-            <i class="fa-solid fa-mobile-screen"></i>
-            <h2 class="h5 mb-0">Acesse sua conta</h2>
-        </div>
+<div class="client-login-shell">
+    <main class="client-login-phone">
+        <header class="client-login-appbar">
+            <a asp-controller="Home" asp-action="Index" class="client-login-back" aria-label="Voltar para a loja">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <strong>Acesse sua conta</strong>
+        </header>
 
-        <div class="auth-body">
-            <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+        <section class="client-login-card">
+            <div class="client-login-icon">
+                <i class="fa-solid fa-mobile-screen"></i>
+            </div>
 
-            <form asp-action="Login" method="post" class="login-form" asp-antiforgery="true" novalidate>
-                @Html.AntiForgeryToken()
+            <div class="client-login-title">
+                <span>Identificação</span>
+                <h1>Entre pelo telefone</h1>
+                <p>Informe seu número com DDD para continuar seu pedido.</p>
+            </div>
+
+            <div asp-validation-summary="ModelOnly" class="client-login-validation"></div>
+
+            <form asp-action="Login" method="post" class="client-login-form" asp-antiforgery="true" novalidate>
                 <input type="hidden" asp-for="ReturnUrl" />
 
-                <div class="form-group mb-4">
-                    <label asp-for="Telefone" class="form-label">Telefone</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fa-solid fa-phone"></i></span>
+                <div class="client-login-field">
+                    <label asp-for="Telefone">Telefone</label>
+                    <div class="client-login-input">
+                        <i class="fa-solid fa-phone"></i>
                         <input asp-for="Telefone"
                                id="telefone"
-                               class="form-control border-start-0"
                                placeholder="(11) 98765-4321"
                                inputmode="numeric"
                                autocomplete="tel-national"
                                pattern="[\d\s\(\)\-]+"
                                required />
                     </div>
-                    <small class="form-text text-muted">Informe seu Telefone com DDD</small>
-                    <span class="text-danger" asp-validation-for="Telefone"></span>
+                    <small>Informe seu telefone com DDD</small>
+                    <span asp-validation-for="Telefone" class="client-login-field-validation"></span>
                 </div>
 
-                <button type="submit" class="btn btn-brand w-100">
-                    Continuar <i class="fas fa-arrow-right ms-2"></i>
+                <button type="submit" class="client-login-submit">
+                    Continuar
+                    <i class="fa-solid fa-arrow-right"></i>
                 </button>
 
-                <a href="@Url.Action("Index", "Home")" class="btn btn-outline-secondary w-100 mt-2">
-                    <i class="fas fa-arrow-left me-2"></i> Voltar para a loja
+                <a href="@Url.Action("Index", "Home")" class="client-login-secondary">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    Voltar para a loja
                 </a>
             </form>
-        </div>
-    </div>
+        </section>
+    </main>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
-    <script>
-        // Máscara leve para telefone (usa Inputmask se presente; senão, fallback)
-        (function(){
-          var el = document.getElementById('telefone');
-          if(!el) return;
 
-          if (window.jQuery && jQuery.fn && jQuery.fn.inputmask) {
-            jQuery(el).inputmask({ mask: '(99) 99999-9999' });
-          } else {
-            function onlyDigits(s){ return (s||'').replace(/\D+/g,''); }
-            el.addEventListener('input', function(){
-              var v = onlyDigits(el.value).slice(0,11);
-              if (v.length > 10) el.value = `(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`;
-              else if (v.length > 6) el.value = `(${v.slice(0,2)}) ${v.slice(2,6)}-${v.slice(6)}`;
-              else if (v.length > 2) el.value = `(${v.slice(0,2)}) ${v.slice(2)}`;
-              else if (v.length > 0) el.value = `(${v}`;
+    <script>
+        (function () {
+            const el = document.getElementById('telefone');
+
+            if (!el) return;
+
+            if (window.jQuery && jQuery.fn && jQuery.fn.inputmask) {
+                jQuery(el).inputmask({ mask: '(99) 99999-9999' });
+                return;
+            }
+
+            function onlyDigits(value) {
+                return (value || '').replace(/\D+/g, '');
+            }
+
+            el.addEventListener('input', function () {
+                const value = onlyDigits(el.value).slice(0, 11);
+
+                if (value.length > 10) {
+                    el.value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
+                    return;
+                }
+
+                if (value.length > 6) {
+                    el.value = `(${value.slice(0, 2)}) ${value.slice(2, 6)}-${value.slice(6)}`;
+                    return;
+                }
+
+                if (value.length > 2) {
+                    el.value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+                    return;
+                }
+
+                if (value.length > 0) {
+                    el.value = `(${value}`;
+                }
             });
-          }
         })();
 
-        // iOS: manter o campo focado visível (sem pulo)
-        (function(){
-          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-          if(!isIOS) return;
+        (function () {
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-          function centerOnFocus(e){
-            setTimeout(() => {
-              try { e.target.scrollIntoView({ block: 'center', inline: 'nearest' }); } catch(_){}
-            }, 140);
-          }
-          document.addEventListener('focusin', (e) => {
-            if(e.target.matches('input, textarea, select')) centerOnFocus(e);
-          });
-          document.addEventListener('focusout', () => {
-            setTimeout(() => window.scrollTo({ top: 0 }), 0);
-          });
+            if (!isIOS) return;
+
+            document.addEventListener('focusin', function (event) {
+                if (!event.target.matches('input, textarea, select')) return;
+
+                setTimeout(function () {
+                    try {
+                        event.target.scrollIntoView({ block: 'center', inline: 'nearest' });
+                    } catch { }
+                }, 140);
+            });
+
+            document.addEventListener('focusout', function () {
+                setTimeout(function () {
+                    window.scrollTo({ top: 0 });
+                }, 0);
+            });
+        })();
+
+        (function () {
+            function applyViewportHeight() {
+                let height = window.visualViewport ? visualViewport.height : window.innerHeight;
+
+                if (!height || height < 100) {
+                    height = window.innerHeight;
+                }
+
+                document.documentElement.style.setProperty('--client-login-vh', height + 'px');
+            }
+
+            applyViewportHeight();
+            window.addEventListener('resize', applyViewportHeight);
+
+            if (window.visualViewport) {
+                visualViewport.addEventListener('resize', applyViewportHeight);
+                visualViewport.addEventListener('scroll', applyViewportHeight);
+            }
         })();
     </script>
-    <script>
-        // Define --vhpx com a altura REAL do viewport (evita qualquer scroll)
-        (function setRealVh(){
-          function apply(){
-            var h = window.visualViewport ? visualViewport.height : window.innerHeight;
-            // Proteção: se algo “estranho” vier (0), cai no innerHeight
-            if (!h || h < 100) h = window.innerHeight;
-            document.documentElement.style.setProperty('--vhpx', h + 'px');
-          }
-          apply();
-          window.addEventListener('resize', apply);
-          if (window.visualViewport){
-            visualViewport.addEventListener('resize', apply);
-            visualViewport.addEventListener('scroll', apply);
-          }
-        })();
-    </script>
-
 }

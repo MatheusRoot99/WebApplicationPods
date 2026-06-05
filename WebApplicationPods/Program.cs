@@ -75,6 +75,16 @@ builder.Services.AddAntiforgery(o =>
     o.Cookie.SameSite = SameSiteMode.Lax;
     o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     o.HeaderName = "RequestVerificationToken";
+
+    var cookieDomain =
+        builder.Configuration["Identity:CookieDomain"]
+        ?? builder.Configuration["DevelopmentSettings:CookieDomain"]
+        ?? builder.Configuration["AppSettings:CookieDomain"];
+
+    if (!string.IsNullOrWhiteSpace(cookieDomain))
+    {
+        o.Cookie.Domain = cookieDomain;
+    }
 });
 
 // ==================== Authorization ====================
@@ -117,7 +127,16 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 
-    // localhost: não definir Domain
+    var cookieDomain =
+        builder.Configuration["Identity:CookieDomain"]
+        ?? builder.Configuration["DevelopmentSettings:CookieDomain"]
+        ?? builder.Configuration["AppSettings:CookieDomain"];
+
+    if (!string.IsNullOrWhiteSpace(cookieDomain))
+    {
+        options.Cookie.Domain = cookieDomain;
+    }
+
     options.LoginPath = "/Conta/Login";
     options.AccessDeniedPath = "/Conta/AcessoNegado";
     options.ExpireTimeSpan = TimeSpan.FromHours(2);
@@ -157,6 +176,7 @@ builder.Services.ConfigureApplicationCookie(options =>
             return true;
 
         var accept = req.Headers.Accept.ToString();
+
         if (!string.IsNullOrWhiteSpace(accept) &&
             accept.Contains("application/json", StringComparison.OrdinalIgnoreCase))
             return true;
@@ -179,7 +199,15 @@ builder.Services.AddSession(options =>
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 
-    // localhost: não definir Domain
+    var cookieDomain =
+        builder.Configuration["Identity:CookieDomain"]
+        ?? builder.Configuration["DevelopmentSettings:CookieDomain"]
+        ?? builder.Configuration["AppSettings:CookieDomain"];
+
+    if (!string.IsNullOrWhiteSpace(cookieDomain))
+    {
+        options.Cookie.Domain = cookieDomain;
+    }
 });
 
 // ==================== HttpContext + Serviços ====================

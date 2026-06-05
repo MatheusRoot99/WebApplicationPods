@@ -412,11 +412,17 @@
                 </main>
 
                 <aside class="checkout-order">
-                    <section class="checkout-order-card">
+                    <section class="checkout-order-card checkout-order-card-refined">
                         <div class="checkout-order-head">
-                            <div>
-                                <span>Resumo</span>
-                                <h2>Seu pedido</h2>
+                            <div class="checkout-order-title-wrap">
+                                <div class="checkout-order-title-icon">
+                                    <i class="bi bi-bag-check"></i>
+                                </div>
+
+                                <div>
+                                    <span>Resumo</span>
+                                    <h2>Seu pedido</h2>
+                                </div>
                             </div>
 
                             <strong>@quantidadeProdutos item(ns)</strong>
@@ -448,7 +454,7 @@
 
                                             @if (!string.IsNullOrWhiteSpace(item.Sabor))
                                             {
-                                                <span>• @item.Sabor</span>
+                                                <span> • @item.Sabor</span>
                                             }
                                         </div>
                                     </div>
@@ -468,11 +474,6 @@
                                 <span>Entrega</span>
                                 <strong id="taxaEntregaLabel">@((Model?.RetiradaNoLocal == true) ? "Grátis" : "R$ 5,00")</strong>
                             </div>
-
-                            <div>
-                                <span>Tipo</span>
-                                <strong id="tipoEntregaLabel">@((Model?.RetiradaNoLocal == true) ? "Retirada" : "Entrega")</strong>
-                            </div>
                         </div>
 
                         <div class="checkout-total-final">
@@ -480,9 +481,14 @@
                             <strong id="totalGeralLabel">@((subtotalPedido + taxaEntregaInicial).ToString("C"))</strong>
                         </div>
 
+                        <div class="checkout-delivery-chip">
+                            <i class="bi bi-truck"></i>
+                            <span id="tipoEntregaLabel">@((Model?.RetiradaNoLocal == true) ? "Retirada no local" : "Entrega no endereço")</span>
+                        </div>
+
                         <button type="submit" class="checkout-finish-btn">
+                            <i class="bi bi-lock"></i>
                             Finalizar pedido
-                            <i class="bi bi-arrow-right"></i>
                         </button>
                     </section>
                 </aside>

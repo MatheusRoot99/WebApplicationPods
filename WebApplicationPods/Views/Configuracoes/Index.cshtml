@@ -6,137 +6,188 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/configuracoes.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 }
 
-<div class="cfg-page">
-    <div class="cfg-header">
-        <div>
+<div class="settings-page">
+    <header class="settings-header">
+        <div class="settings-title">
+            <span>Conta</span>
             <h1>Configurações</h1>
             <p>Gerencie preferências da conta e aparência do sistema.</p>
         </div>
 
-        <a asp-controller="Home" asp-action="Index" class="cfg-btn cfg-btn-light">
+        <a asp-controller="Home" asp-action="Index" class="settings-btn settings-btn-light">
             <i class="fas fa-arrow-left"></i>
             Voltar
         </a>
+    </header>
+
+    <div class="settings-alerts">
+        @if (TempData["MensagemSucesso"] != null)
+        {
+            <div class="settings-alert is-success">
+                <i class="fas fa-check-circle"></i>
+                <span>@TempData["MensagemSucesso"]</span>
+            </div>
+        }
+
+        @if (TempData["MensagemErro"] != null)
+        {
+            <div class="settings-alert is-error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>@TempData["MensagemErro"]</span>
+            </div>
+        }
     </div>
 
-    @if (TempData["MensagemSucesso"] != null)
-    {
-        <div class="cfg-alert cfg-alert-success">
-            @TempData["MensagemSucesso"]
-        </div>
-    }
+    <div class="settings-grid">
+        <section class="settings-card">
+            <div class="settings-card-head">
+                <div class="settings-card-title">
+                    <div class="settings-card-icon">
+                        <i class="fas fa-palette"></i>
+                    </div>
 
-    @if (TempData["MensagemErro"] != null)
-    {
-        <div class="cfg-alert cfg-alert-danger">
-            @TempData["MensagemErro"]
-        </div>
-    }
-
-    <div class="cfg-grid">
-        <section class="cfg-card">
-            <div class="cfg-card-head">
-                <div>
-                    <h2>Aparência</h2>
-                    <p>Escolha como deseja visualizar o sistema.</p>
+                    <div>
+                        <span>Aparência</span>
+                        <h2>Aparência</h2>
+                        <p>Escolha como deseja visualizar o sistema.</p>
+                    </div>
                 </div>
-                <i class="fas fa-palette"></i>
             </div>
 
-            <div class="cfg-theme-options">
-                <button type="button" class="cfg-theme-option" data-theme-option="light">
-                    <span class="cfg-theme-preview cfg-theme-preview-light"></span>
+            <div class="settings-theme-options">
+                <button type="button" class="settings-theme-option" data-theme-option="light">
+                    <span class="settings-theme-preview is-light"></span>
                     <strong>Claro</strong>
                     <small>Visual limpo e iluminado</small>
                 </button>
 
-                <button type="button" class="cfg-theme-option" data-theme-option="dark">
-                    <span class="cfg-theme-preview cfg-theme-preview-dark"></span>
+                <button type="button" class="settings-theme-option" data-theme-option="dark">
+                    <span class="settings-theme-preview is-dark"></span>
                     <strong>Escuro</strong>
                     <small>Melhor para ambientes escuros</small>
                 </button>
             </div>
         </section>
 
-        <section class="cfg-card">
-            <div class="cfg-card-head">
-                <div>
-                    <h2>Conta</h2>
-                    <p>Atualize seu nome de exibição.</p>
+        <section class="settings-card">
+            <div class="settings-card-head">
+                <div class="settings-card-title">
+                    <div class="settings-card-icon">
+                        <i class="fas fa-user"></i>
+                    </div>
+
+                    <div>
+                        <span>Perfil</span>
+                        <h2>Conta</h2>
+                        <p>Atualize seu nome de exibição.</p>
+                    </div>
                 </div>
-                <i class="fas fa-user"></i>
             </div>
 
-            <form asp-action="AtualizarPerfil" method="post" class="cfg-form">
+            <form asp-action="AtualizarPerfil" method="post" class="settings-form">
                 @Html.AntiForgeryToken()
 
-                <div class="cfg-field">
+                <div class="settings-field">
                     <label asp-for="NomeUsuario"></label>
-                    <input asp-for="NomeUsuario" class="cfg-input" placeholder="Seu nome" />
-                    <span asp-validation-for="NomeUsuario" class="text-danger small"></span>
+                    <div class="settings-input-wrap">
+                        <i class="fas fa-user"></i>
+                        <input asp-for="NomeUsuario" placeholder="Seu nome" />
+                    </div>
+                    <span asp-validation-for="NomeUsuario" class="settings-validation"></span>
                 </div>
 
-                <div class="cfg-field">
+                <div class="settings-field">
                     <label>Email</label>
-                    <input value="@Model.Email" class="cfg-input" disabled />
+                    <div class="settings-input-wrap is-disabled">
+                        <i class="fas fa-envelope"></i>
+                        <input value="@Model.Email" disabled />
+                    </div>
                 </div>
 
-                <button type="submit" class="cfg-btn cfg-btn-primary">
+                <button type="submit" class="settings-btn settings-btn-primary">
                     <i class="fas fa-save"></i>
                     Salvar conta
                 </button>
             </form>
         </section>
 
-        <section class="cfg-card">
-            <div class="cfg-card-head">
-                <div>
-                    <h2>Senha</h2>
-                    <p>Altere sua senha de acesso.</p>
+        <section class="settings-card">
+            <div class="settings-card-head">
+                <div class="settings-card-title">
+                    <div class="settings-card-icon">
+                        <i class="fas fa-lock"></i>
+                    </div>
+
+                    <div>
+                        <span>Segurança</span>
+                        <h2>Senha</h2>
+                        <p>Altere sua senha de acesso.</p>
+                    </div>
                 </div>
-                <i class="fas fa-lock"></i>
             </div>
 
-            <form asp-action="AlterarSenha" method="post" class="cfg-form">
+            <form asp-action="AlterarSenha" method="post" class="settings-form">
                 @Html.AntiForgeryToken()
 
-                <div class="cfg-field">
+                <div class="settings-field">
                     <label asp-for="SenhaAtual">Senha atual</label>
-                    <input asp-for="SenhaAtual" class="cfg-input" autocomplete="current-password" />
+                    <div class="settings-input-wrap">
+                        <i class="fas fa-lock"></i>
+                        <input asp-for="SenhaAtual" autocomplete="current-password" />
+                    </div>
                 </div>
 
-                <div class="cfg-field">
+                <div class="settings-field">
                     <label asp-for="NovaSenha">Nova senha</label>
-                    <input asp-for="NovaSenha" class="cfg-input" autocomplete="new-password" />
+                    <div class="settings-input-wrap">
+                        <i class="fas fa-key"></i>
+                        <input asp-for="NovaSenha" autocomplete="new-password" />
+                    </div>
                 </div>
 
-                <div class="cfg-field">
+                <div class="settings-field">
                     <label asp-for="ConfirmarSenha">Confirmar nova senha</label>
-                    <input asp-for="ConfirmarSenha" class="cfg-input" autocomplete="new-password" />
+                    <div class="settings-input-wrap">
+                        <i class="fas fa-check"></i>
+                        <input asp-for="ConfirmarSenha" autocomplete="new-password" />
+                    </div>
                 </div>
 
-                <button type="submit" class="cfg-btn cfg-btn-primary">
+                <button type="submit" class="settings-btn settings-btn-primary">
                     <i class="fas fa-key"></i>
                     Alterar senha
                 </button>
             </form>
         </section>
 
-        <section class="cfg-card">
-            <div class="cfg-card-head">
-                <div>
-                    <h2>Loja</h2>
-                    <p>Dados básicos da loja vinculada.</p>
+        <section class="settings-card">
+            <div class="settings-card-head">
+                <div class="settings-card-title">
+                    <div class="settings-card-icon">
+                        <i class="fas fa-store"></i>
+                    </div>
+
+                    <div>
+                        <span>Loja</span>
+                        <h2>Loja</h2>
+                        <p>Dados básicos da loja vinculada.</p>
+                    </div>
                 </div>
-                <i class="fas fa-store"></i>
             </div>
 
-            <div class="cfg-store-box">
-                <span>Loja atual</span>
-                <strong>@(Model.NomeLoja ?? "Conveniência")</strong>
-                <small>A edição completa dos dados da loja será feita no próximo passo.</small>
+            <div class="settings-store-box">
+                <div class="settings-store-icon">
+                    <i class="fas fa-shop"></i>
+                </div>
+
+                <div>
+                    <span>Loja atual</span>
+                    <strong>@(Model.NomeLoja ?? "Conveniência")</strong>
+                    <small>A edição completa dos dados da loja será feita no próximo passo.</small>
+                </div>
             </div>
         </section>
     </div>
