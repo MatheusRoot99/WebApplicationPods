@@ -3,20 +3,51 @@
 
 @{
     ViewData["Title"] = "Resumo do Pedido";
+
+    var itens = Model?.Itens ?? new List<CarrinhoItemViewModel>();
+    var temItens = itens.Any();
+    var total = Model?.Total ?? 0m;
 }
 
-<div class="container-fluid py-4 resumo-pedido-page">
-    <div class="row g-4">
-        <div class="col-lg-8">
-            <div class="card resumo-card">
-                <div class="card-header resumo-card-header">
-                    <h4 class="mb-0">Itens do Pedido</h4>
-                </div>
+@section Styles {
+    <link rel="stylesheet" href="~/css/ResumoPedidoCliente.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+}
 
-                <div class="card-body">
-                    @if (Model?.Itens != null && Model.Itens.Any())
-                    {
-                        foreach (var item in Model.Itens)
+<div class="order-summary-page">
+    <header class="order-summary-header">
+        <a asp-controller="Carrinho" asp-action="Index" class="order-summary-back" aria-label="Voltar para o carrinho">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+
+        <div class="order-summary-title">
+            <span>Conferência</span>
+            <h1>Resumo do pedido</h1>
+            <p>Revise seus itens e escolha a forma de pagamento.</p>
+        </div>
+
+        <div class="order-summary-safe">
+            <i class="fas fa-shield-alt"></i>
+            <span>Seguro</span>
+        </div>
+    </header>
+
+    @if (temItens)
+    {
+        <div class="order-summary-layout">
+            <main class="order-summary-items">
+                <section class="order-summary-card">
+                    <div class="order-summary-card-head">
+                        <div>
+                            <span>Itens</span>
+                            <h2>Itens do pedido</h2>
+                        </div>
+
+                        <strong>@itens.Count item(ns)</strong>
+                    </div>
+
+                    <div class="order-items-list">
+                        @foreach (var item in itens)
                         {
                             var produto = item.Produto;
                             var nome = produto?.Nome ?? $"Produto #{item.ProdutoId}";
@@ -37,288 +68,129 @@
                             ? $"Total físico: {totalFisico} {(totalFisico == 1 ? "unidade" : "unidades")}"
                             : "";
 
-                            <div class="resumo-item">
-                                <div class="resumo-item-img">
+                            <article class="order-item-card">
+                                <div class="order-item-img">
                                     @if (!string.IsNullOrWhiteSpace(img))
                                     {
-                                        <img src="@img" alt="@nome" />
+                                        <img src="@Url.Content(img)" alt="@nome" />
                                     }
                                     else
                                     {
-                                        <span>Sem imagem</span>
+                                        <i class="fas fa-image"></i>
                                     }
                                 </div>
 
-                                <div class="resumo-item-info">
-                                    <h5>@nome</h5>
+                                <div class="order-item-info">
+                                    <h3>@nome</h3>
 
-                                    <div class="resumo-item-qtd">
+                                    <div class="order-item-meta is-primary">
                                         @resumoQuantidade
                                     </div>
 
                                     @if (!string.IsNullOrWhiteSpace(totalFisicoTexto))
                                     {
-                                        <div class="resumo-item-fisico">
+                                        <div class="order-item-meta is-success">
                                             @totalFisicoTexto
                                         </div>
                                     }
 
                                     @if (!string.IsNullOrWhiteSpace(item.Sabor))
                                     {
-                                        <div class="resumo-item-extra">
+                                        <div class="order-item-meta">
                                             <strong>Sabor:</strong> @item.Sabor
                                         </div>
                                     }
 
                                     @if (!string.IsNullOrWhiteSpace(item.Observacoes))
                                     {
-                                        <div class="resumo-item-extra">
+                                        <div class="order-item-meta">
                                             <strong>Obs:</strong> @item.Observacoes
                                         </div>
                                     }
                                 </div>
 
-                                <div class="resumo-item-total">
+                                <strong class="order-item-total">
                                     @item.Subtotal.ToString("C")
-                                </div>
-                            </div>
+                                </strong>
+                            </article>
                         }
-                    }
-                    else
-                    {
-                        <div class="alert alert-light border mb-0">
-                            Nenhum item encontrado no carrinho.
+                    </div>
+                </section>
+            </main>
+
+            <aside class="order-summary-aside">
+                <section class="order-total-card">
+                    <div class="order-total-head">
+                        <div>
+                            <span>Total</span>
+                            <h2>Total do pedido</h2>
                         </div>
-                    }
-                </div>
-            </div>
-        </div>
 
-        <div class="col-lg-4">
-            <div class="card resumo-card resumo-total-card">
-                <div class="card-header resumo-card-header">
-                    <h4 class="mb-0">Total do Pedido</h4>
-                </div>
-
-                <div class="card-body">
-                    <div class="resumo-total-linha">
-                        <span>Subtotal</span>
-                        <strong>@(Model?.Total.ToString("C") ?? "R$ 0,00")</strong>
+                        <div class="order-total-icon">
+                            <i class="fas fa-receipt"></i>
+                        </div>
                     </div>
 
-                    <div class="resumo-total-linha">
-                        <span>Frete</span>
-                        <strong>A calcular</strong>
+                    <div class="order-total-lines">
+                        <div>
+                            <span>Subtotal</span>
+                            <strong>@total.ToString("C")</strong>
+                        </div>
+
+                        <div>
+                            <span>Entrega</span>
+                            <strong>A calcular</strong>
+                        </div>
                     </div>
 
-                    <hr />
-
-                    <div class="resumo-total-final">
+                    <div class="order-total-final">
                         <span>Total</span>
-                        <strong>@(Model?.Total.ToString("C") ?? "R$ 0,00")</strong>
+                        <strong>@total.ToString("C")</strong>
                     </div>
 
-                    <div class="mt-4">
-                        <h5 class="resumo-section-title">Método de Pagamento</h5>
+                    <div class="order-payment">
+                        <h3>Método de pagamento</h3>
 
-                        <label class="resumo-radio">
+                        <label class="order-payment-option">
                             <input type="radio" name="metodoPagamento" id="pix" value="Pix" checked />
-                            <span>Pix</span>
+                            <span class="order-payment-check"></span>
+                            <i class="fas fa-qrcode"></i>
+                            <strong>Pix</strong>
                         </label>
 
-                        <label class="resumo-radio">
+                        <label class="order-payment-option">
                             <input type="radio" name="metodoPagamento" id="cartao" value="CartaoCredito" />
-                            <span>Cartão de Crédito</span>
+                            <span class="order-payment-check"></span>
+                            <i class="fas fa-credit-card"></i>
+                            <strong>Cartão de Crédito</strong>
                         </label>
                     </div>
 
-                    <button id="finalizarPedido" class="btn-finalizar-pedido">
-                        Finalizar Pedido
+                    <button id="finalizarPedido" class="order-finish-btn" type="button">
+                        Finalizar pedido
+                        <i class="fas fa-arrow-right"></i>
                     </button>
-                </div>
-            </div>
+                </section>
+            </aside>
         </div>
-    </div>
+    }
+    else
+    {
+        <section class="order-empty">
+            <div class="order-empty-icon">
+                <i class="fas fa-bag-shopping"></i>
+            </div>
+
+            <h2>Nenhum item encontrado</h2>
+            <p>Adicione produtos ao carrinho para continuar.</p>
+
+            <a asp-controller="Home" asp-action="Index" class="order-finish-btn">
+                Ver produtos
+                <i class="fas fa-store"></i>
+            </a>
+        </section>
+    }
 </div>
-
-<style>
-    .resumo-pedido-page {
-        width: 100%;
-    }
-
-    .resumo-card {
-        border: 0;
-        border-radius: 18px;
-        overflow: hidden;
-        box-shadow: 0 10px 30px rgba(15, 23, 42, .08);
-    }
-
-    .resumo-card-header {
-        background: linear-gradient(135deg, #6d28d9, #2563eb);
-        color: #fff;
-        padding: 18px 22px;
-    }
-
-    .resumo-item {
-        display: grid;
-        grid-template-columns: 76px 1fr auto;
-        gap: 16px;
-        align-items: center;
-        padding: 16px 0;
-        border-bottom: 1px solid #e5e7eb;
-    }
-
-        .resumo-item:last-child {
-            border-bottom: 0;
-        }
-
-    .resumo-item-img {
-        width: 76px;
-        height: 76px;
-        border-radius: 14px;
-        background: #f1f5f9;
-        border: 1px solid #e5e7eb;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-        color: #94a3b8;
-        font-size: .75rem;
-        text-align: center;
-    }
-
-        .resumo-item-img img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-    .resumo-item-info h5 {
-        margin: 0 0 4px;
-        font-weight: 800;
-        color: #111827;
-    }
-
-    .resumo-item-qtd {
-        font-size: .9rem;
-        color: #2563eb;
-        font-weight: 700;
-    }
-
-    .resumo-item-fisico {
-        font-size: .82rem;
-        color: #059669;
-        font-weight: 700;
-        margin-top: 2px;
-    }
-
-    .resumo-item-extra {
-        font-size: .82rem;
-        color: #6b7280;
-        margin-top: 2px;
-    }
-
-    .resumo-item-total {
-        font-weight: 800;
-        color: #111827;
-        white-space: nowrap;
-    }
-
-    .resumo-total-linha,
-    .resumo-total-final {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 12px;
-    }
-
-    .resumo-total-final {
-        font-size: 1.25rem;
-    }
-
-        .resumo-total-final strong {
-            color: #16a34a;
-            font-size: 1.5rem;
-        }
-
-    .resumo-section-title {
-        font-size: 1rem;
-        font-weight: 800;
-        margin-bottom: 12px;
-    }
-
-    .resumo-radio {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 12px;
-        border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        margin-bottom: 8px;
-        cursor: pointer;
-    }
-
-    .btn-finalizar-pedido {
-        width: 100%;
-        margin-top: 20px;
-        border: 0;
-        border-radius: 14px;
-        padding: 14px 18px;
-        background: linear-gradient(135deg, #6d28d9, #2563eb);
-        color: #fff;
-        font-weight: 800;
-    }
-
-    [data-theme="dark"] .resumo-card,
-    body.dark .resumo-card {
-        background: #111827;
-        color: #e5e7eb;
-    }
-
-    [data-theme="dark"] .resumo-item,
-    body.dark .resumo-item {
-        border-color: #263244;
-    }
-
-    [data-theme="dark"] .resumo-item-info h5,
-    [data-theme="dark"] .resumo-item-total,
-    body.dark .resumo-item-info h5,
-    body.dark .resumo-item-total {
-        color: #fff;
-    }
-
-    [data-theme="dark"] .resumo-item-img,
-    body.dark .resumo-item-img {
-        background: #0f172a;
-        border-color: #263244;
-    }
-
-    [data-theme="dark"] .resumo-radio,
-    body.dark .resumo-radio {
-        border-color: #263244;
-        background: #0f172a;
-    }
-
-    [data-theme="dark"] .resumo-item-fisico,
-    body.dark .resumo-item-fisico {
-        color: #86efac;
-    }
-
-    @@media (max-width: 576px) {
-        .resumo-item {
-            grid-template-columns: 64px 1fr;
-        }
-
-        .resumo-item-total {
-            grid-column: 2;
-        }
-
-        .resumo-item-img {
-            width: 64px;
-            height: 64px;
-        }
-    }
-</style>
 
 @section Scripts {
     <script>

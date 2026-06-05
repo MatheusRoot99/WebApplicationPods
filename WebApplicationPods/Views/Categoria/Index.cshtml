@@ -2,98 +2,147 @@
 @model IEnumerable<CategoriaModel>
 
 @{
-    // Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "Gerenciamento de Categorias";
+    ViewData["Title"] = "Categorias";
+
+    var categorias = Model?.ToList() ?? new List<CategoriaModel>();
+    var totalCategorias = categorias.Count;
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/categories-admin.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 }
 
-<div class="container-fluid px-3 px-md-4 categories-admin">
-
-    <div class="page-head d-flex flex-column flex-md-row justify-content-between align-items-center gap-2 mb-4">
-        <h1 class="m-0">
-            <i class="fas fa-tags me-2"></i>@ViewData["Title"]
-        </h1>
-        <a asp-action="Criar" class="btn btn-primary btn-lg w-100 w-md-auto">
-            <i class="fas fa-plus-circle me-2"></i>Nova Categoria
-        </a>
-    </div>
-
-    <div class="card shadow-sm mb-4">
-        <div class="card-header brand-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
-            <h5 class="m-0">
-                <i class="fas fa-list me-2"></i>Lista de Categorias
-            </h5>
-
-            <div class="search-wrap">
-                <div class="input-group input-group-sm">
-                    <input type="text" id="searchInput" class="form-control" placeholder="Pesquisar...">
-                    <button class="btn btn-outline-secondary" type="button">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </div>
-            </div>
+<div class="categories-page">
+    <header class="categories-header">
+        <div class="categories-title">
+            <span>Administração</span>
+            <h1>Categorias</h1>
+            <p>Organize os produtos da loja por grupos.</p>
         </div>
 
-        <div class="card-body">
+        <a asp-action="Criar" class="categories-btn categories-btn-primary">
+            <i class="fas fa-plus"></i>
+            Nova categoria
+        </a>
+    </header>
 
-            @if (TempData["Sucesso"] != null)
-            {
-                <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
-                    <i class="bi bi-check-circle-fill me-2"></i> @TempData["MensagemSucesso"]
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-                </div>
-            }
-            @if (TempData["Erro"] != null)
-            {
-                <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["MensagemErro"]
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-                </div>
-            }
+    <div class="categories-alerts">
+        @if (TempData["MensagemSucesso"] is string ok && !string.IsNullOrWhiteSpace(ok))
+        {
+            <div class="categories-alert is-success">
+                <i class="fas fa-check-circle"></i>
+                <span>@ok</span>
+            </div>
+        }
 
-            <!-- table-wrap garante rolagem horizontal no mobile -->
-            <div class="table-wrap table-responsive">
-                <table class="table table-hover table-striped align-middle" id="categoriasTable">
-                    <thead class="table-light">
+        @if (TempData["MensagemErro"] is string err && !string.IsNullOrWhiteSpace(err))
+        {
+            <div class="categories-alert is-error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>@err</span>
+            </div>
+        }
+    </div>
+
+    <section class="categories-kpis">
+        <article class="categories-kpi">
+            <div class="categories-kpi-icon">
+                <i class="fas fa-tags"></i>
+            </div>
+
+            <div>
+                <span>Total de categorias</span>
+                <strong>@totalCategorias</strong>
+            </div>
+        </article>
+
+        <article class="categories-kpi">
+            <div class="categories-kpi-icon is-green">
+                <i class="fas fa-layer-group"></i>
+            </div>
+
+            <div>
+                <span>Categorias ativas</span>
+                <strong>@totalCategorias</strong>
+            </div>
+        </article>
+    </section>
+
+    <section class="categories-toolbar">
+        <div class="categories-section-title">
+            <span>Busca</span>
+            <h2>Pesquisar categoria</h2>
+        </div>
+
+        <div class="categories-search">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Pesquisar por nome ou descrição..." />
+        </div>
+    </section>
+
+    <section class="categories-table-card">
+        <div class="categories-table-head">
+            <div>
+                <span>Lista</span>
+                <h2>Lista de categorias</h2>
+            </div>
+
+            <strong>@totalCategorias categoria(s)</strong>
+        </div>
+
+        @if (categorias.Any())
+        {
+            <div class="categories-table-wrap">
+                <table class="categories-table" id="categoriasTable">
+                    <thead>
                         <tr>
-                            <th width="30%">Nome</th>
-                            <th width="50%">Descrição</th>
-                            <th width="20%" class="text-end">Ações</th>
+                            <th>Nome</th>
+                            <th>Descrição</th>
+                            <th class="text-end">Ações</th>
                         </tr>
                     </thead>
+
                     <tbody id="tbodyCategorias">
-                        @foreach (var item in Model)
+                        @foreach (var item in categorias)
                         {
                             <tr>
                                 <td data-label="Nome">
-                                    <div class="d-flex align-items-center">
-                                        <span class="icon-category me-2 me-md-3">
+                                    <div class="category-name-cell">
+                                        <span class="category-icon">
                                             <i class="fas fa-tag"></i>
                                         </span>
+
                                         <strong>@item.Nome</strong>
                                     </div>
                                 </td>
+
                                 <td data-label="Descrição">
-                                    @if (!string.IsNullOrEmpty(item.Descricao))
+                                    @if (!string.IsNullOrWhiteSpace(item.Descricao))
                                     {
-                                        <span class="text-muted">@item.Descricao</span>
+                                        <span class="category-description">@item.Descricao</span>
                                     }
                                     else
                                     {
-                                        <span class="text-muted fst-italic">Sem descrição</span>
+                                        <span class="category-description is-empty">Sem descrição</span>
                                     }
                                 </td>
-                                <td class="text-end" data-label="Ações">
-                                    <div class="btn-group" role="group">
-                                        <a asp-action="Editar" asp-route-id="@item.Id"
-                                           class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="Editar">
+
+                                <td data-label="Ações" class="text-end">
+                                    <div class="category-actions">
+                                        <a asp-action="Editar"
+                                           asp-route-id="@item.Id"
+                                           class="category-icon-btn is-edit"
+                                           title="Editar"
+                                           aria-label="Editar @item.Nome">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <a asp-action="Excluir" asp-route-id="@item.Id"
-                                           class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Excluir">
+
+                                        <a asp-action="Excluir"
+                                           asp-route-id="@item.Id"
+                                           class="category-icon-btn is-delete"
+                                           title="Excluir"
+                                           aria-label="Excluir @item.Nome">
                                             <i class="fas fa-trash-alt"></i>
                                         </a>
                                     </div>
@@ -104,65 +153,95 @@
                 </table>
             </div>
 
-        </div>
+            <div class="categories-mobile-list" id="categoriasMobileList">
+                @foreach (var item in categorias)
+                {
+                    <article class="category-mobile-card">
+                        <header>
+                            <span class="category-icon">
+                                <i class="fas fa-tag"></i>
+                            </span>
 
-        <div class="card-footer bg-white">
-            <div class="row align-items-center">
-                <div class="col-12 col-md-6 mb-2 mb-md-0">
-                    <p class="mb-0 text-muted">
-                        Mostrando <strong>@Model.Count()</strong> categorias
-                    </p>
-                </div>
-                <div class="col-12 col-md-6">
-                    <nav aria-label="Page navigation">
-                        <ul class="pagination pagination-sm justify-content-start justify-content-md-end mb-0">
-                            <li class="page-item disabled"><span class="page-link">Anterior</span></li>
-                            <li class="page-item active"><span class="page-link">1</span></li>
-                            <li class="page-item"><a class="page-link" href="#">2</a></li>
-                            <li class="page-item"><a class="page-link" href="#">3</a></li>
-                            <li class="page-item"><a class="page-link" href="#">Próxima</a></li>
-                        </ul>
-                    </nav>
-                </div>
+                            <div>
+                                <h3>@item.Nome</h3>
+
+                                @if (!string.IsNullOrWhiteSpace(item.Descricao))
+                                {
+                                    <p>@item.Descricao</p>
+                                }
+                                else
+                                {
+                                    <p class="is-empty">Sem descrição</p>
+                                }
+                            </div>
+                        </header>
+
+                        <footer>
+                            <a asp-action="Editar"
+                               asp-route-id="@item.Id"
+                               class="categories-btn categories-btn-light">
+                                <i class="fas fa-edit"></i>
+                                Editar
+                            </a>
+
+                            <a asp-action="Excluir"
+                               asp-route-id="@item.Id"
+                               class="categories-btn categories-btn-danger">
+                                <i class="fas fa-trash-alt"></i>
+                                Excluir
+                            </a>
+                        </footer>
+                    </article>
+                }
             </div>
-        </div>
+        }
+        else
+        {
+            <div class="categories-empty">
+                <div class="categories-empty-icon">
+                    <i class="fas fa-tags"></i>
+                </div>
 
-    </div>
+                <h2>Nenhuma categoria cadastrada</h2>
+                <p>Crie sua primeira categoria para organizar os produtos.</p>
+
+                <a asp-action="Criar" class="categories-btn categories-btn-primary">
+                    <i class="fas fa-plus"></i>
+                    Nova categoria
+                </a>
+            </div>
+        }
+    </section>
 </div>
 
 @section Scripts {
     <script>
-        $(function () {
-            // tooltips
-            $('[data-bs-toggle="tooltip"]').tooltip({ trigger: 'hover focus' });
+        document.addEventListener('DOMContentLoaded', function () {
+            setTimeout(() => {
+                document.querySelectorAll('.categories-alert').forEach(a => a.remove());
+            }, 5000);
 
-            // filtro client-side
-            $('#searchInput').on('keyup', function () {
-                const value = $(this).val().toLowerCase();
-                $('#categoriasTable tbody tr').each(function () {
-                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+            const searchInput = document.getElementById('searchInput');
+            const tableRows = Array.from(document.querySelectorAll('#categoriasTable tbody tr'));
+            const mobileCards = Array.from(document.querySelectorAll('.category-mobile-card'));
+
+            function normalize(value) {
+                return (value || '').toString().toLowerCase().trim();
+            }
+
+            function filterCategories() {
+                const term = normalize(searchInput?.value);
+
+                tableRows.forEach(row => {
+                    row.style.display = normalize(row.textContent).includes(term) ? '' : 'none';
                 });
-            });
 
-            // toasts em mobile no lugar de tooltip
-            if (window.matchMedia('(max-width: 768px)').matches) {
-                $('[data-bs-toggle="tooltip"]').tooltip('dispose').on('click', function (e) {
-                    e.preventDefault();
-                    const title = this.getAttribute('title');
-                    if (!title) return;
-                    const toast = $(`
-                      <div class="toast show position-fixed bottom-0 start-50 translate-middle-x mb-3" role="alert">
-                        <div class="toast-body bg-primary text-white rounded">${title}</div>
-                      </div>`);
-                    $('body').append(toast);
-                    setTimeout(() => toast.remove(), 1800);
+                mobileCards.forEach(card => {
+                    card.style.display = normalize(card.textContent).includes(term) ? '' : 'none';
                 });
             }
 
-            // feedback em botões (touch)
-            $('.btn-outline-primary, .btn-outline-danger')
-              .on('touchstart', function(){ $(this).addClass('active-scale'); })
-              .on('touchend touchcancel', function(){ $(this).removeClass('active-scale'); });
+            searchInput?.addEventListener('input', filterCategories);
         });
     </script>
 }

@@ -1,232 +1,303 @@
 ﻿@using WebApplicationPods.Enum
+@using System.Globalization
 @model WebApplicationPods.Models.PaymentModel
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Pagamento";
+    ViewData["HideStoreHeader"] = true;
 
+    var ptBR = CultureInfo.GetCultureInfo("pt-BR");
     var isPaid = Model.Status == PaymentStatus.Paid;
     var afToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
     var orderToken = ViewBag.OrderToken as string ?? Model.Pedido?.RastreioToken;
-
     var trackUrl = Url.Action("Acompanhar", "Pedido", new { id = Model.PedidoId, t = orderToken });
+
+    var items = ViewBag.Itens as IEnumerable<dynamic>;
+    var resumo = ViewBag.PedidoResumo;
+
+    decimal subtotal = resumo?.Subtotal ?? Model.Amount;
+    decimal frete = resumo?.Frete ?? 0m;
+    decimal desconto = resumo?.Desconto ?? 0m;
+    decimal total = subtotal + frete;
 }
 
 @section Styles {
-    <!-- Arquivo CSS externo da página de checkout -->
     <link rel="stylesheet" href="~/css/checkout.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 }
 
-<div id="checkout-page" class="container-xxl py-4">
-    <div id="checkout-header" class="mb-3">
-        <h3 class="page-title">Pagamento do pedido #@Model.PedidoId</h3>
-        <p class="page-sub">Total a pagar: <strong>@Model.Amount.ToString("C")</strong></p>
-    </div>
+<div id="checkout-page" class="checkout-page">
+    <header class="checkout-header">
+        <a asp-controller="Carrinho" asp-action="Index" class="checkout-back" aria-label="Voltar para o carrinho">
+            <i class="fas fa-arrow-left"></i>
+        </a>
 
-    <div id="checkout-status" class="status-wrap">
-        <div class="status-bar">
+        <div class="checkout-header-title">
+            @*<span>Pedido #@Model.PedidoId</span>*@
+            <h1>Pagamento</h1>
+            <p>Finalize o pagamento para confirmarmos seu pedido.</p>
+        </div>
+
+        <div class="checkout-safe-badge">
+            <i class="fas fa-shield-alt"></i>
+            <span>Seguro</span>
+        </div>
+    </header>
+
+    <section id="checkout-status" class="checkout-status">
+        <div class="checkout-status-copy">
+            <strong>Status do pagamento</strong>
+            <span id="statusBadge" class="checkout-status-pill">Status: @Model.Status</span>
+        </div>
+
+        <div class="status-bar" aria-hidden="true">
             <div id="statusFill" class="fill"></div>
         </div>
-        <span id="statusBadge" class="status-badge">Status: @Model.Status</span>
-    </div>
+    </section>
 
-    <div id="checkout-main-row" class="row g-4">
+    <div class="checkout-layout">
+        <main class="checkout-main">
+            <section id="checkout-main-card" class="checkout-card">
+                <div class="checkout-card-head">
+                    <div>
+                        <span class="checkout-eyebrow">Forma de pagamento</span>
+                        <h2>Finalize seu pagamento</h2>
+                    </div>
 
-        <!-- COL ESQUERDA -->
-        <div class="col-lg-7">
-            <div id="checkout-main-card" class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Finalize seu pagamento</h5>
+                    <div class="checkout-amount-chip">
+                        <span>Total</span>
+                        <strong>@Model.Amount.ToString("C", ptBR)</strong>
+                    </div>
                 </div>
-                <div class="card-body">
 
-                    @* ===================== PIX ===================== *@
+                <div class="checkout-card-body">
                     @if (Model.Metodo == PaymentMethod.Pix)
                     {
-                        <section id="pix-section" class="pix">
-                            <h6 class="mb-2">Pix (chave/QR)</h6>
+                        <section id="pix-section" class="checkout-payment-section">
+                            <div class="payment-title-row">
+                                <div class="payment-icon is-pix">
+                                    <i class="fas fa-qrcode"></i>
+                                </div>
 
-                            <p class="pix-lead">
-                                Escaneie o QR Code com o app do seu banco <span class="d-none d-md-inline">ou</span>
-                                <span class="d-md-none"><br /></span> use <strong>copia e cola</strong>.
-                                Assim que o pagamento for identificado, a confirmação acontece automaticamente.
-                            </p>
+                                <div>
+                                    <h3>Pix</h3>
+                                    <p>Escaneie o QR Code ou use o código copia e cola.</p>
+                                </div>
+                            </div>
 
                             <div class="pix-grid">
-                                <!-- Coluna do QR -->
-                                <div class="pix-qr">
-                                    <div id="pix-qr-container">
+                                <div class="pix-qr-panel">
+                                    <div id="pix-qr-container" class="pix-qr-wrap">
                                         @if (!string.IsNullOrEmpty(Model.PixQrBase64Png))
                                         {
                                             <img id="pix-qr-img"
                                                  src="data:image/png;base64,@Model.PixQrBase64Png"
-                                                 alt="QR Code Pix" class="qr-box" />
+                                                 alt="QR Code Pix" />
                                         }
                                         else
                                         {
-                                            <div id="pix-qr" class="qr-box text-secondary" aria-label="QR Code do Pix">QR Code</div>
+                                            <div id="pix-qr" class="qr-box" aria-label="QR Code do Pix">
+                                                QR Code
+                                            </div>
                                         }
                                     </div>
 
                                     <div class="pix-meta">
                                         <div class="pix-amount">
                                             <span>Valor</span>
-                                            <strong>@Model.Amount.ToString("C")</strong>
+                                            <strong>@Model.Amount.ToString("C", ptBR)</strong>
                                         </div>
 
                                         @if (Model.ExpiresAt.HasValue)
                                         {
                                             <div class="pix-expire">
-                                                <span class="material-symbols-outlined" aria-hidden="true">schedule</span>
+                                                <i class="fas fa-clock"></i>
                                                 <span id="pix-timer"
                                                       data-exp="@Model.ExpiresAt.Value.ToUniversalTime().ToString("o")">
-                                                    Expira em — <span id="pixCountdownTimer">--:--</span>
+                                                    Expira em <strong id="pixCountdownTimer">--:--</strong>
                                                 </span>
                                             </div>
                                         }
                                     </div>
                                 </div>
 
-                                <!-- Coluna de ações/“copia e cola” -->
                                 <div class="pix-actions">
-                                    <label class="form-label" for="pixCopyPaste">Copia e cola</label>
-                                    <div class="input-group">
-                                        <input class="form-control" value="@Model.PixQrData" id="pixCopyPaste" readonly />
-                                        <button class="btn btn-soft" type="button" onclick="copyPix()" id="btnCopyPix">Copiar</button>
-                                    </div>
-                                    <small class="text-muted d-block mt-1">
-                                        Cole o código no seu app bancário caso não possa ler o QR.
-                                    </small>
-                                    <span id="copyBadge" class="copy-badge d-none ms-2">Copiado!</span>
+                                    <label class="checkout-label" for="pixCopyPaste">Copia e cola</label>
 
-                                    <div class="pix-actions-row">
-                                        <button class="btn btn-soft btn-sm" type="button" id="btnForcarConsulta">Atualizar status</button>
-                                        <button class="btn btn-soft btn-sm" type="button" id="pix-cancel-btn">Cancelar</button>
+                                    <div class="checkout-copy-control">
+                                        <input class="checkout-input"
+                                               value="@Model.PixQrData"
+                                               id="pixCopyPaste"
+                                               readonly />
+
+                                        <button class="checkout-btn checkout-btn-light"
+                                                type="button"
+                                                onclick="copyPix()"
+                                                id="btnCopyPix">
+                                            <i class="fas fa-copy"></i>
+                                            Copiar
+                                        </button>
+                                    </div>
+
+                                    <span id="copyBadge" class="copy-badge d-none">Copiado!</span>
+
+                                    <p class="checkout-help">
+                                        Cole o código no aplicativo do seu banco se não puder ler o QR Code.
+                                    </p>
+
+                                    <div class="checkout-inline-actions">
+                                        <button class="checkout-btn checkout-btn-light"
+                                                type="button"
+                                                id="btnForcarConsulta">
+                                            <i class="fas fa-rotate-right"></i>
+                                            Atualizar status
+                                        </button>
+
+                                        <button class="checkout-btn checkout-btn-ghost"
+                                                type="button"
+                                                id="pix-cancel-btn">
+                                            Cancelar
+                                        </button>
                                     </div>
                                 </div>
                             </div>
                         </section>
                     }
 
-                    @* ===================== CARTÃO ===================== *@
                     @if (Model.Metodo == PaymentMethod.CardCredit || Model.Metodo == PaymentMethod.CardDebit)
                     {
-                        <section id="card-section">
-                            <h6 class="mb-2">Pagamento com cartão</h6>
-                            <div id="cardPaymentBrick_container"></div>
+                        <section id="card-section" class="checkout-payment-section">
+                            <div class="payment-title-row">
+                                <div class="payment-icon">
+                                    <i class="fas fa-credit-card"></i>
+                                </div>
 
-                            <div class="mt-3 d-flex gap-2 flex-wrap">
-                                <button id="mp-cancel-btn" type="button" class="btn btn-soft flex-grow-1 flex-sm-grow-0">
+                                <div>
+                                    <h3>Pagamento com cartão</h3>
+                                    <p>Preencha os dados do cartão para concluir o pagamento.</p>
+                                </div>
+                            </div>
+
+                            <div id="cardPaymentBrick_container" class="card-brick-wrap"></div>
+
+                            <div class="checkout-inline-actions mt-3">
+                                <button id="mp-cancel-btn"
+                                        type="button"
+                                        class="checkout-btn checkout-btn-ghost">
                                     Cancelar
                                 </button>
                             </div>
 
-                            <div class="text-muted mt-2">Se necessário, faremos a autenticação 3-D Secure.</div>
+                            <p class="checkout-help">
+                                Se necessário, faremos a autenticação 3-D Secure.
+                            </p>
                         </section>
                     }
 
-                    @* ================= DINHEIRO/MAQUININHA ================ *@
                     @if (Model.Metodo == PaymentMethod.Cash)
                     {
-                        <section id="cash-section">
-                            <h6 class="mb-2">Pagamento na entrega</h6>
-                            <p class="mb-0 text-muted">Seu pedido será cobrado na retirada/entrega.</p>
+                        <section id="cash-section" class="checkout-payment-section">
+                            <div class="payment-title-row">
+                                <div class="payment-icon is-cash">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                </div>
+
+                                <div>
+                                    <h3>Pagamento na entrega</h3>
+                                    <p>Seu pedido será cobrado na retirada ou entrega.</p>
+                                </div>
+                            </div>
                         </section>
                     }
 
-                    <hr class="my-4" />
-
-                    <div class="d-flex flex-wrap gap-2">
-                        <!-- Botão de acompanhar pedido (aparece quando pago) -->
-                        <a id="goTrackBtn" href="@trackUrl" class="btn btn-brand d-none">
+                    <div class="checkout-track-actions">
+                        <a id="goTrackBtn" href="@trackUrl" class="checkout-btn checkout-btn-primary d-none">
+                            <i class="fas fa-location-dot"></i>
                             Acompanhar pedido
                         </a>
-                        <!-- Voltar / mudar pagamento -->
-                        @* <a class="btn btn-soft" href="@Url.Action("Index", "Carrinho")">Voltar</a> *@
                     </div>
                 </div>
-            </div>
-        </div>
+            </section>
+        </main>
 
-        <!-- COL DIREITA -->
-        <div class="col-lg-5">
-            <div id="checkout-summary-card" class="card sticky-lg-top" style="top:-27px;">
-                <div class="card-header">
-                    <h5 class="mb-0">Resumo</h5>
-                </div>
-                <div class="card-body">
-
-                    <!-- Cabeçalho -->
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-muted">Pedido: #@Model.PedidoId</span>
-                        <span id="pay-badge" class="badge bg-light text-dark">
-                            Status: @Model.Status
-                        </span>
+        <aside class="checkout-summary">
+            <section id="checkout-summary-card" class="checkout-summary-card">
+                <div class="summary-head">
+                    <div>
+                        <span>Resumo</span>
+                        <h2>Resumo do pedido</h2>
                     </div>
 
-                    <!-- Lista de itens -->
-                    @{
-                        var items = ViewBag.Itens as IEnumerable<dynamic>;
-                    }
-                    @if (items != null && items.Any())
-                    {
-                        <ul class="list-unstyled mb-3" id="checkout-resumo-itens">
-                            @foreach (var it in items)
-                            {
-                                <li class="d-flex align-items-start gap-2 py-2 border-bottom">
-                                    @if (it.Img != null)
-                                    {
-                                        <img src="@it.Img" alt="@it.Nome" style="width:48px;height:48px;object-fit:cover;border-radius:8px;" />
-                                    }
-                                    <div class="flex-grow-1">
-                                        <div class="fw-600">@it.Nome</div>
-                                        <div class="text-muted small">@it.Qtd × @(((decimal)it.Preco).ToString("C"))</div>
+                    <span id="pay-badge" class="summary-status">
+                        @Model.Status
+                    </span>
+                </div>
+
+                @if (items != null && items.Any())
+                {
+                    <ul id="checkout-resumo-itens" class="summary-items">
+                        @foreach (var it in items)
+                        {
+                            <li class="summary-item">
+                                @if (it.Img != null)
+                                {
+                                    <img src="@it.Img" alt="@it.Nome" />
+                                }
+                                else
+                                {
+                                    <div class="summary-item-placeholder">
+                                        <i class="fas fa-image"></i>
                                     </div>
-                                    <div class="fw-600">@(((decimal)it.Subtotal).ToString("C"))</div>
-                                </li>
-                            }
-                        </ul>
-                    }
+                                }
 
-                    <!-- Totais -->
-                    @{
-                        var resumo = ViewBag.PedidoResumo;
-                        decimal subtotal = resumo?.Subtotal ?? Model.Amount; // já com preço promocional
-                        decimal frete = resumo?.Frete ?? 0m;
-                        decimal desconto = resumo?.Desconto ?? 0m;           // só informativo
-                        decimal total = subtotal + frete;                 // ✅ total correto
-                    }
+                                <div class="summary-item-info">
+                                    <strong>@it.Nome</strong>
+                                    <span>@it.Qtd × @(((decimal)it.Preco).ToString("C", ptBR))</span>
+                                </div>
 
-                    <div class="d-flex justify-content-between text-muted">
-                        <span>Valor com desconto</span><span>@subtotal.ToString("C")</span>
+                                <strong class="summary-item-total">
+                                    @(((decimal)it.Subtotal).ToString("C", ptBR))
+                                </strong>
+                            </li>
+                        }
+                    </ul>
+                }
+
+                <div class="summary-lines">
+                    <div>
+                        <span>Subtotal</span>
+                        <strong>@subtotal.ToString("C", ptBR)</strong>
                     </div>
-                    <div class="d-flex justify-content-between text-muted">
-                        <span>Valor entrega</span><span>@frete.ToString("C")</span>
+
+                    <div>
+                        <span>Entrega</span>
+                        <strong>@frete.ToString("C", ptBR)</strong>
                     </div>
+
                     @if (desconto > 0)
                     {
-                        <div class="d-flex justify-content-between text-muted">
-                            <span>Desconto</span><span>-@desconto.ToString("C")</span>
+                        <div class="is-discount">
+                            <span>Desconto</span>
+                            <strong>-@desconto.ToString("C", ptBR)</strong>
                         </div>
                     }
-                    <hr class="my-2" />
-                    <div class="d-flex justify-content-between fs-5 fw-600">
-                        <span>Total</span><span>@total.ToString("C")</span>
-                    </div>
-
-                    <!-- CTA: Acompanhar pedido -->
-                    <div class="mt-3">
-                        <a id="btn-acompanhar-pedido"
-                           class="btn btn-outline-primary w-100 @(isPaid ? "" : "d-none")"
-                           href="@Url.Action("Acompanhar", "Pedido", new { id = Model.PedidoId, t = orderToken })">
-                            Acompanhar pedido
-                        </a>
-                    </div>
                 </div>
 
-            </div>
-        </div>
+                <div class="summary-total">
+                    <span>Total</span>
+                    <strong>@total.ToString("C", ptBR)</strong>
+                </div>
 
+                <a id="btn-acompanhar-pedido"
+                   class="checkout-btn checkout-btn-primary w-100 @(isPaid ? "" : "d-none")"
+                   href="@Url.Action("Acompanhar", "Pedido", new { id = Model.PedidoId, t = orderToken })">
+                    <i class="fas fa-location-dot"></i>
+                    Acompanhar pedido
+                </a>
+            </section>
+        </aside>
     </div>
 </div>
 
@@ -244,10 +315,9 @@
           statusUrl: '@Url.Action("Status", "Pagamento", new { id = Model.Id, t = orderToken })',
           confirmCardUrl: '@Url.Action("ConfirmCard", "Pagamento", new { id = Model.Id, t = orderToken })',
           cancelUrl: '@Url.Action("Cancelar", "Pagamento", new { id = Model.Id, t = orderToken })',
-          amountStr: '@Model.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture)'
+          amountStr: '@Model.Amount.ToString(CultureInfo.InvariantCulture)'
         };
     </script>
 
     <script src="~/js/checkout.js" asp-append-version="true"></script>
 }
-

@@ -2,83 +2,110 @@
 @model CategoriaModel
 
 @{
-    // Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "Nova Categoria";
+    ViewData["Title"] = "Nova categoria";
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/categories-admin.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 }
 
-<div class="container-fluid px-3 px-md-4 py-3 categories-form">
-    <div class="card shadow-sm">
-        <div class="card-header brand-header">
-            <h4 class="mb-0">
-                <i class="fas fa-plus-circle me-2"></i>@ViewData["Title"]
-            </h4>
+<div class="category-form-page">
+    <header class="category-form-header">
+        <a asp-action="Index" class="category-form-back" aria-label="Voltar">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+
+        <div class="category-form-title">
+            <span>Categorias</span>
+            <h1>Nova categoria</h1>
+            <p>Crie uma categoria para organizar os produtos da loja.</p>
+        </div>
+    </header>
+
+    <section class="category-form-card">
+        <div class="category-form-card-head">
+            <div class="category-form-icon">
+                <i class="fas fa-tag"></i>
+            </div>
+
+            <div>
+                <span>Cadastro</span>
+                <h2>Dados da categoria</h2>
+            </div>
         </div>
 
-        <div class="card-body">
+        <div class="category-form-card-body">
             @if (!ViewData.ModelState.IsValid)
             {
-                <div class="alert alert-danger alert-dismissible fade show">
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-                    <h6 class="mb-2"><i class="fas fa-exclamation-triangle me-2"></i>Erros no formulário:</h6>
-                    <ul class="mb-0">
-                        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
-                        {
-                            <li>@error.ErrorMessage</li>
-                        }
-                    </ul>
+                <div class="categories-alert is-error">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div>
+                        <strong>Erros no formulário</strong>
+                        <ul>
+                            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                            {
+                                <li>@error.ErrorMessage</li>
+                            }
+                        </ul>
+                    </div>
                 </div>
             }
 
-            <form asp-action="Criar" class="needs-validation" novalidate>
+            <form asp-action="Criar" class="category-form needs-validation" novalidate>
+                @Html.AntiForgeryToken()
+
                 <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
-                <div class="mb-3">
-                    <label asp-for="Nome" class="form-label"></label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-tag"></i></span>
-                        <input asp-for="Nome" class="form-control" placeholder="Digite o nome da categoria" />
+                <div class="category-field">
+                    <label asp-for="Nome"></label>
+                    <div class="category-input-wrap">
+                        <i class="fas fa-tag"></i>
+                        <input asp-for="Nome" placeholder="Digite o nome da categoria" />
                     </div>
-                    <span asp-validation-for="Nome" class="text-danger small"></span>
+                    <span asp-validation-for="Nome" class="category-validation"></span>
                 </div>
 
-                <div class="mb-4">
-                    <label asp-for="Descricao" class="form-label"></label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-align-left"></i></span>
-                        <textarea asp-for="Descricao" class="form-control" rows="3" placeholder="Digite uma descrição (opcional)"></textarea>
+                <div class="category-field">
+                    <label asp-for="Descricao"></label>
+                    <div class="category-input-wrap is-textarea">
+                        <i class="fas fa-align-left"></i>
+                        <textarea asp-for="Descricao" rows="4" placeholder="Digite uma descrição opcional"></textarea>
                     </div>
-                    <span asp-validation-for="Descricao" class="text-danger small"></span>
+                    <span asp-validation-for="Descricao" class="category-validation"></span>
                 </div>
 
-                <div class="form-actions">
-                    <a asp-action="Index" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left me-2"></i>Cancelar
+                <div class="category-form-actions">
+                    <a asp-action="Index" class="categories-btn categories-btn-light">
+                        <i class="fas fa-arrow-left"></i>
+                        Cancelar
                     </a>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-save me-2"></i>Salvar Categoria
+
+                    <button type="submit" class="categories-btn categories-btn-primary">
+                        <i class="fas fa-save"></i>
+                        Salvar categoria
                     </button>
                 </div>
             </form>
         </div>
-    </div>
+    </section>
 </div>
 
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+
     <script>
-        (function () {
-            document.querySelectorAll('form.needs-validation').forEach(f => {
-                f.addEventListener('submit', e => {
-                    if (!f.checkValidity()) { e.preventDefault(); e.stopPropagation(); }
-                    f.classList.add('was-validated');
-                }, false);
-            });
-        })();
+        document.querySelectorAll('form.needs-validation').forEach(form => {
+            form.addEventListener('submit', event => {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+
+                form.classList.add('was-validated');
+            }, false);
+        });
     </script>
 }

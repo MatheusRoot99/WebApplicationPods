@@ -2,85 +2,170 @@
 
 @{
     ViewData["Title"] = "Entregadores";
+
+    var entregadores = Model?.ToList() ?? new List<WebApplicationPods.Models.EntregadorModel>();
+    var total = entregadores.Count;
+    var ativos = entregadores.Count(x => x.Ativo);
+    var inativos = entregadores.Count(x => !x.Ativo);
 }
 
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <div>
-        <h2 class="mb-1">Entregadores</h2>
-        <p class="text-muted mb-0">Gerencie os entregadores da sua loja.</p>
+@section Styles {
+    <link rel="stylesheet" href="~/css/entregadores-admin.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+}
+
+<div class="drivers-page">
+    <header class="drivers-header">
+        <div class="drivers-title">
+            <span>Painel lojista</span>
+            <h1>Entregadores</h1>
+            <p>Gerencie os entregadores da sua loja.</p>
+        </div>
+
+        <a asp-area="PainelLojista"
+           asp-controller="Entregadores"
+           asp-action="Create"
+           class="drivers-btn drivers-btn-primary">
+            <i class="fas fa-plus"></i>
+            Novo entregador
+        </a>
+    </header>
+
+    <div class="drivers-alerts">
+        @if (TempData["Sucesso"] is string okMsg)
+        {
+            <div class="drivers-alert is-success">
+                <i class="fas fa-check-circle"></i>
+                <span>@okMsg</span>
+            </div>
+        }
+
+        @if (TempData["Erro"] is string errMsg)
+        {
+            <div class="drivers-alert is-error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>@errMsg</span>
+            </div>
+        }
     </div>
 
-    <a asp-area="PainelLojista"
-       asp-controller="Entregadores"
-       asp-action="Create"
-       class="btn btn-primary">
-        <i class="fa-solid fa-plus me-1"></i> Novo entregador
-    </a>
-</div>
+    <section class="drivers-kpis">
+        <article class="drivers-kpi">
+            <div class="drivers-kpi-icon">
+                <i class="fas fa-id-card"></i>
+            </div>
 
-@if (TempData["Sucesso"] is string okMsg)
-{
-    <div class="alert alert-success">@okMsg</div>
-}
-@if (TempData["Erro"] is string errMsg)
-{
-    <div class="alert alert-danger">@errMsg</div>
-}
+            <div>
+                <span>Total</span>
+                <strong>@total</strong>
+            </div>
+        </article>
 
-<div class="card shadow-sm border-0">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Nome</th>
-                        <th>Telefone</th>
-                        <th>Veículo</th>
-                        <th>Status</th>
-                        <th style="width:260px;">Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (!Model.Any())
-                    {
+        <article class="drivers-kpi">
+            <div class="drivers-kpi-icon is-green">
+                <i class="fas fa-circle-check"></i>
+            </div>
+
+            <div>
+                <span>Ativos</span>
+                <strong>@ativos</strong>
+            </div>
+        </article>
+
+        <article class="drivers-kpi">
+            <div class="drivers-kpi-icon is-muted">
+                <i class="fas fa-circle-pause"></i>
+            </div>
+
+            <div>
+                <span>Inativos</span>
+                <strong>@inativos</strong>
+            </div>
+        </article>
+    </section>
+
+    <section class="drivers-toolbar">
+        <div class="drivers-section-title">
+            <span>Busca</span>
+            <h2>Pesquisar entregador</h2>
+        </div>
+
+        <div class="drivers-search">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Pesquisar por nome, telefone, veículo ou placa..." />
+        </div>
+    </section>
+
+    <section class="drivers-table-card">
+        <div class="drivers-table-head">
+            <div>
+                <span>Lista</span>
+                <h2>Lista de entregadores</h2>
+            </div>
+
+            <strong>@total entregador(es)</strong>
+        </div>
+
+        @if (entregadores.Any())
+        {
+            <div class="drivers-table-wrap">
+                <table class="drivers-table" id="entregadoresTable">
+                    <thead>
                         <tr>
-                            <td colspan="5" class="text-center py-4 text-muted">
-                                Nenhum entregador cadastrado.
-                            </td>
+                            <th>Nome</th>
+                            <th>Telefone</th>
+                            <th>Veículo</th>
+                            <th>Status</th>
+                            <th class="text-end">Ações</th>
                         </tr>
-                    }
-                    else
-                    {
-                        foreach (var item in Model)
+                    </thead>
+
+                    <tbody>
+                        @foreach (var item in entregadores)
                         {
                             <tr>
                                 <td>
-                                    <div class="fw-semibold">@item.Nome</div>
-                                    @if (!string.IsNullOrWhiteSpace(item.PlacaVeiculo))
-                                    {
-                                        <div class="small text-muted">Placa: @item.PlacaVeiculo</div>
-                                    }
+                                    <div class="driver-name-cell">
+                                        <span class="driver-avatar">
+                                            <i class="fas fa-truck"></i>
+                                        </span>
+
+                                        <div>
+                                            <strong>@item.Nome</strong>
+
+                                            @if (!string.IsNullOrWhiteSpace(item.PlacaVeiculo))
+                                            {
+                                                <small>Placa: @item.PlacaVeiculo</small>
+                                            }
+                                        </div>
+                                    </div>
                                 </td>
+
                                 <td>@item.Telefone</td>
+
                                 <td>@(string.IsNullOrWhiteSpace(item.Veiculo) ? "-" : item.Veiculo)</td>
+
                                 <td>
                                     @if (item.Ativo)
                                     {
-                                        <span class="badge bg-success">Ativo</span>
+                                        <span class="driver-status is-active">Ativo</span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-secondary">Inativo</span>
+                                        <span class="driver-status is-inactive">Inativo</span>
                                     }
                                 </td>
-                                <td>
-                                    <div class="d-flex flex-wrap gap-1">
+
+                                <td class="text-end">
+                                    <div class="driver-actions">
                                         <a asp-area="PainelLojista"
                                            asp-controller="Entregadores"
                                            asp-action="Edit"
                                            asp-route-id="@item.Id"
-                                           class="btn btn-sm btn-outline-primary">
-                                            Editar
+                                           class="driver-icon-btn is-edit"
+                                           title="Editar"
+                                           aria-label="Editar @item.Nome">
+                                            <i class="fas fa-edit"></i>
                                         </a>
 
                                         <form asp-area="PainelLojista"
@@ -89,8 +174,12 @@
                                               method="post">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="id" value="@item.Id" />
-                                            <button type="submit" class="btn btn-sm btn-outline-warning">
-                                                @(item.Ativo ? "Inativar" : "Ativar")
+
+                                            <button type="submit"
+                                                    class="driver-icon-btn is-toggle"
+                                                    title="@(item.Ativo ? "Inativar" : "Ativar")"
+                                                    aria-label="@(item.Ativo ? "Inativar" : "Ativar") @item.Nome">
+                                                <i class="fas @(item.Ativo ? "fa-pause" : "fa-play")"></i>
                                             </button>
                                         </form>
 
@@ -101,17 +190,153 @@
                                               onsubmit="return confirm('Deseja remover este entregador?');">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="id" value="@item.Id" />
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                Excluir
+
+                                            <button type="submit"
+                                                    class="driver-icon-btn is-delete"
+                                                    title="Excluir"
+                                                    aria-label="Excluir @item.Nome">
+                                                <i class="fas fa-trash-alt"></i>
                                             </button>
                                         </form>
                                     </div>
                                 </td>
                             </tr>
                         }
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="drivers-mobile-list">
+                @foreach (var item in entregadores)
+                {
+                    <article class="driver-mobile-card">
+                        <header>
+                            <span class="driver-avatar">
+                                <i class="fas fa-truck"></i>
+                            </span>
+
+                            <div>
+                                <h3>@item.Nome</h3>
+
+                                @if (item.Ativo)
+                                {
+                                    <span class="driver-status is-active">Ativo</span>
+                                }
+                                else
+                                {
+                                    <span class="driver-status is-inactive">Inativo</span>
+                                }
+                            </div>
+                        </header>
+
+                        <div class="driver-mobile-lines">
+                            <div>
+                                <span>Telefone</span>
+                                <strong>@item.Telefone</strong>
+                            </div>
+
+                            <div>
+                                <span>Veículo</span>
+                                <strong>@(string.IsNullOrWhiteSpace(item.Veiculo) ? "-" : item.Veiculo)</strong>
+                            </div>
+
+                            <div>
+                                <span>Placa</span>
+                                <strong>@(string.IsNullOrWhiteSpace(item.PlacaVeiculo) ? "-" : item.PlacaVeiculo)</strong>
+                            </div>
+                        </div>
+
+                        <footer>
+                            <a asp-area="PainelLojista"
+                               asp-controller="Entregadores"
+                               asp-action="Edit"
+                               asp-route-id="@item.Id"
+                               class="drivers-btn drivers-btn-light">
+                                <i class="fas fa-edit"></i>
+                                Editar
+                            </a>
+
+                            <form asp-area="PainelLojista"
+                                  asp-controller="Entregadores"
+                                  asp-action="ToggleAtivo"
+                                  method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@item.Id" />
+
+                                <button type="submit" class="drivers-btn drivers-btn-warning">
+                                    <i class="fas @(item.Ativo ? "fa-pause" : "fa-play")"></i>
+                                    @(item.Ativo ? "Inativar" : "Ativar")
+                                </button>
+                            </form>
+
+                            <form asp-area="PainelLojista"
+                                  asp-controller="Entregadores"
+                                  asp-action="Delete"
+                                  method="post"
+                                  onsubmit="return confirm('Deseja remover este entregador?');">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@item.Id" />
+
+                                <button type="submit" class="drivers-btn drivers-btn-danger">
+                                    <i class="fas fa-trash-alt"></i>
+                                    Excluir
+                                </button>
+                            </form>
+                        </footer>
+                    </article>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="drivers-empty">
+                <div class="drivers-empty-icon">
+                    <i class="fas fa-truck"></i>
+                </div>
+
+                <h2>Nenhum entregador cadastrado</h2>
+                <p>Cadastre um entregador para começar a atribuir pedidos.</p>
+
+                <a asp-area="PainelLojista"
+                   asp-controller="Entregadores"
+                   asp-action="Create"
+                   class="drivers-btn drivers-btn-primary">
+                    <i class="fas fa-plus"></i>
+                    Novo entregador
+                </a>
+            </div>
+        }
+    </section>
 </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            setTimeout(() => {
+                document.querySelectorAll('.drivers-alert').forEach(a => a.remove());
+            }, 5000);
+
+            const searchInput = document.getElementById('searchInput');
+            const tableRows = Array.from(document.querySelectorAll('#entregadoresTable tbody tr'));
+            const cards = Array.from(document.querySelectorAll('.driver-mobile-card'));
+
+            function normalize(value) {
+                return (value || '').toString().toLowerCase().trim();
+            }
+
+            function filterDrivers() {
+                const term = normalize(searchInput?.value);
+
+                tableRows.forEach(row => {
+                    row.style.display = normalize(row.textContent).includes(term) ? '' : 'none';
+                });
+
+                cards.forEach(card => {
+                    card.style.display = normalize(card.textContent).includes(term) ? '' : 'none';
+                });
+            }
+
+            searchInput?.addEventListener('input', filterDrivers);
+        });
+    </script>
+}

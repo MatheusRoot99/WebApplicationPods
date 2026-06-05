@@ -2,45 +2,81 @@
 @model CategoriaModel
 
 @{
-    // Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "Excluir Categoria";
+    ViewData["Title"] = "Excluir categoria";
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/categories-admin.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 }
 
-<div class="container-fluid px-3 px-md-4 py-3 categories-form">
-    <div class="card shadow-sm">
-        <div class="card-header danger-header">
-            <h4 class="mb-0">
-                <i class="fas fa-trash-alt me-2"></i>@ViewData["Title"]
-            </h4>
+<div class="category-form-page">
+    <header class="category-form-header">
+        <a asp-action="Index" class="category-form-back" aria-label="Voltar">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+
+        <div class="category-form-title">
+            <span>Categorias</span>
+            <h1>Excluir categoria</h1>
+            <p>Confirme a remoção antes de continuar.</p>
+        </div>
+    </header>
+
+    <section class="category-form-card is-danger">
+        <div class="category-form-card-head">
+            <div class="category-form-icon is-danger">
+                <i class="fas fa-trash-alt"></i>
+            </div>
+
+            <div>
+                <span>Exclusão</span>
+                <h2>Deseja excluir esta categoria?</h2>
+            </div>
         </div>
 
-        <div class="card-body">
-            <h5 class="mb-3">Você tem certeza que deseja excluir esta categoria?</h5>
+        <div class="category-form-card-body">
+            <div class="category-delete-preview">
+                <div class="category-icon">
+                    <i class="fas fa-tag"></i>
+                </div>
 
-            <dl class="row dl">
-                <dt class="col-sm-3">Nome:</dt>
-                <dd class="col-sm-9">@Model.Nome</dd>
+                <div>
+                    <span>Categoria</span>
+                    <strong>@Model.Nome</strong>
 
-                <dt class="col-sm-3">Descrição:</dt>
-                <dd class="col-sm-9">@Model.Descricao</dd>
-            </dl>
+                    @if (!string.IsNullOrWhiteSpace(Model.Descricao))
+                    {
+                        <p>@Model.Descricao</p>
+                    }
+                    else
+                    {
+                        <p class="is-empty">Sem descrição</p>
+                    }
+                </div>
+            </div>
 
-            <form asp-action="Excluir" method="post" class="mt-3">
+            <div class="category-delete-warning">
+                <i class="fas fa-triangle-exclamation"></i>
+                <span>Essa ação não pode ser desfeita.</span>
+            </div>
+
+            <form asp-action="Excluir" method="post" class="category-form">
                 @Html.AntiForgeryToken()
                 <input type="hidden" asp-for="Id" />
-                <div class="form-actions">
-                    <a asp-action="Index" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left me-2"></i>Cancelar
+
+                <div class="category-form-actions">
+                    <a asp-action="Index" class="categories-btn categories-btn-light">
+                        <i class="fas fa-arrow-left"></i>
+                        Cancelar
                     </a>
-                    <button type="submit" class="btn btn-danger">
-                        <i class="fas fa-trash me-2"></i>Confirmar Exclusão
+
+                    <button type="submit" class="categories-btn categories-btn-danger">
+                        <i class="fas fa-trash-alt"></i>
+                        Confirmar exclusão
                     </button>
                 </div>
             </form>
         </div>
-    </div>
+    </section>
 </div>
