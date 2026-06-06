@@ -1,4 +1,5 @@
 ﻿@model WebApplicationPods.Models.CadastroRapidoViewModel
+
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Cadastro Rápido";
@@ -16,57 +17,25 @@
 }
 
 <div class="customer-register-shell">
-    <main class="customer-register-layout">
-        <section class="customer-register-intro">
-            <a asp-controller="Auth" asp-action="Login" asp-route-returnUrl="@returnUrl" class="customer-register-back">
+    <main class="customer-register-phone">
+        <header class="customer-register-appbar">
+            <a asp-controller="Auth" asp-action="Login" asp-route-returnUrl="@returnUrl" aria-label="Voltar">
                 <i class="fa-solid fa-arrow-left"></i>
-                <span>Voltar</span>
             </a>
 
-            <div class="customer-register-brand">
-                <span>
-                    <i class="fa-solid fa-user-check"></i>
-                </span>
-                <strong>Cadastro rápido</strong>
-            </div>
+            <strong>Cadastro rápido</strong>
 
-            <div class="customer-register-copy">
-                <span>Cliente</span>
-                <h1>Complete seu cadastro</h1>
-                <p>Precisamos de alguns dados para identificar você e preparar o endereço principal do pedido.</p>
-            </div>
+            <span></span>
+        </header>
 
-            <div class="customer-register-phone">
-                <span>
-                    <i class="fa-solid fa-mobile-screen"></i>
-                </span>
-                <div>
-                    <small>Telefone confirmado</small>
-                    <strong>@Model.Telefone</strong>
-                </div>
-            </div>
-        </section>
+        <form asp-action="CadastroRapido" method="post" class="customer-register-form" novalidate>
+            @Html.AntiForgeryToken()
 
-        <section class="customer-register-card">
-            <header class="customer-register-appbar">
-                <a asp-controller="Auth" asp-action="Login" asp-route-returnUrl="@returnUrl" aria-label="Voltar">
-                    <i class="fa-solid fa-arrow-left"></i>
-                </a>
-                <strong>Cadastro rápido</strong>
-                <span></span>
-            </header>
+            <input type="hidden" asp-for="Telefone" />
+            <input type="hidden" name="returnUrl" value="@returnUrl" />
 
-            <form asp-action="CadastroRapido" method="post" class="customer-register-form" novalidate>
-                <input type="hidden" asp-for="Telefone" />
-                <input type="hidden" name="returnUrl" value="@returnUrl" />
-
-                <div class="customer-register-mobile-title">
-                    <span>Cliente</span>
-                    <h1>Complete seu cadastro</h1>
-                    <p>Preencha seus dados para continuar o pedido.</p>
-                </div>
-
-                <div class="customer-register-confirmed">
+            <section class="customer-register-hero">
+                <div class="customer-register-phone-chip">
                     <span>
                         <i class="fa-solid fa-mobile-screen"></i>
                     </span>
@@ -76,89 +45,172 @@
                     </div>
                 </div>
 
-                <fieldset class="customer-register-section">
-                    <legend>
-                        <span><i class="fa-solid fa-id-card"></i></span>
-                        Dados pessoais
-                    </legend>
+                <div class="customer-register-title">
+                    <span>Cliente</span>
+                    <h1>Complete seu cadastro</h1>
+                    <p>Preencha seus dados para continuar com o pedido.</p>
+                </div>
 
-                    <div class="customer-register-grid">
-                        <div class="customer-register-field span-8">
-                            <label asp-for="Nome">Nome completo</label>
-                            <input asp-for="Nome" required placeholder="Digite seu nome completo" />
-                            <span asp-validation-for="Nome" class="validation-message"></span>
-                        </div>
-
-                        <div class="customer-register-field span-4">
-                            <label asp-for="CPF">CPF</label>
-                            <input asp-for="CPF" id="cpf" placeholder="000.000.000-00" />
-                            <span asp-validation-for="CPF" class="validation-message"></span>
-                        </div>
-
-                        <div class="customer-register-field span-4">
-                            <label asp-for="DataNascimento">Data de nascimento</label>
-                            <input asp-for="DataNascimento" id="dob" type="date" />
-                            <span asp-validation-for="DataNascimento" class="validation-message"></span>
-                        </div>
-
-                        <div class="customer-register-field span-8">
-                            <label asp-for="Email">E-mail</label>
-                            <input asp-for="Email" type="email" required placeholder="exemplo@email.com" />
-                            <span asp-validation-for="Email" class="validation-message"></span>
-                        </div>
+                <div class="customer-register-steps" aria-label="Etapas do cadastro">
+                    <div class="active">
+                        <span>1</span>
+                        <strong>Dados</strong>
                     </div>
-                </fieldset>
 
-                <fieldset class="customer-register-section">
-                    <legend>
-                        <span><i class="fa-solid fa-location-dot"></i></span>
-                        Endereço principal
-                    </legend>
+                    <i class="fa-solid fa-chevron-right"></i>
 
-                    <div class="customer-register-grid">
-                        <div class="customer-register-field span-4">
-                            <label asp-for="CEP">CEP</label>
-                            <div class="input-with-feedback">
-                                <input asp-for="CEP" id="cep" placeholder="00000-000" inputmode="numeric" autocomplete="postal-code" />
-                                <div class="loading-spinner"></div>
-                            </div>
-                            <span asp-validation-for="CEP" class="validation-message"></span>
-                            <small>Digite o CEP e aguarde o preenchimento automático</small>
+                    <div>
+                        <span>2</span>
+                        <strong>Endereço</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="customer-register-card">
+                <header class="customer-register-card-head">
+                    <span>
+                        <i class="fa-regular fa-id-card"></i>
+                    </span>
+                    <div>
+                        <small>Dados</small>
+                        <h2>Dados pessoais</h2>
+                    </div>
+                </header>
+
+                <div class="customer-register-fields">
+                    <div class="customer-register-field">
+                        <label asp-for="Nome">Nome completo</label>
+                        <input asp-for="Nome"
+                               autocomplete="name"
+                               required
+                               placeholder="Digite seu nome completo" />
+                        <span asp-validation-for="Nome" class="validation-message"></span>
+                    </div>
+
+                    <div class="customer-register-field">
+                        <label asp-for="CPF">CPF</label>
+                        <input asp-for="CPF"
+                               id="cpf"
+                               inputmode="numeric"
+                               autocomplete="off"
+                               placeholder="000.000.000-00" />
+                        <span asp-validation-for="CPF" class="validation-message"></span>
+                    </div>
+
+                    <div class="customer-register-field">
+                        <label asp-for="DataNascimento">Data de nascimento</label>
+
+                        <div class="customer-date-field">
+                            <input asp-for="DataNascimento"
+                                   id="dob"
+                                   type="text"
+                                   inputmode="numeric"
+                                   autocomplete="bday"
+                                   placeholder="00/00/0000" />
+
+                            <input type="date" id="dobCalendar" aria-label="Selecionar data de nascimento" />
+
+                            <button type="button" id="dobCalendarButton" aria-label="Abrir calendário">
+                                <i class="fa-regular fa-calendar"></i>
+                            </button>
                         </div>
 
-                        <div class="customer-register-field span-6">
-                            <label asp-for="Logradouro">Rua</label>
-                            <input asp-for="Logradouro" id="logradouro" placeholder="Rua, Avenida, etc." />
-                            <span asp-validation-for="Logradouro" class="validation-message"></span>
+                        <span asp-validation-for="DataNascimento" class="validation-message"></span>
+                    </div>
+
+                    <div class="customer-register-field">
+                        <label asp-for="Email">E-mail</label>
+                        <input asp-for="Email"
+                               type="email"
+                               autocomplete="email"
+                               required
+                               placeholder="exemplo@email.com" />
+                        <span asp-validation-for="Email" class="validation-message"></span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="customer-register-card">
+                <header class="customer-register-card-head">
+                    <span>
+                        <i class="fa-solid fa-location-dot"></i>
+                    </span>
+                    <div>
+                        <small>Entrega</small>
+                        <h2>Endereço principal</h2>
+                    </div>
+                </header>
+
+                <div class="customer-register-fields">
+                    <div class="customer-register-field">
+                        <label asp-for="CEP">CEP</label>
+
+                        <div class="customer-cep-field input-with-feedback">
+                            <input asp-for="CEP"
+                                   id="cep"
+                                   inputmode="numeric"
+                                   autocomplete="postal-code"
+                                   placeholder="00000-000" />
+
+                            <button type="button" id="buscarCepCadastro">
+                                Buscar
+                            </button>
+
+                            <div class="loading-spinner"></div>
                         </div>
 
-                        <div class="customer-register-field span-2">
-                            <label asp-for="Numero">Número</label>
-                            <input asp-for="Numero" id="numero" placeholder="Nº" />
-                            <span asp-validation-for="Numero" class="validation-message"></span>
-                        </div>
+                        <span asp-validation-for="CEP" class="validation-message"></span>
+                    </div>
 
-                        <div class="customer-register-field span-12">
-                            <label asp-for="Complemento">Complemento</label>
-                            <input asp-for="Complemento" id="complemento" placeholder="Apartamento, bloco, referência..." />
-                            <span asp-validation-for="Complemento" class="validation-message"></span>
-                        </div>
+                    <div class="customer-register-field">
+                        <label asp-for="Logradouro">Rua</label>
+                        <input asp-for="Logradouro"
+                               id="logradouro"
+                               autocomplete="street-address"
+                               placeholder="Rua, avenida, travessa..." />
+                        <span asp-validation-for="Logradouro" class="validation-message"></span>
+                    </div>
 
-                        <div class="customer-register-field span-5">
-                            <label asp-for="Bairro">Bairro</label>
-                            <input asp-for="Bairro" id="bairro" placeholder="Seu bairro" />
-                            <span asp-validation-for="Bairro" class="validation-message"></span>
-                        </div>
+                    <div class="customer-register-field">
+                        <label asp-for="Numero">Número</label>
+                        <input asp-for="Numero"
+                               id="numero"
+                               autocomplete="address-line2"
+                               placeholder="Nº" />
+                        <span asp-validation-for="Numero" class="validation-message"></span>
+                    </div>
 
-                        <div class="customer-register-field span-5">
+                    <div class="customer-register-field">
+                        <label asp-for="Complemento">Complemento</label>
+                        <input asp-for="Complemento"
+                               id="complemento"
+                               placeholder="Apartamento, bloco, referência..." />
+                        <span asp-validation-for="Complemento" class="validation-message"></span>
+                    </div>
+
+                    <div class="customer-register-field">
+                        <label asp-for="Bairro">Bairro</label>
+                        <input asp-for="Bairro"
+                               id="bairro"
+                               placeholder="Seu bairro" />
+                        <span asp-validation-for="Bairro" class="validation-message"></span>
+                    </div>
+
+                    <div class="customer-register-row">
+                        <div class="customer-register-field">
                             <label asp-for="Cidade">Cidade</label>
-                            <input asp-for="Cidade" id="cidade" placeholder="Sua cidade" />
+                            <input asp-for="Cidade"
+                                   id="cidade"
+                                   placeholder="Sua cidade" />
                             <span asp-validation-for="Cidade" class="validation-message"></span>
                         </div>
 
-                        <div class="customer-register-field span-2">
+                        <div class="customer-register-field is-uf">
                             <label asp-for="Estado">UF</label>
-                            <input asp-for="Estado" id="estado" placeholder="UF" maxlength="2" />
+                            <input asp-for="Estado"
+                                   id="estado"
+                                   placeholder="UF"
+                                   maxlength="2" />
                             <span asp-validation-for="Estado" class="validation-message"></span>
                         </div>
                     </div>
@@ -167,37 +219,38 @@
                         <span>
                             <i class="fa-solid fa-check"></i>
                         </span>
+
                         <div>
                             <strong>Endereço principal</strong>
-                            <small>Esse endereço será usado como padrão nos próximos pedidos.</small>
+                            <small>Usaremos esse endereço como padrão nos próximos pedidos.</small>
                         </div>
+
                         <input type="checkbox" id="mainAddress" checked disabled />
                     </div>
-                </fieldset>
-
-                <div class="customer-register-actions">
-                    <button id="btnSubmit"
-                            type="submit"
-                            class="customer-register-submit"
-                            aria-live="polite"
-                            aria-busy="false"
-                            data-text-default="Finalizar cadastro"
-                            data-text-loading="Enviando..."
-                            data-text-success="Pronto!">
-                        <i class="fas fa-check-circle btn-icon" aria-hidden="true"></i>
-                        <span class="btn-text">Finalizar cadastro</span>
-                        <span class="btn-spinner" aria-hidden="true"></span>
-                    </button>
-
-                    <a href="@cancelUrl"
-                       class="customer-register-cancel"
-                       onclick="if (history.length > 1) { history.back(); return false; }">
-                        <i class="fas fa-times"></i>
-                        Cancelar
-                    </a>
                 </div>
-            </form>
-        </section>
+            </section>
+
+            <div class="customer-register-actions">
+                <button id="btnSubmit"
+                        type="submit"
+                        class="customer-register-submit"
+                        aria-live="polite"
+                        aria-busy="false"
+                        data-text-default="Finalizar cadastro"
+                        data-text-loading="Enviando..."
+                        data-text-success="Pronto!">
+                    <i class="fa-solid fa-check btn-icon" aria-hidden="true"></i>
+                    <span class="btn-text">Finalizar cadastro</span>
+                    <span class="btn-spinner" aria-hidden="true"></span>
+                </button>
+
+                <a href="@cancelUrl"
+                   class="customer-register-cancel"
+                   onclick="if (history.length > 1) { history.back(); return false; }">
+                    Cancelar
+                </a>
+            </div>
+        </form>
     </main>
 </div>
 
@@ -209,19 +262,105 @@
 
     <script>
         (function () {
+            function setVh() {
+                var h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+                document.documentElement.style.setProperty('--customer-register-vh', h + 'px');
+            }
+
+            setVh();
+            window.addEventListener('resize', setVh);
+
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', setVh);
+                window.visualViewport.addEventListener('scroll', setVh);
+            }
+        })();
+
+        (function () {
+            const cpf = document.getElementById('cpf');
+            const dob = document.getElementById('dob');
+            const dobCalendar = document.getElementById('dobCalendar');
+            const dobCalendarButton = document.getElementById('dobCalendarButton');
+            const uf = document.getElementById('estado');
+
+            try {
+                if (window.Inputmask && cpf) {
+                    Inputmask('999.999.999-99', {
+                        showMaskOnHover: false,
+                        clearIncomplete: true
+                    }).mask(cpf);
+                }
+
+                if (window.Inputmask && dob) {
+                    Inputmask('99/99/9999', {
+                        placeholder: '00/00/0000',
+                        showMaskOnHover: false,
+                        clearIncomplete: true
+                    }).mask(dob);
+                }
+
+                if (window.Inputmask && uf) {
+                    Inputmask('AA', {
+                        casing: 'upper',
+                        placeholder: 'UF'
+                    }).mask(uf);
+                }
+            } catch { }
+
+            function brToIso(value) {
+                const parts = (value || '').split('/');
+
+                if (parts.length !== 3) return '';
+
+                const dia = parts[0];
+                const mes = parts[1];
+                const ano = parts[2];
+
+                if (dia.length !== 2 || mes.length !== 2 || ano.length !== 4) return '';
+
+                return `${ano}-${mes}-${dia}`;
+            }
+
+            function isoToBr(value) {
+                const parts = (value || '').split('-');
+
+                if (parts.length !== 3) return '';
+
+                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+
+            dob?.addEventListener('change', function () {
+                if (dobCalendar) {
+                    dobCalendar.value = brToIso(dob.value);
+                }
+            });
+
+            dobCalendar?.addEventListener('change', function () {
+                if (dob) {
+                    dob.value = isoToBr(dobCalendar.value);
+                    dob.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            });
+
+            dobCalendarButton?.addEventListener('click', function () {
+                if (!dobCalendar) return;
+
+                dobCalendar.value = brToIso(dob?.value || '');
+
+                if (typeof dobCalendar.showPicker === 'function') {
+                    dobCalendar.showPicker();
+                } else {
+                    dobCalendar.click();
+                }
+            });
+        })();
+
+        (function () {
             const form = document.querySelector('form.customer-register-form');
             const btn = document.getElementById('btnSubmit');
             const lock = document.getElementById('formLock');
 
             if (!form || !btn || !lock) return;
-
-            try {
-                const uf = document.getElementById('estado');
-                if (window.Inputmask && uf) Inputmask('AA', { casing: 'upper', placeholder: 'UF' }).mask(uf);
-
-                const cpf = document.getElementById('cpf');
-                if (window.Inputmask && cpf) Inputmask('999.999.999-99', { showMaskOnHover: false, clearIncomplete: true }).mask(cpf);
-            } catch { }
 
             const all = function (selector, root) {
                 return Array.from((root || document).querySelectorAll(selector));
@@ -246,8 +385,6 @@
                 });
             }
 
-            let submitted = false;
-
             function setBtnState(state) {
                 btn.classList.toggle('is-loading', state === 'loading');
                 btn.classList.toggle('is-success', state === 'success');
@@ -266,6 +403,8 @@
                 }
             }
 
+            let submitted = false;
+
             form.addEventListener('submit', function (event) {
                 if (submitted) {
                     event.preventDefault();
@@ -283,6 +422,7 @@
                     applyClientErrors(invalidEls);
                     invalidEls[0]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     invalidEls[0]?.focus({ preventScroll: true });
+
                     return false;
                 }
 
@@ -305,38 +445,24 @@
                 setBtnState('success');
             });
         })();
-    </script>
 
-    <script>
         (function () {
-            function apply() {
-                var h = window.visualViewport ? visualViewport.height : window.innerHeight;
+            const buscarCepButton = document.getElementById('buscarCepCadastro');
+            const cep = document.getElementById('cep');
 
-                if (!h || h < 100) {
-                    h = window.innerHeight;
-                }
-
-                document.documentElement.style.setProperty('--customer-register-vh', h + 'px');
-            }
-
-            apply();
-            addEventListener('resize', apply);
-
-            if (window.visualViewport) {
-                visualViewport.addEventListener('resize', apply);
-                visualViewport.addEventListener('scroll', apply);
-            }
+            buscarCepButton?.addEventListener('click', function () {
+                cep?.dispatchEvent(new Event('blur', { bubbles: true }));
+                cep?.focus();
+            });
         })();
-    </script>
 
-    <script>
         (function () {
             const isTouch = matchMedia('(pointer: coarse)').matches;
 
             if (!isTouch) return;
 
             document.addEventListener('focusin', function (event) {
-                if (!event.target.closest('.customer-register-card')) return;
+                if (!event.target.closest('.customer-register-form')) return;
                 if (!event.target.matches('input, textarea, select')) return;
 
                 setTimeout(function () {

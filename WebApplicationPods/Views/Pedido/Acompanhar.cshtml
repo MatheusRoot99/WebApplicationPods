@@ -4,6 +4,7 @@
 
 @{
     ViewData["Title"] = "Acompanhar pedido";
+    ViewData["HideStoreHeader"] = true;
 
     var ultimos = ViewBag.Ultimos as IEnumerable<PedidoModel> ?? Enumerable.Empty<PedidoModel>();
     var historico = ViewBag.Historico as IEnumerable<PedidoHistoricoModel> ?? Enumerable.Empty<PedidoHistoricoModel>();

@@ -824,3 +824,12 @@
         box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
     }
 }
+@media (max-width: 575.98px) {
+    .track-page {
+        padding-top: 12px;
+    }
+
+    .track-header {
+        margin-top: 0;
+    }
+}

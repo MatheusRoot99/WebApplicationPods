@@ -904,6 +904,85 @@ namespace WebApplicationPods.Controllers
             }
         }
 
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult AtualizarEndereco(int ClienteId, EnderecoModel endereco)
+        {
+            var guard = EnsureLojaOrRedirect();
+            if (guard != null) return guard;
+
+            try
+            {
+                var telefone = HttpContext.Session.GetString("ClienteTelefone");
+                var clienteSessao = string.IsNullOrWhiteSpace(telefone)
+                    ? null
+                    : _clienteRepository.ObterPorTelefone(telefone);
+
+                if (clienteSessao == null || clienteSessao.Id != ClienteId)
+                {
+                    TempData["Erro"] = "Sessão inválida. Faça login novamente.";
+                    return RedirectToAction("Login", "Auth", new { returnUrl = Url.Action(nameof(Resumo), "Carrinho") });
+                }
+
+                var enderecoAtual = _clienteRepository.ObterEnderecoPorId(endereco.Id);
+
+                if (enderecoAtual == null || enderecoAtual.ClienteId != ClienteId)
+                {
+                    TempData["Erro"] = "Endereço não encontrado.";
+                    return RedirectToAction(nameof(Resumo));
+                }
+
+                endereco.ClienteId = ClienteId;
+                endereco.Estado = (endereco.Estado ?? "").Trim().ToUpper();
+
+                var digitosCep = new string((endereco.CEP ?? "").Where(char.IsDigit).ToArray());
+                if (digitosCep.Length == 8)
+                    endereco.CEP = $"{digitosCep[..5]}-{digitosCep[5..]}";
+
+                var validationContext = new ValidationContext(endereco, null, null);
+                var validationResults = new List<ValidationResult>();
+                var isValid = Validator.TryValidateObject(endereco, validationContext, validationResults, true);
+
+                if (!isValid)
+                {
+                    TempData["Erro"] = "Verifique os campos do endereço: " +
+                                       string.Join(", ", validationResults.Select(v => v.ErrorMessage));
+                    return RedirectToAction(nameof(Resumo));
+                }
+
+                var enderecosExistentes = _clienteRepository.ObterEnderecos(ClienteId) ?? new List<EnderecoModel>();
+                var jaExiste = enderecosExistentes.Any(e =>
+                    e.Id != endereco.Id &&
+                    string.Equals((e.CEP ?? ""), endereco.CEP ?? "", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals((e.Logradouro ?? "").Trim(), (endereco.Logradouro ?? "").Trim(), StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals((e.Numero ?? "").Trim(), (endereco.Numero ?? "").Trim(), StringComparison.OrdinalIgnoreCase)
+                );
+
+                if (jaExiste)
+                {
+                    TempData["Erro"] = "Já existe outro endereço igual cadastrado.";
+                    return RedirectToAction(nameof(Resumo));
+                }
+
+                if (enderecoAtual.Principal && !endereco.Principal)
+                    endereco.Principal = true;
+
+                var salvo = _clienteRepository.AtualizarEnderecoComPrincipal(endereco);
+
+                TempData["EnderecoNovoId"] = salvo.Id;
+                TempData["SkipConfirm"] = "1";
+                TempData["Sucesso"] = "Endereço atualizado com sucesso!";
+                return RedirectToAction(nameof(Resumo));
+            }
+            catch (Exception ex)
+            {
+                TempData["Erro"] = $"Não foi possível atualizar o endereço: {ex.Message}";
+                return RedirectToAction(nameof(Resumo));
+            }
+        }
+
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult ExcluirEndereco(int ClienteId, int id)

@@ -165,7 +165,9 @@ namespace WebApplicationPods.Repository.Repository
 
             var existente = _context.Enderecos
                 .FirstOrDefault(e => e.Id == endereco.Id && e.ClienteId == endereco.ClienteId);
-            if (existente == null) throw new Exception("Endereço não encontrado.");
+
+            if (existente == null)
+                throw new Exception("Endereço não encontrado.");
 
             existente.Logradouro = endereco.Logradouro;
             existente.Numero = endereco.Numero;
@@ -180,17 +182,14 @@ namespace WebApplicationPods.Repository.Repository
 
             if (endereco.Principal)
             {
-                DefinirEnderecoPrincipal(existente.ClienteId, existente.Id);
-                existente.Principal = true;
-            }
-            else
-            {
                 _context.Database.ExecuteSqlRaw(@"
-                    UPDATE Enderecos
-                       SET Principal = 0
-                     WHERE Id = {0} AND ClienteId = {1};",
-                    existente.Id, existente.ClienteId);
-                existente.Principal = false;
+            UPDATE Enderecos
+               SET Principal = CASE WHEN Id = {0} THEN 1 ELSE 0 END
+             WHERE ClienteId = {1} AND Ativo = 1;",
+                    existente.Id,
+                    existente.ClienteId);
+
+                existente.Principal = true;
             }
 
             tx.Commit();
