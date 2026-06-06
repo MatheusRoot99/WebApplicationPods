@@ -335,3 +335,55 @@ body.client-login-page {
         min-height: 46px;
     }
 }
+.client-edit-page .client-login-phone {
+    background: var(--client-login-bg);
+}
+
+.client-edit-content {
+    padding: 0 0 18px;
+}
+
+.client-edit-card {
+    position: relative;
+}
+
+    .client-edit-card::after {
+        content: "";
+        display: block;
+        height: 1px;
+        margin-top: 18px;
+        background: var(--client-login-border-soft);
+    }
+
+.client-edit-actions {
+    display: grid;
+    gap: 10px;
+    margin-top: 2px;
+}
+
+.client-edit-page .client-login-input input:-webkit-autofill {
+    -webkit-text-fill-color: var(--client-login-text);
+    box-shadow: 0 0 0 1000px #fff inset;
+}
+
+@media (min-width: 768px) {
+    .client-edit-page .client-login-phone {
+        min-height: 650px;
+    }
+
+    .client-edit-content {
+        padding-bottom: 24px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .client-edit-content {
+        height: calc(var(--client-login-vh, 100dvh) - 58px);
+        overflow-y: auto;
+        padding-bottom: 18px;
+    }
+
+    .client-edit-page .client-login-card {
+        margin-bottom: 18px;
+    }
+}

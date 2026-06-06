@@ -74,12 +74,12 @@
             <div class="mobile-menu-section">
                 <span>Operação</span>
 
-                <a class="mobile-menu-link @Active("", "PainelLojista")"
-                   asp-area=""
-                   asp-controller="PainelLojista"
+                <a class="sidebar-link @Active(AppAreas.Lojista, "Dashboard")"
+                   asp-area="@AppAreas.Lojista"
+                   asp-controller="Dashboard"
                    asp-action="Index">
                     <i class="fa-solid fa-house"></i>
-                    Dashboard
+                    <span>Dashboard</span>
                 </a>
 
                 <a class="mobile-menu-link @Active("", "PedidosAdmin")"
@@ -118,9 +118,9 @@
                     Produtos
                 </a>
 
-                <a class="mobile-menu-link @Active("", "Categorias")"
+                <a class="mobile-menu-link @Active("", "Categoria")"
                    asp-area=""
-                   asp-controller="Categorias"
+                   asp-controller="Categoria"
                    asp-action="Index">
                     <i class="fa-regular fa-tag"></i>
                     Categorias

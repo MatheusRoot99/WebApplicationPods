@@ -55,12 +55,12 @@
     }
     else if (isLojista)
     {
-        <a class="bottom-nav-item @Active("", "PainelLojista")"
-           asp-area=""
-           asp-controller="PainelLojista"
+        <a class="sidebar-link @Active(AppAreas.Lojista, "Dashboard")"
+           asp-area="@AppAreas.Lojista"
+           asp-controller="Dashboard"
            asp-action="Index">
             <i class="fa-solid fa-house"></i>
-            <span>Início</span>
+            <span>Dashboard</span>
         </a>
 
         <a class="bottom-nav-item @Active("", "PedidosAdmin")"

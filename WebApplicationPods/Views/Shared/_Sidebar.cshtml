@@ -73,9 +73,9 @@
             <div class="sidebar-section">
                 <span class="sidebar-section-title">Operação</span>
 
-                <a class="sidebar-link @Active("", "PainelLojista")"
-                   asp-area=""
-                   asp-controller="PainelLojista"
+                <a class="sidebar-link @Active(AppAreas.Lojista, "Dashboard")"
+                   asp-area="@AppAreas.Lojista"
+                   asp-controller="Dashboard"
                    asp-action="Index">
                     <i class="fa-solid fa-house"></i>
                     <span>Dashboard</span>
@@ -117,9 +117,9 @@
                     <span>Produtos</span>
                 </a>
 
-                <a class="sidebar-link @Active("", "Categorias")"
+                <a class="sidebar-link @Active("", "Categoria")"
                    asp-area=""
-                   asp-controller="Categorias"
+                   asp-controller="Categoria"
                    asp-action="Index">
                     <i class="fa-regular fa-tag"></i>
                     <span>Categorias</span>

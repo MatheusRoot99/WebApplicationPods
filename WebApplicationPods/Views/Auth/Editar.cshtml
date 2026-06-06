@@ -1,64 +1,100 @@
 ﻿@model WebApplicationPods.Models.EditarInfoViewModel
+
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Editar informações";
+    ViewData["HideStoreHeader"] = true;
+    ViewData["BodyClass"] = "client-login-page client-edit-page";
+
+    var voltarUrl = !string.IsNullOrWhiteSpace(Model?.ReturnUrl)
+        ? Model.ReturnUrl
+        : Url.Action("Resumo", "Carrinho");
 }
+
 @section Styles {
     <link rel="stylesheet" href="~/css/login.css" asp-append-version="true" />
 }
 
-<div class="auth-shell">
-    <div class="auth-card">
-        <div class="auth-head d-flex align-items-center gap-2">
-            <i class="fa-solid fa-id-card"></i>
-            <h2 class="h5 mb-0">Editar informações</h2>
-        </div>
+<div class="client-login-shell">
+    <div class="client-login-phone">
+        <header class="client-login-appbar">
+            <a href="@voltarUrl" class="client-login-back" aria-label="Voltar">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
 
-        <div class="auth-body">
-            <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+            <strong>Editar informações</strong>
 
-            <form asp-action="Editar" method="post" class="login-form" asp-antiforgery="true" novalidate>
-                @Html.AntiForgeryToken()
-                <input type="hidden" asp-for="ReturnUrl" />
+            <span></span>
+        </header>
 
-                <div class="form-group mb-3">
-                    <label asp-for="Nome" class="form-label"></label>
-                    <input asp-for="Nome" class="form-control" />
-                    <span asp-validation-for="Nome" class="text-danger"></span>
+        <main class="client-edit-content">
+            <section class="client-login-card client-edit-card">
+                <div class="client-login-icon">
+                    <i class="fa-regular fa-id-card"></i>
                 </div>
 
-                <div class="form-group mb-3">
-                    <label asp-for="Telefone" class="form-label"></label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fa-solid fa-phone"></i></span>
-                        <input asp-for="Telefone"
-                               class="form-control border-start-0"
-                               inputmode="numeric"
-                               autocomplete="tel-national"
-                               placeholder="(11) 98765-4321" />
+                <div class="client-login-title">
+                    <span>Seus dados</span>
+                    <h1>Atualize suas informações</h1>
+                    <p>Confira nome, telefone e e-mail antes de continuar com o pedido.</p>
+                </div>
+
+                <div asp-validation-summary="ModelOnly" class="client-login-validation"></div>
+
+                <form asp-action="Editar" method="post" class="client-login-form" asp-antiforgery="true" novalidate>
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="ReturnUrl" />
+
+                    <div class="client-login-field">
+                        <label asp-for="Nome"></label>
+                        <div class="client-login-input">
+                            <i class="fa-regular fa-user"></i>
+                            <input asp-for="Nome"
+                                   autocomplete="name"
+                                   placeholder="Seu nome completo" />
+                        </div>
+                        <span asp-validation-for="Nome" class="client-login-field-validation"></span>
                     </div>
-                    <small class="form-text text-muted">WhatsApp com DDD</small>
-                    <span asp-validation-for="Telefone" class="text-danger"></span>
-                </div>
 
-                <div class="form-group mb-4">
-                    <label asp-for="Email" class="form-label"></label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
-                        <input asp-for="Email" class="form-control border-start-0" placeholder="voce@email.com" />
+                    <div class="client-login-field">
+                        <label asp-for="Telefone"></label>
+                        <div class="client-login-input">
+                            <i class="fa-solid fa-phone"></i>
+                            <input asp-for="Telefone"
+                                   inputmode="numeric"
+                                   autocomplete="tel-national"
+                                   placeholder="(11) 98765-4321" />
+                        </div>
+                        <small>WhatsApp com DDD para acompanhar o pedido.</small>
+                        <span asp-validation-for="Telefone" class="client-login-field-validation"></span>
                     </div>
-                    <span asp-validation-for="Email" class="text-danger"></span>
-                </div>
 
-                <button type="submit" class="btn btn-brand w-100">
-                    Salvar alterações <i class="fas fa-check ms-2"></i>
-                </button>
+                    <div class="client-login-field">
+                        <label asp-for="Email"></label>
+                        <div class="client-login-input">
+                            <i class="fa-regular fa-envelope"></i>
+                            <input asp-for="Email"
+                                   type="email"
+                                   autocomplete="email"
+                                   placeholder="voce@email.com" />
+                        </div>
+                        <span asp-validation-for="Email" class="client-login-field-validation"></span>
+                    </div>
 
-                <a href="@(Model.ReturnUrl ?? Url.Action("Resumo", "Carrinho"))" class="btn btn-outline-secondary w-100 mt-2">
-                    <i class="fas fa-arrow-left me-2"></i> Voltar
-                </a>
-            </form>
-        </div>
+                    <div class="client-edit-actions">
+                        <button type="submit" class="client-login-submit">
+                            <i class="fa-solid fa-check"></i>
+                            Salvar alterações
+                        </button>
+
+                        <a href="@voltarUrl" class="client-login-secondary">
+                            <i class="fa-solid fa-arrow-left"></i>
+                            Voltar
+                        </a>
+                    </div>
+                </form>
+            </section>
+        </main>
     </div>
 </div>
 
@@ -67,8 +103,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
     <script>
         (function () {
+            function setVh() {
+                document.documentElement.style.setProperty('--client-login-vh', window.innerHeight + 'px');
+            }
+
+            setVh();
+            window.addEventListener('resize', setVh);
+
             const $tel = window.jQuery && jQuery('[name="Telefone"]');
-            if ($tel && $tel.inputmask) $tel.inputmask({ mask: '(99) 99999-9999' });
+
+            if ($tel && $tel.inputmask) {
+                $tel.inputmask({ mask: '(99) 99999-9999' });
+            }
         })();
     </script>
 }
