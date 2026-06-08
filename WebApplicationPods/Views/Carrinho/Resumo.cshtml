@@ -730,6 +730,67 @@
     </div>
 </div>
 
+<div class="modal fade" id="trocoModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content change-modal">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-cash-coin"></i>
+                    Precisa de troco?
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+
+            <div class="modal-body">
+                <p class="change-modal-text">
+                    Você escolheu pagamento em dinheiro. Informe se precisa de troco para agilizar a entrega.
+                </p>
+
+                <div class="change-options">
+                    <label class="change-option">
+                        <input type="radio" name="PrecisaTrocoOpcao" value="nao" checked />
+                        <span>
+                            <strong>Não preciso de troco</strong>
+                            <small>Vou pagar o valor exato.</small>
+                        </span>
+                    </label>
+
+                    <label class="change-option">
+                        <input type="radio" name="PrecisaTrocoOpcao" value="sim" />
+                        <span>
+                            <strong>Preciso de troco</strong>
+                            <small>Informe o valor que você vai entregar.</small>
+                        </span>
+                    </label>
+                </div>
+
+                <div class="change-value-box d-none" id="trocoValorBox">
+                    <label for="trocoValor">Troco para quanto?</label>
+                    <div class="change-input-wrap">
+                        <span>R$</span>
+                        <input id="trocoValor"
+                               type="text"
+                               inputmode="decimal"
+                               autocomplete="off"
+                               placeholder="Ex.: 100,00" />
+                    </div>
+                    <small>Exemplo: se o total deu R$ 74,90 e você vai entregar R$ 100,00, digite 100,00.</small>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" id="btnTrocoCancelar" data-bs-dismiss="modal">
+                    Voltar
+                </button>
+
+                <button type="button" class="btn btn-primary" id="btnTrocoConfirmar">
+                    Continuar pedido
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         function formatarTelefoneBR(valor) {
@@ -1086,12 +1147,103 @@
                 });
             }
 
-            document.getElementById('formFinalizar')?.addEventListener('submit', function (e) {
-                if (!retiradaChk?.checked && !selectEnd?.value) {
-                    e.preventDefault();
-                    alert('Por favor, selecione um endereço de entrega ou marque "Retirar no local".');
+                           const formFinalizar = document.getElementById('formFinalizar');
+        const trocoModalEl = document.getElementById('trocoModal');
+        const trocoModal = trocoModalEl ? new bootstrap.Modal(trocoModalEl, { backdrop: 'static' }) : null;
+        const trocoValorBox = document.getElementById('trocoValorBox');
+        const trocoValorInput = document.getElementById('trocoValor');
+        const btnTrocoConfirmar = document.getElementById('btnTrocoConfirmar');
+
+        let bypassTrocoModal = false;
+
+        function metodoPagamentoSelecionado() {
+            return document.querySelector('input[name="MetodoPagamento"]:checked')?.value || '';
+        }
+
+        function pagamentoEmDinheiro() {
+            return metodoPagamentoSelecionado().toLowerCase() === 'dinheiro';
+        }
+
+        function normalizarValorTroco(valor) {
+            const limpo = (valor || '').replace(/[^\d,\.]/g, '').replace('.', ',').trim();
+            return limpo;
+        }
+
+        function atualizarObservacaoTroco(valorTroco) {
+            const obs = document.querySelector('[name="Observacoes"]');
+            if (!obs) return;
+
+            let atual = obs.value || '';
+            atual = atual.replace(/\n?Troco:.*$/im, '').trim();
+
+            if (valorTroco) {
+                atual = atual ? `${atual}\nTroco: precisa de troco para R$ ${valorTroco}.` : `Troco: precisa de troco para R$ ${valorTroco}.`;
+            } else {
+                atual = atual ? `${atual}\nTroco: não precisa de troco.` : 'Troco: não precisa de troco.';
+            }
+
+            obs.value = atual;
+        }
+
+        document.querySelectorAll('input[name="PrecisaTrocoOpcao"]').forEach(radio => {
+            radio.addEventListener('change', function () {
+                const precisa = this.value === 'sim';
+                trocoValorBox?.classList.toggle('d-none', !precisa);
+
+                if (precisa) {
+                    setTimeout(() => trocoValorInput?.focus(), 120);
                 }
             });
         });
+
+        trocoValorInput?.addEventListener('input', function () {
+            let valor = this.value.replace(/[^\d,\.]/g, '');
+
+            const partes = valor.split(/[,.]/);
+            if (partes.length > 2) {
+                valor = partes[0] + ',' + partes.slice(1).join('');
+            }
+
+            this.value = valor;
+        });
+
+        btnTrocoConfirmar?.addEventListener('click', function () {
+            const opcao = document.querySelector('input[name="PrecisaTrocoOpcao"]:checked')?.value || 'nao';
+
+            if (opcao === 'sim') {
+                const valor = normalizarValorTroco(trocoValorInput?.value);
+
+                if (!valor) {
+                    alert('Informe o valor para troco.');
+                    trocoValorInput?.focus();
+                    return;
+                }
+
+                atualizarObservacaoTroco(valor);
+            } else {
+                atualizarObservacaoTroco(null);
+            }
+
+            bypassTrocoModal = true;
+            trocoModal?.hide();
+            formFinalizar?.requestSubmit();
+        });
+
+        formFinalizar?.addEventListener('submit', function (e) {
+            if (!retiradaChk?.checked && !selectEnd?.value) {
+                e.preventDefault();
+                alert('Por favor, selecione um endereço de entrega ou marque "Retirar no local".');
+                return;
+            }
+
+            if (pagamentoEmDinheiro() && !bypassTrocoModal) {
+                e.preventDefault();
+                trocoModal?.show();
+                return;
+            }
+
+            bypassTrocoModal = false;
+        });
+    });
     </script>
 }

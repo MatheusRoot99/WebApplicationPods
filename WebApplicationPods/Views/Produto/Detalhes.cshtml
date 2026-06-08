@@ -75,6 +75,7 @@
 <div id="product-data"
      data-stock="@produto.Estoque"
      data-is-out-of-stock="@(estaEsgotado ? "true" : "false")"
+     data-resumo-url="@Url.Action("Resumo", "Carrinho")"
      hidden>
 </div>
 
@@ -368,7 +369,7 @@
                     </div>
                 </div>
 
-                <form asp-controller="Carrinho" asp-action="AdicionarItem" method="post" id="addToCartForm" class="pdp-buy-form">
+                <form asp-controller="Carrinho" asp-action="AdicionarItem" method="post" id="addToCartForm" class="pdp-buy-form" data-cart-local-handler="true">
                     @Html.AntiForgeryToken()
 
                     <input type="hidden" name="produtoId" value="@produto.Id" />
@@ -680,6 +681,7 @@
         (function () {
             const productData = document.getElementById('product-data');
             const isOutOfStock = productData?.dataset?.isOutOfStock === 'true';
+            const resumoUrl = productData?.dataset?.resumoUrl || '/Carrinho/Resumo';
 
             const qtd = document.getElementById('quantity');
             const qtdHidden = document.getElementById('quantidadeHidden');
@@ -703,19 +705,12 @@
 
                 let value = parseInt(qtd.value || '1', 10);
 
-                if (isNaN(value) || value < 1) {
-                    value = 1;
-                }
-
-                if (value > max) {
-                    value = max;
-                }
+                if (isNaN(value) || value < 1) value = 1;
+                if (value > max) value = max;
 
                 qtd.value = value;
 
-                if (qtdHidden) {
-                    qtdHidden.value = value;
-                }
+                if (qtdHidden) qtdHidden.value = value;
             }
 
             function hasFlavorOptions() {
@@ -745,16 +740,91 @@
                 }
             }
 
+            function setLoading(button, loading, text) {
+                if (!button) return;
+
+                if (loading) {
+                    button.dataset.originalText = button.innerHTML;
+                    button.disabled = true;
+                    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ' + text;
+                } else {
+                    button.disabled = false;
+
+                    if (button.dataset.originalText) {
+                        button.innerHTML = button.dataset.originalText;
+                    }
+                }
+            }
+
+            async function submitCart(buyNow) {
+                if (!form || isOutOfStock) return;
+
+                normalizeQty();
+
+                if (flavorIsRequiredAndMissing()) {
+                    alert('Selecione um sabor antes de continuar.');
+                    return;
+                }
+
+                if (buyNowHidden) buyNowHidden.value = buyNow ? 'true' : 'false';
+
+                const button = buyNow ? buyNowBtn : addToCartBtn;
+                setLoading(button, true, buyNow ? 'Indo para compra...' : 'Adicionando...');
+
+                try {
+                    const formData = new FormData(form);
+
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'RequestVerificationToken': form.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                        },
+                        credentials: 'same-origin',
+                        cache: 'no-store'
+                    });
+
+                    const data = await response.json();
+
+                    if (!data?.ok) {
+                        alert(data?.error || 'Não foi possível adicionar ao carrinho.');
+                        return;
+                    }
+
+                    if (typeof window.updateCartBadges === 'function') {
+                        window.updateCartBadges(data.count || 0);
+                    }
+
+                    if (buyNow || data.buyNow) {
+                        window.location.href = resumoUrl;
+                        return;
+                    }
+
+                    if (addToCartBtn) {
+                        addToCartBtn.classList.add('is-added');
+                        addToCartBtn.innerHTML = '<i class="fa-solid fa-check"></i> Adicionado';
+
+                        setTimeout(function () {
+                            addToCartBtn.classList.remove('is-added');
+                            addToCartBtn.innerHTML = '<i class="fas fa-shopping-cart"></i> Adicionar ao carrinho';
+                        }, 900);
+                    }
+                } catch {
+                    alert('Erro ao adicionar ao carrinho. Tente novamente.');
+                } finally {
+                    setLoading(button, false);
+                }
+            }
+
             minus?.addEventListener('click', function () {
                 if (!qtd || isOutOfStock) return;
-
                 qtd.stepDown();
                 normalizeQty();
             });
 
             plus?.addEventListener('click', function () {
                 if (!qtd || isOutOfStock) return;
-
                 qtd.stepUp();
                 normalizeQty();
             });
@@ -767,9 +837,7 @@
                     const value = event.target.value;
                     const estoque = event.target.getAttribute('data-estoque') || '0';
 
-                    if (saborSelecionado) {
-                        saborSelecionado.value = value;
-                    }
+                    if (saborSelecionado) saborSelecionado.value = value;
 
                     if (estoqueInfo && estoqueQuantidade) {
                         estoqueQuantidade.textContent = estoque;
@@ -780,43 +848,13 @@
                 });
             });
 
-            buyNowBtn?.addEventListener('click', function () {
-                if (!form || isOutOfStock) return;
-
-                normalizeQty();
-
-                if (flavorIsRequiredAndMissing()) {
-                    alert('Selecione um sabor antes de continuar.');
-                    return;
-                }
-
-                if (buyNowHidden) {
-                    buyNowHidden.value = 'true';
-                }
-
-                form.requestSubmit();
-            });
-
-            addToCartBtn?.addEventListener('click', function () {
-                if (buyNowHidden) {
-                    buyNowHidden.value = 'false';
-                }
-            });
-
             form?.addEventListener('submit', function (event) {
-                normalizeQty();
+                event.preventDefault();
+                submitCart(false);
+            });
 
-                if (isOutOfStock) {
-                    event.preventDefault();
-                    alert('Produto esgotado.');
-                    return;
-                }
-
-                if (flavorIsRequiredAndMissing()) {
-                    event.preventDefault();
-                    alert('Selecione um sabor antes de continuar.');
-                    return;
-                }
+            buyNowBtn?.addEventListener('click', function () {
+                submitCart(true);
             });
 
             normalizeQty();

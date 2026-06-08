@@ -57,11 +57,17 @@
         etapaEntregaDescricao = "Seu pedido está pronto e aguardando a saída para entrega.";
         etapaEntregaHora = "—";
     }
+    else if (ehEntrega)
+    {
+        etapaEntregaTitulo = "Aguardando saída para entrega";
+        etapaEntregaDescricao = "Seu pedido ainda não saiu para entrega. Avisaremos quando estiver a caminho.";
+        etapaEntregaHora = "—";
+    }
     else
     {
-        etapaEntregaTitulo = ehEntrega ? "Saiu para entrega" : "Pronto para retirada";
-        etapaEntregaDescricao = ehEntrega ? "Seu pedido está a caminho." : "Seu pedido está pronto para retirada no local.";
-        etapaEntregaHora = Model?.DataSaiuParaEntregaOuRetirada?.ToString("HH:mm") ?? "—";
+        etapaEntregaTitulo = "Aguardando retirada";
+        etapaEntregaDescricao = "Seu pedido ainda não está pronto para retirada.";
+        etapaEntregaHora = "—";
     }
 
     string statusBadgeClass = "track-status-badge";

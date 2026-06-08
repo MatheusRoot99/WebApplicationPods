@@ -101,3 +101,46 @@
             display: block;
         }
 }
+@media (max-width: 991.98px) {
+    .bottom-nav-badge {
+        top: -11px;
+        right: -13px;
+        min-width: 19px;
+        width: auto;
+        height: 19px;
+        padding: 0 5px;
+        border-radius: 999px;
+        background: #ef4444;
+        color: #fff;
+        border: 2px solid #fff;
+        font-size: 10px;
+        font-weight: 950;
+        line-height: 1;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 6px 14px rgba(239, 68, 68, .28);
+        transform: translateZ(0);
+    }
+
+        .bottom-nav-badge.show {
+            display: inline-flex;
+        }
+
+        .bottom-nav-badge:empty {
+            display: none;
+        }
+
+    .bottom-nav-item.active .bottom-nav-badge {
+        border-color: #eff6ff;
+    }
+
+    .bottom-nav-icon-wrap {
+        width: 24px;
+        height: 22px;
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+}

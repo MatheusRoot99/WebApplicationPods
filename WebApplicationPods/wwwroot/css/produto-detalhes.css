@@ -1777,3 +1777,9 @@ body.dark .pdp-related-status.esgotado {
         border-radius: 11px !important;
     }
 }
+.pdp-btn-primary.is-added {
+    background: #16a34a;
+    border-color: #16a34a;
+    color: #fff;
+    box-shadow: 0 14px 28px rgba(22, 163, 74, .24);
+}

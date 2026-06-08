@@ -70,9 +70,18 @@
 
         @if (isLojista)
         {
-            <div class="sidebar-section">
-                <span class="sidebar-section-title">Operação</span>
+            <span class="sidebar-section-title">Area Cliente</span>
 
+            <div class="sidebar-section">
+                <a class="sidebar-link @Active(AppAreas.Lojista, "Home")"
+                   asp-area=""
+                   asp-controller="Home"
+                   asp-action="Index">
+                    <i class="fa-solid fa-house"></i>
+                    <span>Home Cliente</span>
+                </a>
+
+                <span class="sidebar-section-title">Operação</span>
                 <a class="sidebar-link @Active(AppAreas.Lojista, "Dashboard")"
                    asp-area="@AppAreas.Lojista"
                    asp-controller="Dashboard"

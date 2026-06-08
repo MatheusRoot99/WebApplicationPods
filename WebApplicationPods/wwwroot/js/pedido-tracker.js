@@ -14,13 +14,22 @@
 
         if (s.indexOf('cancel') >= 0 || s.indexOf('falhou') >= 0) return -1;
 
-        if (s.indexOf('concl') >= 0 || s.indexOf('entregue') >= 0 || s.indexOf('entreg') >= 0) return 5;
+        if (
+            s.indexOf('concl') >= 0 ||
+            s.indexOf('entregue') >= 0 ||
+            s.indexOf('retirado') >= 0 ||
+            s.indexOf('finalizado') >= 0
+        ) return 5;
 
         if (
-            s.indexOf('rota') >= 0 ||
             s.indexOf('saiu') >= 0 ||
-            s.indexOf('retirada') >= 0 ||
-            s.indexOf('pronto') >= 0
+            s.indexOf('rota') >= 0 ||
+            s.indexOf('a caminho') >= 0
+        ) return 4;
+
+        if (
+            s.indexOf('pronto') >= 0 ||
+            s.indexOf('atribuid') >= 0
         ) return 4;
 
         if (
@@ -36,6 +45,10 @@
 
         if (
             s.indexOf('aguard') >= 0 && s.indexOf('pag') >= 0
+        ) return 1;
+
+        if (
+            s.indexOf('pendente') >= 0
         ) return 1;
 
         return 0;
@@ -101,14 +114,19 @@
         if (typeof step === 'number') __currentStep = step;
 
         var nodes = qsa('.vstep');
+
         for (var i = 0; i < nodes.length; i++) {
             nodes[i].classList.remove('done');
             nodes[i].classList.remove('active');
             nodes[i].classList.remove('cancelled');
+            nodes[i].classList.remove('pending');
+            nodes[i].classList.remove('next');
 
             if (__currentStep >= 0) {
                 if (i < __currentStep) nodes[i].classList.add('done');
                 if (i === __currentStep) nodes[i].classList.add('active');
+                if (i > __currentStep) nodes[i].classList.add('pending');
+                if (i === __currentStep + 1) nodes[i].classList.add('next');
             }
         }
 

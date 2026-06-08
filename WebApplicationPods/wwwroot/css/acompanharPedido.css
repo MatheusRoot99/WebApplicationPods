@@ -833,3 +833,86 @@
         margin-top: 0;
     }
 }
+.vstep.pending .vbullet {
+    border-color: #d9e2ec;
+    background: #fff;
+    color: #98a2b3;
+    box-shadow: none;
+    animation: none;
+}
+
+.vstep.pending .vtitle {
+    color: #344054;
+}
+
+.vstep.pending .vdesc,
+.vstep.pending .vtime {
+    color: #98a2b3;
+}
+
+.vstep.pending .vbody::after {
+    content: "Ainda não aconteceu";
+    width: fit-content;
+    min-height: 24px;
+    margin-top: 7px;
+    padding: 0 9px;
+    border-radius: 999px;
+    border: 1px solid #d9e2ec;
+    background: #f8fafc;
+    color: #667085;
+    display: inline-flex;
+    align-items: center;
+    font-size: .72rem;
+    font-weight: 900;
+}
+
+.vstep.next .vbody::after {
+    content: "Próxima etapa";
+    border-color: rgba(37, 99, 235, .22);
+    background: var(--track-blue-soft);
+    color: var(--track-blue);
+}
+
+.vstep.done .vbody::after,
+.vstep.active .vbody::after,
+.vstep.cancelled .vbody::after {
+    content: none;
+}
+
+.vstep.active .vbody::before {
+    content: "Etapa atual";
+    width: fit-content;
+    min-height: 24px;
+    margin-bottom: 7px;
+    padding: 0 9px;
+    border-radius: 999px;
+    background: var(--track-blue-soft);
+    color: var(--track-blue);
+    display: inline-flex;
+    align-items: center;
+    font-size: .72rem;
+    font-weight: 900;
+}
+
+.vstep.done .vbody::before {
+    content: "Concluído";
+    width: fit-content;
+    min-height: 22px;
+    margin-bottom: 6px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--track-green-soft);
+    color: #15803d;
+    display: inline-flex;
+    align-items: center;
+    font-size: .68rem;
+    font-weight: 900;
+}
+
+@media (max-width: 575.98px) {
+    .vstep.pending .vbody::after,
+    .vstep.active .vbody::before,
+    .vstep.done .vbody::before {
+        font-size: .66rem;
+    }
+}
