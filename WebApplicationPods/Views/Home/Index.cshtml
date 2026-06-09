@@ -550,21 +550,20 @@
             }
 
             function updateCartCount(count) {
-                const normalized = Number(count || 0);
+                const normalized = Math.max(0, parseInt(count || 0, 10) || 0);
 
-                const els = document.querySelectorAll('[data-cart-count], .cart-count, #cartCount');
-                els.forEach(el => el.textContent = normalized);
+                if (typeof window.updateCartBadges === 'function') {
+                    window.updateCartBadges(normalized);
+                    return;
+                }
 
                 const dock = document.getElementById('storeCartDock');
                 const dockCount = document.getElementById('storeCartDockCount');
                 const dockText = document.getElementById('storeCartDockText');
 
-                if (dockCount) dockCount.textContent = normalized;
-                if (dockText) dockText.textContent = normalized;
-
-                if (dock) {
-                    dock.classList.toggle('is-visible', normalized > 0);
-                }
+                if (dockCount) dockCount.textContent = String(normalized);
+                if (dockText) dockText.textContent = String(normalized);
+                if (dock) dock.classList.toggle('is-visible', normalized > 0);
             }
 
             function sincronizarStorageComServidor() {

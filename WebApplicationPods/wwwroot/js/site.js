@@ -45,17 +45,22 @@ window.updateCartBadges = function (count) {
             el.textContent = String(n);
             el.classList.add('show');
             el.classList.remove('visually-hidden');
+            el.setAttribute('aria-label', `${n} item(ns) no carrinho`);
         } else {
             el.textContent = '';
             el.classList.remove('show');
             el.classList.add('visually-hidden');
+            el.removeAttribute('aria-label');
         }
     });
 
-    const dot = document.getElementById('cart-new-dot');
-    if (dot) {
-        dot.classList.toggle('show', n > 0);
-    }
+    const dock = document.getElementById('storeCartDock');
+    const dockCount = document.getElementById('storeCartDockCount');
+    const dockText = document.getElementById('storeCartDockText');
+
+    if (dockCount) dockCount.textContent = String(n);
+    if (dockText) dockText.textContent = String(n);
+    if (dock) dock.classList.toggle('is-visible', n > 0);
 };
 
 (function () {

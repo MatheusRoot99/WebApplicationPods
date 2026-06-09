@@ -147,18 +147,15 @@
                 desktopSidebarToggle.addEventListener('click', toggleSidebar);
             }
 
-            const badges = document.querySelectorAll('.js-cart-badge');
             const count = parseInt(localStorage.getItem('cart_count') || '0', 10) || 0;
 
-            badges.forEach(function (badge) {
-            if (count > 0) {
-                badge.textContent = String(count);
-                badge.classList.add('show');
-            } else {
-                badge.textContent = '';
-                badge.classList.remove('show');
+            if (typeof window.updateCartBadges === 'function') {
+                window.updateCartBadges(count);
             }
-        });
+
+            if (typeof refreshCartBadge === 'function') {
+                refreshCartBadge();
+            }
         });
     </script>
 
