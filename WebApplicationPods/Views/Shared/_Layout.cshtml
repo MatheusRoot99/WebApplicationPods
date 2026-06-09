@@ -148,17 +148,17 @@
             }
 
             const badges = document.querySelectorAll('.js-cart-badge');
-            const count = localStorage.getItem('cart_count') || '0';
+            const count = parseInt(localStorage.getItem('cart_count') || '0', 10) || 0;
 
             badges.forEach(function (badge) {
-                badge.textContent = count;
-
-                if (parseInt(count, 10) > 0) {
-                    badge.classList.add('show');
-                } else {
-                    badge.classList.remove('show');
-                }
-            });
+            if (count > 0) {
+                badge.textContent = String(count);
+                badge.classList.add('show');
+            } else {
+                badge.textContent = '';
+                badge.classList.remove('show');
+            }
+        });
         });
     </script>
 

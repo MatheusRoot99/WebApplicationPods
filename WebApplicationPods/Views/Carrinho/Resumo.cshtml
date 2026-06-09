@@ -784,7 +784,7 @@
                 </button>
 
                 <button type="button" class="btn btn-primary" id="btnTrocoConfirmar">
-                    Continuar pedido
+                    Salvar escolha
                 </button>
             </div>
         </div>
@@ -1147,14 +1147,17 @@
                 });
             }
 
-                           const formFinalizar = document.getElementById('formFinalizar');
+                const formFinalizar = document.getElementById('formFinalizar');
         const trocoModalEl = document.getElementById('trocoModal');
         const trocoModal = trocoModalEl ? new bootstrap.Modal(trocoModalEl, { backdrop: 'static' }) : null;
         const trocoValorBox = document.getElementById('trocoValorBox');
         const trocoValorInput = document.getElementById('trocoValor');
         const btnTrocoConfirmar = document.getElementById('btnTrocoConfirmar');
+        const btnTrocoCancelar = document.getElementById('btnTrocoCancelar');
+        const payMoney = document.getElementById('pay-money');
 
-        let bypassTrocoModal = false;
+        let trocoConfirmado = false;
+        let fechandoTrocoConfirmado = false;
 
         function metodoPagamentoSelecionado() {
             return document.querySelector('input[name="MetodoPagamento"]:checked')?.value || '';
@@ -1165,25 +1168,57 @@
         }
 
         function normalizarValorTroco(valor) {
-            const limpo = (valor || '').replace(/[^\d,\.]/g, '').replace('.', ',').trim();
-            return limpo;
+            return (valor || '').replace(/[^\d,\.]/g, '').replace('.', ',').trim();
+        }
+
+        function limparObservacaoTroco() {
+            const obs = document.querySelector('[name="Observacoes"]');
+            if (!obs) return;
+
+            obs.value = (obs.value || '').replace(/\n?Troco:.*$/im, '').trim();
         }
 
         function atualizarObservacaoTroco(valorTroco) {
             const obs = document.querySelector('[name="Observacoes"]');
             if (!obs) return;
 
-            let atual = obs.value || '';
-            atual = atual.replace(/\n?Troco:.*$/im, '').trim();
+            limparObservacaoTroco();
 
-            if (valorTroco) {
-                atual = atual ? `${atual}\nTroco: precisa de troco para R$ ${valorTroco}.` : `Troco: precisa de troco para R$ ${valorTroco}.`;
-            } else {
-                atual = atual ? `${atual}\nTroco: não precisa de troco.` : 'Troco: não precisa de troco.';
+            const atual = obs.value || '';
+            const textoTroco = valorTroco
+                ? `Troco: precisa de troco para R$ ${valorTroco}.`
+                : 'Troco: não precisa de troco.';
+
+            obs.value = atual ? `${atual}\n${textoTroco}` : textoTroco;
+        }
+
+        function resetTrocoModal() {
+            document.querySelector('input[name="PrecisaTrocoOpcao"][value="nao"]')?.click();
+
+            if (trocoValorInput) {
+                trocoValorInput.value = '';
             }
 
-            obs.value = atual;
+            trocoValorBox?.classList.add('d-none');
         }
+
+        function abrirModalTroco() {
+            resetTrocoModal();
+            trocoModal?.show();
+        }
+
+        document.querySelectorAll('input[name="MetodoPagamento"]').forEach(radio => {
+            radio.addEventListener('change', function () {
+                if ((this.value || '').toLowerCase() === 'dinheiro') {
+                    trocoConfirmado = false;
+                    abrirModalTroco();
+                    return;
+                }
+
+                trocoConfirmado = false;
+                limparObservacaoTroco();
+            });
+        });
 
         document.querySelectorAll('input[name="PrecisaTrocoOpcao"]').forEach(radio => {
             radio.addEventListener('change', function () {
@@ -1198,8 +1233,8 @@
 
         trocoValorInput?.addEventListener('input', function () {
             let valor = this.value.replace(/[^\d,\.]/g, '');
-
             const partes = valor.split(/[,.]/);
+
             if (partes.length > 2) {
                 valor = partes[0] + ',' + partes.slice(1).join('');
             }
@@ -1224,9 +1259,31 @@
                 atualizarObservacaoTroco(null);
             }
 
-            bypassTrocoModal = true;
+            trocoConfirmado = true;
+            fechandoTrocoConfirmado = true;
             trocoModal?.hide();
-            formFinalizar?.requestSubmit();
+        });
+
+        btnTrocoCancelar?.addEventListener('click', function () {
+            trocoConfirmado = false;
+            fechandoTrocoConfirmado = false;
+            limparObservacaoTroco();
+
+            if (payMoney) {
+                payMoney.checked = false;
+            }
+        });
+
+        trocoModalEl?.addEventListener('hidden.bs.modal', function () {
+            if (fechandoTrocoConfirmado) {
+                fechandoTrocoConfirmado = false;
+                return;
+            }
+
+            if (!trocoConfirmado && payMoney) {
+                payMoney.checked = false;
+                limparObservacaoTroco();
+            }
         });
 
         formFinalizar?.addEventListener('submit', function (e) {
@@ -1236,13 +1293,10 @@
                 return;
             }
 
-            if (pagamentoEmDinheiro() && !bypassTrocoModal) {
+            if (pagamentoEmDinheiro() && !trocoConfirmado) {
                 e.preventDefault();
-                trocoModal?.show();
-                return;
+                abrirModalTroco();
             }
-
-            bypassTrocoModal = false;
         });
     });
     </script>

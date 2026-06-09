@@ -53,7 +53,9 @@ window.updateCartBadges = function (count) {
     });
 
     const dot = document.getElementById('cart-new-dot');
-    if (dot) dot.classList.toggle('show', n > 0);
+    if (dot) {
+        dot.classList.toggle('show', n > 0);
+    }
 };
 
 (function () {

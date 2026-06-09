@@ -147,7 +147,7 @@
                                     }
                                 </div>
 
-                                <form asp-action="RemoverItem" method="post" class="cart-remove-form">
+                                <form asp-action="RemoverItem" method="post" class="cart-remove-form" data-cart-local-handler="true">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="produtoId" value="@produto!.Id" />
                                     <input type="hidden" name="sabor" value="@item.Sabor" />
@@ -169,7 +169,7 @@
                                     <small>Subtotal: @subtotal.ToString("C", ptBR)</small>
                                 </div>
 
-                                <form asp-action="AtualizarItem" method="post" class="cart-qty-form">
+                                <form asp-action="AtualizarItem" method="post" class="cart-qty-form" data-cart-local-handler="true">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="produtoId" value="@produto!.Id" />
                                     <input type="hidden" name="sabor" value="@item.Sabor" />
