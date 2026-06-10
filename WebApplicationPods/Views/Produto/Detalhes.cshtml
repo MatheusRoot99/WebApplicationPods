@@ -49,7 +49,7 @@
     var estaEsgotado = produto.EstaEsgotado;
 
     var temVolume = produto.BebidaVolumeMl.HasValue && produto.BebidaVolumeMl.Value > 0;
-    var volumeTexto = temVolume ? $"{produto.BebidaVolumeMl.Value} ml" : "";
+    var volumeTexto = temVolume ? $"{produto.BebidaVolumeMl.GetValueOrDefault()} ml" : "";
 
     var temEmbalagem = !string.IsNullOrWhiteSpace(unidadeVendaDescricao);
     var temTipoBebida = !string.IsNullOrWhiteSpace(produto.BebidaTipo);
@@ -64,7 +64,7 @@
         && produto.BebidaQtdPorEmbalagem.Value > 1;
 
     var estoqueFisicoTotal = mostrarEstoqueFisico
-        ? produto.Estoque * produto.BebidaQtdPorEmbalagem.Value
+        ? produto.Estoque * produto.BebidaQtdPorEmbalagem.GetValueOrDefault()
         : produto.Estoque;
 }
 
@@ -219,7 +219,7 @@
                         {
                             <div class="pdp-info-card">
                                 <span>Puffs</span>
-                                <strong>@produto.PodPuffs.Value</strong>
+                                <strong>@produto.PodPuffs.GetValueOrDefault()</strong>
                             </div>
                         }
 
@@ -270,25 +270,25 @@
                             </div>
                         }
 
-                        <div class="pdp-info-card">
+                        @*<div class="pdp-info-card">
                             <span>Estoque</span>
                             <strong>@estoqueDescricao</strong>
-                        </div>
+                        </div>*@
 
                         @if (mostrarEstoqueFisico)
                         {
-                            <div class="pdp-info-card">
+                            @*<div class="pdp-info-card">
                                 <span>Total físico</span>
                                 <strong>@estoqueFisicoTotal unidades</strong>
-                            </div>
+                            </div>*@
                         }
                     }
                     else
                     {
-                        <div class="pdp-info-card">
+                        @*<div class="pdp-info-card">
                             <span>Estoque</span>
                             <strong>@estoqueDescricao</strong>
-                        </div>
+                        </div>*@
                     }
                 </div>
             </section>
@@ -451,7 +451,7 @@
                         {
                             <div class="pdp-spec-item">
                                 <span>Puffs</span>
-                                <strong>@produto.PodPuffs.Value</strong>
+                                <strong>@produto.PodPuffs.GetValueOrDefault()</strong>
                             </div>
                         }
 

@@ -2,9 +2,9 @@
 
 @{
     var isAuth = User?.Identity?.IsAuthenticated ?? false;
-    var isAdmin = User.IsInRole("Admin");
-    var isLojista = User.IsInRole("Lojista");
-    var isEntregador = User.IsInRole("Entregador");
+    var isAdmin = User?.IsInRole("Admin") == true;
+    var isLojista = User?.IsInRole("Lojista") == true;
+    var isEntregador = User?.IsInRole("Entregador") == true;
 
     var areaAtual = (ViewContext.RouteData.Values["area"]?.ToString() ?? "");
     var controllerAtual = (ViewContext.RouteData.Values["controller"]?.ToString() ?? "");

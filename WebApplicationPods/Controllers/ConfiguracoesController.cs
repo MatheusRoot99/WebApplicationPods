@@ -38,11 +38,18 @@ namespace WebApplicationPods.Controllers
             ModelState.Remove(nameof(vm.NovaSenha));
             ModelState.Remove(nameof(vm.ConfirmarSenha));
             ModelState.Remove(nameof(vm.TemaAtual));
-            ModelState.Remove(nameof(vm.Email));
             ModelState.Remove(nameof(vm.NomeLoja));
+            ModelState.Remove(nameof(vm.Cpf));
 
             if (string.IsNullOrWhiteSpace(vm.NomeUsuario))
                 ModelState.AddModelError(nameof(vm.NomeUsuario), "Informe o nome do usuário.");
+
+            if (!string.IsNullOrWhiteSpace(vm.Email) && !IsValidEmail(vm.Email))
+                ModelState.AddModelError(nameof(vm.Email), "Informe um e-mail válido.");
+
+            var telefoneDigitos = LimparDigitos(vm.Telefone ?? string.Empty);
+            if (!string.IsNullOrWhiteSpace(vm.Telefone) && telefoneDigitos.Length < 10)
+                ModelState.AddModelError(nameof(vm.Telefone), "Informe um telefone válido com DDD.");
 
             if (!ModelState.IsValid)
             {
@@ -57,17 +64,24 @@ namespace WebApplicationPods.Controllers
 
             var nome = vm.NomeUsuario!.Trim();
 
-            var alterouNome = SetStringPropertyIfExists(user, nome,
-                "Nome",
-                "NomeCompleto",
-                "NomeUsuario",
-                "FullName",
-                "DisplayName");
+            user.Nome = nome;
+            user.PhoneNumber = string.IsNullOrWhiteSpace(telefoneDigitos) ? null : telefoneDigitos;
 
-            if (!alterouNome)
+            var email = vm.Email?.Trim();
+            if (!string.IsNullOrWhiteSpace(email) &&
+                !string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase))
             {
-                TempData["MensagemErro"] = "Não encontrei um campo de nome no usuário. Se quiser, no próximo passo ajustamos o ApplicationUser para ter Nome.";
-                return RedirectToAction(nameof(Index));
+                var emailOwner = await _userManager.FindByEmailAsync(email);
+                if (emailOwner != null && emailOwner.Id != user.Id)
+                {
+                    ModelState.AddModelError(nameof(vm.Email), "Este e-mail já está em uso.");
+                    await CompletarViewModelAsync(vm);
+                    return View("Index", vm);
+                }
+
+                user.Email = email;
+                user.NormalizedEmail = _userManager.NormalizeEmail(email);
+                user.EmailConfirmed = false;
             }
 
             var result = await _userManager.UpdateAsync(user);
@@ -136,54 +150,37 @@ namespace WebApplicationPods.Controllers
             if (user != null)
             {
                 vm.Email = user.Email;
-                vm.NomeUsuario = GetStringPropertyIfExists(user,
-                    "Nome",
-                    "NomeCompleto",
-                    "NomeUsuario",
-                    "FullName",
-                    "DisplayName") ?? user.UserName;
+                vm.Telefone = user.PhoneNumber;
+                vm.Cpf = user.CPF;
+                vm.NomeUsuario = string.IsNullOrWhiteSpace(user.Nome) ? user.UserName : user.Nome;
             }
 
             vm.NomeLoja = loja?.Nome ?? "Conveniência";
             vm.TemaAtual = "light";
         }
 
-        private static string? GetStringPropertyIfExists(object obj, params string[] names)
+        private static string LimparDigitos(string input)
         {
-            var type = obj.GetType();
+            if (string.IsNullOrWhiteSpace(input))
+                return string.Empty;
 
-            foreach (var name in names)
-            {
-                var prop = type.GetProperty(name);
-
-                if (prop == null || prop.PropertyType != typeof(string))
-                    continue;
-
-                var value = prop.GetValue(obj) as string;
-
-                if (!string.IsNullOrWhiteSpace(value))
-                    return value;
-            }
-
-            return null;
+            return new string(input.Where(char.IsDigit).ToArray());
         }
 
-        private static bool SetStringPropertyIfExists(object obj, string value, params string[] names)
+        private static bool IsValidEmail(string email)
         {
-            var type = obj.GetType();
+            if (string.IsNullOrWhiteSpace(email))
+                return false;
 
-            foreach (var name in names)
+            try
             {
-                var prop = type.GetProperty(name);
-
-                if (prop == null || !prop.CanWrite || prop.PropertyType != typeof(string))
-                    continue;
-
-                prop.SetValue(obj, value);
-                return true;
+                var addr = new System.Net.Mail.MailAddress(email);
+                return addr.Address == email;
             }
-
-            return false;
+            catch
+            {
+                return false;
+            }
         }
     }
 }

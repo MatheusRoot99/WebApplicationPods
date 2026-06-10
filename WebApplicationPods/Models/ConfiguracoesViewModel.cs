@@ -10,6 +10,12 @@ namespace WebApplicationPods.Models
 
         public string? Email { get; set; }
 
+        [Display(Name = "Telefone")]
+        [StringLength(20, ErrorMessage = "O telefone deve ter no máximo 20 caracteres.")]
+        public string? Telefone { get; set; }
+
+        public string? Cpf { get; set; }
+
         public string? NomeLoja { get; set; }
 
         public string? TemaAtual { get; set; }

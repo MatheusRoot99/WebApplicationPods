@@ -48,9 +48,7 @@
       "launchUrl": "http://painel.lvh.me:44320",
       "applicationUrl": "http://painel.lvh.me:44320",
       "environmentVariables": { "ASPNETCORE_ENVIRONMENT": "Development" }
-    }
-
-  },
+    },
     "Lojista Portal": {
       "commandName": "Project",
       "dotnetRunMessages": true,

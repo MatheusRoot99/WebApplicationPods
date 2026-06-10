@@ -1,6 +1,13 @@
-﻿@{
+@using Microsoft.AspNetCore.Identity
+@using WebApplicationPods.Models
+@inject UserManager<ApplicationUser> UserManager
+
+@{
     var isAuth = User?.Identity?.IsAuthenticated ?? false;
-    var nomeUsuario = User?.Identity?.Name ?? "Perfil";
+    var usuarioLogado = isAuth ? await UserManager.GetUserAsync(User!) : null;
+    var nomeUsuario = !string.IsNullOrWhiteSpace(usuarioLogado?.Nome)
+        ? usuarioLogado!.Nome
+        : (User?.Identity?.Name ?? "Perfil");
 }
 
 <header class="store-header">
@@ -27,7 +34,7 @@
         <div class="store-actions">
             <a class="store-icon-button store-cart-button" asp-area="" asp-controller="Carrinho" asp-action="Index" aria-label="Carrinho">
                 <i class="fa-solid fa-cart-shopping"></i>
-                <span class="js-cart-badge">0</span>
+                <span class="js-cart-badge"></span>
             </a>
 
             @if (isAuth)

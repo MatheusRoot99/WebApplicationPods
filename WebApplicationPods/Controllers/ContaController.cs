@@ -256,6 +256,126 @@ namespace WebApplicationPods.Controllers
             return RedirectToAction("Login", "Conta");
         }
 
+        [HttpGet]
+        [Authorize]
+        public async Task<IActionResult> Perfil()
+        {
+            var user = await _userManager.GetUserAsync(User);
+
+            if (user == null)
+                return Challenge();
+
+            var vm = new ConfiguracoesViewModel
+            {
+                NomeUsuario = user.Nome,
+                Email = user.Email,
+                Telefone = user.PhoneNumber,
+                Cpf = user.CPF
+            };
+
+            return View(vm);
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AtualizarPerfil(ConfiguracoesViewModel vm)
+        {
+            ModelState.Remove(nameof(vm.SenhaAtual));
+            ModelState.Remove(nameof(vm.NovaSenha));
+            ModelState.Remove(nameof(vm.ConfirmarSenha));
+            ModelState.Remove(nameof(vm.TemaAtual));
+            ModelState.Remove(nameof(vm.NomeLoja));
+            ModelState.Remove(nameof(vm.Cpf));
+
+            if (string.IsNullOrWhiteSpace(vm.NomeUsuario))
+                ModelState.AddModelError(nameof(vm.NomeUsuario), "Informe o nome.");
+
+            if (!string.IsNullOrWhiteSpace(vm.Email) && !IsValidEmail(vm.Email))
+                ModelState.AddModelError(nameof(vm.Email), "Informe um e-mail válido.");
+
+            var telefoneDigitos = LimparDigitos(vm.Telefone ?? string.Empty);
+            if (!string.IsNullOrWhiteSpace(vm.Telefone) && telefoneDigitos.Length < 10)
+                ModelState.AddModelError(nameof(vm.Telefone), "Informe um telefone válido com DDD.");
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Challenge();
+
+            vm.Cpf = user.CPF;
+
+            if (!ModelState.IsValid)
+                return View("Perfil", vm);
+
+            user.Nome = vm.NomeUsuario!.Trim();
+            user.PhoneNumber = string.IsNullOrWhiteSpace(telefoneDigitos) ? null : telefoneDigitos;
+
+            var email = vm.Email?.Trim();
+            if (!string.IsNullOrWhiteSpace(email) &&
+                !string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase))
+            {
+                var emailOwner = await _userManager.FindByEmailAsync(email);
+                if (emailOwner != null && emailOwner.Id != user.Id)
+                {
+                    ModelState.AddModelError(nameof(vm.Email), "Este e-mail já está em uso.");
+                    return View("Perfil", vm);
+                }
+
+                user.Email = email;
+                user.NormalizedEmail = _userManager.NormalizeEmail(email);
+                user.EmailConfirmed = false;
+            }
+
+            var result = await _userManager.UpdateAsync(user);
+
+            if (!result.Succeeded)
+            {
+                foreach (var error in result.Errors)
+                    ModelState.AddModelError(string.Empty, error.Description);
+
+                return View("Perfil", vm);
+            }
+
+            await _signInManager.RefreshSignInAsync(user);
+            TempData["MensagemSucesso"] = "Perfil atualizado com sucesso.";
+            return RedirectToAction(nameof(Perfil));
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AlterarSenhaPerfil(ConfiguracoesViewModel vm)
+        {
+            if (string.IsNullOrWhiteSpace(vm.SenhaAtual) ||
+                string.IsNullOrWhiteSpace(vm.NovaSenha) ||
+                string.IsNullOrWhiteSpace(vm.ConfirmarSenha))
+            {
+                TempData["MensagemErro"] = "Preencha a senha atual, a nova senha e a confirmação.";
+                return RedirectToAction(nameof(Perfil));
+            }
+
+            if (!string.Equals(vm.NovaSenha, vm.ConfirmarSenha, StringComparison.Ordinal))
+            {
+                TempData["MensagemErro"] = "A confirmação da senha não confere.";
+                return RedirectToAction(nameof(Perfil));
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Challenge();
+
+            var result = await _userManager.ChangePasswordAsync(user, vm.SenhaAtual, vm.NovaSenha);
+            if (!result.Succeeded)
+            {
+                TempData["MensagemErro"] = string.Join(" ", result.Errors.Select(e => e.Description));
+                return RedirectToAction(nameof(Perfil));
+            }
+
+            await _signInManager.RefreshSignInAsync(user);
+            TempData["MensagemSucesso"] = "Senha alterada com sucesso.";
+            return RedirectToAction(nameof(Perfil));
+        }
+
         // =========================
         // ACESSO NEGADO + RECUPERAÇÃO
         // =========================

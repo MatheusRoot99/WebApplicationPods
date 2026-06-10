@@ -1,10 +1,9 @@
-﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Authorization
 @using WebApplicationPods.Models
 @model WebApplicationPods.Models.LojaConfig
 @inject IAuthorizationService Authz
 
 @{
-    // Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Configurações da Loja";
     var authResult = await Authz.AuthorizeAsync(User, policyName: "Admin");
     var isAdmin = authResult.Succeeded || (User?.Identity?.IsAuthenticated == true && User.IsInRole("Admin"));
@@ -14,228 +13,272 @@
     <link rel="stylesheet" href="~/css/loja-settings.css" asp-append-version="true" />
 }
 
-<div class="container py-4 loja-settings-page">
-    <div id="loja-settings" class="loja-settings">
+<div class="store-settings-page">
+    <header class="store-settings-header">
+        <div class="store-settings-title">
+            <span>Configurações</span>
+            <h1>Configurações da loja</h1>
+            <p>Edite identidade, horário de funcionamento e endereço usado para retirada no local.</p>
+        </div>
 
-        <header class="page-head">
-            <div class="head-left">
-                <div class="icon-wrap">
-                    <i class="fas fa-store"></i>
-                </div>
-                <div class="min-w-0">
-                    <h1 class="title"><span class="brand-gradient">Configurações da Loja</span></h1>
-                    <p class="subtitle">Edite identidade, funcionamento e endereço para retirada no local.</p>
+        <a asp-area="PainelLojista" asp-controller="Dashboard" asp-action="Index" class="store-settings-btn store-settings-btn-light">
+            <i class="fa-solid fa-arrow-left"></i>
+            Voltar
+        </a>
+    </header>
+
+    @if (TempData["Sucesso"] is string okMsg)
+    {
+        <div class="store-settings-alert is-success">
+            <i class="fa-solid fa-circle-check"></i>
+            <span>@okMsg</span>
+        </div>
+    }
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="store-settings-alert is-error">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span>Corrija os campos destacados antes de salvar.</span>
+        </div>
+    }
+
+    <form asp-action="Editar" method="post" enctype="multipart/form-data" class="store-settings-form">
+        @Html.AntiForgeryToken()
+        <input asp-for="Id" type="hidden" />
+
+        <section class="store-settings-card">
+            <div class="store-settings-card-head">
+                <div class="store-settings-card-title">
+                    <span class="store-settings-icon"><i class="fa-solid fa-store"></i></span>
+                    <div>
+                        <span>Identidade</span>
+                        <h2>Dados da loja</h2>
+                    </div>
                 </div>
             </div>
 
-            <!-- usa o toggle global do layout (html[data-theme]) -->
-            <div class="theme-pill" role="group" aria-label="Tema do site">
-                <div class="label" id="themeLabel">
-                    <i class="fa-solid fa-moon"></i>
-                    <span>Tema</span>
+            <div class="store-settings-grid two">
+                <div class="store-field">
+                    <label asp-for="Nome">Nome do estabelecimento</label>
+                    <input asp-for="Nome" />
+                    <span asp-validation-for="Nome"></span>
                 </div>
-                <button type="button" class="switch" id="themeSwitch" title="Alternar tema" aria-label="Alternar tema"></button>
+
+                <div class="store-field">
+                    <label>Logo da loja</label>
+                    <input type="file" name="logoFile" accept=".png,.jpg,.jpeg,.webp" />
+                    <span asp-validation-for="LogoPath"></span>
+
+                    @if (!string.IsNullOrWhiteSpace(Model.LogoPath))
+                    {
+                        <div class="store-logo-current">
+                            <img src="@Model.LogoPath" alt="Logo atual" />
+                            <small>@Model.LogoPath</small>
+                        </div>
+                    }
+                </div>
             </div>
-        </header>
+        </section>
 
-        @if (TempData["Sucesso"] is string okMsg)
-        {
-            <div class="alert alert-success alert-dismissible fade show mt-3">
-                <i class="bi bi-check2-circle me-2"></i>@okMsg
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-            </div>
-        }
-        @if (!ViewData.ModelState.IsValid)
-        {
-            <div class="alert alert-danger mt-3">
-                <strong>Corrija os campos abaixo.</strong>
-            </div>
-        }
-
-        <form asp-action="Editar" method="post" enctype="multipart/form-data" class="card main-card p-3 p-md-4">
-            @Html.AntiForgeryToken()
-            <input asp-for="Id" type="hidden" />
-
-            <section class="section">
-                <h2 class="section-title"><i class="bi bi-person-badge me-2"></i>Identidade</h2>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label asp-for="Nome" class="form-label">Nome do Estabelecimento</label>
-                        <input asp-for="Nome" class="form-control" />
-                        <span asp-validation-for="Nome" class="text-danger"></span>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">Logo (PNG/JPG/WEBP)</label>
-                        <input type="file" name="logoFile" class="form-control" accept=".png,.jpg,.jpeg,.webp" />
-                        @if (!string.IsNullOrWhiteSpace(Model.LogoPath))
-                        {
-                            <div class="mt-2 d-flex align-items-center gap-2">
-                                <img src="@Model.LogoPath" alt="Logo atual" class="logo-thumb" />
-                                <span class="text-muted small text-truncate">@Model.LogoPath</span>
-                            </div>
-                        }
-                        <span asp-validation-for="LogoPath" class="text-danger"></span>
+        <section class="store-settings-card">
+            <div class="store-settings-card-head">
+                <div class="store-settings-card-title">
+                    <span class="store-settings-icon"><i class="fa-regular fa-clock"></i></span>
+                    <div>
+                        <span>Funcionamento</span>
+                        <h2>Horários e status</h2>
                     </div>
                 </div>
-            </section>
+            </div>
 
-            <hr class="my-3 my-md-4" />
+            <div class="store-settings-grid hours">
+                <div class="store-field">
+                    <label>Abre às</label>
+                    <input asp-for="HorarioAbertura" type="time" />
+                    <span asp-validation-for="HorarioAbertura"></span>
+                </div>
 
-            <section class="section">
-                <h2 class="section-title"><i class="bi bi-clock-history me-2"></i>Funcionamento</h2>
-                <div class="row g-3">
-                    <div class="col-sm-6 col-md-3">
-                        <label class="form-label">Abre às</label>
-                        <input asp-for="HorarioAbertura" type="time" class="form-control" />
-                        <span asp-validation-for="HorarioAbertura" class="text-danger"></span>
-                    </div>
+                <div class="store-field">
+                    <label>Fecha às</label>
+                    <input asp-for="HorarioFechamento" type="time" />
+                    <small>Suporta virar o dia, como 18:00 até 02:00.</small>
+                    <span asp-validation-for="HorarioFechamento"></span>
+                </div>
 
-                    <div class="col-sm-6 col-md-3">
-                        <label class="form-label">Fecha às</label>
-                        <input asp-for="HorarioFechamento" type="time" class="form-control" />
-                        <span asp-validation-for="HorarioFechamento" class="text-danger"></span>
-                        <div class="form-text">Suporta virar o dia (ex.: 18:00 → 02:00)</div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label d-block">Dias abertos</label>
+                <div class="store-days">
+                    <label>Dias abertos</label>
+                    <div class="store-days-list">
                         @foreach (DiasSemanaFlags d in Enum.GetValues(typeof(DiasSemanaFlags)))
                         {
                             if (d == DiasSemanaFlags.Nenhum || d == DiasSemanaFlags.Todos) { continue; }
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox"
+
+                            <label class="store-check-pill">
+                                <input type="checkbox"
                                        name="DiasAbertosSelecionados"
                                        value="@((int)d)"
-                                       @(Model.DiasAbertos.HasFlag(d) ? "checked" : "") />
-                                <label class="form-check-label">@d</label>
-                            </div>
+                                       checked="@(Model.DiasAbertos.HasFlag(d))" />
+                                <span>@d</span>
+                            </label>
                         }
                     </div>
-
-                    <div class="col-md-3">
-                        <div class="form-check mt-4">
-                            <input class="form-check-input" asp-for="Ativo" />
-                            <label class="form-check-label" asp-for="Ativo">Loja ativa</label>
-                        </div>
-                    </div>
-
-                    <div class="col-md-3">
-                        <div class="form-check mt-4">
-                            <input class="form-check-input" asp-for="ForcarFechado" />
-                            <label class="form-check-label" asp-for="ForcarFechado">Forçar fechado</label>
-                        </div>
-                    </div>
-
-                    <div class="col-12">
-                        <label asp-for="MensagemStatus" class="form-label">Mensagem (opcional)</label>
-                        <input asp-for="MensagemStatus" class="form-control" placeholder="Ex.: Voltamos às 19h" />
-                        <span asp-validation-for="MensagemStatus" class="text-danger"></span>
-                    </div>
                 </div>
-            </section>
-
-            <hr class="my-3 my-md-4" />
-
-            <section class="section">
-                <h2 class="section-title"><i class="bi bi-geo-alt-fill me-2"></i>Endereço da Loja</h2>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label asp-for="Logradouro" class="form-label">Logradouro</label>
-                        <input asp-for="Logradouro" class="form-control" />
-                        <span asp-validation-for="Logradouro" class="text-danger"></span>
-                    </div>
-                    <div class="col-md-2">
-                        <label asp-for="Numero" class="form-label">Número</label>
-                        <input asp-for="Numero" class="form-control" />
-                        <span asp-validation-for="Numero" class="text-danger"></span>
-                    </div>
-                    <div class="col-md-4">
-                        <label asp-for="Complemento" class="form-label">Complemento</label>
-                        <input asp-for="Complemento" class="form-control" />
-                        <span asp-validation-for="Complemento" class="text-danger"></span>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label asp-for="Bairro" class="form-label">Bairro</label>
-                        <input asp-for="Bairro" class="form-control" />
-                        <span asp-validation-for="Bairro" class="text-danger"></span>
-                    </div>
-                    <div class="col-md-4">
-                        <label asp-for="Cidade" class="form-label">Cidade</label>
-                        <input asp-for="Cidade" class="form-control" />
-                        <span asp-validation-for="Cidade" class="text-danger"></span>
-                    </div>
-                    <div class="col-md-2">
-                        <label asp-for="Estado" class="form-label">UF</label>
-                        <input asp-for="Estado" class="form-control text-uppercase" maxlength="2" />
-                        <span asp-validation-for="Estado" class="text-danger"></span>
-                    </div>
-                    <div class="col-md-2">
-                        <label asp-for="Cep" class="form-label">CEP</label>
-                        <input asp-for="Cep" class="form-control" placeholder="00000-000" />
-                        <span asp-validation-for="Cep" class="text-danger"></span>
-                    </div>
-                </div>
-            </section>
-
-            <section class="section mt-3">
-                <h2 class="section-title"><i class="bi bi-map me-2"></i>Google Maps</h2>
-
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label asp-for="Latitude" class="form-label">Latitude</label>
-                        <input asp-for="Latitude" class="form-control" step="any" />
-                        <span asp-validation-for="Latitude" class="text-danger"></span>
-                    </div>
-                    <div class="col-md-3">
-                        <label asp-for="Longitude" class="form-label">Longitude</label>
-                        <input asp-for="Longitude" class="form-control" step="any" />
-                        <span asp-validation-for="Longitude" class="text-danger"></span>
-                    </div>
-                    <div class="col-md-6">
-                        <label asp-for="MapsPlaceUrl" class="form-label">URL do Google Maps (opcional)</label>
-                        <input asp-for="MapsPlaceUrl" class="form-control" placeholder="Cole a URL do place se já tiver" />
-                        <span class="form-text">Se preencher, tem prioridade sobre endereço. Se também informar lat/lng, lat/lng têm prioridade máxima.</span>
-                        <span asp-validation-for="MapsPlaceUrl" class="text-danger"></span>
-                    </div>
-                </div>
-
-                <div class="mt-3 p-3 border rounded bg-light maps-block">
-                    <div class="small text-muted">Endereço completo (visual):</div>
-                    <div id="enderecoPreview" class="fw-semibold">@Model.EnderecoTexto</div>
-
-                    <div class="small text-muted mt-2">URL de rotas (preview):</div>
-                    <div class="d-flex flex-column flex-md-row gap-2 align-items-stretch align-items-md-center">
-                        <input id="mapsUrlPreview" class="form-control" readonly value="@Model.MapsUrl" />
-                        <div class="d-flex gap-2">
-                            <a id="btnAbrirMaps" class="btn btn-primary" target="_blank" rel="noopener">
-                                <i class="bi bi-geo-alt"></i> Abrir no Maps
-                            </a>
-                            <button type="button" id="btnCopyMaps" class="btn btn-outline-secondary" title="Copiar">
-                                <i class="bi bi-clipboard"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <div class="form-actions mt-3 d-flex flex-column flex-md-row gap-2">
-                <button class="btn btn-success"><i class="fas fa-save me-2"></i>Salvar</button>
-                <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">Voltar</a>
             </div>
-        </form>
 
-        @if (isAdmin)
-        {
-            <form asp-action="LimparDuplicatas" method="post" class="mt-3">
-                @Html.AntiForgeryToken()
-                <button class="btn btn-outline-danger" onclick="return confirm('Tem certeza?');">
-                    <i class="fas fa-broom me-2"></i>Limpar duplicatas
-                </button>
-            </form>
-        }
-    </div>
+            <div class="store-settings-grid two compact">
+                <label class="store-toggle-row">
+                    <input asp-for="Ativo" />
+                    <span>
+                        <strong>Loja ativa</strong>
+                        <small>A loja pode receber pedidos.</small>
+                    </span>
+                </label>
+
+                <label class="store-toggle-row">
+                    <input asp-for="ForcarFechado" />
+                    <span>
+                        <strong>Forçar fechado</strong>
+                        <small>Use quando precisar pausar vendas.</small>
+                    </span>
+                </label>
+            </div>
+
+            <div class="store-field">
+                <label asp-for="MensagemStatus">Mensagem de status</label>
+                <input asp-for="MensagemStatus" placeholder="Ex.: Voltamos às 19h" />
+                <span asp-validation-for="MensagemStatus"></span>
+            </div>
+        </section>
+
+        <section class="store-settings-card">
+            <div class="store-settings-card-head">
+                <div class="store-settings-card-title">
+                    <span class="store-settings-icon"><i class="fa-solid fa-location-dot"></i></span>
+                    <div>
+                        <span>Endereço</span>
+                        <h2>Endereço da loja</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="store-settings-grid address">
+                <div class="store-field wide">
+                    <label asp-for="Logradouro">Logradouro</label>
+                    <input asp-for="Logradouro" />
+                    <span asp-validation-for="Logradouro"></span>
+                </div>
+
+                <div class="store-field">
+                    <label asp-for="Numero">Número</label>
+                    <input asp-for="Numero" />
+                    <span asp-validation-for="Numero"></span>
+                </div>
+
+                <div class="store-field">
+                    <label asp-for="Complemento">Complemento</label>
+                    <input asp-for="Complemento" />
+                    <span asp-validation-for="Complemento"></span>
+                </div>
+
+                <div class="store-field">
+                    <label asp-for="Bairro">Bairro</label>
+                    <input asp-for="Bairro" />
+                    <span asp-validation-for="Bairro"></span>
+                </div>
+
+                <div class="store-field">
+                    <label asp-for="Cidade">Cidade</label>
+                    <input asp-for="Cidade" />
+                    <span asp-validation-for="Cidade"></span>
+                </div>
+
+                <div class="store-field uf">
+                    <label asp-for="Estado">UF</label>
+                    <input asp-for="Estado" maxlength="2" />
+                    <span asp-validation-for="Estado"></span>
+                </div>
+
+                <div class="store-field">
+                    <label asp-for="Cep">CEP</label>
+                    <input asp-for="Cep" placeholder="00000-000" />
+                    <span asp-validation-for="Cep"></span>
+                </div>
+            </div>
+        </section>
+
+        <section class="store-settings-card">
+            <div class="store-settings-card-head">
+                <div class="store-settings-card-title">
+                    <span class="store-settings-icon"><i class="fa-solid fa-map-location-dot"></i></span>
+                    <div>
+                        <span>Mapa</span>
+                        <h2>Google Maps</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="store-settings-grid map">
+                <div class="store-field">
+                    <label asp-for="Latitude">Latitude</label>
+                    <input asp-for="Latitude" step="any" />
+                    <span asp-validation-for="Latitude"></span>
+                </div>
+
+                <div class="store-field">
+                    <label asp-for="Longitude">Longitude</label>
+                    <input asp-for="Longitude" step="any" />
+                    <span asp-validation-for="Longitude"></span>
+                </div>
+
+                <div class="store-field wide">
+                    <label asp-for="MapsPlaceUrl">URL do Google Maps</label>
+                    <input asp-for="MapsPlaceUrl" placeholder="Cole a URL do place se já tiver" />
+                    <small>Latitude e longitude têm prioridade. Se não preencher, o sistema monta a rota pelo endereço.</small>
+                    <span asp-validation-for="MapsPlaceUrl"></span>
+                </div>
+            </div>
+
+            <div class="store-map-preview">
+                <div>
+                    <small>Endereço completo</small>
+                    <strong id="enderecoPreview">@Model.EnderecoTexto</strong>
+                </div>
+
+                <div class="store-map-url">
+                    <input id="mapsUrlPreview" readonly value="@Model.MapsUrl" />
+                    <a id="btnAbrirMaps" href="@Model.MapsUrl" target="_blank" rel="noopener" class="store-settings-btn store-settings-btn-light">
+                        <i class="fa-solid fa-route"></i>
+                        Abrir
+                    </a>
+                    <button type="button" id="btnCopyMaps" class="store-settings-btn store-settings-btn-light" title="Copiar URL">
+                        <i class="fa-regular fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <div class="store-settings-actions">
+            <button type="submit" class="store-settings-btn store-settings-btn-primary">
+                <i class="fa-solid fa-save"></i>
+                Salvar configurações
+            </button>
+
+            <a asp-area="PainelLojista" asp-controller="Dashboard" asp-action="Index" class="store-settings-btn store-settings-btn-light">
+                Cancelar
+            </a>
+        </div>
+    </form>
+
+    @if (isAdmin)
+    {
+        <form asp-action="LimparDuplicatas" method="post" class="store-settings-admin-action">
+            @Html.AntiForgeryToken()
+            <button class="store-settings-btn store-settings-btn-danger" onclick="return confirm('Tem certeza?');">
+                <i class="fa-solid fa-broom"></i>
+                Limpar duplicatas
+            </button>
+        </form>
+    }
 </div>
 
 @section Scripts {
@@ -243,90 +286,70 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-          const qs = (q) => document.querySelector(q);
+            const qs = (selector) => document.querySelector(selector);
 
-          // ===== THEME: usa o do layout (html[data-theme]) =====
-          const btn = qs('#themeSwitch');
-          const label = qs('#themeLabel');
+            function montaEndereco() {
+                const log = qs('#Logradouro')?.value?.trim() || '';
+                const num = qs('#Numero')?.value?.trim() || '';
+                const comp = qs('#Complemento')?.value?.trim() || '';
+                const bai = qs('#Bairro')?.value?.trim() || '';
+                const cid = qs('#Cidade')?.value?.trim() || '';
+                const uf = (qs('#Estado')?.value || '').trim().toUpperCase();
+                const cep = qs('#Cep')?.value?.trim() || '';
+                const rua = log && num ? `${log}, ${num}` : (log || num);
+                const cidadeUf = cid && uf ? `${cid}/${uf}` : (cid || uf);
+                const local = bai && cidadeUf ? `${bai} - ${cidadeUf}` : (bai || cidadeUf);
 
-          function currentTheme(){
-            return document.documentElement.getAttribute('data-theme') || 'light';
-          }
-          function setLabel(){
-            const t = currentTheme();
-            if (!label) return;
-            label.innerHTML = (t === 'dark')
-              ? '<i class="fa-solid fa-moon"></i><span>Dark</span>'
-              : '<i class="fa-solid fa-sun"></i><span>Light</span>';
-            btn?.classList.toggle('on', t === 'dark');
-          }
-          function toggleTheme(){
-            const t = currentTheme();
-            const next = (t === 'dark') ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', next);
-            try { localStorage.setItem('theme', next); } catch {}
-            setLabel();
-          }
-          btn?.addEventListener('click', toggleTheme);
-          setLabel();
+                return [rua, comp, local, cep].filter(Boolean).join(', ');
+            }
 
-          // ===== MAP PREVIEW =====
-          function montaEndereco() {
-            const log = qs('#Logradouro')?.value?.trim() || '';
-            const num = qs('#Numero')?.value?.trim() || '';
-            const comp = qs('#Complemento')?.value?.trim() || '';
-            const bai = qs('#Bairro')?.value?.trim() || '';
-            const cid = qs('#Cidade')?.value?.trim() || '';
-            const uf  = (qs('#Estado')?.value || '').trim().toUpperCase();
-            const cep = qs('#Cep')?.value?.trim() || '';
+            function montaMapsUrl() {
+                const lat = parseFloat(qs('#Latitude')?.value);
+                const lng = parseFloat(qs('#Longitude')?.value);
+                const placeUrl = qs('#MapsPlaceUrl')?.value?.trim();
 
-            let p1 = log && num ? `${log}, ${num}` : (log || num);
-            let p2 = comp;
-            let cidadeUf = cid && uf ? `${cid}/${uf}` : (cid || uf);
-            let p3 = bai && cidadeUf ? `${bai} - ${cidadeUf}` : (bai || cidadeUf);
-            return [p1, p2, p3, cep].filter(Boolean).join(', ');
-          }
+                if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+                    return `https://www.google.com/maps/dir/?api=1&destination=${lat}%2C${lng}`;
+                }
 
-          function montaMapsUrl() {
-            const lat = parseFloat(qs('#Latitude')?.value);
-            const lng = parseFloat(qs('#Longitude')?.value);
-            const placeUrl = qs('#MapsPlaceUrl')?.value?.trim();
+                if (placeUrl) return placeUrl;
 
-            if (!isNaN(lat) && !isNaN(lng)) return `https://www.google.com/maps/dir/?api=1&destination=${lat}%2C${lng}`;
-            if (placeUrl) return placeUrl;
+                return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(montaEndereco())}`;
+            }
 
-            const end = montaEndereco();
-            return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(end)}`;
-          }
+            function atualizarPreview() {
+                const endereco = montaEndereco();
+                const url = montaMapsUrl();
+                const enderecoPreview = qs('#enderecoPreview');
+                const mapsUrlPreview = qs('#mapsUrlPreview');
+                const btnAbrirMaps = qs('#btnAbrirMaps');
 
-          function atualizarPreviews() {
-            const endPrev = qs('#enderecoPreview');
-            const urlPrev = qs('#mapsUrlPreview');
-            const btnMaps = qs('#btnAbrirMaps');
-            if (endPrev) endPrev.textContent = montaEndereco();
-            const url = montaMapsUrl();
-            if (urlPrev) urlPrev.value = url;
-            if (btnMaps) btnMaps.setAttribute('href', url);
-          }
+                if (enderecoPreview) enderecoPreview.textContent = endereco || 'Endereço não informado';
+                if (mapsUrlPreview) mapsUrlPreview.value = url;
+                if (btnAbrirMaps) btnAbrirMaps.href = url;
+            }
 
-          ['#Logradouro','#Numero','#Complemento','#Bairro','#Cidade','#Estado','#Cep','#Latitude','#Longitude','#MapsPlaceUrl']
-            .forEach(sel => qs(sel)?.addEventListener('input', atualizarPreviews));
+            ['#Logradouro', '#Numero', '#Complemento', '#Bairro', '#Cidade', '#Estado', '#Cep', '#Latitude', '#Longitude', '#MapsPlaceUrl']
+                .forEach(selector => qs(selector)?.addEventListener('input', atualizarPreview));
 
-          qs('#Cep')?.addEventListener('input', (e) => {
-            let v = e.target.value.replace(/\D/g,'').slice(0,8);
-            if (v.length > 5) v = v.slice(0,5) + '-' + v.slice(5);
-            e.target.value = v;
-          });
+            qs('#Cep')?.addEventListener('input', (event) => {
+                let value = event.target.value.replace(/\D/g, '').slice(0, 8);
+                if (value.length > 5) value = `${value.slice(0, 5)}-${value.slice(5)}`;
+                event.target.value = value;
+            });
 
-          qs('#Estado')?.addEventListener('input', (e) => {
-            e.target.value = e.target.value.replace(/[^A-Za-z]/g,'').slice(0,2).toUpperCase();
-          });
+            qs('#Estado')?.addEventListener('input', (event) => {
+                event.target.value = event.target.value.replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase();
+            });
 
-          qs('#btnCopyMaps')?.addEventListener('click', async () => {
-            try { await navigator.clipboard.writeText(qs('#mapsUrlPreview')?.value || ''); } catch {}
-          });
+            qs('#btnCopyMaps')?.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(qs('#mapsUrlPreview')?.value || '');
+                } catch {
+                }
+            });
 
-          atualizarPreviews();
+            atualizarPreview();
         });
     </script>
 }
